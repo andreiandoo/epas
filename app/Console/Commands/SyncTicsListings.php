@@ -42,13 +42,20 @@ class SyncTicsListings extends Command
         }
 
         $total = 0;
+        $failed = 0;
         $query->select(['id', 'slug', 'marketplace_client_id'])
             ->orderBy('id')
-            ->chunkById(500, function ($events) use ($tics, &$total) {
+            ->chunkById(500, function ($events) use ($tics, &$total, &$failed) {
                 $total += $tics->sync($events);
+                $failed += $tics->failedRequests;
             });
 
         $this->info("Evenimente actualizate: {$total}");
+        if ($failed > 0) {
+            $this->error("Cereri eșuate către tics: {$failed}. Ultima eroare: {$tics->lastError}");
+
+            return self::FAILURE;
+        }
 
         return self::SUCCESS;
     }

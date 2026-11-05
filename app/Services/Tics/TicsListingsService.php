@@ -17,7 +17,15 @@ use Illuminate\Support\Facades\Log;
  */
 class TicsListingsService
 {
-    private const BATCH = 100;
+    // Fiecare eveniment adaugă și URL-ul lui în query string; la 100 cererea trecea de limita
+    // de 8 KB a serverului web. 25 rămâne în jur de 3-4 KB.
+    private const BATCH = 25;
+
+    /** Ultima eroare de la tics (pentru comanda de sincronizare). */
+    public ?string $lastError = null;
+
+    /** Câte cereri către tics au eșuat în ultimul sync(). */
+    public int $failedRequests = 0;
 
     public function enabled(): bool
     {
@@ -57,12 +65,14 @@ class TicsListingsService
         }
 
         $updated = 0;
+        $this->failedRequests = 0;
         $events->filter(fn (Event $e) => $this->appliesTo($e))
             ->groupBy(fn (Event $e) => $this->platformFor($e->marketplace_client_id))
             ->each(function (Collection $group, string $platform) use (&$updated) {
                 foreach ($group->chunk(self::BATCH) as $chunk) {
                     $data = $this->fetch($platform, $chunk);
                     if ($data === null) {
+                        $this->failedRequests++;
                         continue;
                     }
                     foreach ($chunk as $event) {
@@ -99,12 +109,14 @@ class TicsListingsService
                     'urls' => $urls,
                 ]);
         } catch (\Throwable $e) {
+            $this->lastError = 'cerere eșuată: ' . $e->getMessage();
             Log::warning('tics listings: request failed', ['error' => $e->getMessage()]);
 
             return null;
         }
 
         if (! $response->successful() || ! is_array($response->json('data'))) {
+            $this->lastError = 'HTTP ' . $response->status() . ': ' . mb_substr(strip_tags($response->body()), 0, 200);
             Log::warning('tics listings: bad response', ['status' => $response->status(), 'body' => mb_substr($response->body(), 0, 300)]);
 
             return null;

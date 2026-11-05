@@ -205,7 +205,8 @@ class EventResource extends Resource
             $html .= "<div style='margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(220,38,38,.12);color:#dc2626;font-weight:600;'>"
                 . e($t('Organizatorul are contract exclusiv.', 'The organizer has an exclusive contract.')) . '</div>';
         }
-        if ($listing->match_confidence !== null && $listing->match_confidence < 0.85) {
+        // Încrederea contează doar când tics a grupat și alte platforme sub același eveniment.
+        if ($active > 0 && $listing->match_confidence !== null && $listing->match_confidence < 0.85) {
             $html .= "<div style='{$muted}margin-top:6px;'>" . e($t('Potrivire aproximativă', 'Approximate match') . ' (' . round($listing->match_confidence * 100) . '%) — ' . $t('verifică linkurile.', 'check the links.')) . '</div>';
         }
 
