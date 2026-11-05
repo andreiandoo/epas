@@ -773,8 +773,8 @@ async function loadContract() {
         if (response.success) {
             const data = response.data;
             document.getElementById('contract-commission').textContent = (data.commission_rate || 0) + '%';
-            const modeLabels = { 'included': 'Inclus in pretul biletului', 'on_top': 'Adaugat peste pretul biletului' };
-            const modeDescs = { 'included': 'Comisionul este inclus in pretul afisat al biletului', 'on_top': 'Comisionul se adauga separat la pretul biletului' };
+            const modeLabels = { 'included': 'Inclus in pretul biletului', 'added_on_top': 'Adaugat peste pretul biletului', 'on_top': 'Adaugat peste pretul biletului' };
+            const modeDescs = { 'included': 'Comisionul este inclus in pretul afisat al biletului', 'added_on_top': 'Comisionul se adauga separat la pretul biletului', 'on_top': 'Comisionul se adauga separat la pretul biletului' };
             document.getElementById('contract-mode').textContent = modeLabels[data.commission_mode] || data.commission_mode || '-';
             document.getElementById('contract-mode-desc').textContent = modeDescs[data.commission_mode] || '';
             const workModeLabels = { 'exclusive': 'Exclusiv', 'non_exclusive': 'Non-exclusiv' };
