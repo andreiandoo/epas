@@ -167,6 +167,7 @@ class MarketplacePayout extends Model
         'fees_amount',
         'adjustments_amount',
         'net_override',
+        'decont_mentions',
         'adjustments_note',
         'status',
         'source',

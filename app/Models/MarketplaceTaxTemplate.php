@@ -293,6 +293,7 @@ class MarketplaceTaxTemplate extends Model
             '{{payout_fees_amount}}' => 'Fees Amount (taxe)',
             '{{payout_adjustments_amount}}' => 'Adjustments Amount (ajustări)',
             '{{payout_adjustments_note}}' => 'Adjustments Note',
+            '{{payout_mentions}}' => 'Mențiuni decont (text adăugat de operator; gol dacă nu există)',
             '{{payout_period_start}}' => 'Period Start Date',
             '{{payout_period_end}}' => 'Period End Date',
             '{{payout_payment_reference}}' => 'Payment/Transfer Reference',
@@ -2328,6 +2329,12 @@ class MarketplaceTaxTemplate extends Model
             $variables['payout_amount_without_vat'] = number_format($baseWithoutVat, 2);
             $variables['payout_total_with_vat'] = number_format($vatBase, 2);
             $variables['payout_adjustments_note'] = $payout->adjustments_note ?? '';
+            $mentions = trim((string) ($payout->decont_mentions ?? ''));
+            // $ și \ ar fi citite ca referințe de preg_replace în processTemplate().
+            $variables['payout_mentions'] = $mentions === ''
+                ? ''
+                : '<div style="margin-top:3px; font-size:7pt; color:#333;"><strong>Mențiuni:</strong> '
+                    . str_replace(['$', '\\'], ['&#36;', '&#92;'], nl2br(e($mentions), false)) . '</div>';
             $variables['payout_period_start'] = $payout->period_start
                 ? $payout->period_start->format('d.m.Y')
                 : '';

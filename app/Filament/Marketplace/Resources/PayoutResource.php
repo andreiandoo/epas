@@ -639,9 +639,13 @@ class PayoutResource extends Resource
                                     ->label('Note admin')
                                     ->placeholder('—')
                                     ->columnSpanFull(),
+                                Infolists\Components\TextEntry::make('decont_mentions')
+                                    ->label('Mențiuni decont (apar în PDF)')
+                                    ->placeholder('—')
+                                    ->columnSpanFull(),
                             ])
                             ->collapsible()
-                            ->collapsed(fn ($record) => empty($record->organizer_notes) && empty($record->admin_notes)),
+                            ->collapsed(fn ($record) => empty($record->organizer_notes) && empty($record->admin_notes) && empty($record->decont_mentions)),
                     ]),
 
                     // RIGHT: Sidebar (1/3)
@@ -782,6 +786,47 @@ class PayoutResource extends Resource
                                         ->action(function (array $data, $record, $livewire) {
                                             $record->update(['admin_notes' => $data['admin_notes']]);
                                             $livewire->refreshFormData(['admin_notes']);
+                                        }),
+                                ])->fullWidth(),
+
+                                \Filament\Schemas\Components\Actions::make([
+                                    \Filament\Actions\Action::make('edit_decont_mentions')
+                                        ->label('Mențiuni decont')
+                                        ->icon('heroicon-o-chat-bubble-bottom-center-text')
+                                        ->color('gray')
+                                        ->modalHeading('Mențiuni decont')
+                                        ->modalDescription('Textul apare în PDF-ul decontului, sub nota „Facturile pot circula fără semnătură...”. Lasă gol ca să nu apară nimic.')
+                                        ->visible(fn ($record) => ! in_array($record->status, ['rejected', 'cancelled'], true))
+                                        ->fillForm(fn ($record) => [
+                                            'decont_mentions' => $record->decont_mentions,
+                                            'regenerate' => $record->decontDocument !== null,
+                                        ])
+                                        ->form([
+                                            \Filament\Forms\Components\Textarea::make('decont_mentions')
+                                                ->label('Mențiuni')
+                                                ->rows(4)
+                                                ->maxLength(2000),
+                                            \Filament\Forms\Components\Toggle::make('regenerate')
+                                                ->label('Regenerează decontul acum')
+                                                ->helperText('Numărul decontului rămâne același.')
+                                                ->visible(fn ($record) => $record->decontDocument !== null),
+                                        ])
+                                        ->action(function (array $data, $record, $livewire) {
+                                            $mentions = trim((string) ($data['decont_mentions'] ?? ''));
+                                            $record->update(['decont_mentions' => $mentions !== '' ? $mentions : null]);
+
+                                            if (! empty($data['regenerate']) && $record->decontDocument !== null
+                                                && method_exists($livewire, 'regenerateDecontDocument')) {
+                                                $livewire->regenerateDecontDocument();
+                                                return;
+                                            }
+
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Mențiuni salvate')
+                                                ->body($record->decontDocument !== null ? 'Regenerează decontul ca să apară în PDF.' : null)
+                                                ->success()
+                                                ->send();
+                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
                                         }),
                                 ])->fullWidth(),
 

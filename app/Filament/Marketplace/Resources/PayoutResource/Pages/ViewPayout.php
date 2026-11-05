@@ -663,17 +663,7 @@ class ViewPayout extends ViewRecord
                     ->color('warning')
                     ->requiresConfirmation()
                     ->modalDescription('Decontul existent va fi șters și regenerat.')
-                    ->action(function () {
-                        $existingDecont = $this->record->decontDocument;
-                        if ($existingDecont) {
-                            if ($existingDecont->file_path) {
-                                Storage::disk('public')->delete($existingDecont->file_path);
-                            }
-                            $existingDecont->delete();
-                            $this->record->unsetRelation('decontDocument');
-                        }
-                        $this->runDecontGeneration(isRegeneration: true);
-                    }),
+                    ->action(fn () => $this->regenerateDecontDocument()),
             ])
                 ->label('Decont')
                 ->icon('heroicon-o-document-text')
@@ -1545,6 +1535,31 @@ class ViewPayout extends ViewRecord
      * Run decont generation via the observer and surface a truthful notification
      * based on whether a decont document was actually created.
      */
+    /**
+     * Șterge PDF-ul de decont existent și îl generează din nou (numărul rămâne, vine din decont_series).
+     * Public: îl apelează și acțiunea „Mențiuni decont” din infolist.
+     */
+    public function regenerateDecontDocument(): void
+    {
+        // Câmpurile tocmai salvate dintr-o acțiune (ex. mențiunile) trebuie să ajungă în PDF.
+        $this->record->refresh();
+
+        // Aceeași condiție ca butonul „Regenerează decont” (metoda e apelabilă și direct din Livewire).
+        if ($this->record->decontDocument === null || in_array($this->record->status, ['rejected', 'cancelled'], true)) {
+            return;
+        }
+
+        $existingDecont = $this->record->decontDocument;
+        if ($existingDecont) {
+            if ($existingDecont->file_path) {
+                Storage::disk('public')->delete($existingDecont->file_path);
+            }
+            $existingDecont->delete();
+            $this->record->unsetRelation('decontDocument');
+        }
+        $this->runDecontGeneration(isRegeneration: true);
+    }
+
     protected function runDecontGeneration(bool $isRegeneration): void
     {
         $observer = new \App\Observers\MarketplacePayoutObserver();
