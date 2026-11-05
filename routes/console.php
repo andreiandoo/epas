@@ -1302,6 +1302,13 @@ Schedule::command('ops-board:digest --escalation')
     ->at('08:30')
     ->timezone('Europe/Bucharest');
 
+// tics.ro: pe ce alte platforme de ticketing se mai vând evenimentele viitoare (AmBilet).
+// Fără TICS_INTERNAL_API_KEY comanda iese imediat.
+Schedule::command('tics:sync-listings')
+    ->hourlyAt(17)
+    ->withoutOverlapping(30)
+    ->runInBackground();
+
 // Organizer fiscal documents: one notice per problem (cerere missing or
 // outdated, impozit + PV due). Daily only to catch new problems — nothing
 // already announced is sent again.

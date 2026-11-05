@@ -532,6 +532,12 @@ class Event extends Model
         return $this->belongsTo(MarketplaceClient::class);
     }
 
+    /** Ce știe tics.ro: pe ce alte platforme de ticketing se mai vinde evenimentul. */
+    public function ticsListing(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TicsEventListing::class);
+    }
+
     public function marketplaceOrganizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class);

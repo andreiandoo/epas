@@ -232,6 +232,19 @@ return [
         'stream_webhook_secret' => env('BUNNY_STREAM_WEBHOOK_SECRET'),
     ],
 
+    // tics.ro (app.tics.ro): pe ce alte platforme se vând evenimentele noastre. Endpoint intern
+    // cu cheie (INTERNAL_API_KEY în tics). platforms = marketplace_client_id:slug-platformă-în-tics.
+    'tics' => [
+        'base_url' => env('TICS_API_URL', 'https://app.tics.ro/api/v1'),
+        'key' => env('TICS_INTERNAL_API_KEY'),
+        'timeout' => (int) env('TICS_API_TIMEOUT', 8),
+        'platforms' => collect(explode(',', (string) env('TICS_LISTINGS_PLATFORMS', '1:ambilet')))
+            ->map(fn ($pair) => array_map('trim', explode(':', $pair, 2)))
+            ->filter(fn ($pair) => count($pair) === 2 && ctype_digit($pair[0]) && $pair[1] !== '')
+            ->mapWithKeys(fn ($pair) => [(int) $pair[0] => $pair[1]])
+            ->all(),
+    ],
+
     // Marketplace sites whose home page services:check-status fetches every 5 minutes (public status pages).
     'status_sites' => array_filter(array_map('trim', explode(',', (string) env('STATUS_SITES', 'bilete.online')))),
 

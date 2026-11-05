@@ -171,6 +171,71 @@ class EventResource extends Resource
     }
 
     /**
+     * Conținutul secțiunii „Alte platforme (tics.ro)”: doar din snapshot-ul local, fără apel la tics.
+     * Stiluri inline: tema panoului e precompilată, clasele noi n-ar exista în ea.
+     */
+    protected static function renderTicsListing(Event $record, callable $t): string
+    {
+        $listing = $record->ticsListing;
+        $muted = 'color:#9ca3af;font-size:12px;';
+
+        if (! $listing) {
+            return "<div style='{$muted}'>" . e($t('Încă nesincronizat cu tics.ro. Apasă „Reîmprospătează”.', 'Not synced with tics.ro yet. Press “Refresh”.')) . '</div>';
+        }
+
+        $synced = $listing->synced_at
+            ? $listing->synced_at->copy()->setTimezone(\App\Support\MarketplaceTz::tz($record->marketplaceClient))->format('d.m.Y H:i')
+            : '—';
+        $footer = "<div style='{$muted}margin-top:8px;'>" . e($t('Actualizat', 'Updated')) . ': ' . e($synced) . '</div>';
+
+        if (! $listing->found) {
+            return "<div style='font-size:13px;'>" . e($t('tics.ro nu are încă acest eveniment. Evenimentele noi apar de obicei în câteva ore de la publicare.', 'tics.ro does not track this event yet. New events usually appear a few hours after publishing.')) . '</div>' . $footer;
+        }
+
+        $safeUrl = fn (?string $url) => ($url && preg_match('#^https?://#i', $url)) ? e($url) : null;
+        $platforms = $listing->platforms ?? [];
+        $active = $listing->other_active_count;
+
+        $html = "<div style='font-size:13px;'>";
+        $html .= $active > 0
+            ? "<div style='font-weight:600;color:#d97706;'>" . e($t('Se vinde și pe ', 'Also sold on ') . $active . ($active === 1 ? $t(' altă platformă', ' other platform') : $t(' alte platforme', ' other platforms'))) . '</div>'
+            : "<div style='font-weight:600;color:#16a34a;'>" . e($t('Nu apare pe alte platforme', 'Not listed on other platforms')) . '</div>';
+
+        if ($active > 0 && $record->marketplaceOrganizer?->work_mode === 'exclusive') {
+            $html .= "<div style='margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(220,38,38,.12);color:#dc2626;font-weight:600;'>"
+                . e($t('Organizatorul are contract exclusiv.', 'The organizer has an exclusive contract.')) . '</div>';
+        }
+        if ($listing->match_confidence !== null && $listing->match_confidence < 0.85) {
+            $html .= "<div style='{$muted}margin-top:6px;'>" . e($t('Potrivire aproximativă', 'Approximate match') . ' (' . round($listing->match_confidence * 100) . '%) — ' . $t('verifică linkurile.', 'check the links.')) . '</div>';
+        }
+
+        foreach ($platforms as $p) {
+            $isActive = ($p['status'] ?? null) === 'active';
+            $name = e($p['platform_name'] ?? $p['platform_slug'] ?? '?');
+            $url = $safeUrl($p['url'] ?? null);
+            $label = $url ? "<a href='{$url}' target='_blank' rel='noopener noreferrer' style='text-decoration:underline;'>{$name}</a>" : $name;
+
+            $bits = [];
+            if (! $isActive) {
+                $bits[] = $t('încheiat', 'ended');
+            } elseif (! empty($p['sold_out'])) {
+                $bits[] = 'sold out';
+            } elseif (isset($p['min_price']) && $p['min_price'] !== null) {
+                $bits[] = $t('de la ', 'from ') . number_format((float) $p['min_price'], 2, ',', '.') . ' ' . ($p['currency'] ?? 'RON');
+            }
+
+            $html .= "<div style='display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid rgba(156,163,175,.25);" . ($isActive ? '' : 'opacity:.55;') . "'>"
+                . "<span>{$label}</span><span style='{$muted}white-space:nowrap;'>" . e(implode(' · ', $bits)) . '</span></div>';
+        }
+
+        if ($ticsUrl = $safeUrl($listing->tics_url)) {
+            $html .= "<div style='margin-top:8px;'><a href='{$ticsUrl}' target='_blank' rel='noopener noreferrer' style='font-size:12px;text-decoration:underline;'>" . e($t('Vezi comparația pe tics.ro', 'See the comparison on tics.ro')) . '</a></div>';
+        }
+
+        return $html . '</div>' . $footer;
+    }
+
+    /**
      * Resolve the commission defaults a ticket type INHERITS when its
      * commission_type is "inherit" (stored as null). This is a pure DISPLAY
      * helper for the ticket-type form: it mirrors the exact resolution order
@@ -5603,6 +5668,44 @@ class EventResource extends Resource
                                     ->helperText($t('Selectează ce notificări primește organizatorul pentru acest eveniment.', 'Select which notifications the organizer receives for this event.')),
                             ]),
 
+                        // Alte platforme de ticketing pe care se vinde evenimentul (date din tics.ro,
+                        // sincronizate din oră în oră de tics:sync-listings; butonul reface acum).
+                        SC\Section::make($t('Alte platforme (tics.ro)', 'Other platforms (tics.ro)'))
+                            ->icon('heroicon-o-globe-alt')
+                            ->compact()
+                            ->collapsible()
+                            ->visible(fn (?Event $record) => $record && $record->exists
+                                && app(\App\Services\Tics\TicsListingsService::class)->appliesTo($record))
+                            ->headerActions([
+                                \Filament\Actions\Action::make('refreshTicsListing')
+                                    ->label($t('Reîmprospătează', 'Refresh'))
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->link()
+                                    ->action(function (?Event $record, $livewire) use ($t) {
+                                        $tics = app(\App\Services\Tics\TicsListingsService::class);
+                                        if (! $record || ! $tics->enabled()) {
+                                            \Filament\Notifications\Notification::make()
+                                                ->title($t('Integrarea tics.ro nu e configurată', 'tics.ro integration is not configured'))
+                                                ->warning()->send();
+
+                                            return;
+                                        }
+                                        $ok = $tics->sync(collect([$record])) > 0;
+                                        $record->unsetRelation('ticsListing');
+                                        $notice = \Filament\Notifications\Notification::make()
+                                            ->title($ok ? $t('Date actualizate din tics.ro', 'Updated from tics.ro') : $t('tics.ro nu a răspuns', 'tics.ro did not respond'));
+                                        $ok ? $notice->success() : $notice->danger();
+                                        $notice->send();
+                                    }),
+                            ])
+                            ->schema([
+                                Forms\Components\Placeholder::make('tics_listing_info')
+                                    ->hiddenLabel()
+                                    ->content(fn (?Event $record) => $record
+                                        ? new HtmlString(static::renderTicsListing($record, $t))
+                                        : ''),
+                            ]),
+
 
                         // 6. Activity Log (doar pentru edit)
                         SC\Section::make($t('Activitate recentă', 'Recent activity'))
@@ -6271,6 +6374,17 @@ class EventResource extends Resource
                     ->boolean()
                     ->label('Sold Out')
                     ->toggleable(),
+                // tics.ro: pe câte alte platforme se mai vinde (snapshot local, sincronizat din oră în oră).
+                Tables\Columns\TextColumn::make('ticsListing.other_active_count')
+                    ->label('Alte platforme')
+                    ->badge()
+                    ->placeholder('—')
+                    ->formatStateUsing(fn ($state) => (int) $state > 0 ? (string) (int) $state : '0')
+                    ->color(fn ($state) => (int) $state > 0 ? 'warning' : 'gray')
+                    ->tooltip(fn (Event $record) => collect($record->ticsListing?->activePlatforms() ?? [])
+                        ->pluck('platform_name')->filter()->implode(', ') ?: null)
+                    ->visible(fn () => app(\App\Services\Tics\TicsListingsService::class)->platformFor($marketplace?->id) !== null)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -6289,6 +6403,18 @@ class EventResource extends Resource
                 Tables\Filters\Filter::make('has_pending_changes')
                     ->label('Modificări în așteptare')
                     ->query(fn ($query) => $query->where('pending_changes_status', 'pending'))
+                    ->toggle(),
+                Tables\Filters\Filter::make('tics_other_platforms')
+                    ->label('Se vinde și pe alte platforme (tics.ro)')
+                    ->query(fn ($query) => $query->whereHas('ticsListing', fn ($q) => $q->where('other_active_count', '>', 0)))
+                    ->visible(fn () => app(\App\Services\Tics\TicsListingsService::class)->platformFor($marketplace?->id) !== null)
+                    ->toggle(),
+                Tables\Filters\Filter::make('tics_exclusive_conflict')
+                    ->label('Contract exclusiv, dar vândut și în altă parte')
+                    ->query(fn ($query) => $query
+                        ->whereHas('ticsListing', fn ($q) => $q->where('other_active_count', '>', 0))
+                        ->whereHas('marketplaceOrganizer', fn ($q) => $q->where('work_mode', 'exclusive')))
+                    ->visible(fn () => app(\App\Services\Tics\TicsListingsService::class)->platformFor($marketplace?->id) !== null)
                     ->toggle(),
             ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
             ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label('Filtre')->icon('heroicon-o-funnel')->button())
