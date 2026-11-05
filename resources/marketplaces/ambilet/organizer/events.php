@@ -522,8 +522,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             <label class="flex flex-col items-center justify-center w-full h-32 transition-colors border-2 border-gray-300 border-dashed cursor-pointer drop-zone rounded-xl hover:border-primary hover:bg-primary/5" id="poster-upload-area" data-target="poster">
                                                 <svg class="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                 <span class="text-sm text-muted">Trage imaginea aici sau click pentru upload</span>
-                                                <span class="mt-1 text-xs text-muted">JPG, PNG (recomandat 800x1200, max 5MB)</span>
-                                                <input type="file" name="poster" accept="image/*" class="hidden" onchange="previewPoster(this)">
+                                                <span class="mt-1 text-xs text-muted">JPG, PNG, WebP (recomandat 800x1200, max 10MB)</span>
+                                                <input type="file" name="poster" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="if (checkImageFile(this)) previewPoster(this)">
                                             </label>
                                         </div>
                                     </div>
@@ -539,8 +539,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             <label class="flex flex-col items-center justify-center w-full h-32 transition-colors border-2 border-gray-300 border-dashed cursor-pointer drop-zone rounded-xl hover:border-primary hover:bg-primary/5" id="cover-upload-area" data-target="cover">
                                                 <svg class="w-8 h-8 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                 <span class="text-sm text-muted">Trage imaginea aici sau click pentru upload</span>
-                                                <span class="mt-1 text-xs text-muted">JPG, PNG (recomandat 1200x630, max 5MB)</span>
-                                                <input type="file" name="cover_image" accept="image/*" class="hidden" onchange="previewCover(this)">
+                                                <span class="mt-1 text-xs text-center text-muted">Format cover eveniment Facebook: <strong>1920×1005 px</strong> (raport 1,91:1), minim 1200×628 px. JPG, PNG, WebP, max 10MB.<br>Dacă imaginea are alt raport, o poți decupa după încărcare.</span>
+                                                <input type="file" name="cover_image" accept="image/jpeg,image/png,image/webp" class="hidden" onchange="onCoverSelected(this)">
                                             </label>
                                         </div>
                                     </div>
@@ -2425,6 +2425,183 @@ function renumberTicketTypes() {
 
 // ==================== MEDIA PREVIEWS ====================
 
+// ==================== MACHETA ORIZONTALĂ (cover Facebook) ====================
+// Ambilet cere macheta orizontală pe raportul coverului de eveniment Facebook (1920×1005, ~1,91:1).
+// Aceeași regulă e verificată și pe server.
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const COVER_SPEC = { width: 1920, height: 1005, minWidth: 1200, minHeight: 628, tolerance: 0.02 };
+const COVER_RATIO = COVER_SPEC.width / COVER_SPEC.height;
+let cropperLibPromise = null;
+
+function checkImageFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return false;
+    if (!IMAGE_TYPES.includes(file.type)) {
+        AmbiletNotifications.error('Sunt acceptate doar imagini JPG, PNG sau WebP');
+        input.value = '';
+        return false;
+    }
+    if (file.size > IMAGE_MAX_BYTES) {
+        AmbiletNotifications.error('Fișierul depășește 10MB');
+        input.value = '';
+        return false;
+    }
+    return true;
+}
+
+function readImageSize(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => resolve({ url, width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
+        img.src = url;
+    });
+}
+
+function loadCropperLib() {
+    if (window.Cropper) return Promise.resolve();
+    if (cropperLibPromise) return cropperLibPromise;
+    cropperLibPromise = new Promise((resolve, reject) => {
+        const css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css';
+        document.head.appendChild(css);
+        const js = document.createElement('script');
+        js.src = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js';
+        js.onload = () => resolve();
+        js.onerror = () => { cropperLibPromise = null; reject(new Error('cropper')); };
+        document.head.appendChild(js);
+    });
+    return cropperLibPromise;
+}
+
+async function onCoverSelected(input) {
+    if (!checkImageFile(input)) return;
+    const file = input.files[0];
+
+    let dims;
+    try {
+        dims = await readImageSize(file);
+    } catch (e) {
+        AmbiletNotifications.error('Nu am putut citi imaginea. Încearcă alt fișier JPG, PNG sau WebP.');
+        input.value = '';
+        return;
+    }
+
+    if (dims.width < COVER_SPEC.minWidth || dims.height < COVER_SPEC.minHeight) {
+        URL.revokeObjectURL(dims.url);
+        AmbiletNotifications.error(`Imaginea are ${dims.width}×${dims.height} px. Macheta orizontală trebuie să aibă minim ${COVER_SPEC.minWidth}×${COVER_SPEC.minHeight} px (recomandat ${COVER_SPEC.width}×${COVER_SPEC.height} px, cover eveniment Facebook).`);
+        input.value = '';
+        return;
+    }
+
+    if (Math.abs(dims.width / dims.height - COVER_RATIO) / COVER_RATIO <= COVER_SPEC.tolerance) {
+        URL.revokeObjectURL(dims.url);
+        previewCover(input);
+        return;
+    }
+
+    // Alt raport: organizatorul alege zona, la raportul cerut.
+    input.value = '';
+    try {
+        await loadCropperLib();
+    } catch (e) {
+        URL.revokeObjectURL(dims.url);
+        AmbiletNotifications.error(`Imaginea are ${dims.width}×${dims.height} px, alt raport decât 1,91:1. Încarcă o imagine de ${COVER_SPEC.width}×${COVER_SPEC.height} px.`);
+        return;
+    }
+    openCoverCropper(file, dims, input);
+}
+
+function openCoverCropper(file, dims, input) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'cover-cropper-title');
+    overlay.innerHTML = `
+        <div class="flex flex-col w-full max-w-3xl max-h-full overflow-hidden bg-white shadow-xl rounded-2xl">
+            <div class="p-5 border-b border-border">
+                <h3 id="cover-cropper-title" class="font-semibold text-secondary">Decupează macheta orizontală</h3>
+                <p class="mt-1 text-sm text-muted">Imaginea ta are ${dims.width}×${dims.height} px. Macheta orizontală folosește formatul coverului de eveniment Facebook: ${COVER_SPEC.width}×${COVER_SPEC.height} px (raport 1,91:1). Mută și redimensionează chenarul peste zona care trebuie să rămână.</p>
+            </div>
+            <div class="p-5 overflow-hidden bg-gray-50">
+                <div style="max-height:60vh;"><img id="cover-cropper-img" alt="Imagine de decupat" style="display:block;max-width:100%;max-height:60vh;"></div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 p-5 border-t border-border">
+                <span id="cover-cropper-size" class="text-xs text-muted"></span>
+                <div class="flex gap-3">
+                    <button type="button" data-crop-cancel class="px-4 py-2 text-sm font-medium border rounded-xl border-border text-secondary hover:bg-gray-50">Anulează</button>
+                    <button type="button" data-crop-apply class="px-4 py-2 text-sm font-semibold text-white rounded-xl bg-primary hover:bg-primary-dark">Folosește decupajul</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const img = overlay.querySelector('#cover-cropper-img');
+    const sizeEl = overlay.querySelector('#cover-cropper-size');
+    const applyBtn = overlay.querySelector('[data-crop-apply]');
+    let cropper = null;
+
+    const close = () => {
+        document.removeEventListener('keydown', onKey);
+        if (cropper) cropper.destroy();
+        URL.revokeObjectURL(dims.url);
+        overlay.remove();
+    };
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    overlay.querySelector('[data-crop-cancel]').addEventListener('click', close);
+
+    img.addEventListener('load', () => {
+        cropper = new Cropper(img, {
+            aspectRatio: COVER_RATIO,
+            viewMode: 1,
+            autoCropArea: 1,
+            zoomOnWheel: false,
+            background: false,
+            crop(event) {
+                const w = Math.round(event.detail.width);
+                const h = Math.round(event.detail.height);
+                const tooSmall = w < COVER_SPEC.minWidth;
+                sizeEl.textContent = tooSmall
+                    ? `Zona aleasă: ${w}×${h} px, prea mică (minim ${COVER_SPEC.minWidth} px lățime).`
+                    : `Zona aleasă: ${w}×${h} px → se salvează la ${Math.min(COVER_SPEC.width, w)}×${Math.round(Math.min(COVER_SPEC.width, w) / COVER_RATIO)} px.`;
+                sizeEl.classList.toggle('text-error', tooSmall);
+                applyBtn.disabled = tooSmall;
+                applyBtn.classList.toggle('opacity-50', tooSmall);
+            },
+        });
+    }, { once: true });
+    img.src = dims.url;
+
+    applyBtn.addEventListener('click', () => {
+        if (!cropper) return;
+        const data = cropper.getData(true);
+        if (data.width < COVER_SPEC.minWidth) return;
+        const outWidth = Math.min(COVER_SPEC.width, data.width);
+        const outHeight = Math.round(outWidth / COVER_RATIO);
+        const canvas = cropper.getCroppedCanvas({ width: outWidth, height: outHeight, fillColor: '#fff', imageSmoothingQuality: 'high' });
+        applyBtn.disabled = true;
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                AmbiletNotifications.error('Decupajul nu a reușit. Încearcă din nou.');
+                applyBtn.disabled = false;
+                return;
+            }
+            const base = (file.name || 'macheta').replace(/\.[^.]+$/, '');
+            const cropped = new File([blob], base + '-cover.jpg', { type: 'image/jpeg' });
+            const dt = new DataTransfer();
+            dt.items.add(cropped);
+            input.files = dt.files;
+            close();
+            previewCover(input);
+        }, 'image/jpeg', 0.9);
+    });
+}
+
 function previewPoster(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -2479,14 +2656,14 @@ function initDragDrop() {
             const files = e.dataTransfer.files;
             if (files.length === 0) return;
             const file = files[0];
-            if (!file.type.startsWith('image/')) { AmbiletNotifications.error('Doar fișiere imagine sunt acceptate'); return; }
-            if (file.size > 5 * 1024 * 1024) { AmbiletNotifications.error('Fișierul depășește 5MB'); return; }
+            if (!IMAGE_TYPES.includes(file.type)) { AmbiletNotifications.error('Sunt acceptate doar imagini JPG, PNG sau WebP'); return; }
+            if (file.size > IMAGE_MAX_BYTES) { AmbiletNotifications.error('Fișierul depășește 10MB'); return; }
             const input = zone.querySelector('input[type="file"]');
             const dt = new DataTransfer();
             dt.items.add(file);
             input.files = dt.files;
             if (zone.dataset.target === 'poster') { previewPoster(input); }
-            else if (zone.dataset.target === 'cover') { previewCover(input); }
+            else if (zone.dataset.target === 'cover') { onCoverSelected(input); }
         });
     });
 }
@@ -2507,7 +2684,9 @@ async function uploadEventImagesIfNeeded(eventId) {
         await AmbiletAPI.organizer.uploadEventImages(eventId, posterFile, coverFile);
     } catch (error) {
         console.error('Image upload error:', error);
-        AmbiletNotifications.error('Evenimentul a fost salvat, dar imaginile nu s-au putut încărca. Încearcă din nou.');
+        AmbiletNotifications.error(error && error.status === 422 && error.message
+            ? 'Evenimentul a fost salvat, dar imaginile nu au fost încărcate: ' + error.message
+            : 'Evenimentul a fost salvat, dar imaginile nu s-au putut încărca. Încearcă din nou.');
     }
 }
 
@@ -3378,9 +3557,13 @@ saveAndSubmitEvent = async function() {
         const catText = cat?.selectedOptions[0]?.text;
 
         // Poster preview: pick whichever is currently visible
-        const posterImg = document.getElementById('poster-preview-img');
-        const coverImg = document.getElementById('cover-preview-img');
-        const heroSrc = (coverImg && coverImg.getAttribute('src')) || (posterImg && posterImg.getAttribute('src')) || '';
+        // Doar imaginile afișate (după „șterge” img-ul păstrează src-ul vechi, dar containerul e ascuns).
+        const shownSrc = (imgId, wrapId) => {
+            const wrap = document.getElementById(wrapId);
+            const img = document.getElementById(imgId);
+            return (wrap && img && !wrap.classList.contains('hidden')) ? (img.getAttribute('src') || '') : '';
+        };
+        const heroSrc = shownSrc('cover-img', 'cover-preview') || shownSrc('poster-img', 'poster-preview');
 
         // Tickets summary
         const ticketRows = [];

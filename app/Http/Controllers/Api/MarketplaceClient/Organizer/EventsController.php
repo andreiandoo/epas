@@ -1008,6 +1008,15 @@ class EventsController extends BaseController
             'cover_image' => 'nullable|image|mimes:jpeg,png,webp|max:10240',
         ]);
 
+        // Macheta orizontală pe raportul coverului de eveniment Facebook (doar marketplace-urile din config).
+        if ($request->hasFile('cover_image')
+            && in_array((int) $organizer->marketplace_client_id, config('marketplace_media.facebook_cover_marketplaces', []), true)) {
+            $coverError = $this->facebookCoverRatioError($request->file('cover_image'));
+            if ($coverError !== null) {
+                return $this->error($coverError, 422);
+            }
+        }
+
         $updateData = [];
 
         if ($request->hasFile('poster')) {
@@ -1031,6 +1040,32 @@ class EventsController extends BaseController
         return $this->success([
             'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'venue'])),
         ], 'Images uploaded successfully');
+    }
+
+    /**
+     * Null dacă imaginea respectă raportul coverului Facebook, altfel mesajul pentru organizator.
+     */
+    protected function facebookCoverRatioError(\Illuminate\Http\UploadedFile $file): ?string
+    {
+        $spec = config('marketplace_media.facebook_cover');
+        $size = @getimagesize($file->getRealPath());
+        $width = (int) ($size[0] ?? 0);
+        $height = (int) ($size[1] ?? 0);
+        $target = $spec['width'] . '×' . $spec['height'] . ' px (raport 1,91:1, cover de eveniment Facebook)';
+
+        if ($width <= 0 || $height <= 0) {
+            return 'Nu am putut citi dimensiunile machetei orizontale. Încarcă o imagine JPG, PNG sau WebP de ' . $target . '.';
+        }
+        if ($width < $spec['min_width'] || $height < $spec['min_height']) {
+            return "Macheta orizontală are {$width}×{$height} px, prea mică. Minim {$spec['min_width']}×{$spec['min_height']} px; recomandat {$target}.";
+        }
+
+        $ratio = $spec['width'] / $spec['height'];
+        if (abs(($width / $height) - $ratio) / $ratio > $spec['ratio_tolerance']) {
+            return "Macheta orizontală are {$width}×{$height} px, alt raport decât cel cerut. Folosește {$target}.";
+        }
+
+        return null;
     }
 
     /**
