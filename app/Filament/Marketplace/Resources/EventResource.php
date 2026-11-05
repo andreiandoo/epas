@@ -180,7 +180,7 @@ class EventResource extends Resource
         $muted = 'color:#9ca3af;font-size:12px;';
 
         if (! $listing) {
-            return "<div style='{$muted}'>" . e($t('Încă nesincronizat cu tics.ro. Apasă „Reîmprospătează”.', 'Not synced with tics.ro yet. Press “Refresh”.')) . '</div>';
+            return "<div style='{$muted}'>" . e($t('Încă nesincronizat cu tics.ro. Apasă iconița de reîmprospătare.', 'Not synced with tics.ro yet. Use the refresh icon.')) . '</div>';
         }
 
         $synced = $listing->synced_at
@@ -5671,7 +5671,7 @@ class EventResource extends Resource
 
                         // Alte platforme de ticketing pe care se vinde evenimentul (date din tics.ro,
                         // sincronizate din oră în oră de tics:sync-listings; butonul reface acum).
-                        SC\Section::make($t('Alte platforme (tics.ro)', 'Other platforms (tics.ro)'))
+                        SC\Section::make($t('Alte platforme', 'Other platforms'))
                             ->icon('heroicon-o-globe-alt')
                             ->compact()
                             ->collapsible()
@@ -5679,9 +5679,10 @@ class EventResource extends Resource
                                 && app(\App\Services\Tics\TicsListingsService::class)->appliesTo($record))
                             ->headerActions([
                                 \Filament\Actions\Action::make('refreshTicsListing')
-                                    ->label($t('Reîmprospătează', 'Refresh'))
+                                    ->label($t('Reîmprospătează din tics.ro', 'Refresh from tics.ro'))
                                     ->icon('heroicon-o-arrow-path')
-                                    ->link()
+                                    ->iconButton()
+                                    ->tooltip($t('Reîmprospătează din tics.ro', 'Refresh from tics.ro'))
                                     ->action(function (?Event $record, $livewire) use ($t) {
                                         $tics = app(\App\Services\Tics\TicsListingsService::class);
                                         if (! $record || ! $tics->enabled()) {
