@@ -210,6 +210,8 @@ class EventResource extends Resource
             $html .= "<div style='{$muted}margin-top:6px;'>" . e($t('Potrivire aproximativă', 'Approximate match') . ' (' . round($listing->match_confidence * 100) . '%) — ' . $t('verifică linkurile.', 'check the links.')) . '</div>';
         }
 
+        $tz = \App\Support\MarketplaceTz::tz($record->marketplaceClient);
+        $hasSales = false;
         foreach ($platforms as $p) {
             $isActive = ($p['status'] ?? null) === 'active';
             $name = e($p['platform_name'] ?? $p['platform_slug'] ?? '?');
@@ -225,8 +227,23 @@ class EventResource extends Resource
                 $bits[] = $t('de la ', 'from ') . number_format((float) $p['min_price'], 2, ',', '.') . ' ' . ($p['currency'] ?? 'RON');
             }
 
-            $html .= "<div style='display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid rgba(156,163,175,.25);" . ($isActive ? '' : 'opacity:.55;') . "'>"
-                . "<span>{$label}</span><span style='{$muted}white-space:nowrap;'>" . e(implode(' · ', $bits)) . '</span></div>';
+            $soldLine = static::ticsSoldLine($p, $t, $tz);
+            if ($soldLine !== '') {
+                $hasSales = true;
+            }
+
+            $html .= "<div style='padding:4px 0;border-top:1px solid rgba(156,163,175,.25);" . ($isActive ? '' : 'opacity:.55;') . "'>"
+                . "<div style='display:flex;justify-content:space-between;gap:8px;'>"
+                . "<span>{$label}</span><span style='{$muted}white-space:nowrap;'>" . e(implode(' · ', $bits)) . '</span></div>'
+                . ($soldLine !== '' ? "<div style='font-size:12px;font-weight:600;margin-top:1px;'>" . e($soldLine) . '</div>' : '')
+                . '</div>';
+        }
+
+        if ($hasSales) {
+            $html .= "<div style='{$muted}margin-top:6px;'>" . e($t(
+                'Vânzările sunt estimate de tics.ro: din harta de locuri sau, fără hartă, din scăderea stocului de când urmărește evenimentul.',
+                'Sales are estimated by tics.ro: from the seat map or, without one, from stock drops since it started tracking the event.'
+            )) . '</div>';
         }
 
         if ($ticsUrl = $safeUrl($listing->tics_url)) {
@@ -234,6 +251,35 @@ class EventResource extends Resource
         }
 
         return $html . '</div>' . $footer;
+    }
+
+    /** Biletele vândute pe o altă platformă, așa cum le estimează tics (gol când tics nu știe). */
+    protected static function ticsSoldLine(array $p, callable $t, string $tz): string
+    {
+        $sold = isset($p['tickets_sold']) && is_numeric($p['tickets_sold']) ? (int) $p['tickets_sold'] : null;
+        if (! $sold) {
+            return '';
+        }
+        $n = fn (int $v) => number_format($v, 0, ',', '.');
+
+        if (($p['sold_basis'] ?? null) === 'seat_map') {
+            $total = (int) ($p['seats_total'] ?? 0);
+            if ($total > 0) {
+                return $n($sold) . ' / ' . $n($total) . ' ' . $t('locuri vândute', 'seats sold') . ' (' . round($sold / $total * 100) . '%)';
+            }
+
+            return $n($sold) . ' ' . $t('locuri vândute', 'seats sold');
+        }
+
+        $line = $t('min. ', 'at least ') . $n($sold) . ' ' . $t('bilete vândute', 'tickets sold');
+        if (! empty($p['sold_tracked_since'])) {
+            try {
+                $line .= ' ' . $t('din ', 'since ') . \Illuminate\Support\Carbon::parse($p['sold_tracked_since'])->setTimezone($tz)->format('d.m.Y');
+            } catch (\Throwable) {
+            }
+        }
+
+        return $line;
     }
 
     /**
