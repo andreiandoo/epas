@@ -55,6 +55,7 @@
         .opsb-cell { display: block; width: 9.5rem; padding: .35rem .5rem; border-radius: .4rem; border: 1px solid transparent; line-height: 1.25; }
         .opsb-cell strong { display: block; font-weight: 600; }
         .opsb-cell small { display: block; font-size: .6875rem; opacity: .85; }
+        .opsb-cell small.opsb-actor { margin-top: .15rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         a.opsb-cell:hover { filter: brightness(.96); }
         .opsb-na { color: var(--opsb-muted); border-color: var(--opsb-line); border-style: dashed; }
         .opsb-waiting { color: var(--opsb-muted); border-color: var(--opsb-line); }
@@ -92,8 +93,9 @@
 
     {{-- q: instant search, kept in the browser. A row is hidden when its
          event and organizer names do not contain what was typed. --}}
-    <div class="opsb" x-data="{ q: '', hit(el) { return this.q.trim() === '' || el.dataset.s.includes(this.q.trim().toLowerCase()); } }">
-        <p class="opsb-intro">Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual.</p>
+    {{-- Reîmprospătare la 30s cât tab-ul e vizibil: stările și cine le-a rezolvat apar fără reload. --}}
+    <div class="opsb" wire:poll.30s.visible x-data="{ q: '', hit(el) { return this.q.trim() === '' || el.dataset.s.includes(this.q.trim().toLowerCase()); } }">
+        <p class="opsb-intro">Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual. Pe fiecare sarcină rezolvată apare cine a rezolvat-o și când; pagina se actualizează singură la 30 de secunde.</p>
 
         <div class="opsb-bar">
             <div class="opsb-seg">
@@ -212,11 +214,13 @@
                                                     <a href="{{ $cell['url'] }}" target="_blank" rel="noopener" class="opsb-cell opsb-{{ $cell['state'] }}">
                                                         <strong>{{ $cell['label'] }}</strong>
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
+                                                        @if($cell['at'] ?? null)<small class="opsb-actor" title="Rezolvat{{ ($cell['by'] ?? null) ? ' de ' . $cell['by'] : '' }} la {{ $cell['at'] }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
                                                     </a>
                                                 @else
                                                     <span class="opsb-cell opsb-{{ $cell['state'] }}">
                                                         <strong>{{ $cell['label'] }}</strong>
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
+                                                        @if($cell['at'] ?? null)<small class="opsb-actor" title="Rezolvat{{ ($cell['by'] ?? null) ? ' de ' . $cell['by'] : '' }} la {{ $cell['at'] }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
                                                     </span>
                                                 @endif
                                             </td>
