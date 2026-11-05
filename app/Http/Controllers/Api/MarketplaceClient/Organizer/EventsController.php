@@ -181,6 +181,8 @@ class EventsController extends BaseController
             'max_tickets_per_order' => 'nullable|integer|min:1|max:50',
             'sales_start_at' => 'nullable|date',
             'sales_end_at' => 'nullable|date',
+            // Doar modul (inclus / peste). Procentul și minimul vin din fișa organizatorului.
+            'commission_mode' => 'nullable|string|in:included,added_on_top',
             'ticket_types' => $isDraft ? 'nullable|array' : 'required|array|min:1',
             'ticket_types.*.name' => 'required|string|max:255',
             'ticket_types.*.description' => 'nullable|string|max:500',
@@ -264,6 +266,7 @@ class EventsController extends BaseController
                 'event_website_url' => $validated['event_website_url'] ?? null,
                 'facebook_url' => $validated['facebook_url'] ?? null,
                 'video_url' => $validated['video_url'] ?? null,
+                'commission_mode' => $validated['commission_mode'] ?? null,
                 'is_published' => false,
             ], $dateFields));
 
@@ -384,7 +387,9 @@ class EventsController extends BaseController
             'max_tickets_per_order' => 'nullable|integer|min:1|max:50',
             'sales_start_at' => 'nullable|date',
             'sales_end_at' => 'nullable|date',
+            'commission_mode' => 'nullable|string|in:included,added_on_top',
             'ticket_types' => 'nullable|array',
+            'ticket_types.*.id' => 'nullable|integer',
             'ticket_types.*.name' => 'required|string|max:255',
             'ticket_types.*.description' => 'nullable|string|max:500',
             'ticket_types.*.price' => 'required|numeric|min:0',
@@ -421,6 +426,11 @@ class EventsController extends BaseController
                 unset($validated['ticket_types']);
             }
         }
+
+        // Modul de comision nu trece prin live-edit / aprobare: pe un eveniment publicat
+        // sau cu vânzări rămâne cum e (îl schimbă doar un operator din admin).
+        $requestedCommissionMode = $validated['commission_mode'] ?? null;
+        unset($validated['commission_mode']);
 
         // Published/live events take the live-edit path: only safe fields, and
         // either applied directly (allow_live_edits) or parked as pending
@@ -545,6 +555,11 @@ class EventsController extends BaseController
             if (isset($validated['video_url'])) {
                 $updateData['video_url'] = $validated['video_url'];
             }
+            if ($requestedCommissionMode !== null
+                && $requestedCommissionMode !== $event->commission_mode
+                && !$event->commissionModeLocked()) {
+                $updateData['commission_mode'] = $requestedCommissionMode;
+            }
 
             if (!empty($updateData)) {
                 $event->update($updateData);
@@ -561,39 +576,7 @@ class EventsController extends BaseController
 
             // Sync ticket types if provided (only for unpublished events - we block published above)
             if ($ticketTypesData !== null) {
-                // Delete existing ticket types and recreate. Free-with-code
-                // types are excluded: they are upserted below by id/code and
-                // never deleted (with none on the event this is the exact
-                // legacy query).
-                // The invitation type (issued invitations hang on it) is kept too.
-                $freeWithCodeTypeIds = array_merge(
-                    $this->freeWithCodeTicketTypeIds($event),
-                    $this->invitationTicketTypeIds($event)
-                );
-                $event->ticketTypes()
-                    ->when(!empty($freeWithCodeTypeIds), fn ($q) => $q->whereNotIn('id', $freeWithCodeTypeIds))
-                    ->delete();
-
-                // Use virtual price_max / capacity (mass-assignable) so the
-                // mutators populate price_cents / quota_total correctly.
-                // Default min_per_order=1 and max_per_order=event.max_tickets_per_order
-                // (or 10) so the NOT-NULL constraint is satisfied without making
-                // those fields required in the form.
-                $defaultMaxPerOrderUpdate = (int) ($validated['max_tickets_per_order'] ?? $event->max_tickets_per_order ?? 10);
-                foreach ($ticketTypesData as $index => $ticketTypeData) {
-                    TicketType::create([
-                        'event_id' => $event->id,
-                        'name' => $ticketTypeData['name'],
-                        'description' => $ticketTypeData['description'] ?? null,
-                        'currency' => 'RON',
-                        'price_max' => $ticketTypeData['price'],
-                        'capacity' => $ticketTypeData['quantity'] ?? null,
-                        'min_per_order' => $ticketTypeData['min_per_order'] ?? 1,
-                        'max_per_order' => $ticketTypeData['max_per_order'] ?? $defaultMaxPerOrderUpdate,
-                        'quota_sold' => 0,
-                        'status' => 'active',
-                    ]);
-                }
+                $this->syncDraftTicketTypes($event, $ticketTypesData, (int) ($validated['max_tickets_per_order'] ?? $event->max_tickets_per_order ?? 10));
             }
 
             // Free-with-code types: create / update (meta merged) / disable.
@@ -628,6 +611,74 @@ class EventsController extends BaseController
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->error('Failed to update event: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Tipurile de bilet ale unui eveniment nepublicat, sincronizate pe id:
+     * - rând cu id existent → se actualizează doar câmpurile din formular, și doar dacă s-au schimbat
+     *   (comisionul per bilet, datele de vânzare etc. setate de admin rămân);
+     * - rând fără id (sau cu id străin) → tip nou;
+     * - tip existent care nu mai e în formular → șters (organizatorul l-a scos).
+     * Tipurile „gratuit cu cod” și invitația nu se ating niciodată.
+     * Un formular vechi, fără id-uri, se comportă ca înainte (toate se recreează).
+     */
+    protected function syncDraftTicketTypes(Event $event, array $rows, int $defaultMaxPerOrder): void
+    {
+        $protectedIds = array_merge(
+            $this->freeWithCodeTicketTypeIds($event),
+            $this->invitationTicketTypeIds($event)
+        );
+        $existing = $event->ticketTypes()
+            ->when(!empty($protectedIds), fn ($q) => $q->whereNotIn('id', $protectedIds))
+            ->get()
+            ->keyBy('id');
+
+        $keptIds = [];
+        $toSave = [];
+        foreach ($rows as $row) {
+            $id = isset($row['id']) ? (int) $row['id'] : 0;
+            $ticketType = ($id && $existing->has($id) && !in_array($id, $keptIds, true)) ? $existing->get($id) : null;
+
+            if ($ticketType) {
+                $keptIds[] = $id;
+                $ticketType->fill([
+                    'name' => $row['name'],
+                    'description' => $row['description'] ?? null,
+                    'price_max' => $row['price'],
+                    'capacity' => $row['quantity'] ?? null,
+                    'min_per_order' => $row['min_per_order'] ?? 1,
+                    'max_per_order' => $row['max_per_order'] ?? $defaultMaxPerOrder,
+                ]);
+                if ($ticketType->isDirty()) {
+                    $toSave[] = $ticketType;
+                }
+                continue;
+            }
+
+            // Use virtual price_max / capacity (mass-assignable) so the
+            // mutators populate price_cents / quota_total correctly.
+            $toSave[] = new TicketType([
+                'event_id' => $event->id,
+                'name' => $row['name'],
+                'description' => $row['description'] ?? null,
+                'currency' => 'RON',
+                'price_max' => $row['price'],
+                'capacity' => $row['quantity'] ?? null,
+                'min_per_order' => $row['min_per_order'] ?? 1,
+                'max_per_order' => $row['max_per_order'] ?? $defaultMaxPerOrder,
+                'quota_sold' => 0,
+                'status' => 'active',
+            ]);
+        }
+
+        // Întâi ștergerile, apoi salvările.
+        $removedIds = $existing->keys()->diff($keptIds)->all();
+        if (!empty($removedIds)) {
+            $event->ticketTypes()->whereIn('id', $removedIds)->delete();
+        }
+        foreach ($toSave as $ticketType) {
+            $ticketType->save();
         }
     }
 
@@ -5413,6 +5464,10 @@ class EventsController extends BaseController
             // the submit-for-approval step (changes publish immediately).
             'allow_live_edits' => (bool) ($event->marketplaceOrganizer?->allow_live_edits ?? false),
             'has_pending_changes' => $event->pending_changes_status === 'pending',
+            // Comision: organizatorul alege doar modul, pe tot evenimentul, cât timp nu e publicat și nu are vânzări.
+            'commission_mode' => $event->commission_mode,
+            'effective_commission_mode' => $event->getEffectiveCommissionMode(),
+            'commission_mode_locked' => (bool) $event->is_published || $event->commissionModeLocked(),
             'is_featured' => $event->is_featured,
             'is_sold_out' => (bool) ($event->is_sold_out ?? false),
             'door_sales_only' => (bool) ($event->door_sales_only ?? false),

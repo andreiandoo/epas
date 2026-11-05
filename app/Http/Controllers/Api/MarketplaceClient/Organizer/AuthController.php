@@ -930,6 +930,10 @@ class AuthController extends BaseController
         $payload = [
             'commission_rate' => $organizer->getEffectiveCommissionRate(),
             'commission_mode' => $organizer->getEffectiveCommissionMode(),
+            // Minimul per bilet se aplică doar când e activ „calcul cu floor” pe organizator.
+            'commission_floor' => $organizer->commission_use_floor && (float) $organizer->fixed_commission_default > 0
+                ? (float) $organizer->fixed_commission_default
+                : null,
             'work_mode' => $organizer->work_mode,
             'terms' => [
                 'Comisionul se aplica doar biletelor vandute',

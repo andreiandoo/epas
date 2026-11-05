@@ -767,6 +767,24 @@ class Event extends Model
     }
 
     /**
+     * Modul de comision al evenimentului nu se mai schimbă după prima comandă plătită:
+     * rapoartele și deconturile îl recitesc din setări, nu din comenzi. Rambursările contează
+     * și ele (comisionul reținut se decontează în modul în care s-a vândut).
+     */
+    public function commissionModeLocked(): bool
+    {
+        return \Illuminate\Support\Facades\DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->where('ticket_types.event_id', $this->id)
+            ->whereIn('orders.status', array_merge(
+                \App\Services\Marketplace\SalesBreakdownService::PAID_ORDER_STATUSES,
+                ['refunded']
+            ))
+            ->exists();
+    }
+
+    /**
      * Commission mode for a decont that has no valid tickets left to read it
      * from (everything refunded). Ticket types can override the event's mode,
      * so take it from them, same "dominant" rule as the payout breakdown: one

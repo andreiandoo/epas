@@ -5496,6 +5496,21 @@ class EventResource extends Resource
                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Organizatorul selectat va primi plățile pentru acest eveniment', 'The selected organizer will receive payouts for this event'))
                                     ->prefixIcon('heroicon-m-building-office-2'),
 
+                                // Mod comision pe eveniment (îl alege și organizatorul la creare). Gol = ca la organizator.
+                                // Biletele cu comision propriu își păstrează modul lor.
+                                Forms\Components\Select::make('commission_mode')
+                                    ->label($t('Mod comision eveniment', 'Event commission mode'))
+                                    ->options([
+                                        'included' => $t('Inclus în preț', 'Included in price'),
+                                        'added_on_top' => $t('Adăugat peste preț', 'Added on top'),
+                                    ])
+                                    ->placeholder($t('Ca la organizator', 'Organizer default'))
+                                    ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
+                                    ->helperText(fn (?Event $record) => $record?->exists && $record->commissionModeLocked()
+                                        ? $t('Evenimentul are vânzări: schimbarea modului se reflectă în rapoarte și în deconturile noi.', 'The event has sales: changing the mode affects reports and new payouts.')
+                                        : $t('Se aplică biletelor fără comision personalizat.', 'Applies to ticket types without a custom commission.'))
+                                    ->prefixIcon('heroicon-m-receipt-percent'),
+
                                 Forms\Components\Placeholder::make('organizer_quick_info')
                                     ->hiddenLabel()
                                     ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))

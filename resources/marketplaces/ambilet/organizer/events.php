@@ -565,6 +565,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div class="pt-2 space-y-4 border-t border-gray-100">
                                 <p class="text-sm text-muted">Adauga cel putin un tip de bilet. Poti adauga mai multe categorii (ex: Early Bird, Standard, VIP).</p>
 
+                                <!-- Comision AmBilet: organizatorul alege doar modul, pentru tot evenimentul -->
+                                <div id="commission-mode-box" class="p-4 border rounded-xl border-border bg-gray-50">
+                                    <p class="text-sm font-semibold text-secondary">Comisionul AmBilet</p>
+                                    <p id="commission-terms" class="mt-0.5 text-xs text-muted">Se încarcă...</p>
+                                    <div class="grid gap-3 mt-3 md:grid-cols-2">
+                                        <label class="flex items-start gap-3 p-3 bg-white border cursor-pointer rounded-xl border-border commission-option">
+                                            <input type="radio" name="commission_mode" value="included" class="mt-1">
+                                            <span>
+                                                <span class="block text-sm font-medium text-secondary">Inclus în prețul biletului</span>
+                                                <span class="block text-xs text-muted">Clientul plătește prețul afișat; comisionul se reține din el.</span>
+                                            </span>
+                                        </label>
+                                        <label class="flex items-start gap-3 p-3 bg-white border cursor-pointer rounded-xl border-border commission-option">
+                                            <input type="radio" name="commission_mode" value="added_on_top" class="mt-1">
+                                            <span>
+                                                <span class="block text-sm font-medium text-secondary">Adăugat peste prețul biletului</span>
+                                                <span class="block text-xs text-muted">Clientul plătește prețul + comisionul; tu primești prețul întreg.</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <p id="commission-example" class="mt-3 text-xs text-muted"></p>
+                                    <p id="commission-locked-note" class="hidden mt-2 text-xs font-medium text-warning">Modul de comision nu se mai poate schimba după publicare sau după prima vânzare. Pentru modificări, contactează un operator AmBilet.</p>
+                                    <p class="mt-2 text-xs text-muted">Se aplică tuturor tipurilor de bilet din acest eveniment. Procentul și minimul per bilet sunt cele din contractul tău și nu pot fi modificate de aici.</p>
+                                </div>
+
                                 <div id="ticket-types-container" class="space-y-4">
                                     <!-- First ticket type (default) -->
                                     <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="0">
@@ -878,6 +903,77 @@ $scriptsExtra .= <<<'JS'
 document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 
 let ticketTypeCount = 1;
+
+// ==================== COMISION (mod pe eveniment) ====================
+// Organizatorul alege doar „inclus” / „peste”; procentul și minimul vin din contract.
+const commissionState = { contract: null, loading: null, eventMode: null, locked: false };
+
+function normalizeCommissionMode(mode) {
+    return (mode === 'on_top' || mode === 'added_on_top') ? 'added_on_top' : (mode === 'included' ? 'included' : null);
+}
+
+function loadCommissionTerms() {
+    if (commissionState.contract || commissionState.loading) return commissionState.loading || Promise.resolve();
+    commissionState.loading = AmbiletAPI.get('/organizer/contract')
+        .then(res => { if (res && res.success) commissionState.contract = res.data || {}; })
+        .catch(() => {})
+        .finally(() => { commissionState.loading = null; renderCommissionBox(); });
+    return commissionState.loading;
+}
+
+function commissionPerTicket(price) {
+    const c = commissionState.contract || {};
+    const rate = parseFloat(c.commission_rate) || 0;
+    const floor = parseFloat(c.commission_floor) || 0;
+    const pct = Math.round(price * rate) / 100;
+    return floor > 0 ? Math.max(pct, floor) : pct;
+}
+
+function renderCommissionBox() {
+    const box = document.getElementById('commission-mode-box');
+    if (!box) return;
+    const c = commissionState.contract;
+    const fmt = (v) => Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const termsEl = document.getElementById('commission-terms');
+    if (termsEl) {
+        termsEl.textContent = c
+            ? 'Comision: ' + (Number(c.commission_rate || 0).toLocaleString('ro-RO')) + '%'
+                + (c.commission_floor ? ', minim ' + fmt(c.commission_floor) + ' lei/bilet' : '') + '.'
+            : 'Comisionul din contractul tău.';
+    }
+
+    const selected = normalizeCommissionMode(commissionState.eventMode)
+        || normalizeCommissionMode(c?.commission_mode) || 'included';
+    box.querySelectorAll('[name="commission_mode"]').forEach(r => {
+        r.checked = r.value === selected;
+        r.disabled = commissionState.locked;
+        r.closest('.commission-option')?.classList.toggle('opacity-60', commissionState.locked && !r.checked);
+        r.closest('.commission-option')?.classList.toggle('border-primary', r.checked);
+    });
+    document.getElementById('commission-locked-note')?.classList.toggle('hidden', !commissionState.locked);
+
+    const exampleEl = document.getElementById('commission-example');
+    if (exampleEl) {
+        if (!c) { exampleEl.textContent = ''; return; }
+        const firstPrice = parseFloat(document.querySelector('[name^="ticket_price_"]')?.value || '');
+        const price = firstPrice > 0 ? firstPrice : 100;
+        const fee = commissionPerTicket(price);
+        exampleEl.textContent = selected === 'added_on_top'
+            ? 'Exemplu: bilet de ' + fmt(price) + ' lei → clientul plătește ' + fmt(price) + ' lei + ' + fmt(fee) + ' lei comision (plus TVA pe comision, unde se aplică); tu primești ' + fmt(price) + ' lei.'
+            : 'Exemplu: bilet de ' + fmt(price) + ' lei → clientul plătește ' + fmt(price) + ' lei; din ei se rețin ' + fmt(fee) + ' lei comision.';
+    }
+}
+
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.name === 'commission_mode' && !commissionState.locked) {
+        commissionState.eventMode = e.target.value;
+        renderCommissionBox();
+    }
+});
+document.addEventListener('input', (e) => {
+    if (e.target && e.target.name && e.target.name.startsWith('ticket_price_')) renderCommissionBox();
+});
 let descriptionEditor = null;
 let ticketTermsEditor = null;
 let thankYouEditor = null;
@@ -1162,9 +1258,13 @@ function showCreateForm() {
     initGenreSearch();
     initDragDrop();
     initShortDescWordCount();
+    loadCommissionTerms();
 }
 
 function resetFormState() {
+    commissionState.eventMode = null;
+    commissionState.locked = false;
+    renderCommissionBox();
     selectedGenres = [];
     selectedArtists = [];
     renderGenreTags();
@@ -1253,6 +1353,10 @@ async function loadEventForEdit(eventId) {
         }
 
         showCreateForm();
+
+        commissionState.eventMode = event.commission_mode || event.effective_commission_mode || null;
+        commissionState.locked = !!event.commission_mode_locked;
+        renderCommissionBox();
 
         history.replaceState({}, '', `/organizator/event/${eventId}?action=edit`);
 
@@ -1519,7 +1623,7 @@ async function loadEventForEdit(eventId) {
                     `;
                 } else {
                     container.innerHTML += `
-                        <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${i}">
+                        <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${i}" data-existing-id="${tt.id || ''}">
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-sm font-semibold text-secondary">Tip bilet #${i + 1}</h4>
                                 <button type="button" onclick="removeTicketType(this)" class="${removeBtn} text-red-400 hover:text-red-600 remove-ticket-btn">
@@ -2454,6 +2558,9 @@ function collectFormData() {
         const tPrice = item.querySelector(`[name="ticket_price_${i}"]`)?.value;
         if (tName && tPrice !== '') {
             const ticket = { name: tName, price: parseFloat(tPrice) };
+            // Id-ul tipului existent: serverul îl actualizează pe loc în loc să-l recreeze.
+            const existingId = parseInt(item.dataset.existingId || '', 10);
+            if (existingId > 0) ticket.id = existingId;
             const tQty = item.querySelector(`[name="ticket_quantity_${i}"]`)?.value;
             const tDesc = item.querySelector(`[name="ticket_desc_${i}"]`)?.value;
             const tMin = item.querySelector(`[name="ticket_min_${i}"]`)?.value;
@@ -2539,6 +2646,11 @@ function collectFormData() {
     if (maxTickets) data.max_tickets_per_order = parseInt(maxTickets);
 
     if (ticketTypes.length > 0) data.ticket_types = ticketTypes;
+
+    if (!commissionState.locked) {
+        const commissionMode = document.querySelector('[name="commission_mode"]:checked')?.value;
+        if (commissionMode) data.commission_mode = commissionMode;
+    }
 
     return data;
 }
