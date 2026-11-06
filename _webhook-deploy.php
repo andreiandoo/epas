@@ -38,7 +38,7 @@ define('DEPLOY_SECRET', (string) (getenv('DEPLOY_SECRET') ?: (is_file($deploySec
 // GitHub repo details
 define('GITHUB_USER', 'andreiandoo');
 define('GITHUB_REPO', 'epas');
-define('GITHUB_BRANCH', 'marketplace');
+define('GITHUB_BRANCH', 'ambilet');
 define('ZIP_URL', 'https://github.com/' . GITHUB_USER . '/' . GITHUB_REPO . '/archive/refs/heads/' . GITHUB_BRANCH . '.zip');
 
 // Deploy path (unde să extragă fișierele)
