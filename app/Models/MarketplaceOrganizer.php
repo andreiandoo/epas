@@ -674,7 +674,7 @@ class MarketplaceOrganizer extends Authenticatable
      *
      * @return array{net: float, paid: float, pending: float, available: float}
      */
-    public function deriveBalances(?\App\Services\Marketplace\SalesBreakdownService $service = null): array
+    public function deriveBalances(?\App\Services\Marketplace\SalesBreakdownService $service = null, bool $includePos = false): array
     {
         $service ??= app(\App\Services\Marketplace\SalesBreakdownService::class);
 
@@ -682,10 +682,13 @@ class MarketplaceOrganizer extends Authenticatable
             ->where('marketplace_client_id', $this->marketplace_client_id)
             ->get();
 
+        // POS sales are excluded by default: the organizer collected that
+        // money at the door and it never goes through a decont, so it is not
+        // something AmBilet owes. $includePos is only for "total sales" figures.
         $net = 0.0;
         foreach ($events as $event) {
             $settled = \App\Models\MarketplacePayout::eventHasLegacySettlement($event->id);
-            $breakdown = $service->build($event, excludeLegacyImport: !$settled);
+            $breakdown = $service->build($event, excludePos: ! $includePos, excludeLegacyImport: !$settled);
             $net += (float) ($breakdown['total_net'] ?? 0);
         }
 

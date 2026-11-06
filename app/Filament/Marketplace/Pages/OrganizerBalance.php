@@ -340,7 +340,11 @@ class OrganizerBalance extends Page
             $rows = [];
             foreach ($events as $event) {
                 $settled = MarketplacePayout::eventHasLegacySettlement($event->id);
-                $b = $service->build($event, excludeLegacyImport: ! $settled);
+                // Fără POS, ca la decont: banii de la ușă i-a încasat
+                // organizatorul, nu trec prin AmBilet. Netul POS se arată
+                // separat, doar informativ.
+                $b = $service->build($event, excludePos: true, excludeLegacyImport: ! $settled);
+                $pos = $service->build($event, onlyPos: true, excludeLegacyImport: ! $settled);
 
                 $title = is_array($event->title)
                     ? ($event->title['ro'] ?? $event->title['en'] ?? (collect($event->title)->first() ?: null))
@@ -363,6 +367,7 @@ class OrganizerBalance extends Page
                     'discount' => round((float) ($b['total_discount'] ?? 0), 2),
                     'extras' => round((float) ($b['total_extras'] ?? 0), 2),
                     'net' => round((float) ($b['total_net'] ?? 0), 2),
+                    'pos_net' => round((float) ($pos['total_net'] ?? 0), 2),
                 ];
             }
 
@@ -372,7 +377,7 @@ class OrganizerBalance extends Page
 
     protected function eventRowsCacheKey(): string
     {
-        return 'organizer_balance_page_events:' . $this->organizerId;
+        return 'organizer_balance_page_events:v2:' . $this->organizerId;
     }
 
     /**
@@ -429,7 +434,7 @@ class OrganizerBalance extends Page
             return $row;
         })
             // Evenimentele fără vânzări și fără deconturi nu spun nimic aici.
-            ->filter(fn ($r) => abs($r['net']) > 0.004 || $r['paid'] > 0 || $r['pending'] > 0 || abs($r['revenue']) > 0.004)
+            ->filter(fn ($r) => abs($r['net']) > 0.004 || $r['paid'] > 0 || $r['pending'] > 0 || abs($r['revenue']) > 0.004 || abs($r['pos_net'] ?? 0) > 0.004)
             ->sortByDesc('sort_date')
             ->values();
 

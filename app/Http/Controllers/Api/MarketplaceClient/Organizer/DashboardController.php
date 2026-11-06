@@ -155,7 +155,7 @@ class DashboardController extends BaseController
                 'to' => $toDate,
             ],
             'all_time' => [
-                'total_sales' => $organizer->deriveBalances()['net'],
+                'total_sales' => $organizer->deriveBalances(includePos: true)['net'],
                 'tickets_sold' => $allTimeTickets,
                 'views' => $allTimeViews,
                 'ongoing_events' => $upcomingEvents,

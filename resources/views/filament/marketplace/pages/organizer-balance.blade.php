@@ -16,7 +16,7 @@
                         <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format((float) $summary['net'], 2, ',', '.') }} RON</p>
                     </div>
                 </div>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Ce i se cuvine organizatorului din bilete, după comision, reduceri și taxe peste preț.</p>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Ce i se cuvine organizatorului din bilete vândute prin AmBilet, după comision, reduceri și taxe peste preț. Fără vânzările POS.</p>
             </div>
 
             <div class="{{ $card }}">
@@ -161,6 +161,7 @@
         @php
             $th = 'px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider';
             $td = 'px-4 py-3 text-sm text-right whitespace-nowrap';
+            $hasPos = $eventRows->contains(fn ($r) => abs($r['pos_net'] ?? 0) > 0.004);
         @endphp
         <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="w-full px-6 py-4 flex items-center justify-between gap-4 text-left" x-bind:class="open ? 'border-b border-gray-200 dark:border-gray-700' : ''">
@@ -170,7 +171,7 @@
                         Sold pe eveniment
                         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $eventRows->count() }})</span>
                     </h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Brut − comision − reduceri − taxe peste preț (asigurare, card cultural) = net. Net − plătit − în procesare = sold.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Brut − comision − reduceri − taxe peste preț (asigurare, card cultural) = net. Net − plătit − în procesare = sold.@if($hasPos) Vânzările POS le-a încasat organizatorul la ușă: nu intră în net și nici în sold.@endif</p>
                 </div>
                 <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
             </button>
@@ -194,6 +195,9 @@
                             <th class="{{ $th }} text-right">Plătit</th>
                             <th class="{{ $th }} text-right">În procesare</th>
                             <th class="{{ $th }} text-right">Sold</th>
+                            @if($hasPos)
+                                <th class="{{ $th }} text-right" title="Net din vânzări POS, încasat direct de organizator. Informativ, nu intră în sold.">POS (la organizator)</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -219,6 +223,9 @@
                                         <div class="text-[11px] font-normal">de regularizat</div>
                                     @endif
                                 </td>
+                                @if($hasPos)
+                                    <td class="{{ $td }} text-gray-500 dark:text-gray-400">{{ abs($row['pos_net'] ?? 0) > 0.004 ? number_format((float) $row['pos_net'], 2, ',', '.') : '—' }}</td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>
@@ -233,6 +240,9 @@
                             <td class="{{ $td }} font-semibold text-blue-600 dark:text-blue-400">{{ number_format((float) $eventRows->sum('paid'), 2, ',', '.') }}</td>
                             <td class="{{ $td }} font-semibold text-yellow-600 dark:text-yellow-400">{{ number_format((float) $eventRows->sum('pending'), 2, ',', '.') }}</td>
                             <td class="{{ $td }} font-semibold text-gray-900 dark:text-white">{{ number_format((float) $eventRows->sum('balance'), 2, ',', '.') }}</td>
+                            @if($hasPos)
+                                <td class="{{ $td }} font-semibold text-gray-500 dark:text-gray-400">{{ number_format((float) $eventRows->sum('pos_net'), 2, ',', '.') }}</td>
+                            @endif
                         </tr>
                         @if($orgWidePaid > 0 || $orgWidePending > 0)
                             <tr>
@@ -240,18 +250,21 @@
                                 <td class="{{ $td }} text-blue-600 dark:text-blue-400">{{ number_format((float) $orgWidePaid, 2, ',', '.') }}</td>
                                 <td class="{{ $td }} text-yellow-600 dark:text-yellow-400">{{ number_format((float) $orgWidePending, 2, ',', '.') }}</td>
                                 <td class="{{ $td }} text-gray-600 dark:text-gray-300">−{{ number_format((float) $orgWidePaid + $orgWidePending, 2, ',', '.') }}</td>
+                                @if($hasPos)<td></td>@endif
                             </tr>
                         @endif
                         @if($advanceOffset > 0.004)
                             <tr>
                                 <td class="px-4 py-2 text-gray-600 dark:text-gray-300" colspan="8">Deconturi acoperite din avans (avansul e numărat o singură dată)</td>
                                 <td class="{{ $td }} text-gray-600 dark:text-gray-300">+{{ number_format((float) $advanceOffset, 2, ',', '.') }}</td>
+                                @if($hasPos)<td></td>@endif
                             </tr>
                         @endif
                         @if($orgWidePaid > 0 || $orgWidePending > 0 || $advanceOffset > 0.004)
                             <tr>
                                 <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white" colspan="8">Sold disponibil</td>
                                 <td class="{{ $td }} font-semibold text-gray-900 dark:text-white">{{ number_format((float) $summary['available'], 2, ',', '.') }}</td>
+                                @if($hasPos)<td></td>@endif
                             </tr>
                         @endif
                     </tfoot>
