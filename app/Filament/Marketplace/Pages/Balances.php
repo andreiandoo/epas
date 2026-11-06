@@ -51,6 +51,27 @@ class Balances extends Page implements HasForms, HasTable
         };
     }
 
+    /** Header propriu: titlul în stânga, cardurile cu totaluri în dreapta. */
+    public function getHeader(): ?\Illuminate\Contracts\View\View
+    {
+        $totals = $this->baseQuery()
+            ->selectRaw('COALESCE(SUM(pending_balance), 0) as pending, COALESCE(SUM(available_balance), 0) as available')
+            ->toBase()
+            ->first();
+
+        $pending = (float) ($totals->pending ?? 0);
+        $available = (float) ($totals->available ?? 0);
+
+        return view('filament.marketplace.pages.balances-header', [
+            'heading' => $this->getHeading(),
+            'cards' => [
+                ['label' => 'În procesare', 'value' => $pending, 'color' => '#d97706'],
+                ['label' => 'Sold disponibil', 'value' => $available, 'color' => '#059669'],
+                ['label' => 'Total (procesare + disponibil)', 'value' => $pending + $available, 'color' => null],
+            ],
+        ]);
+    }
+
     /** Filtrele rapide de deasupra tabelului, cu numărul de organizatori. */
     public function quickFilters(): array
     {
