@@ -142,6 +142,54 @@ class MarketplacePanelProvider extends PanelProvider
                         ->buildCsvResponse($query, $filename);
                 })->name('filament.marketplace.tickets.export-csv');
 
+                // PDF-ul facturii din contabilitate (Oblio), servit cu numele
+                // AmBilet: „AMBFF… - firmă - data - oraș.pdf”. Dacă PDF-ul nu
+                // se poate lua, trimite la linkul original.
+                Route::get('/organizer-invoices/{invoice}/pdf', function (\Illuminate\Http\Request $request, int $invoice) {
+                    $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user()
+                        ?? auth()->user();
+                    $marketplace = ($admin && method_exists($admin, 'marketplaceClient'))
+                        ? $admin->marketplaceClient
+                        : null;
+                    if (! $marketplace) {
+                        abort(403);
+                    }
+
+                    $record = \App\Models\Invoice::where('marketplace_client_id', $marketplace->id)->findOrFail($invoice);
+                    $type = $request->query('type') === 'proforma' ? 'proforma' : 'fiscal';
+                    $url = $record->accountingPdfUrl($type);
+                    if (! $url) {
+                        abort(404, 'Factura nu are PDF în contabilitate.');
+                    }
+
+                    $meta = is_array($record->meta) ? $record->meta : [];
+                    $number = $type === 'proforma'
+                        ? ($meta['accounting_proforma']['invoice_number'] ?? $meta['accounting_proforma']['external_ref'] ?? null)
+                        : $record->accountingNumber();
+                    $fileName = $record->pdfFileName($number ?: null);
+
+                    try {
+                        $response = \Illuminate\Support\Facades\Http::timeout(30)->get($url);
+                        $body = $response->body();
+                        if (! $response->successful() || ! str_starts_with($body, '%PDF')) {
+                            return redirect()->away($url);
+                        }
+                    } catch (\Throwable $e) {
+                        return redirect()->away($url);
+                    }
+
+                    $disposition = $request->boolean('inline') ? 'inline' : 'attachment';
+
+                    return response($body, 200, [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => \Symfony\Component\HttpFoundation\HeaderUtils::makeDisposition(
+                            $disposition,
+                            $fileName,
+                            str_replace(['%', '/', '\\'], '', \Illuminate\Support\Str::ascii($fileName))
+                        ),
+                    ]);
+                })->whereNumber('invoice')->name('organizer-invoice.pdf');
+
                 Route::get('/marketplace-customers/{id}/login-as', function (int $id) {
                     $customer = \App\Models\MarketplaceCustomer::findOrFail($id);
                     $marketplace = \App\Models\MarketplaceClient::find($customer->marketplace_client_id);

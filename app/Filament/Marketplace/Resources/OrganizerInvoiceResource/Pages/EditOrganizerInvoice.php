@@ -555,10 +555,8 @@ class EditOrganizerInvoice extends EditRecord
             ->label('PDF Proformă')
             ->icon('heroicon-o-document-duplicate')
             ->color('gray')
-            ->url(function () {
-                $meta = $this->record->meta ?? [];
-                return $meta['accounting_proforma']['pdf_url'] ?? null;
-            })
+            // Prin ruta noastră, ca PDF-ul să aibă numele AmBilet la salvare.
+            ->url(fn () => url('/marketplace/organizer-invoices/' . $this->record->id . '/pdf?type=proforma&inline=1'))
             ->openUrlInNewTab()
             ->visible(fn () => !empty(($this->record->meta ?? [])['accounting_proforma']['pdf_url']));
 
@@ -566,10 +564,7 @@ class EditOrganizerInvoice extends EditRecord
             ->label('PDF Factură Fiscală')
             ->icon('heroicon-o-document-text')
             ->color('gray')
-            ->url(function () {
-                $meta = $this->record->meta ?? [];
-                return $meta['accounting']['pdf_url'] ?? null;
-            })
+            ->url(fn () => url('/marketplace/organizer-invoices/' . $this->record->id . '/pdf?inline=1'))
             ->openUrlInNewTab()
             ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['pdf_url']));
 

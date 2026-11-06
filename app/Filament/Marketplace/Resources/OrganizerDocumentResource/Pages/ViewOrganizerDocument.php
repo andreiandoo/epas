@@ -165,19 +165,28 @@ class ViewOrganizerDocument extends ViewRecord
                         Storage::disk('public')->delete($document->file_path);
                     }
 
-                    // Generate new filename
-                    $fileName = sprintf(
-                        '%s_%s_%s_%s.pdf',
-                        $document->document_type,
-                        $organizer->id,
-                        $event->id,
-                        now()->format('YmdHis')
-                    );
-                    $filePath = sprintf(
-                        'organizer-documents/%d/%s',
-                        $organizer->id,
-                        $fileName
-                    );
+                    // Generate new filename. Deconturile păstrează numele după
+                    // seria AmBilet; restul documentelor rămân ca înainte.
+                    $decontPayout = ($document->document_type === 'decont' && $document->marketplace_payout_id)
+                        ? \App\Models\MarketplacePayout::find($document->marketplace_payout_id)
+                        : null;
+                    if ($decontPayout) {
+                        $fileName = $decontPayout->decontPdfFileName();
+                        $filePath = \App\Models\MarketplacePayout::uniqueDocumentPath($organizer->id, $fileName);
+                    } else {
+                        $fileName = sprintf(
+                            '%s_%s_%s_%s.pdf',
+                            $document->document_type,
+                            $organizer->id,
+                            $event->id,
+                            now()->format('YmdHis')
+                        );
+                        $filePath = sprintf(
+                            'organizer-documents/%d/%s',
+                            $organizer->id,
+                            $fileName
+                        );
+                    }
 
                     // Save to storage
                     Storage::disk('public')->put($filePath, $pdfContent);

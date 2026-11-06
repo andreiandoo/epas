@@ -110,6 +110,43 @@ class Invoice extends Model
         return null;
     }
 
+    /**
+     * Numele PDF-ului facturii: „{număr AmBilet} - {firmă} - {data eveniment} - {oraș}.pdf”.
+     * Fără eveniment (facturi fără decont), doar număr și firmă.
+     */
+    public function pdfFileName(?string $number = null): string
+    {
+        $number ??= $this->accountingNumber() ?: (string) $this->number;
+        $payout = $this->payout;
+        if ($payout) {
+            return $payout->documentFileName($number, false);
+        }
+
+        $organizer = $this->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($this->marketplace_organizer_id)
+            : null;
+
+        return MarketplacePayout::buildFileName([
+            $number,
+            $organizer?->company_name ?: $organizer?->name,
+        ]);
+    }
+
+    /** URL-ul PDF-ului din contabilitate (fiscală, apoi proformă), dacă există. */
+    public function accountingPdfUrl(string $type = 'fiscal'): ?string
+    {
+        $meta = is_array($this->meta) ? $this->meta : [];
+        $keys = $type === 'proforma' ? ['accounting_proforma'] : ['accounting', 'accounting_proforma'];
+        foreach ($keys as $key) {
+            $url = $meta[$key]['pdf_url'] ?? null;
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        }
+
+        return null;
+    }
+
     public function anafQueue(): HasOne
     {
         return $this->hasOne(AnafQueue::class, 'invoice_id');

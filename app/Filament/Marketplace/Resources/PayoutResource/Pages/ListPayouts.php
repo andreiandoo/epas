@@ -1103,8 +1103,8 @@ class ListPayouts extends ListRecords
                         $pdf->setPaper('A4', $template->page_orientation ?? 'portrait');
                         $pdfContent = $pdf->output();
 
-                        $fileName = 'decont_' . $payout->reference . '_' . now()->format('Ymd_His') . '.pdf';
-                        $filePath = "organizer-documents/{$organizer->id}/{$fileName}";
+                        $fileName = $payout->decontPdfFileName();
+                        $filePath = \App\Models\MarketplacePayout::uniqueDocumentPath($organizer->id, $fileName);
                         \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $pdfContent);
 
                         \App\Models\OrganizerDocument::create([
@@ -1113,7 +1113,7 @@ class ListPayouts extends ListRecords
                             'event_id' => $payout->event_id,
                             'marketplace_payout_id' => $payout->id,
                             'tax_template_id' => $template->id,
-                            'title' => 'Decont ' . $payout->reference,
+                            'title' => 'Decont ' . ($payout->decont_series ?: $payout->reference),
                             'document_type' => 'decont',
                             'file_path' => $filePath,
                             'file_name' => $fileName,

@@ -206,18 +206,9 @@ class MarketplacePayoutObserver
 
             $pdfContent = $pdf->output();
 
-            // Generate filename
-            $fileName = sprintf(
-                'decont_%s_%s.pdf',
-                $payout->reference,
-                now()->format('YmdHis')
-            );
-
-            $filePath = sprintf(
-                'organizer-documents/%d/%s',
-                $organizer->id,
-                $fileName
-            );
+            // Numele fișierului: seria AmBilet - firmă - data - oraș - dN
+            $fileName = $payout->decontPdfFileName();
+            $filePath = MarketplacePayout::uniqueDocumentPath($organizer->id, $fileName);
 
             // Save to storage
             Storage::disk('public')->put($filePath, $pdfContent);
@@ -229,7 +220,7 @@ class MarketplacePayoutObserver
                 'event_id' => $payout->event_id,
                 'marketplace_payout_id' => $payout->id,
                 'tax_template_id' => $template->id,
-                'title' => 'Decont ' . $payout->reference,
+                'title' => 'Decont ' . ($payout->decont_series ?: $payout->reference),
                 'document_type' => 'decont',
                 'file_path' => $filePath,
                 'file_name' => $fileName,

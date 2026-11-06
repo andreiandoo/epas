@@ -637,6 +637,8 @@ class OrganizerInvoiceResource extends Resource
         if ($pdfUrl && static::isProviderTemplateEnabled($record->marketplace_client_id)) {
             $provider = ucfirst($meta['accounting']['provider'] ?? 'contabilitate');
             $accNumber = e($meta['accounting']['invoice_number'] ?? $record->number);
+            // Prin ruta noastră, ca PDF-ul să aibă numele AmBilet la salvare.
+            $pdfUrl = e(url('/marketplace/organizer-invoices/' . $record->id . '/pdf?inline=1'));
 
             return <<<HTML
             <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;text-align:center;padding:40px 20px;">

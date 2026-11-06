@@ -78,6 +78,9 @@
             'icon' => 'decont',
             'payout_id' => $payout?->id,
             'internal_ref' => $internalRef,
+            // La descărcare, deconturile primesc numele cu seria AmBilet
+            // (și cele generate înainte de schimbarea numelor).
+            'download_name' => ($payout && $internalRef !== null) ? $payout->decontPdfFileName() : ($doc->file_name ?? null),
         ]);
     }
 
@@ -106,6 +109,9 @@
             'badge_color' => 'amber',
             'icon' => 'invoice',
             'invoice_id' => $invoice->id,
+            'invoice_pdf_url' => $invoice->accountingPdfUrl()
+                ? url('/marketplace/organizer-invoices/' . $invoice->id . '/pdf')
+                : null,
         ]);
     }
 
@@ -180,9 +186,15 @@
 
             <div class="flex flex-col gap-1.5 flex-shrink-0">
                 @if($downloadUrl)
-                    <a href="{{ $downloadUrl }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 transition">
+                    <a href="{{ $downloadUrl }}" target="_blank" rel="noopener" @if(!empty($item['download_name'])) download="{{ $item['download_name'] }}" @endif class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 transition">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         Descarcă
+                    </a>
+                @endif
+                @if(!empty($item['invoice_pdf_url']))
+                    <a href="{{ $item['invoice_pdf_url'] }}" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700 transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Descarcă PDF
                     </a>
                 @endif
                 @if($invoiceUrl)

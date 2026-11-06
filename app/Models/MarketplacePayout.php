@@ -1300,6 +1300,92 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Al câtelea decont e acesta pe eveniment (1, 2, 3…): deconturile
+     * aprobate, în procesare sau finalizate ale organizatorului pe același
+     * eveniment, în ordinea creării. Avansurile și deconturile respinse nu
+     * se numără; decontul curent se numără mereu.
+     */
+    public function decontOrdinal(): int
+    {
+        if (! $this->event_id) {
+            return 1;
+        }
+
+        return static::query()
+            ->where('event_id', $this->event_id)
+            ->where('marketplace_organizer_id', $this->marketplace_organizer_id)
+            ->whereIn('status', ['approved', 'processing', 'completed'])
+            ->where(fn ($q) => $q->whereNull('source')->orWhere('source', '!=', 'advance'))
+            ->where('id', '<', $this->id)
+            ->count() + 1;
+    }
+
+    /**
+     * Nume de fișier pentru documentele decontului:
+     * „{număr} - {firmă organizator} - {data eveniment} - {oraș}[ - dN].pdf”,
+     * fără diacritice și fără caractere interzise în nume de fișiere.
+     */
+    public function documentFileName(string $number, bool $withOrdinal = false): string
+    {
+        $event = $this->event;
+        $date = $event?->event_date ?? $event?->range_start_date ?? $event?->starts_at;
+        $city = $event?->venue?->city ?: $event?->marketplaceCity?->name;
+        if (is_array($city)) {
+            $city = $city['ro'] ?? $city['en'] ?? (collect($city)->first() ?: null);
+        }
+
+        $party = $this->organizerInvoiceParty();
+        $company = $party['name'] ?: ($this->organizer?->company_name ?: $this->organizer?->name);
+
+        return self::buildFileName([
+            $number,
+            $company,
+            $date ? \Illuminate\Support\Carbon::parse($date)->format('d.m.Y') : null,
+            $city,
+            ($withOrdinal && $this->event_id) ? 'd' . $this->decontOrdinal() : null,
+        ]);
+    }
+
+    /** Numele PDF-ului de decont, după seria AmBilet (DECAMB…). */
+    public function decontPdfFileName(): string
+    {
+        return $this->documentFileName($this->decont_series ?: ($this->reference ?: 'Decont ' . $this->id), true);
+    }
+
+    /** @param  array<int, mixed>  $parts */
+    public static function buildFileName(array $parts): string
+    {
+        $clean = [];
+        foreach ($parts as $part) {
+            $part = \Illuminate\Support\Str::ascii((string) $part);
+            $part = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', "\0"], ' ', $part);
+            $part = trim(preg_replace('/\s+/', ' ', $part), " .-");
+            if ($part !== '') {
+                $clean[] = $part;
+            }
+        }
+
+        $name = \Illuminate\Support\Str::limit(implode(' - ', $clean) ?: 'document', 180, '');
+
+        return $name . '.pdf';
+    }
+
+    /**
+     * Calea pe disc pentru un document al organizatorului, cu numele dat.
+     * Dacă există deja un fișier cu același nume, îl pune într-un subfolder
+     * cu data generării, ca să nu-l suprascrie.
+     */
+    public static function uniqueDocumentPath(int $organizerId, string $fileName): string
+    {
+        $path = "organizer-documents/{$organizerId}/{$fileName}";
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            $path = "organizer-documents/{$organizerId}/" . now()->format('YmdHis') . "/{$fileName}";
+        }
+
+        return $path;
+    }
+
+    /**
      * MarketplaceRefundRequests explicitly attached to THIS payout (the
      * operator picked them in the manual modal / edit-tickets action).
      * Each linked refund's amount is deducted from this payout's net,
