@@ -1,6 +1,6 @@
 <?php
 require_once dirname(__DIR__) . '/includes/config.php';
-$pageTitle = 'Invita prieteni';
+$pageTitle = 'Invită prieteni';
 $currentPage = 'referrals';
 $cssBundle = 'account';
 require_once dirname(__DIR__) . '/includes/head.php';
@@ -13,20 +13,20 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <div class="absolute top-0 right-0 w-1/2 h-full opacity-30 bg-gradient-radial from-primary/50 to-transparent"></div>
                 <div class="relative z-10 grid gap-8 lg:grid-cols-2 lg:items-center">
                     <div>
-                        <h1 class="mb-4 text-2xl font-extrabold lg:text-3xl">Invita prieteni,<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-yellow-400">castiga puncte</span></h1>
-                        <p class="mb-6 text-gray-400">Primesti 100 de puncte pentru fiecare prieten care isi face cont si cumpara primul bilet. Prietenul tau primeste 50 de puncte pe care le poate folosi la prima achizitie!</p>
+                        <h1 class="mb-4 text-2xl font-extrabold lg:text-3xl">Invită prieteni,<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-yellow-400">câștigă puncte</span></h1>
+                        <p class="mb-6 text-gray-400">Primești 100 de puncte pentru fiecare prieten care își face cont și cumpără primul bilet. Prietenul tău primește 50 de puncte pe care le poate folosi la prima achiziție!</p>
                         <div class="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-white/10 backdrop-blur-sm">
                             <span class="text-3xl font-extrabold text-yellow-400">100 puncte</span>
-                            <span class="text-sm text-gray-400">pentru tine<strong class="block text-white">pentru fiecare invitatie</strong></span>
+                            <span class="text-sm text-gray-400">pentru tine<strong class="block text-white">pentru fiecare invitație</strong></span>
                         </div>
                     </div>
                     <div class="p-5 rounded-xl bg-white/5">
-                        <div class="mb-3 text-xs font-semibold tracking-widest text-gray-400 uppercase">Link-ul tau personal de invitatie</div>
+                        <div class="mb-3 text-xs font-semibold tracking-widest text-gray-400 uppercase">Link-ul tău personal de invitație</div>
                         <div class="flex gap-2 mb-4 mobile:flex-col">
                             <input type="text" class="flex-1 px-4 py-3 font-mono text-sm text-white border rounded-lg bg-white/10 border-white/20" id="referral-link" value="---" readonly>
                             <button class="flex items-center gap-2 px-5 py-3 font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:-translate-y-0.5" id="copy-btn">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                                Copiaza
+                                Copiază
                             </button>
                         </div>
                         <div class="flex gap-2">
@@ -54,33 +54,33 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <div class="text-3xl font-extrabold text-secondary" id="stat-invited">0</div>
                         <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     </div>
-                    <div class="text-sm text-muted">Prieteni invitati</div>
+                    <div class="text-sm text-muted">Prieteni invitați</div>
                 </div>
                 <div class="p-5 text-center bg-white border rounded-xl border-border">
                     <div class="flex items-center justify-center mx-auto gap-x-2">
                         <div class="text-3xl font-extrabold text-secondary" id="stat-completed">0</div>
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <div class="text-sm text-muted">Au cumparat bilete</div>
+                    <div class="text-sm text-muted">Au cumpărat bilete</div>
                 </div>
                 <div class="p-5 text-center bg-white border rounded-xl border-border">
                     <div class="flex items-center justify-center mx-auto gap-x-2">
                         <div class="text-3xl font-extrabold text-secondary" id="stat-pending">0</div>
                         <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <div class="text-sm text-muted">In asteptare</div>
+                    <div class="text-sm text-muted">În așteptare</div>
                 </div>
                 <div class="p-5 text-center bg-white border rounded-xl border-border">
                     <div class="flex items-center justify-center mx-auto gap-x-2">
                         <div class="text-3xl font-extrabold text-secondary" id="stat-credit">0</div>
                         <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <div class="text-sm text-muted">Puncte castigate</div>
+                    <div class="text-sm text-muted">Puncte câștigate</div>
                 </div>
             </div>
 
             <!-- How it Works -->
-            <h2 class="mb-4 text-lg font-bold text-secondary">Cum functioneaza</h2>
+            <h2 class="mb-4 text-lg font-bold text-secondary">Cum funcționează</h2>
             <div class="grid gap-6 mb-6 md:grid-cols-3">
                 <div class="relative p-6 pt-8 text-center bg-white border rounded-xl border-border">
                     <div class="absolute flex items-center justify-center w-8 h-8 text-sm font-bold text-white -translate-x-1/2 rounded-full -top-3 left-1/2 bg-gradient-to-r from-primary to-primary/80">1</div>
@@ -88,30 +88,30 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                     </div>
                     <h3 class="mb-2 font-semibold text-secondary">Distribuie link-ul</h3>
-                    <p class="text-sm text-muted">Trimite link-ul tau personal prietenilor prin orice metoda preferi</p>
+                    <p class="text-sm text-muted">Trimite link-ul tău personal prietenilor, pe orice cale preferi</p>
                 </div>
                 <div class="relative p-6 pt-8 text-center bg-white border rounded-xl border-border">
                     <div class="absolute flex items-center justify-center w-8 h-8 text-sm font-bold text-white -translate-x-1/2 rounded-full -top-3 left-1/2 bg-gradient-to-r from-primary to-primary/80">2</div>
                     <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-xl bg-surface">
                         <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
-                    <h3 class="mb-2 font-semibold text-secondary">Prietenul cumpara</h3>
-                    <p class="text-sm text-muted">Prietenul tau isi face cont si cumpara primul bilet cu 50 de puncte bonus</p>
+                    <h3 class="mb-2 font-semibold text-secondary">Prietenul cumpără</h3>
+                    <p class="text-sm text-muted">Prietenul tău își face cont și cumpără primul bilet cu 50 de puncte bonus</p>
                 </div>
                 <div class="relative p-6 pt-8 text-center bg-white border rounded-xl border-border">
                     <div class="absolute flex items-center justify-center w-8 h-8 text-sm font-bold text-white -translate-x-1/2 rounded-full -top-3 left-1/2 bg-gradient-to-r from-primary to-primary/80">3</div>
                     <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-xl bg-surface">
                         <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h3 class="mb-2 font-semibold text-secondary">Primesti puncte</h3>
-                    <p class="text-sm text-muted">100 de puncte se adauga automat in contul tau dupa achizitia prietenului</p>
+                    <h3 class="mb-2 font-semibold text-secondary">Primești puncte</h3>
+                    <p class="text-sm text-muted">100 de puncte se adaugă automat în contul tău după achiziția prietenului</p>
                 </div>
             </div>
 
             <!-- Referrals List -->
             <div class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
                 <div class="p-5 border-b border-border">
-                    <h2 class="font-semibold text-secondary">Prietenii invitati</h2>
+                    <h2 class="font-semibold text-secondary">Prietenii invitați</h2>
                 </div>
                 <div id="referrals-list">
                     <!-- Referrals will be loaded here -->
@@ -120,8 +120,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <div class="flex items-center justify-center w-20 h-20 mx-auto mb-4 rounded-full bg-surface">
                         <svg class="w-10 h-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     </div>
-                    <h3 class="mb-2 font-semibold text-secondary">Nu ai invitat inca pe nimeni</h3>
-                    <p class="text-muted">Distribuie link-ul tau pentru a incepe sa castigi puncte.</p>
+                    <h3 class="mb-2 font-semibold text-secondary">Nu ai invitat încă pe nimeni</h3>
+                    <p class="text-muted">Distribuie link-ul tău ca să începi să câștigi puncte.</p>
                 </div>
             </div>
 
@@ -134,10 +134,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <table class="w-full" id="credit-history-table">
                         <thead class="bg-surface">
                             <tr>
-                                <th class="px-5 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Tranzactie</th>
+                                <th class="px-5 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Tranzacție</th>
                                 <th class="px-5 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Data</th>
                                 <th class="px-5 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Suma</th>
-                                <th class="px-5 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Balanta</th>
+                                <th class="px-5 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Sold</th>
                             </tr>
                         </thead>
                         <tbody id="credit-history-body">
@@ -146,7 +146,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </table>
                 </div>
                 <div class="hidden p-10 text-center" id="empty-history">
-                    <p class="text-muted">Nu ai inca tranzactii in istoric.</p>
+                    <p class="text-muted">Nu ai încă tranzacții în istoric.</p>
                 </div>
             </div>
 <?php 
@@ -195,7 +195,7 @@ const ReferralsPage = {
         if (code) {
             document.getElementById('referral-link').value = this.buildReferralLink(code);
         } else {
-            document.getElementById('referral-link').value = 'Nu ai inca un cod de referral';
+            document.getElementById('referral-link').value = 'Nu ai încă un cod de invitație';
         }
     },
 
@@ -232,16 +232,16 @@ const ReferralsPage = {
                     <div class="text-sm text-muted">${ref.email}</div>
                 </div>
                 <div class="text-right">
-                    <div class="text-xs text-muted">Inregistrat</div>
+                    <div class="text-xs text-muted">Înregistrat</div>
                     <div class="text-sm font-medium text-secondary">${ref.date}</div>
                 </div>
                 <span class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full ${ref.completed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
                     ${ref.completed ? '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>' : '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'}
-                    ${ref.completed ? 'Completat' : 'In asteptare'}
+                    ${ref.completed ? 'Finalizat' : 'În așteptare'}
                 </span>
                 <div class="text-right min-w-[80px]">
                     <div class="font-bold ${ref.completed ? 'text-green-600' : 'text-gray-400'}">${ref.completed ? '+100 puncte' : '—'}</div>
-                    <div class="text-xs text-muted">${ref.completed ? 'puncte primite' : 'nu a cumparat'}</div>
+                    <div class="text-xs text-muted">${ref.completed ? 'puncte primite' : 'nu a cumpărat'}</div>
                 </div>
             </div>
         `).join('');
@@ -287,7 +287,7 @@ const ReferralsPage = {
                 const btn = document.getElementById('copy-btn');
                 btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copiat!';
                 setTimeout(() => {
-                    btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copiaza';
+                    btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copiază';
                 }, 2000);
                 AmbiletNotifications.success('Link copiat!');
             }).catch(() => {
@@ -308,15 +308,15 @@ function shareOnFacebook() {
 function shareOnWhatsApp() {
     const link = document.getElementById('referral-link').value;
     const url = link.startsWith('http') ? link : 'https://' + link;
-    const text = 'Inregistreaza-te folosind link-ul meu si primesti 50 de puncte bonus la prima achizitie! ' + url;
+    const text = 'Înregistrează-te folosind link-ul meu și primești 50 de puncte bonus la prima achiziție! ' + url;
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
 }
 
 function shareByEmail() {
     const link = document.getElementById('referral-link').value;
     const url = link.startsWith('http') ? link : 'https://' + link;
-    const subject = 'Ti-am trimis puncte bonus pentru bilete!';
-    const body = 'Salut!\n\nInregistreaza-te folosind link-ul meu si primesti 50 de puncte bonus la prima achizitie de bilete!\n\n' + url + '\n\nNe vedem la concert!';
+    const subject = 'Ți-am trimis puncte bonus pentru bilete!';
+    const body = 'Salut!\n\nÎnregistrează-te folosind link-ul meu și primești 50 de puncte bonus la prima achiziție de bilete!\n\n' + url + '\n\nNe vedem la concert!';
     window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 
