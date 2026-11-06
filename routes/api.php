@@ -1971,6 +1971,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.events.status');
         Route::post('/events/{event}/ticket-types/{ticketType}/sold-out', [OrganizerEventsController::class, 'markTicketTypeSoldOut'])
             ->name('api.marketplace-client.organizer.events.ticket-type.sold-out');
+        Route::post('/events/{event}/ticket-types/{ticketType}/pos', [OrganizerEventsController::class, 'updatePosTicket'])
+            ->name('api.marketplace-client.organizer.events.ticket-type.pos');
         Route::post('/events/{event}/images', [OrganizerEventsController::class, 'uploadImages'])
             ->name('api.marketplace-client.organizer.events.images');
         Route::delete('/events/{event}', [OrganizerEventsController::class, 'destroy'])

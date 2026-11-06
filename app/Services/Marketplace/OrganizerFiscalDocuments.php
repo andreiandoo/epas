@@ -294,6 +294,37 @@ class OrganizerFiscalDocuments
     }
 
     /**
+     * Alerta din formularul de bilete: există o cerere de vizare, iar biletele nu
+     * mai corespund ei. O cerere veche, fără amprentă, nu poate fi comparată; atunci
+     * contează doar dacă salvarea a schimbat ceva ($ticketsChanged).
+     */
+    public function cerereRefreshNotice(Event $event, bool $ticketsChanged = true): ?array
+    {
+        try {
+            if ($event->is_cancelled || $this->isEnded($event)) {
+                return null;
+            }
+            $cerere = $this->latestByType($this->documents($event))['cerere_avizare'] ?? null;
+            if (! $cerere) {
+                return null;
+            }
+            $needs = $cerere['fingerprint'] ? $this->isStale($event, $cerere) : $ticketsChanged;
+            if (! $needs) {
+                return null;
+            }
+
+            return [
+                'generated_at' => MarketplaceTz::fmt($cerere['generated_at'], 'd.m.Y H:i', $event->marketplaceClient),
+                'url' => '/organizator/documente?event=' . $event->id,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Cerere refresh notice failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
      * Generate the group's documents (one, or impozit + PV together).
      *
      * @return array{success: bool, message: string}

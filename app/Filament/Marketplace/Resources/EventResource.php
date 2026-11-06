@@ -3079,7 +3079,7 @@ class EventResource extends Resource
                                                 empty($component->getState()[$arguments['item'] ?? '']['id'] ?? null)
                                                     ? $t('Salvează întâi biletul, apoi poți crea varianta POS', 'Save the ticket first, then create the POS variant')
                                                     : $t('Creează varianta POS (vânzare doar din aplicație, comision inclus în preț)', 'Create POS variant (app-only, commission included in price)'))
-                                            ->action(function (array $arguments, Forms\Components\Repeater $component, \Livewire\Component $livewire) use ($t, $marketplace) {
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component, \Livewire\Component $livewire) use ($t) {
                                                 $state = $component->getState();
                                                 $itemKey = $arguments['item'];
                                                 $src = $state[$itemKey] ?? null;
@@ -3089,7 +3089,7 @@ class EventResource extends Resource
 
                                                 $new = $src;
                                                 $new['id'] = null;
-                                                $new['name'] = 'POS ' . $srcName;
+                                                $new['name'] = \App\Services\Marketplace\PosTwinTicketService::posName($srcName);
                                                 $new['sku'] = '';
                                                 $new['quota_sold'] = 0;
                                                 $new['series_start'] = null;
@@ -3138,17 +3138,9 @@ class EventResource extends Resource
                                                 $new['meta'] = $meta;
 
                                                 // Comision: aceeasi valoare ca originalul, dar mereu inclus in pret.
-                                                // Pe "Mosteneste" modul e ignorat la calcul, deci il facem explicit.
-                                                $type = $src['commission_type'] ?? null;
-                                                if (in_array($type, ['percentage', 'fixed', 'both'], true)) {
-                                                    $new['commission_mode'] = 'included';
-                                                } else {
-                                                    $organizerId = data_get($livewire, 'data.marketplace_organizer_id') ?? (method_exists($livewire, 'getRecord') ? $livewire->getRecord()?->marketplace_organizer_id : null);
-                                                    $inh = static::resolveInheritedCommission($organizerId, $marketplace);
-                                                    $new['commission_type'] = 'percentage';
-                                                    $new['commission_rate'] = $inh['rate'];
-                                                    $new['commission_fixed'] = null;
-                                                    $new['commission_mode'] = 'included';
+                                                $eventRecord = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
+                                                if ($eventRecord instanceof Event) {
+                                                    $new = array_merge($new, \App\Services\Marketplace\PosTwinTicketService::commission($eventRecord, $src));
                                                 }
 
                                                 // Inserat imediat sub original

@@ -2149,46 +2149,7 @@ class EditEvent extends EditRecord
      */
     protected function copyPosTwinSeating(): void
     {
-        try {
-            $twins = \App\Models\TicketType::where('event_id', $this->record->id)
-                ->whereNotNull('meta->pos_source_ticket_type_id')
-                ->get();
-
-            foreach ($twins as $twin) {
-                $meta = is_array($twin->meta) ? $twin->meta : [];
-                if (!empty($meta['pos_seating_copied'])) {
-                    continue;
-                }
-                $source = \App\Models\TicketType::where('event_id', $this->record->id)
-                    ->find((int) $meta['pos_source_ticket_type_id']);
-                if (!$source) {
-                    continue;
-                }
-
-                $rowIds = $source->seatingRows()->pluck('seating_rows.id')->all();
-                $sectionIds = $source->seatingSections()->pluck('seating_sections.id')->all();
-                $gaIds = $source->generalAccessSections()->pluck('seating_sections.id')->all();
-                if (!$rowIds && !$sectionIds && !$gaIds) {
-                    continue; // originalul nu are alocare; reincercam la urmatoarea salvare
-                }
-
-                // Daca twin-ul are deja alocare proprie, nu o atingem
-                $hasOwn = $twin->seatingRows()->exists()
-                    || $twin->seatingSections()->exists()
-                    || $twin->generalAccessSections()->exists();
-                if (!$hasOwn) {
-                    $twin->seatingRows()->syncWithoutDetaching($rowIds);
-                    $twin->seatingSections()->syncWithoutDetaching($sectionIds);
-                    $twin->generalAccessSections()->syncWithoutDetaching($gaIds);
-                }
-
-                $meta['pos_seating_copied'] = true;
-                $twin->meta = $meta;
-                $twin->saveQuietly();
-            }
-        } catch (\Throwable $e) {
-            \Log::warning('POS twin seating copy failed', ['event_id' => $this->record->id, 'error' => $e->getMessage()]);
-        }
+        \App\Services\Marketplace\PosTwinTicketService::copyPendingSeating($this->record);
     }
 
     /** Captures the event's Sold Out state before the save, for the cascade in afterSave(). */

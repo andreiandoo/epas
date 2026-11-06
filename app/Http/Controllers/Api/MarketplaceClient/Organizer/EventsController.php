@@ -190,6 +190,13 @@ class EventsController extends BaseController
             'ticket_types.*.quantity' => 'nullable|integer|min:1',
             'ticket_types.*.min_per_order' => 'nullable|integer|min:1',
             'ticket_types.*.max_per_order' => 'nullable|integer|min:1',
+            // Varianta POS a tipului de bilet (vânzare doar din aplicație, comision inclus)
+            'ticket_types.*.is_pos' => 'nullable|boolean',
+            'ticket_types.*.pos' => 'nullable|array',
+            'ticket_types.*.pos.enabled' => 'required_with:ticket_types.*.pos|boolean',
+            'ticket_types.*.pos.name' => 'nullable|string|max:250',
+            'ticket_types.*.pos.price' => 'nullable|numeric|min:0',
+            'ticket_types.*.pos.quantity' => 'nullable|integer|min:1',
         ] + $this->freeWithCodeValidationRules();
 
         $validated = $request->validate($rules);
@@ -280,7 +287,7 @@ class EventsController extends BaseController
             // organizers don't have to fill those fields per ticket type.
             $defaultMaxPerOrder = (int) ($validated['max_tickets_per_order'] ?? 10);
             foreach ($paidTicketRows as $index => $ticketTypeData) {
-                TicketType::create([
+                $createdTicketType = TicketType::create([
                     'event_id' => $event->id,
                     'name' => $ticketTypeData['name'],
                     'description' => $ticketTypeData['description'] ?? null,
@@ -292,6 +299,7 @@ class EventsController extends BaseController
                     'quota_sold' => 0,
                     'status' => 'active',
                 ]);
+                $this->applyPosRow($createdTicketType, $ticketTypeData);
             }
 
             // Free-with-code ticket types (created after the regular ones so
@@ -396,6 +404,13 @@ class EventsController extends BaseController
             'ticket_types.*.quantity' => 'nullable|integer|min:1',
             'ticket_types.*.min_per_order' => 'nullable|integer|min:1',
             'ticket_types.*.max_per_order' => 'nullable|integer|min:1',
+            // Varianta POS a tipului de bilet (vânzare doar din aplicație, comision inclus)
+            'ticket_types.*.is_pos' => 'nullable|boolean',
+            'ticket_types.*.pos' => 'nullable|array',
+            'ticket_types.*.pos.enabled' => 'required_with:ticket_types.*.pos|boolean',
+            'ticket_types.*.pos.name' => 'nullable|string|max:250',
+            'ticket_types.*.pos.price' => 'nullable|numeric|min:0',
+            'ticket_types.*.pos.quantity' => 'nullable|integer|min:1',
         ], $this->freeWithCodeValidationRules());
 
         $validated = $request->validate($rules);
@@ -606,6 +621,9 @@ class EventsController extends BaseController
 
             return $this->success([
                 'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists', 'venue'])),
+                'cerere_refresh' => $ticketTypesData !== null
+                    ? app(\App\Services\Marketplace\OrganizerFiscalDocuments::class)->cerereRefreshNotice($event->fresh(), true)
+                    : null,
             ], 'Event updated');
 
         } catch (\Exception $e) {
@@ -625,9 +643,15 @@ class EventsController extends BaseController
      */
     protected function syncDraftTicketTypes(Event $event, array $rows, int $defaultMaxPerOrder): void
     {
+        // Gemenii POS se gestionează prin rândul originalului (cheia `pos`), iar
+        // Test POS nu apare în formular. Niciunul nu se șterge doar pentru că lipsește
+        // din payload — un formular vechi deschis în browser nu-i trimite.
+        $posTwinIds = $this->posTwinTicketTypeIds($event);
         $protectedIds = array_merge(
             $this->freeWithCodeTicketTypeIds($event),
-            $this->invitationTicketTypeIds($event)
+            $this->invitationTicketTypeIds($event),
+            $this->testPosTicketTypeIds($event),
+            $posTwinIds
         );
         $existing = $event->ticketTypes()
             ->when(!empty($protectedIds), fn ($q) => $q->whereNotIn('id', $protectedIds))
@@ -638,29 +662,35 @@ class EventsController extends BaseController
         $toSave = [];
         foreach ($rows as $row) {
             $id = isset($row['id']) ? (int) $row['id'] : 0;
+            // Rând cu id-ul unui tip protejat (formular vechi) → ignorat, nu recreat.
+            if ($id && in_array($id, $protectedIds, true)) {
+                continue;
+            }
             $ticketType = ($id && $existing->has($id) && !in_array($id, $keptIds, true)) ? $existing->get($id) : null;
+            $name = $row['name'];
+            if (!empty($row['is_pos']) || ($ticketType && $ticketType->is_entry_ticket)) {
+                $name = \App\Services\Marketplace\PosTwinTicketService::posName($name);
+            }
 
             if ($ticketType) {
                 $keptIds[] = $id;
                 $ticketType->fill([
-                    'name' => $row['name'],
+                    'name' => $name,
                     'description' => $row['description'] ?? null,
                     'price_max' => $row['price'],
                     'capacity' => $row['quantity'] ?? null,
                     'min_per_order' => $row['min_per_order'] ?? 1,
                     'max_per_order' => $row['max_per_order'] ?? $defaultMaxPerOrder,
                 ]);
-                if ($ticketType->isDirty()) {
-                    $toSave[] = $ticketType;
-                }
+                $toSave[] = [$ticketType, $row];
                 continue;
             }
 
             // Use virtual price_max / capacity (mass-assignable) so the
             // mutators populate price_cents / quota_total correctly.
-            $toSave[] = new TicketType([
+            $toSave[] = [new TicketType([
                 'event_id' => $event->id,
-                'name' => $row['name'],
+                'name' => $name,
                 'description' => $row['description'] ?? null,
                 'currency' => 'RON',
                 'price_max' => $row['price'],
@@ -669,17 +699,106 @@ class EventsController extends BaseController
                 'max_per_order' => $row['max_per_order'] ?? $defaultMaxPerOrder,
                 'quota_sold' => 0,
                 'status' => 'active',
-            ]);
+            ]), $row];
         }
 
-        // Întâi ștergerile, apoi salvările.
+        // Întâi ștergerile, apoi salvările. Geamănul POS al unui bilet scos pleacă odată cu el.
         $removedIds = $existing->keys()->diff($keptIds)->all();
         if (!empty($removedIds)) {
+            foreach ($event->ticketTypes()->whereIn('id', $posTwinIds)->get() as $twin) {
+                if (in_array((int) ($twin->meta['pos_source_ticket_type_id'] ?? 0), array_map('intval', $removedIds), true)) {
+                    $this->removeOrStopPosTwin($twin);
+                }
+            }
             $event->ticketTypes()->whereIn('id', $removedIds)->delete();
         }
-        foreach ($toSave as $ticketType) {
-            $ticketType->save();
+        foreach ($toSave as [$ticketType, $row]) {
+            if (!$ticketType->exists || $ticketType->isDirty()) {
+                $ticketType->save();
+            }
+            $this->applyPosRow($ticketType, $row);
         }
+    }
+
+    /**
+     * Cheia `pos` a unui rând de bilet: creează / actualizează / oprește geamănul POS.
+     * Fără cheia `pos` (formular vechi) geamănul rămâne neatins. Numele, descrierea
+     * și restul vin de la original; organizatorul alege doar numele (după „POS ”),
+     * prețul și stocul.
+     */
+    protected function applyPosRow(TicketType $source, array $row): void
+    {
+        if (!isset($row['pos']) || !is_array($row['pos']) || $source->is_entry_ticket) {
+            return;
+        }
+        $pos = $row['pos'];
+        $twin = \App\Services\Marketplace\PosTwinTicketService::findTwin($source);
+        $enabled = !empty($pos['enabled']);
+        $quantityGiven = array_key_exists('quantity', $pos);
+
+        if (!$enabled) {
+            if ($twin) {
+                $this->removeOrStopPosTwin($twin);
+            }
+            return;
+        }
+
+        if (!$twin) {
+            \App\Services\Marketplace\PosTwinTicketService::createTwin(
+                $source,
+                $pos['name'] ?? null,
+                $pos['price'] ?? null,
+                $pos['quantity'] ?? null,
+                $quantityGiven
+            );
+            return;
+        }
+
+        $twin->fill([
+            'name' => \App\Services\Marketplace\PosTwinTicketService::posName(filled($pos['name'] ?? null) ? $pos['name'] : \App\Services\Marketplace\PosTwinTicketService::plainName($source)),
+            'description' => $source->description,
+            'price_max' => $pos['price'] ?? ((int) $twin->price_cents) / 100,
+            'is_active' => true,
+        ]);
+        if ($quantityGiven) {
+            $twin->capacity = $pos['quantity'];
+        }
+        if ($twin->isDirty()) {
+            $twin->save();
+        }
+    }
+
+    /** Pe ciornă geamănul fără vânzări se șterge; cu vânzări doar se oprește. */
+    protected function removeOrStopPosTwin(TicketType $twin): void
+    {
+        if (\App\Services\Marketplace\PosTwinTicketService::soldCount($twin) === 0
+            && !\DB::table('order_items')->where('ticket_type_id', $twin->id)->exists()) {
+            $twin->delete();
+            return;
+        }
+        if ($twin->status !== 'hidden') {
+            $twin->update(['is_active' => false]);
+        }
+    }
+
+    protected function posTwinTicketTypeIds(Event $event): array
+    {
+        return TicketType::where('event_id', $event->id)
+            ->whereNotNull('meta->pos_source_ticket_type_id')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    protected function testPosTicketTypeIds(Event $event): array
+    {
+        return TicketType::where('event_id', $event->id)
+            ->get(['id', 'name', 'meta'])
+            ->filter(fn (TicketType $tt) => $tt->isTestPos())
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
     }
 
     /**
@@ -708,6 +827,9 @@ class EventsController extends BaseController
 
         return $this->success([
             'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'eventGenres', 'artists', 'venue'])),
+            'cerere_refresh' => !empty($validated['ticket_types'])
+                ? app(\App\Services\Marketplace\OrganizerFiscalDocuments::class)->cerereRefreshNotice($event->fresh(), true)
+                : null,
         ], 'Modificările au fost publicate');
     }
 
@@ -985,6 +1107,136 @@ class EventsController extends BaseController
             'ticket_type_id' => $ticketType->id,
             'is_sold_out' => true,
         ], 'Tipul de bilet a fost declarat sold-out.');
+    }
+
+    /**
+     * Varianta POS a unui tip de bilet, salvată imediat (și pe evenimente publicate:
+     * biletul POS nu apare pe site, deci nu trece prin aprobare). {ticketType} poate
+     * fi originalul sau chiar biletul POS. enabled=false: pe ciornă se șterge (dacă
+     * nu are vânzări), pe eveniment publicat doar se oprește.
+     */
+    public function updatePosTicket(Request $request, int $eventId, int $ticketTypeId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $ticketType = $event->ticketTypes()->where('id', $ticketTypeId)->first();
+        if (!$ticketType) {
+            return $this->error('Ticket type not found', 404);
+        }
+        $meta = is_array($ticketType->meta) ? $ticketType->meta : [];
+        if ($ticketType->isTestPos() || !empty($meta['is_invitation']) || $ticketType->isFreeWithCode()) {
+            return $this->error('Acest tip de bilet nu poate avea variantă POS.', 422);
+        }
+
+        $validated = $request->validate([
+            'enabled' => 'required|boolean',
+            'name' => 'nullable|string|max:250',
+            'price' => 'nullable|numeric|min:0|required_if:enabled,true',
+            'quantity' => 'nullable|integer|min:1',
+        ], [
+            'price.required_if' => 'Completează prețul la intrare.',
+            'price.min' => 'Prețul nu poate fi negativ.',
+            'quantity.min' => 'Stocul trebuie să fie cel puțin 1 (sau gol, pentru nelimitat).',
+        ]);
+
+        $svc = \App\Services\Marketplace\PosTwinTicketService::class;
+        if ($ticketType->is_entry_ticket) {
+            $posTicket = $ticketType;
+            $sourceId = (int) ($meta['pos_source_ticket_type_id'] ?? 0);
+            $source = $sourceId ? $event->ticketTypes()->where('id', $sourceId)->first() : null;
+        } else {
+            $source = $ticketType;
+            $posTicket = $svc::findTwin($ticketType);
+        }
+
+        $quantityGiven = $request->exists('quantity');
+        $quantity = $validated['quantity'] ?? null;
+
+        try {
+            if (!$validated['enabled']) {
+                if ($posTicket) {
+                    if ($event->is_published) {
+                        $posTicket->update(['is_active' => false]);
+                    } else {
+                        $this->removeOrStopPosTwin($posTicket);
+                    }
+                }
+                $action = 'stopped';
+            } elseif (!$posTicket) {
+                $posTicket = $svc::createTwin($source, $validated['name'] ?? null, $validated['price'], $quantity, $quantityGiven);
+                $action = 'created';
+            } else {
+                $sold = $svc::soldCount($posTicket);
+                if ($quantityGiven && $quantity !== null && $quantity < $sold) {
+                    return $this->error("Stocul nu poate fi mai mic decât biletele deja vândute ({$sold}).", 422, [
+                        'quantity' => ["Minim {$sold} (bilete deja vândute)."],
+                    ]);
+                }
+                $baseName = filled($validated['name'] ?? null)
+                    ? $validated['name']
+                    : ($source ? $svc::plainName($source) : $svc::stripPrefix($svc::plainName($posTicket)));
+                $posTicket->fill([
+                    'name' => $svc::posName($baseName),
+                    'price_max' => $validated['price'],
+                    'is_active' => true,
+                ]);
+                if ($quantityGiven) {
+                    $posTicket->capacity = $quantity;
+                }
+                if ($posTicket->isDirty()) {
+                    $posTicket->save();
+                }
+                $action = 'updated';
+            }
+        } catch (\Exception $e) {
+            return $this->error('Nu am putut salva biletul POS: ' . $e->getMessage(), 500);
+        }
+
+        Log::channel('marketplace')->info('Organizer POS ticket ' . $action, [
+            'organizer_id' => $organizer->id,
+            'event_id' => $event->id,
+            'ticket_type_id' => $posTicket?->id,
+            'source_ticket_type_id' => $source?->id,
+            'name' => $posTicket?->exists ? $svc::plainName($posTicket) : null,
+            'price' => $validated['price'] ?? null,
+            'quantity' => $quantityGiven ? $quantity : 'unchanged',
+        ]);
+
+        $posTicket = $posTicket?->exists ? $posTicket->fresh() : null;
+
+        return $this->success([
+            'pos' => $posTicket ? $this->formatPosTicket($posTicket) : null,
+            'cerere_refresh' => app(\App\Services\Marketplace\OrganizerFiscalDocuments::class)->cerereRefreshNotice($event->fresh()),
+        ], match ($action) {
+            'created' => 'Biletul POS a fost creat.',
+            'stopped' => $event->is_published ? 'Vânzarea la intrare a fost oprită.' : 'Biletul POS a fost scos.',
+            default => 'Biletul POS a fost salvat.',
+        });
+    }
+
+    protected function formatPosTicket(TicketType $tt): array
+    {
+        $svc = \App\Services\Marketplace\PosTwinTicketService::class;
+        $quota = $tt->quota_total;
+
+        return [
+            'id' => $tt->id,
+            'name' => $svc::plainName($tt),
+            'name_suffix' => $svc::stripPrefix($svc::plainName($tt)),
+            'price' => ((int) $tt->price_cents) / 100,
+            'quantity' => ($quota === null || (int) $quota < 0) ? null : (int) $quota,
+            'quantity_sold' => $svc::soldCount($tt),
+            'is_active' => $tt->status === 'active',
+            'source_id' => (int) (($tt->meta ?? [])['pos_source_ticket_type_id'] ?? 0) ?: null,
+        ];
     }
 
     /**
@@ -5594,6 +5846,8 @@ class EventsController extends BaseController
                     'free_with_code' => $freeWithCode,
                     // The edit form skips it (invitations come from "Invitații").
                     'is_invitation' => (bool) ($tt->meta['is_invitation'] ?? false),
+                    // Varianta POS: formularul o afișează sub biletul original.
+                    'pos_source_ticket_type_id' => (int) ($tt->meta['pos_source_ticket_type_id'] ?? 0) ?: null,
                 ];
                 });
             })(),

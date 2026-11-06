@@ -186,7 +186,7 @@ class EventLiveEditService
                 // in this same loop) — skip. Keeps additive-only semantics.
                 continue;
             }
-            \App\Models\TicketType::create([
+            $created = \App\Models\TicketType::create([
                 'event_id' => $event->id,
                 'name' => $name,
                 'description' => $row['description'] ?? null,
@@ -199,6 +199,19 @@ class EventLiveEditService
                 'status' => 'active',
             ]);
             $existingSet[$key] = true;
+
+            // Bifa „Vinde și la intrare” pe un bilet nou → geamănul POS, creat odată cu el.
+            $pos = $row['pos'] ?? null;
+            if (is_array($pos) && !empty($pos['enabled'])) {
+                $twin = PosTwinTicketService::createTwin(
+                    $created,
+                    $pos['name'] ?? null,
+                    $pos['price'] ?? null,
+                    $pos['quantity'] ?? null,
+                    array_key_exists('quantity', $pos)
+                );
+                $existingSet[mb_strtolower(PosTwinTicketService::plainName($twin))] = true;
+            }
         }
     }
 

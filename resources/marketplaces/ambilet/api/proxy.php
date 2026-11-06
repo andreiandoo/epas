@@ -3679,6 +3679,20 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.ticket-type.pos':
+        $eventId = $_GET['event_id'] ?? '';
+        $ticketTypeId = $_GET['ticket_type_id'] ?? '';
+        if (!$eventId || !$ticketTypeId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id or ticket_type_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/ticket-types/' . urlencode($ticketTypeId) . '/pos';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.seating-map':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {

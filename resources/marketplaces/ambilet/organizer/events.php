@@ -932,6 +932,7 @@ function commissionPerTicket(price) {
 function renderCommissionBox() {
     const box = document.getElementById('commission-mode-box');
     if (!box) return;
+    if (typeof renderAllPosCommissions === 'function') renderAllPosCommissions();
     const c = commissionState.contract;
     const fmt = (v) => Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -973,6 +974,10 @@ document.addEventListener('change', (e) => {
 });
 document.addEventListener('input', (e) => {
     if (e.target && e.target.name && e.target.name.startsWith('ticket_price_')) renderCommissionBox();
+    if (e.target && e.target.name && e.target.name.startsWith('ticket_name_')) {
+        const block = e.target.closest('.ticket-type-item')?.querySelector('.pos-block');
+        if (block) refreshPosTitle(block);
+    }
 });
 let descriptionEditor = null;
 let ticketTermsEditor = null;
@@ -994,6 +999,7 @@ const eventIdFromQuery = urlParams.get('id');
 const eventId = eventIdFromPath || eventIdFromQuery;
 
 document.addEventListener('DOMContentLoaded', function() {
+    ensurePosBlocks();
     if (urlParams.get('action') === 'create') {
         showCreateForm();
     } else if (eventId) {
@@ -1262,6 +1268,10 @@ function showCreateForm() {
 }
 
 function resetFormState() {
+    posState.eventId = null;
+    posState.published = false;
+    posState.hasSeating = false;
+    document.getElementById('cerere-refresh-alert')?.remove();
     commissionState.eventMode = null;
     commissionState.locked = false;
     renderCommissionBox();
@@ -1540,8 +1550,20 @@ async function loadEventForEdit(eventId) {
         updateSummaries();
 
         const allTicketTypes = Array.isArray(event.ticket_types) ? event.ticket_types : [];
-        // Invitation type is issued from "Invitații", not edited here.
-        event.ticket_types = allTicketTypes.filter(tt => !(tt && (tt.free_with_code || tt.is_invitation)));
+        // Invitation type is issued from "Invitații", not edited here; Test POS nu se editează.
+        const shownTypes = allTicketTypes.filter(tt => tt && !tt.free_with_code && !tt.is_invitation && !(tt.meta && tt.meta.is_test));
+        // Geamănul POS al unui bilet se afișează în cardul biletului original.
+        const shownIds = new Set(shownTypes.map(tt => tt.id));
+        const posTwinBySource = {};
+        shownTypes.forEach(tt => {
+            const srcId = tt.pos_source_ticket_type_id;
+            if (tt.is_entry_ticket && srcId && shownIds.has(srcId) && !posTwinBySource[srcId]) posTwinBySource[srcId] = tt;
+        });
+        event.ticket_types = shownTypes.filter(tt => !(tt.is_entry_ticket && posTwinBySource[tt.pos_source_ticket_type_id] === tt));
+        posState.eventId = event.id;
+        posState.published = event.is_public === true;
+        posState.hasSeating = !!event.has_seating;
+        document.getElementById('cerere-refresh-alert')?.remove();
 
         if (event.ticket_types && event.ticket_types.length > 0) {
             const container = document.getElementById('ticket-types-container');
@@ -1573,7 +1595,7 @@ async function loadEventForEdit(eventId) {
                     container.innerHTML += `
                         <div class="p-4 border border-gray-200 ticket-type-item ticket-type-locked rounded-xl bg-gray-50" data-index="${i}" data-existing-id="${tt.id || ''}" data-tt-name="${(tt.name || '').replace(/"/g,'&quot;')}" data-tt-price="${tt.price || 0}">
                             <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-sm font-semibold text-secondary">Tip bilet #${i + 1}</h4>
+                                <h4 class="flex items-center gap-2 text-sm font-semibold text-secondary">Tip bilet #${i + 1}${tt.is_entry_ticket ? ' <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded-full bg-primary/10 text-primary">POS · doar în aplicație</span>' : ''}</h4>
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200 rounded-full">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                     Blocat
@@ -1619,13 +1641,16 @@ async function loadEventForEdit(eventId) {
                                     Declară sold-out acest tip de bilet
                                 </button>`}
                             </div>
+                            ${tt.is_entry_ticket
+                                ? posBlockHtml({ mode: 'live', self: true, pos: tt })
+                                : posBlockHtml({ mode: 'live', pos: posTwinBySource[tt.id] || null, sourceId: tt.id, sourceName: tt.name || '', sourcePrice: tt.price || 0, sourceQty: (Number(tt.quantity) > 0 ? tt.quantity : '') })}
                         </div>
                     `;
                 } else {
                     container.innerHTML += `
-                        <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${i}" data-existing-id="${tt.id || ''}">
+                        <div class="p-4 border border-gray-200 ticket-type-item rounded-xl" data-index="${i}" data-existing-id="${tt.id || ''}"${tt.is_entry_ticket ? ' data-is-pos="1"' : ''}>
                             <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-sm font-semibold text-secondary">Tip bilet #${i + 1}</h4>
+                                <h4 class="flex items-center gap-2 text-sm font-semibold text-secondary">Tip bilet #${i + 1}${tt.is_entry_ticket ? ' <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded-full bg-primary/10 text-primary">POS · doar în aplicație</span>' : ''}</h4>
                                 <button type="button" onclick="removeTicketType(this)" class="${removeBtn} text-red-400 hover:text-red-600 remove-ticket-btn">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </button>
@@ -1633,7 +1658,12 @@ async function loadEventForEdit(eventId) {
                             <div class="grid gap-3 md:grid-cols-3">
                                 <div>
                                     <label class="text-xs label">Nume bilet <span class="text-red-500">*</span></label>
-                                    <input type="text" name="ticket_name_${i}" required class="input" placeholder="ex: Standard, VIP" value="${tt.name || ''}">
+                                    ${tt.is_entry_ticket ? `
+                                    <div class="flex">
+                                        <span class="inline-flex items-center px-3 text-sm font-semibold bg-white border border-r-0 rounded-l-xl border-border text-secondary" aria-hidden="true">POS</span>
+                                        <input type="text" name="ticket_name_${i}" required class="input" style="border-top-left-radius:0;border-bottom-left-radius:0" aria-label="Nume bilet POS (după prefixul POS)" placeholder="ex: Standard" value="${posEsc(String(tt.name || '').replace(/^\s*pos\s+/i, ''))}">
+                                    </div>` : `
+                                    <input type="text" name="ticket_name_${i}" required class="input" placeholder="ex: Standard, VIP" value="${tt.name || ''}">`}
                                 </div>
                                 <div>
                                     <label class="text-xs label">Pret (RON) <span class="text-red-500">*</span></label>
@@ -1658,11 +1688,14 @@ async function loadEventForEdit(eventId) {
                                     <input type="number" name="ticket_max_${i}" class="input" placeholder="10" min="1" value="${tt.max_per_order || ''}">
                                 </div>
                             </div>
+                            ${tt.is_entry_ticket ? '' : posBlockHtml({ mode: 'form', pos: posTwinBySource[tt.id] || null, sourceName: tt.name || '' })}
                         </div>
                     `;
                 }
             });
         }
+
+        renderAllPosCommissions();
 
         // Step 7: Sales settings
         if (event.capacity) form.querySelector('[name="capacity"]').value = event.capacity;
@@ -2277,7 +2310,10 @@ function updateSummaries() {
         const tPrice = item.querySelector(`[name="ticket_price_${i}"]`)?.value;
         if (tName && tPrice) ticketSummary.push(`${tName}: ${tPrice} RON`);
     });
-    document.getElementById('summary-6').textContent = ticketSummary.join(' | ');
+    const posCount = document.querySelectorAll('.pos-block .pos-toggle:checked').length
+        + document.querySelectorAll('.pos-block[data-self="1"]').length;
+    document.getElementById('summary-6').textContent = ticketSummary.join(' | ')
+        + (posCount ? ` · ${posCount} ${posCount === 1 ? 'vândut' : 'vândute'} și la intrare (POS)` : '');
 
     // Step 7 summary
     const capacity = form.querySelector('[name="capacity"]').value;
@@ -2382,10 +2418,12 @@ function addTicketType() {
                     <input type="number" name="ticket_max_${index}" class="input" placeholder="10" min="1">
                 </div>
             </div>
+            ${posBlockHtml({ mode: 'form' })}
         </div>
     `;
     container.insertAdjacentHTML('beforeend', html);
     updateRemoveButtons();
+    renderAllPosCommissions();
 }
 
 function removeTicketType(btn) {
@@ -2421,6 +2459,418 @@ function renumberTicketTypes() {
         item.querySelector('[name^="ticket_max_"]').name = `ticket_max_${i}`;
     });
     ticketTypeCount = items.length;
+}
+
+// ==================== VARIANTA POS (vânzare la intrare) ====================
+// Fiecare tip de bilet poate avea un geamăn „POS <nume>”, vândut doar din aplicație,
+// cu comisionul mereu inclus în preț. Pe ciornă se salvează odată cu formularul;
+// pe un eveniment publicat se salvează imediat, din propriul buton.
+const posState = { eventId: null, published: false, hasSeating: false };
+
+const POS_ICON = '<svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l1.5-5h15L21 9M3 9h18M3 9v1a3 3 0 006 0V9m0 1a3 3 0 006 0V9m0 1a3 3 0 006 0V9M5 13v7h14v-7M10 20v-4h4v4"/></svg>';
+
+function posEsc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function posFmt(v) { return Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+/** Biletul POS din API (formatEventDetailed sau endpoint-ul /pos) într-o formă unică. */
+function posNormalize(p) {
+    if (!p) return null;
+    const name = String(p.name || '');
+    const q = p.quantity;
+    return {
+        id: p.id,
+        suffix: p.name_suffix !== undefined ? p.name_suffix : name.replace(/^\s*pos\s+/i, ''),
+        price: Number(p.price || 0),
+        qty: (q === null || q === undefined || Number(q) < 0) ? null : Number(q),
+        sold: Number(p.quantity_sold || 0),
+        active: p.is_active !== undefined ? !!p.is_active : (p.is_visible !== false),
+    };
+}
+
+function posStockHint() {
+    return posState.hasSeating
+        ? 'Locurile de pe hartă sunt comune: biletul POS preia zonele biletului online, iar un loc vândut pe un canal nu mai poate fi vândut pe celălalt.'
+        : 'Stocul POS e separat de cel online: se pot vinde amândouă integral. Dacă sala are o capacitate fixă, împarte locurile între ele.';
+}
+
+/**
+ * opts.mode: 'form' (ciornă / bilet nou, se salvează cu formularul) sau 'live' (salvare imediată).
+ * opts.self: cardul ESTE un bilet POS (creat de operator, fără bilet online legat).
+ */
+function posBlockHtml(opts = {}) {
+    const p = posNormalize(opts.pos);
+    const live = opts.mode === 'live';
+    const isSelf = !!opts.self;
+    const srcName = opts.sourceName || '';
+    const checked = isSelf || !!(p && p.active);
+    const suffixVal = p ? ((isSelf || p.suffix !== srcName) ? p.suffix : '') : '';
+    const title = 'POS ' + (suffixVal || srcName || 'bilet');
+    const btnLabel = !p ? 'Creează biletul POS' : (checked ? 'Salvează' : 'Repornește vânzarea');
+    const minQty = p && p.sold ? Math.max(1, p.sold) : 1;
+    const err = (f) => `<p class="hidden mt-1 text-xs text-error pos-err" data-for="${f}"></p>`;
+
+    return `
+        <div class="pt-3 mt-3 border-t border-gray-200 pos-block" data-mode="${live ? 'live' : 'form'}" data-pos-id="${p ? p.id : ''}" data-active="${p && p.active ? 1 : 0}" data-source-id="${opts.sourceId || ''}" data-source-name="${posEsc(srcName)}" data-source-price="${opts.sourcePrice ?? ''}" data-source-qty="${opts.sourceQty ?? ''}" data-sold="${p ? p.sold : 0}" data-self="${isSelf ? 1 : 0}">
+            ${isSelf ? '' : `
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" class="w-4 h-4 mt-0.5 rounded pos-toggle accent-primary" ${checked ? 'checked' : ''} onchange="onPosToggle(this)">
+                <span>
+                    <span class="block text-sm font-medium text-secondary">Vinde și la intrare, din aplicația POS</span>
+                    <span class="block text-xs text-muted">Creăm biletul „<span class="pos-name-preview">${posEsc(title)}</span>”. Se vinde doar din aplicație, nu apare pe site.</span>
+                </span>
+            </label>
+            ${p && !p.active ? `<p class="mt-2 text-xs text-muted pos-stopped-note">Vânzarea la intrare e oprită${p.sold ? ' · ' + p.sold + ' bilete vândute' : ''}. Bifează ca s-o repornești.</p>` : ''}`}
+            <div class="${isSelf ? '' : 'mt-3 '}p-4 border border-l-4 rounded-xl border-border border-l-primary bg-surface pos-panel ${checked ? '' : 'hidden'}">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <p class="flex items-center gap-2 text-sm font-semibold text-secondary">${POS_ICON}<span class="pos-title">${posEsc(title)}</span></p>
+                    <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded-full bg-primary/10 text-primary">POS · doar în aplicație</span>
+                </div>
+                <div class="grid gap-3 md:grid-cols-3">
+                    <div>
+                        <label class="text-xs label">Nume bilet POS</label>
+                        <div class="flex">
+                            <span class="inline-flex items-center px-3 text-sm font-semibold bg-white border border-r-0 rounded-l-xl border-border text-secondary" aria-hidden="true">POS</span>
+                            <input type="text" class="input pos-name" style="border-top-left-radius:0;border-bottom-left-radius:0" maxlength="240" placeholder="${posEsc(srcName || 'ex: Standard')}" value="${posEsc(suffixVal)}" aria-label="Nume bilet POS (după prefixul POS)" oninput="onPosNameInput(this)">
+                        </div>
+                        ${isSelf ? '' : '<p class="mt-1 text-xs text-muted">Gol = același nume ca biletul online.</p>'}
+                        ${err('name')}
+                    </div>
+                    <div>
+                        <label class="text-xs label">Preț la intrare (RON) <span class="text-red-500">*</span></label>
+                        <input type="number" class="input pos-price" step="0.01" min="0" inputmode="decimal" placeholder="0.00" value="${p ? p.price : ''}" oninput="onPosFieldInput(this)">
+                        ${err('price')}
+                    </div>
+                    <div>
+                        <label class="text-xs label">Stoc POS</label>
+                        <input type="number" class="input pos-qty" min="${minQty}" step="1" inputmode="numeric" placeholder="Nelimitat" value="${p && p.qty !== null ? p.qty : ''}" oninput="onPosFieldInput(this)">
+                        <p class="mt-1 text-xs text-muted pos-sold-line ${p && p.sold ? '' : 'hidden'}">Vândute: <strong class="pos-sold">${p ? p.sold : 0}</strong>. Stocul nu poate coborî sub acest număr.</p>
+                        ${err('quantity')}
+                    </div>
+                </div>
+                <p class="mt-3 text-xs text-secondary pos-commission"></p>
+                <p class="mt-1 text-xs text-muted">${posStockHint()}</p>
+                ${live ? `
+                <div class="flex flex-wrap items-center gap-3 mt-4">
+                    <button type="button" class="text-white btn btn-sm bg-primary hover:bg-primary-dark pos-save-btn" onclick="savePosTicket(this)">${btnLabel}</button>
+                    <span class="text-xs pos-save-status" role="status" aria-live="polite"></span>
+                </div>
+                <p class="mt-2 text-xs text-muted">Se salvează imediat, fără aprobare: biletul POS nu apare pe site.</p>` : ''}
+            </div>
+        </div>`;
+}
+
+/** Cardurile editabile fără bloc POS (cardul static din pagină, carduri noi) îl primesc acum. */
+function ensurePosBlocks() {
+    document.querySelectorAll('.ticket-type-item').forEach(item => {
+        if (item.querySelector('.pos-block') || item.dataset.isPos === '1' || item.classList.contains('ticket-type-locked')) return;
+        item.insertAdjacentHTML('beforeend', posBlockHtml({ mode: 'form', sourceName: item.querySelector('[name^="ticket_name_"]')?.value || '' }));
+    });
+    renderAllPosCommissions();
+}
+
+function posSourceValues(block) {
+    const item = block.closest('.ticket-type-item');
+    if (block.dataset.mode === 'form' && item) {
+        return {
+            name: item.querySelector('[name^="ticket_name_"]')?.value || '',
+            price: item.querySelector('[name^="ticket_price_"]')?.value || '',
+            qty: item.querySelector('[name^="ticket_quantity_"]')?.value || '',
+        };
+    }
+    return { name: block.dataset.sourceName || '', price: block.dataset.sourcePrice || '', qty: block.dataset.sourceQty || '' };
+}
+
+function refreshPosTitle(block) {
+    const suffix = (block.querySelector('.pos-name')?.value || '').trim();
+    const src = posSourceValues(block).name.trim();
+    const title = 'POS ' + (suffix.replace(/^pos\s+/i, '') || src || 'bilet');
+    block.querySelectorAll('.pos-title, .pos-name-preview').forEach(el => { el.textContent = title; });
+    const nameInput = block.querySelector('.pos-name');
+    if (nameInput && block.dataset.self !== '1') nameInput.placeholder = src || 'ex: Standard';
+}
+
+function onPosToggle(cb) {
+    const block = cb.closest('.pos-block');
+    const panel = block.querySelector('.pos-panel');
+    const live = block.dataset.mode === 'live';
+    const hasTwin = !!block.dataset.posId;
+    block.querySelector('.pos-remove-note')?.remove();
+
+    if (cb.checked) {
+        panel.classList.remove('hidden');
+        block.querySelector('.pos-stopped-note')?.classList.add('hidden');
+        // Precompletare din biletul online, doar unde câmpul e gol.
+        const src = posSourceValues(block);
+        const priceEl = block.querySelector('.pos-price');
+        const qtyEl = block.querySelector('.pos-qty');
+        if (priceEl && priceEl.value === '' && src.price !== '') priceEl.value = src.price;
+        if (qtyEl && qtyEl.value === '' && src.qty !== '' && Number(src.qty) > 0) qtyEl.value = src.qty;
+        refreshPosTitle(block);
+        renderPosCommission(block);
+        if (live && !hasTwin) priceEl?.focus();
+    } else if (live && hasTwin && block.dataset.active === '1') {
+        stopPosTicket(block, cb);
+        return;
+    } else {
+        panel.classList.add('hidden');
+        if (!live && hasTwin) {
+            cb.closest('label').insertAdjacentHTML('afterend',
+                '<p class="mt-2 text-xs text-warning pos-remove-note">La salvare, biletul POS va fi scos. Dacă are deja bilete vândute, doar se oprește vânzarea.</p>');
+        }
+    }
+    updateSummaries();
+}
+
+function onPosNameInput(input) {
+    const block = input.closest('.pos-block');
+    // Prefixul e fix: dacă cineva tastează „POS ” în câmp, nu-l dublăm.
+    if (/^pos\s+/i.test(input.value)) input.value = input.value.replace(/^pos\s+/i, '');
+    setPosFieldError(block, 'name', '');
+    refreshPosTitle(block);
+}
+
+function onPosFieldInput(input) {
+    const block = input.closest('.pos-block');
+    setPosFieldError(block, input.classList.contains('pos-price') ? 'price' : 'quantity', '');
+    if (input.classList.contains('pos-price')) renderPosCommission(block);
+    const status = block.querySelector('.pos-save-status');
+    if (status) status.textContent = '';
+}
+
+function renderPosCommission(block) {
+    const el = block.querySelector('.pos-commission');
+    if (!el) return;
+    const c = commissionState.contract;
+    const price = parseFloat(block.querySelector('.pos-price')?.value || '');
+    const eventMode = normalizeCommissionMode(commissionState.eventMode) || normalizeCommissionMode(c?.commission_mode) || 'included';
+    let txt = 'Comisionul AmBilet e inclus în prețul de la intrare';
+    if (c && price > 0) {
+        const fee = Math.min(commissionPerTicket(price), price);
+        txt += `: la ${posFmt(price)} lei încasezi ${posFmt(price - fee)} lei (comision estimat după contract: ${posFmt(fee)} lei).`;
+    } else {
+        txt += '.';
+    }
+    if (eventMode === 'added_on_top') {
+        txt += ' Online, comisionul se adaugă peste preț; la intrare clientul plătește exact prețul de mai sus.';
+    }
+    el.textContent = txt;
+}
+
+function renderAllPosCommissions() {
+    document.querySelectorAll('.pos-block').forEach(renderPosCommission);
+}
+
+function setPosFieldError(block, field, msg) {
+    const el = block.querySelector(`.pos-err[data-for="${field}"]`);
+    const input = block.querySelector(field === 'name' ? '.pos-name' : (field === 'price' ? '.pos-price' : '.pos-qty'));
+    if (el) { el.textContent = msg || ''; el.classList.toggle('hidden', !msg); }
+    if (input) {
+        input.classList.toggle('border-error', !!msg);
+        if (msg) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+    }
+}
+
+/** Validează un bloc POS bifat; marchează câmpurile și întoarce primul câmp greșit. */
+function validatePosBlock(block) {
+    const priceEl = block.querySelector('.pos-price');
+    const qtyEl = block.querySelector('.pos-qty');
+    let first = null;
+    const price = priceEl.value.trim();
+    if (price === '' || isNaN(Number(price)) || Number(price) < 0) {
+        setPosFieldError(block, 'price', 'Completează prețul la intrare (0 sau mai mult).');
+        first = first || priceEl;
+    }
+    const qty = qtyEl.value.trim();
+    const sold = Number(block.dataset.sold || 0);
+    if (qty !== '') {
+        const q = Number(qty);
+        if (!Number.isInteger(q) || q < 1) {
+            setPosFieldError(block, 'quantity', 'Stocul trebuie să fie un număr întreg, cel puțin 1. Lasă gol pentru nelimitat.');
+            first = first || qtyEl;
+        } else if (q < sold) {
+            setPosFieldError(block, 'quantity', `Minim ${sold}: atâtea bilete POS s-au vândut deja.`);
+            first = first || qtyEl;
+        }
+    }
+    return first;
+}
+
+/** Înainte de salvarea formularului: toate blocurile POS bifate trebuie să fie valide. */
+function validatePosBlocks() {
+    let first = null;
+    document.querySelectorAll('.pos-block[data-mode="form"]').forEach(block => {
+        if (!block.querySelector('.pos-toggle')?.checked) return;
+        const bad = validatePosBlock(block);
+        if (bad && !first) first = bad;
+    });
+    if (!first) return true;
+    const section = document.querySelector('.accordion-section[data-step="6"]');
+    if (section && section.getAttribute('data-open') !== 'true') toggleAccordion(6);
+    first.focus();
+    first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    AmbiletNotifications.error('Verifică biletul POS marcat cu roșu.');
+    return false;
+}
+
+/** Cheia `pos` pentru rândul de bilet trimis cu formularul (doar mod ciornă / bilet nou). */
+function collectPosForItem(item) {
+    const block = item.querySelector('.pos-block[data-mode="form"]');
+    if (!block) return undefined;
+    const enabled = !!block.querySelector('.pos-toggle')?.checked;
+    // Fără bifă și fără geamăn existent nu trimitem nimic.
+    if (!enabled && !block.dataset.posId) return undefined;
+    if (!enabled) return { enabled: false };
+    const qty = block.querySelector('.pos-qty').value.trim();
+    return {
+        enabled: true,
+        name: block.querySelector('.pos-name').value.trim() || null,
+        price: parseFloat(block.querySelector('.pos-price').value),
+        quantity: qty === '' ? null : parseInt(qty, 10),
+    };
+}
+
+async function savePosTicket(btn) {
+    const block = btn.closest('.pos-block');
+    const bad = validatePosBlock(block);
+    if (bad) { bad.focus(); return; }
+
+    const qty = block.querySelector('.pos-qty').value.trim();
+    const payload = {
+        enabled: true,
+        name: block.querySelector('.pos-name').value.trim() || null,
+        price: parseFloat(block.querySelector('.pos-price').value),
+        quantity: qty === '' ? null : parseInt(qty, 10),
+    };
+    const ttId = block.dataset.self === '1' ? block.dataset.posId : block.dataset.sourceId;
+    const status = block.querySelector('.pos-save-status');
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.textContent = 'Se salvează…';
+    if (status) status.textContent = '';
+
+    try {
+        const res = await AmbiletAPI.post(`/organizer/events/${posState.eventId}/ticket-types/${ttId}/pos`, payload);
+        if (res && res.success === false) throw new Error(res.message || 'Nu am putut salva biletul POS.');
+        applyPosResult(block, res.data?.pos);
+        btn.textContent = 'Salvează';
+        if (status) { status.textContent = 'Salvat'; status.className = 'text-xs font-medium pos-save-status text-success'; }
+        AmbiletNotifications.success(res.message || 'Biletul POS a fost salvat.');
+        showCerereRefreshAlert(res.data?.cerere_refresh);
+    } catch (error) {
+        btn.textContent = label;
+        const errs = error.errors || {};
+        ['name', 'price', 'quantity'].forEach(f => { if (errs[f]) setPosFieldError(block, f, [].concat(errs[f])[0]); });
+        AmbiletNotifications.error(error.message || 'Nu am putut salva biletul POS. Încearcă din nou.');
+    } finally {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+    }
+}
+
+async function stopPosTicket(block, cb) {
+    const ttId = block.dataset.self === '1' ? block.dataset.posId : block.dataset.sourceId;
+    cb.disabled = true;
+    try {
+        const res = await AmbiletAPI.post(`/organizer/events/${posState.eventId}/ticket-types/${ttId}/pos`, { enabled: false });
+        if (res && res.success === false) throw new Error(res.message || 'Nu am putut opri vânzarea la intrare.');
+        block.dataset.active = '0';
+        block.querySelector('.pos-panel').classList.add('hidden');
+        const sold = Number(block.dataset.sold || 0);
+        let note = block.querySelector('.pos-stopped-note');
+        if (!note) {
+            cb.closest('label').insertAdjacentHTML('afterend', '<p class="mt-2 text-xs text-muted pos-stopped-note"></p>');
+            note = block.querySelector('.pos-stopped-note');
+        }
+        note.textContent = 'Vânzarea la intrare e oprită' + (sold ? ' · ' + sold + ' bilete vândute' : '') + '. Bifează ca s-o repornești.';
+        note.classList.remove('hidden');
+        const btn = block.querySelector('.pos-save-btn');
+        if (btn) btn.textContent = 'Repornește vânzarea';
+        AmbiletNotifications.success(res.message || 'Vânzarea la intrare a fost oprită.');
+        updateSummaries();
+    } catch (error) {
+        cb.checked = true;
+        AmbiletNotifications.error(error.message || 'Nu am putut opri vânzarea la intrare. Încearcă din nou.');
+    } finally {
+        cb.disabled = false;
+    }
+}
+
+function applyPosResult(block, pos) {
+    if (!pos) return;
+    const p = posNormalize(pos);
+    block.dataset.posId = p.id;
+    block.dataset.active = p.active ? '1' : '0';
+    block.dataset.sold = p.sold;
+    block.querySelector('.pos-stopped-note')?.classList.add('hidden');
+    const soldLine = block.querySelector('.pos-sold-line');
+    if (soldLine) {
+        soldLine.querySelector('.pos-sold').textContent = p.sold;
+        soldLine.classList.toggle('hidden', !p.sold);
+    }
+    const qtyEl = block.querySelector('.pos-qty');
+    if (qtyEl) qtyEl.min = Math.max(1, p.sold);
+    refreshPosTitle(block);
+}
+
+/**
+ * După salvarea formularului: cardurile noi primesc id-ul tipului creat (potrivire unică
+ * după nume), iar blocurile POS id-ul geamănului — ca următoarea salvare să actualizeze,
+ * iar o debifare să-l scoată.
+ */
+function refreshPosIdsFromEvent(event) {
+    const types = Array.isArray(event?.ticket_types) ? event.ticket_types : [];
+    if (!types.length) return;
+    const regular = types.filter(tt => !tt.is_entry_ticket && !tt.free_with_code && !tt.is_invitation);
+    const twinBySource = {};
+    types.forEach(tt => { if (tt.is_entry_ticket && tt.pos_source_ticket_type_id) twinBySource[tt.pos_source_ticket_type_id] = tt; });
+    const usedIds = new Set([...document.querySelectorAll('.ticket-type-item')].map(i => parseInt(i.dataset.existingId || '', 10)).filter(Boolean));
+
+    document.querySelectorAll('.ticket-type-item').forEach(item => {
+        let id = parseInt(item.dataset.existingId || '', 10);
+        if (!id && item.dataset.isPos !== '1') {
+            const name = (item.querySelector('[name^="ticket_name_"]')?.value || '').trim().toLowerCase();
+            const matches = regular.filter(tt => !usedIds.has(tt.id) && String(tt.name || '').trim().toLowerCase() === name);
+            if (matches.length === 1) {
+                id = matches[0].id;
+                item.dataset.existingId = id;
+                usedIds.add(id);
+            }
+        }
+        const block = item.querySelector('.pos-block[data-mode="form"]');
+        if (!block || !id) return;
+        const twin = twinBySource[id];
+        block.dataset.posId = twin ? twin.id : '';
+        block.querySelector('.pos-remove-note')?.remove();
+        if (twin) {
+            const p = posNormalize(twin);
+            block.dataset.active = p.active ? '1' : '0';
+            block.dataset.sold = p.sold;
+        }
+    });
+}
+
+/** Alerta „cererea de vizare trebuie refăcută”, deasupra listei de bilete. */
+function showCerereRefreshAlert(notice) {
+    if (!notice) return;
+    const container = document.getElementById('ticket-types-container');
+    if (!container) return;
+    let box = document.getElementById('cerere-refresh-alert');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'cerere-refresh-alert';
+        box.setAttribute('role', 'alert');
+        box.className = 'flex gap-3 p-4 mb-3 text-sm border rounded-xl border-error/30 bg-error/5';
+        container.parentNode.insertBefore(box, container);
+    }
+    box.innerHTML = `
+        <svg class="flex-shrink-0 w-5 h-5 mt-0.5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        <div>
+            <p class="font-semibold text-error">Cererea de vizare trebuie refăcută</p>
+            <p class="mt-1 text-secondary">Ai modificat biletele după ce cererea de vizare a fost generată${notice.generated_at ? ' (' + posEsc(notice.generated_at) + ')' : ''}. Regenerează cererea și depune noua versiune la primărie, ca să includă și biletele POS, cu prețurile și stocurile actuale.</p>
+            <a href="${posEsc(notice.url || '/organizator/documente')}" class="inline-flex items-center gap-1 mt-2 text-sm font-semibold text-primary hover:underline">Mergi la Documente →</a>
+        </div>`;
+    AmbiletNotifications.warning('Cererea de vizare trebuie refăcută: biletele s-au schimbat.', 8000);
 }
 
 // ==================== MEDIA PREVIEWS ====================
@@ -2748,6 +3198,10 @@ function collectFormData() {
             if (tDesc) ticket.description = tDesc;
             if (tMin) ticket.min_per_order = parseInt(tMin);
             if (tMax) ticket.max_per_order = parseInt(tMax);
+            // Bilet POS de sine stătător (creat de operator): serverul păstrează prefixul „POS ”.
+            if (item.dataset.isPos === '1') ticket.is_pos = true;
+            const pos = collectPosForItem(item);
+            if (pos) ticket.pos = pos;
             ticketTypes.push(ticket);
         }
     });
@@ -2853,6 +3307,8 @@ async function saveEventDraft() {
         }
     }
 
+    if (!validatePosBlocks()) return;
+
     data.is_draft = true;
 
     const btnText = document.getElementById('save-btn-text');
@@ -2883,6 +3339,9 @@ async function saveEventDraft() {
             saveStatus.textContent = 'Salvat la ' + new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
             saveStatus.classList.remove('hidden');
             AmbiletNotifications.success('Evenimentul a fost salvat ca ciornă!');
+            // Biletele POS create acum primesc id: reîncarcă blocurile ca o nouă salvare să le actualizeze.
+            refreshPosIdsFromEvent(result.data?.event);
+            showCerereRefreshAlert(result.data?.cerere_refresh);
         } else {
             const msg = result.message || 'Eroare la salvare.';
             AmbiletNotifications.error(msg);
@@ -2926,12 +3385,16 @@ async function saveAndSubmitEvent() {
         toggleAccordion(6);
         return;
     }
+    if (!validatePosBlocks()) return;
     try {
         const savedEventId = document.getElementById('saved-event-id').value;
         let eventId = savedEventId;
+        let cerereRefresh = null;
 
         if (savedEventId) {
-            await AmbiletAPI.organizer.updateEvent(savedEventId, data);
+            const updateResult = await AmbiletAPI.organizer.updateEvent(savedEventId, data);
+            cerereRefresh = updateResult?.data?.cerere_refresh || null;
+            refreshPosIdsFromEvent(updateResult?.data?.event);
         } else {
             const result = await AmbiletAPI.organizer.createEvent(data);
             if (result.success === false) {
@@ -2961,7 +3424,15 @@ async function saveAndSubmitEvent() {
                 AmbiletNotifications.success(liveEdit
                     ? 'Modificările au fost publicate!'
                     : 'Modificările au fost trimise spre aprobare!');
-                setTimeout(() => hideCreateForm(), 1500);
+                // Cererea de vizare trebuie refăcută → rămânem pe formular, cu alerta vizibilă.
+                if (cerereRefresh) {
+                    showCerereRefreshAlert(cerereRefresh);
+                    const section = document.querySelector('.accordion-section[data-step="6"]');
+                    if (section && section.getAttribute('data-open') !== 'true') toggleAccordion(6);
+                    document.getElementById('cerere-refresh-alert')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                } else {
+                    setTimeout(() => hideCreateForm(), 1500);
+                }
             } else {
                 const submitResult = await AmbiletAPI.organizer.submitEvent(eventId);
                 if (submitResult.success !== false) {
