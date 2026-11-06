@@ -284,7 +284,7 @@ class TicketType extends Model
             }
             $meta = is_array($model->meta) ? $model->meta : [];
             $restored = false;
-            foreach (['is_invitation', 'is_test'] as $key) {
+            foreach (['is_invitation', 'is_test', 'pos_seating_copied'] as $key) {
                 if (!empty($old[$key]) && !array_key_exists($key, $meta)) {
                     $meta[$key] = $old[$key];
                     $restored = true;

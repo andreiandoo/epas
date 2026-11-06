@@ -3053,6 +3053,121 @@ class EventResource extends Resource
                                                 $state[$newUuid] = $newData;
                                                 $component->state($state);
                                             }),
+                                        // Twin "POS <nume>": vandut doar din aplicatie (App ON, ascuns online),
+                                        // acelasi pret si stoc, comision mereu inclus in pret. Alocarea pe
+                                        // harta se copiaza dupa salvare (EditEvent::copyPosTwinSeating).
+                                        Action::make('createPosVariant')
+                                            ->iconButton()
+                                            ->icon('heroicon-o-building-storefront')
+                                            ->color('gray')
+                                            ->visible(function (array $arguments, Forms\Components\Repeater $component): bool {
+                                                $item = $component->getState()[$arguments['item'] ?? ''] ?? null;
+                                                if (!is_array($item) || ($item['is_entry_ticket'] ?? false)) {
+                                                    return false;
+                                                }
+                                                $meta = is_array($item['meta'] ?? null) ? $item['meta'] : [];
+                                                if (!empty($meta['is_invitation']) || !empty($meta['is_test']) || filled($meta['free_with_code']['code'] ?? null)) {
+                                                    return false;
+                                                }
+                                                $name = is_array($item['name'] ?? null) ? ($item['name']['ro'] ?? reset($item['name'])) : ($item['name'] ?? '');
+                                                $name = trim(mb_strtolower((string) $name));
+                                                return $name !== 'test pos' && $name !== 'invitatie';
+                                            })
+                                            ->disabled(fn (array $arguments, Forms\Components\Repeater $component): bool =>
+                                                empty($component->getState()[$arguments['item'] ?? '']['id'] ?? null))
+                                            ->tooltip(fn (array $arguments, Forms\Components\Repeater $component) =>
+                                                empty($component->getState()[$arguments['item'] ?? '']['id'] ?? null)
+                                                    ? $t('Salvează întâi biletul, apoi poți crea varianta POS', 'Save the ticket first, then create the POS variant')
+                                                    : $t('Creează varianta POS (vânzare doar din aplicație, comision inclus în preț)', 'Create POS variant (app-only, commission included in price)'))
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component, \Livewire\Component $livewire) use ($t, $marketplace) {
+                                                $state = $component->getState();
+                                                $itemKey = $arguments['item'];
+                                                $src = $state[$itemKey] ?? null;
+                                                if (!is_array($src) || empty($src['id'])) return;
+
+                                                $srcName = is_array($src['name'] ?? null) ? ($src['name']['ro'] ?? reset($src['name'])) : ($src['name'] ?? '');
+
+                                                $new = $src;
+                                                $new['id'] = null;
+                                                $new['name'] = 'POS ' . $srcName;
+                                                $new['sku'] = '';
+                                                $new['quota_sold'] = 0;
+                                                $new['series_start'] = null;
+                                                $new['series_end'] = null;
+
+                                                // Canal: doar aplicatie, activ
+                                                $new['is_entry_ticket'] = true;
+                                                $new['is_active'] = true;
+                                                $new['is_sold_out'] = false;
+
+                                                // Pret intreg, fara promotie
+                                                $new['has_sale'] = false;
+                                                $new['price'] = null;
+                                                $new['discount_percent'] = null;
+                                                $new['sales_start_at'] = null;
+                                                $new['sales_end_at'] = null;
+                                                $new['sale_stock'] = null;
+
+                                                // Setari de vanzare online — nu se copiaza
+                                                $new['scheduled_at'] = null;
+                                                $new['active_until'] = null;
+                                                $new['autostart_when_previous_sold_out'] = false;
+                                                $new['min_per_order'] = 1;
+                                                $new['max_per_order'] = 10;
+                                                $new['multiplier'] = 1;
+                                                $new['perks'] = [];
+                                                $new['bulk_discounts'] = [];
+                                                $new['is_refundable'] = false;
+                                                $new['is_subscription'] = false;
+                                                $new['admin_notes'] = null;
+
+                                                $meta = is_array($new['meta'] ?? null) ? $new['meta'] : [];
+                                                unset($meta['free_with_code'], $meta['is_invitation'], $meta['is_test'], $meta['pos_seating_copied']);
+                                                if (!empty($meta['performance_prices']) && is_array($meta['performance_prices'])) {
+                                                    foreach ($meta['performance_prices'] as $pk => $pp) {
+                                                        if (is_array($pp)) {
+                                                            $meta['performance_prices'][$pk]['series_start'] = null;
+                                                            $meta['performance_prices'][$pk]['series_end'] = null;
+                                                        }
+                                                    }
+                                                }
+                                                $meta['pos_source_ticket_type_id'] = (int) $src['id'];
+                                                if (static::isLeisureRecord($livewire)) {
+                                                    $meta['pos_only'] = true;
+                                                }
+                                                $new['meta'] = $meta;
+
+                                                // Comision: aceeasi valoare ca originalul, dar mereu inclus in pret.
+                                                // Pe "Mosteneste" modul e ignorat la calcul, deci il facem explicit.
+                                                $type = $src['commission_type'] ?? null;
+                                                if (in_array($type, ['percentage', 'fixed', 'both'], true)) {
+                                                    $new['commission_mode'] = 'included';
+                                                } else {
+                                                    $organizerId = data_get($livewire, 'data.marketplace_organizer_id') ?? (method_exists($livewire, 'getRecord') ? $livewire->getRecord()?->marketplace_organizer_id : null);
+                                                    $inh = static::resolveInheritedCommission($organizerId, $marketplace);
+                                                    $new['commission_type'] = 'percentage';
+                                                    $new['commission_rate'] = $inh['rate'];
+                                                    $new['commission_fixed'] = null;
+                                                    $new['commission_mode'] = 'included';
+                                                }
+
+                                                // Inserat imediat sub original
+                                                $newUuid = (string) Str::uuid();
+                                                $result = [];
+                                                foreach ($state as $k => $v) {
+                                                    $result[$k] = $v;
+                                                    if ($k === $itemKey) {
+                                                        $result[$newUuid] = $new;
+                                                    }
+                                                }
+                                                $component->state($result);
+
+                                                \Filament\Notifications\Notification::make()
+                                                    ->title($t('Varianta POS a fost adăugată', 'POS variant added'))
+                                                    ->body($t('„POS ' . $srcName . '” apare sub biletul original. Apasă Salvează ca să fie creat.', '"POS ' . $srcName . '" was added below the original. Click Save to create it.'))
+                                                    ->success()
+                                                    ->send();
+                                            }),
                                     ])
                                     ->columns(12)
                                     ->schema([
@@ -3305,6 +3420,9 @@ class EventResource extends Resource
                                                 Forms\Components\Hidden::make('is_refundable')->default(false),
                                                 Forms\Components\Hidden::make('is_subscription')->default(false),
                                                 Forms\Components\Hidden::make('is_sold_out')->default(false),
+                                                // Legatura twin POS → bilet original (pentru copierea alocarii pe harta)
+                                                Forms\Components\Hidden::make('meta.pos_source_ticket_type_id')
+                                                    ->dehydrated(fn ($state) => filled($state)),
 
                                                 // Single-day ticket date (visible only for range events)
                                                 Forms\Components\DatePicker::make('valid_date')

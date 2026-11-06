@@ -2107,6 +2107,8 @@ class EditEvent extends EditRecord
             }
         }
 
+        $this->copyPosTwinSeating();
+
         // Fallback: copy hero_image_url to featured image fields when empty
         $record = $this->record;
         if ($record->is_homepage_featured && !$record->homepage_featured_image && $record->hero_image_url) {
@@ -2137,6 +2139,55 @@ class EditEvent extends EditRecord
                         ->update(['is_sold_out' => false, 'sold_out_by_event' => false]);
                 }
             }
+        }
+    }
+
+    /**
+     * Biletele "POS <nume>" create din butonul de pe tipul de bilet preiau, o singura
+     * data, alocarea pe harta a biletului original (randuri, sectiuni, acces general).
+     * Dupa copiere, alocarea POS-ului se gestioneaza separat si nu mai e suprascrisa.
+     */
+    protected function copyPosTwinSeating(): void
+    {
+        try {
+            $twins = \App\Models\TicketType::where('event_id', $this->record->id)
+                ->whereNotNull('meta->pos_source_ticket_type_id')
+                ->get();
+
+            foreach ($twins as $twin) {
+                $meta = is_array($twin->meta) ? $twin->meta : [];
+                if (!empty($meta['pos_seating_copied'])) {
+                    continue;
+                }
+                $source = \App\Models\TicketType::where('event_id', $this->record->id)
+                    ->find((int) $meta['pos_source_ticket_type_id']);
+                if (!$source) {
+                    continue;
+                }
+
+                $rowIds = $source->seatingRows()->pluck('seating_rows.id')->all();
+                $sectionIds = $source->seatingSections()->pluck('seating_sections.id')->all();
+                $gaIds = $source->generalAccessSections()->pluck('seating_sections.id')->all();
+                if (!$rowIds && !$sectionIds && !$gaIds) {
+                    continue; // originalul nu are alocare; reincercam la urmatoarea salvare
+                }
+
+                // Daca twin-ul are deja alocare proprie, nu o atingem
+                $hasOwn = $twin->seatingRows()->exists()
+                    || $twin->seatingSections()->exists()
+                    || $twin->generalAccessSections()->exists();
+                if (!$hasOwn) {
+                    $twin->seatingRows()->syncWithoutDetaching($rowIds);
+                    $twin->seatingSections()->syncWithoutDetaching($sectionIds);
+                    $twin->generalAccessSections()->syncWithoutDetaching($gaIds);
+                }
+
+                $meta['pos_seating_copied'] = true;
+                $twin->meta = $meta;
+                $twin->saveQuietly();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('POS twin seating copy failed', ['event_id' => $this->record->id, 'error' => $e->getMessage()]);
         }
     }
 
