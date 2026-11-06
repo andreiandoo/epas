@@ -194,6 +194,7 @@ const RewardsPage = {
     level: 1,
     levelName: 'Newbie',
     nextLevelXP: 1000,
+    xpInLevel: 0,
     rewards: [],
     badges: { earned: [], available: [] },
     pointsHistory: [],
@@ -264,7 +265,9 @@ const RewardsPage = {
                 this.xp = levelData.total_xp || response.data.total_xp || 0;
                 this.level = levelData.current || (typeof response.data.level === 'number' ? response.data.level : 1);
                 this.levelName = levelData.name || response.data.level_name || 'Newbie';
+                // xp_to_next = how much XP the current level needs in total; xp_in_level = what was gathered in it
                 this.nextLevelXP = levelData.xp_to_next || response.data.next_level_xp || 1000;
+                this.xpInLevel = typeof levelData.xp_in_level === 'number' ? levelData.xp_in_level : this.xp;
                 if (response.data.levels) {
                     this.levels = response.data.levels;
                 }
@@ -332,10 +335,10 @@ const RewardsPage = {
 
         // Update XP/Level info
         document.getElementById('level-info').textContent = 'Nivel ' + this.level + ' - ' + this.levelName;
-        const xpRemaining = Math.max(0, this.nextLevelXP - this.xp);
-        document.getElementById('level-remaining').textContent = xpRemaining.toLocaleString() + ' XP pana la nivelul urmator';
-        document.getElementById('xp-progress').textContent = this.xp.toLocaleString() + ' / ' + this.nextLevelXP.toLocaleString();
-        const progressPercent = Math.min(100, Math.round((this.xp / this.nextLevelXP) * 100));
+        const xpRemaining = Math.max(0, this.nextLevelXP - this.xpInLevel);
+        document.getElementById('level-remaining').textContent = xpRemaining.toLocaleString() + ' XP până la nivelul următor · ' + this.xp.toLocaleString() + ' XP în total';
+        document.getElementById('xp-progress').textContent = this.xpInLevel.toLocaleString() + ' / ' + this.nextLevelXP.toLocaleString();
+        const progressPercent = Math.min(100, Math.round((this.xpInLevel / this.nextLevelXP) * 100));
         document.getElementById('level-bar').style.width = progressPercent + '%';
         document.getElementById('level-current').textContent = 'Nivel ' + this.level;
         document.getElementById('level-next').textContent = 'Nivel ' + (this.level + 1);
@@ -568,9 +571,9 @@ const RewardsPage = {
 
             const currentProgress = isCurrent ?
                 '<div class="h-2 mt-2 overflow-hidden rounded-full bg-border">' +
-                    '<div class="h-full rounded-full bg-primary" style="width: ' + Math.min(100, Math.round((this.xp / this.nextLevelXP) * 100)) + '%"></div>' +
+                    '<div class="h-full rounded-full bg-primary" style="width: ' + Math.min(100, Math.round((this.xpInLevel / this.nextLevelXP) * 100)) + '%"></div>' +
                 '</div>' +
-                '<p class="mt-1 text-xs text-muted">' + this.xp.toLocaleString() + ' / ' + this.nextLevelXP.toLocaleString() + ' XP (Nivel ' + this.level + ')</p>'
+                '<p class="mt-1 text-xs text-muted">' + this.xpInLevel.toLocaleString() + ' / ' + this.nextLevelXP.toLocaleString() + ' XP (Nivel ' + this.level + ')</p>'
                 : '';
 
             return '<div class="p-4 rounded-xl lg:p-5 ' + cardClass + '">' +

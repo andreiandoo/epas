@@ -37,8 +37,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
                                 </div>
                             </div>
                             <div class="lg:pb-2">
-                                <h1 class="text-2xl font-bold lg:text-3xl text-secondary" id="user-name">Loading...</h1>
-                                <p class="text-muted">Membru din <span id="user-member-since">...</span></p>
+                                <h1 class="text-2xl font-bold lg:text-3xl text-secondary" id="user-name">Se încarcă...</h1>
+                                <p class="text-muted"><span id="user-member-since">...</span></p>
                                 <div class="flex items-center gap-2 mt-2">
                                     <span class="px-3 py-1 text-sm font-bold rounded-full bg-accent/10 text-accent" id="user-type-badge">...</span>
                                     <span class="px-3 py-1 text-sm font-bold rounded-full bg-success/10 text-success" id="user-level-text">Nivel 0</span>
@@ -48,11 +48,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <div class="flex gap-2">
                             <a href="/cont/setari" class="flex items-center gap-2 px-4 py-2.5 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                Editeaza profilul
+                                Editează profilul
                             </a>
                             <button class="flex items-center gap-2 px-4 py-2.5 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-                                Partajeaza
+                                Partajează
                             </button>
                         </div>
                     </div>
@@ -67,15 +67,15 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
                 <div class="p-4 text-center bg-white border stat-card rounded-xl lg:rounded-2xl lg:p-5 border-border">
                     <p class="text-3xl font-bold lg:text-4xl text-secondary" id="stat-spent">0</p>
-                    <p class="mt-1 text-sm text-muted">Lei cheltuiti</p>
+                    <p class="mt-1 text-sm text-muted">Lei cheltuiți</p>
                 </div>
                 <div class="p-4 text-center bg-white border stat-card rounded-xl lg:rounded-2xl lg:p-5 border-border">
                     <p class="text-3xl font-bold lg:text-4xl text-secondary" id="stat-cities">0</p>
-                    <p class="mt-1 text-sm text-muted">Orase vizitate</p>
+                    <p class="mt-1 text-sm text-muted">Orașe vizitate</p>
                 </div>
                 <div class="p-4 text-center bg-white border stat-card rounded-xl lg:rounded-2xl lg:p-5 border-border">
                     <p class="text-3xl font-bold lg:text-4xl text-secondary" id="stat-artists">0</p>
-                    <p class="mt-1 text-sm text-muted">Artisti vazuti</p>
+                    <p class="mt-1 text-sm text-muted">Artiști văzuți</p>
                 </div>
             </div>
 
@@ -85,7 +85,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <!-- Taste Profile -->
                     <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                         <div class="flex items-center justify-between mb-6">
-                            <h2 class="text-lg font-bold text-secondary">Profilul tau muzical</h2>
+                            <h2 class="text-lg font-bold text-secondary">Profilul tău muzical</h2>
                             <span class="text-xs text-muted">Bazat pe <span id="taste-events-count">0</span> evenimente</span>
                         </div>
 
@@ -111,7 +111,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
                     <!-- Activity Chart -->
                     <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
-                        <h2 class="mb-4 text-lg font-bold text-secondary">Activitatea ta in <?= date('Y') ?></h2>
+                        <h2 class="mb-4 text-lg font-bold text-secondary">Activitatea ta în <?= date('Y') ?></h2>
                         <div class="h-64">
                             <canvas id="activityChart"></canvas>
                         </div>
@@ -119,7 +119,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
                     <!-- Top Artists -->
                     <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
-                        <h2 class="mb-4 text-lg font-bold text-secondary">Artistii tai preferati</h2>
+                        <h2 class="mb-4 text-lg font-bold text-secondary">Artiștii tăi preferați</h2>
                         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3" id="top-artists-container">
                             <!-- Populated by JavaScript -->
                         </div>
@@ -146,7 +146,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
                     <!-- Cities Map -->
                     <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
-                        <h2 class="mb-4 text-lg font-bold text-secondary">Orase vizitate</h2>
+                        <h2 class="mb-4 text-lg font-bold text-secondary">Orașe vizitate</h2>
                         <div class="space-y-3" id="cities-container">
                             <!-- Populated by JavaScript -->
                         </div>
@@ -165,8 +165,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
                     <!-- Share Profile -->
                     <div class="p-5 border bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl lg:rounded-2xl border-primary/20">
-                        <h3 class="mb-2 font-bold text-secondary">Partajeaza profilul</h3>
-                        <p class="mb-4 text-sm text-muted">Arata-le prietenilor ce concerte ai vazut!</p>
+                        <h3 class="mb-2 font-bold text-secondary">Partajează profilul</h3>
+                        <p class="mb-4 text-sm text-muted">Arată-le prietenilor ce concerte ai văzut!</p>
                         <div class="flex gap-2">
                             <button class="flex-1 py-2.5 bg-[#1877F2] text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>

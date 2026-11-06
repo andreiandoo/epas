@@ -163,7 +163,7 @@
         // while it is being tested, before enabling it site-wide. To go
         // site-wide later, delete this if/endif wrapper and keep the <script>.
         $epChatPath = rtrim((string) parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH), '/');
-        $epChatOnContact = ($epChatPath === '/contact')
+        $epChatOnContact = in_array($epChatPath, ['/contact', '/cont/ajutor'], true)
             || (basename($_SERVER['SCRIPT_NAME'] ?? '') === 'contact.php');
         if ($epChatOnContact):
     ?>

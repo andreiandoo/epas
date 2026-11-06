@@ -26,7 +26,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-secondary">Favorite</h1>
-                    <p class="mt-1 text-sm text-muted">Evenimente pe care le urmaresti</p>
+                    <p class="mt-1 text-sm text-muted">Evenimente pe care le urmărești</p>
                 </div>
             </div>
 
@@ -36,10 +36,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     Evenimente (<span id="events-count">0</span>)
                 </button>
                 <button onclick="showTab('artists')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted" id="tab-btn-artists">
-                    Artisti (<span id="artists-count">0</span>)
+                    Artiști (<span id="artists-count">0</span>)
                 </button>
                 <button onclick="showTab('venues')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted" id="tab-btn-venues">
-                    Locatii (<span id="venues-count">0</span>)
+                    Locații (<span id="venues-count">0</span>)
                 </button>
             </div>
 
@@ -52,11 +52,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                         </div>
                         <div class="flex-1">
-                            <p class="font-semibold text-secondary">Notificari active pentru <span id="notification-count">0</span> evenimente</p>
-                            <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
-                            <a href="/cont/setari" class="hidden text-sm font-medium mobile:block text-primary whitespace-nowrap">Gestioneaza →</a>
+                            <p class="font-semibold text-secondary">Notificări active pentru <span id="notification-count">0</span> evenimente</p>
+                            <p class="text-sm text-muted">Vei fi notificat când biletele devin disponibile sau se apropie de sold out.</p>
+                            <a href="/cont/setari" class="hidden text-sm font-medium mobile:block text-primary whitespace-nowrap">Gestionează →</a>
                         </div>
-                        <a href="/cont/setari" class="text-sm font-medium text-primary whitespace-nowrap mobile:hidden">Gestioneaza →</a>
+                        <a href="/cont/setari" class="text-sm font-medium text-primary whitespace-nowrap mobile:hidden">Gestionează →</a>
                     </div>
                 </div>
 
@@ -186,7 +186,7 @@ const WatchlistPage = {
     renderEvents() {
         const grid = document.getElementById('events-grid');
         if (this.events.length === 0) {
-            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai evenimente in favorite.</p>';
+            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai evenimente în favorite.</p>';
             return;
         }
 
@@ -227,9 +227,9 @@ const WatchlistPage = {
                                 '<span class="text-lg font-bold text-primary">' + event.price + ' lei</span>' +
                                 '<span class="ml-1 text-xs text-muted">de la</span>' +
                             '</div>' +
-                            '<span class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary bg-primary">Cumpara</span>'
+                            '<span class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary bg-primary">Cumpără</span>'
                         :
-                            '<div><span class="text-sm text-muted">Bilete in curand</span></div>' +
+                            '<div><span class="text-sm text-muted">Bilete în curând</span></div>' +
                             '<span class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-secondary">Vezi detalii</span>'
                         )) +
                     '</div>' +
@@ -241,7 +241,7 @@ const WatchlistPage = {
     renderArtists() {
         const grid = document.getElementById('artists-grid');
         if (this.artists.length === 0) {
-            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai artisti in favorite.</p>';
+            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai artiști în favorite.</p>';
             return;
         }
 
@@ -271,7 +271,7 @@ const WatchlistPage = {
     renderVenues() {
         const grid = document.getElementById('venues-grid');
         if (this.venues.length === 0) {
-            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai locatii in favorite.</p>';
+            grid.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu ai locații în favorite.</p>';
             return;
         }
 
