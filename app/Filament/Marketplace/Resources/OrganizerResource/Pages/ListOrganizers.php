@@ -44,6 +44,12 @@ class ListOrganizers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('reports')
+                ->label('Rapoarte')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->url(\App\Filament\Marketplace\Pages\OrganizerReports::getUrl()),
+
             Actions\CreateAction::make(),
 
             Actions\Action::make('download_template')

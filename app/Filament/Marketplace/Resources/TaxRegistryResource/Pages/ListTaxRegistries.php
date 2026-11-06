@@ -18,6 +18,12 @@ class ListTaxRegistries extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('reports')
+                ->label('Rapoarte')
+                ->icon('heroicon-o-table-cells')
+                ->color('gray')
+                ->url(\App\Filament\Marketplace\Pages\TaxRegistryReports::getUrl()),
+
             Actions\Action::make('downloadTemplate')
                 ->label('Descarcă Template CSV')
                 ->icon('heroicon-o-arrow-down-tray')
