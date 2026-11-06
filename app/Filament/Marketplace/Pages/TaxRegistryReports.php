@@ -31,7 +31,7 @@ class TaxRegistryReports extends ConfigurableReportPage
         return 'tax_registries';
     }
 
-    public function getSubheading(): ?string
+    public function introText(): ?string
     {
         return 'Alegi coloanele din datele registrelor de taxe și salvezi raportul. Rapoartele sunt comune pentru toți adminii. '
             .'Numele registrului deschide pagina lui de editare într-un tab nou.';
@@ -125,6 +125,14 @@ class TaxRegistryReports extends ConfigurableReportPage
                 'options' => [
                     MarketplaceTaxRegistry::SUBMISSION_EMAIL => 'Pe email',
                     MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY => 'Prin soluție terță',
+                ],
+                'bulk' => [
+                    'attr' => 'submission_method',
+                    'options' => [
+                        MarketplaceTaxRegistry::SUBMISSION_EMAIL => 'Pe email',
+                        MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY => 'Prin soluție terță',
+                        '__null' => 'Nesetat',
+                    ],
                 ],
                 'format' => fn ($state) => match ($state) {
                     MarketplaceTaxRegistry::SUBMISSION_EMAIL => 'Pe email',

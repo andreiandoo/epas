@@ -4,6 +4,10 @@
         $current = $this->currentReport();
     @endphp
 
+    @if($intro = $this->introText())
+        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-4">{{ $intro }}</p>
+    @endif
+
     <div class="flex flex-wrap items-center gap-2">
         <span class="text-sm text-gray-500 dark:text-gray-400 mr-1">Rapoarte:</span>
         @forelse($reports as $r)

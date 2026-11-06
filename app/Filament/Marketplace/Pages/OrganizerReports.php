@@ -30,7 +30,7 @@ class OrganizerReports extends ConfigurableReportPage
         return 'organizers';
     }
 
-    public function getSubheading(): ?string
+    public function introText(): ?string
     {
         return 'Alegi coloanele din datele organizatorilor și salvezi raportul. Rapoartele sunt comune pentru toți adminii. '
             .'Numele organizatorului deschide fișa lui de editare într-un tab nou.';
@@ -186,12 +186,20 @@ class OrganizerReports extends ConfigurableReportPage
                 'expr' => 'COALESCE(marketplace_organizers.default_commission_mode, ?)', 'bindings' => [$mpMode],
                 'state' => fn ($r) => $r->default_commission_mode ?: $mpMode,
                 'format' => fn ($state, $r) => ($modeOptions[$state] ?? $state).($r->default_commission_mode ? '' : ' (implicit)'),
+                'bulk' => [
+                    'attr' => 'default_commission_mode',
+                    'options' => $modeOptions + ['__null' => 'Implicit marketplace ('.($modeOptions[$mpMode] ?? $mpMode).')'],
+                ],
             ],
             'fixed_commission_default' => ['label' => 'Valoare minimă comision (RON/bilet)', 'group' => $g['comision'], 'type' => 'money'],
             'commission_use_floor' => $bool('Valoare minimă activă', $g['comision']),
             'payment_fee_mode' => [
                 'label' => 'Taxă procesare card', 'group' => $g['comision'], 'type' => 'enum',
                 'options' => ['pass_to_customer' => 'Transferată clientului', 'absorbed_by_commission' => 'Inclusă în comision'],
+                'bulk' => [
+                    'attr' => 'payment_fee_mode',
+                    'options' => ['pass_to_customer' => 'Transferată clientului', 'absorbed_by_commission' => 'Inclusă în comision', '__null' => 'Implicit marketplace'],
+                ],
             ],
             'currency' => $text('Monedă', $g['comision']),
 

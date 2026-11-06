@@ -6,6 +6,10 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\MarketplaceSavedReport;
 use Carbon\CarbonInterface;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
@@ -182,8 +186,11 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
         return $table
             ->query(fn () => $this->reportQuery())
             ->columns($columns)
-            ->filters($filters, layout: FiltersLayout::AboveContentCollapsible)
-            ->filtersFormColumns(4)
+            // Iconița de filtre stă în dreapta căutării, pe același rând.
+            ->filters($filters, layout: FiltersLayout::Dropdown)
+            ->filtersFormColumns(2)
+            ->filtersFormWidth('4xl')
+            ->toolbarActions($this->bulkActions())
             ->defaultSort($titleKey)
             ->paginated([25, 50, 100, 'all'])
             ->defaultPaginationPageOption(50)
@@ -231,11 +238,14 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
             if (in_array($type, ['number', 'money', 'percent'], true)) {
                 $column->alignEnd();
             }
-            if (! empty($def['limit'])) {
-                $column->limit($def['limit'])->tooltip(fn ($state) => $state);
-            }
-            if ($type === 'list') {
-                $column->wrap();
+            // Textele lungi: maximum două rânduri, restul în tooltip, ca să
+            // nu se lățească tabelul.
+            if (in_array($type, ['text', 'list', 'enum'], true)) {
+                $column
+                    ->wrap()
+                    ->lineClamp(2)
+                    ->extraAttributes(['style' => 'max-width: 20rem; min-width: 6rem;'])
+                    ->tooltip(fn ($state) => (is_string($state) && mb_strlen($state) > 40) ? $state : null);
             }
         }
 
@@ -443,6 +453,98 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
     // ------------------------------------------------------------------
     // Acțiuni: rapoarte + export
     // ------------------------------------------------------------------
+
+    /**
+     * Setările din raportul curent care pot fi schimbate în bulk: coloanele
+     * da/nu care sunt câmpuri reale, plus cele marcate cu `bulk` în catalog
+     * (ex. mod comision, cu opțiunea „implicit”).
+     *
+     * @return array<string, array{label: string, attr: string, options: array}>
+     */
+    protected function bulkEditableColumns(): array
+    {
+        $out = [];
+        foreach ($this->selectedColumnKeys() as $key) {
+            $def = $this->columnCatalog()[$key];
+            $bulk = $def['bulk'] ?? null;
+            if ($bulk === false) {
+                continue;
+            }
+            if (is_array($bulk)) {
+                $out[$key] = ['label' => $def['label'], 'attr' => $bulk['attr'], 'options' => $bulk['options']];
+            } elseif (($def['type'] ?? null) === 'bool' && ! empty($def['attr']) && empty($def['expr'])) {
+                $out[$key] = ['label' => $def['label'], 'attr' => $def['attr'], 'options' => ['1' => 'Da', '0' => 'Nu']];
+            }
+        }
+
+        return $out;
+    }
+
+    protected function bulkActions(): array
+    {
+        $editable = $this->bulkEditableColumns();
+        if (! $editable) {
+            return [];
+        }
+
+        return [
+            BulkActionGroup::make([
+                BulkAction::make('applySetting')
+                    ->label('Aplică o setare')
+                    ->icon('heroicon-o-adjustments-horizontal')
+                    ->modalHeading('Aplică o setare pe rândurile selectate')
+                    ->modalDescription('Se aplică doar pe rândurile bifate. Setările disponibile sunt coloanele din raportul curent care se pot modifica.')
+                    ->modalSubmitActionLabel('Aplică')
+                    ->schema([
+                        Select::make('field')
+                            ->label('Setare')
+                            ->options(collect($editable)->map(fn ($e) => $e['label'])->all())
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(fn ($set) => $set('value', null)),
+                        Select::make('value')
+                            ->label('Valoare nouă')
+                            ->options(fn (Get $get) => $editable[$get('field')]['options'] ?? [])
+                            ->required()
+                            ->visible(fn (Get $get) => filled($get('field'))),
+                    ])
+                    ->action(function (Collection $records, array $data) use ($editable) {
+                        $setting = $editable[$data['field']] ?? null;
+                        if (! $setting || ! array_key_exists((string) $data['value'], $setting['options'])) {
+                            return;
+                        }
+
+                        $value = match (true) {
+                            $data['value'] === '__null' => null,
+                            $setting['options'] === ['1' => 'Da', '0' => 'Nu'] => (bool) (int) $data['value'],
+                            default => $data['value'],
+                        };
+
+                        $changed = 0;
+                        foreach ($records as $record) {
+                            $record->setAttribute($setting['attr'], $value);
+                            if ($record->isDirty($setting['attr'])) {
+                                $record->save();
+                                $changed++;
+                            }
+                        }
+
+                        Notification::make()
+                            ->title("{$setting['label']}: {$setting['options'][(string) $data['value']]}")
+                            ->body("Modificat la {$changed} din {$records->count()} rânduri selectate.")
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+            ])->label('Acțiuni pe selecție'),
+        ];
+    }
+
+    /** Textul scurt de sub titlu. */
+    public function introText(): ?string
+    {
+        return null;
+    }
 
     protected function getHeaderActions(): array
     {
