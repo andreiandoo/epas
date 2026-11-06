@@ -26,7 +26,6 @@
                 <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Total vânzări (net)</p>
                     <p class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{{ $fmt($total) }} RON</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Ce i se cuvine organizatorului din bilete vândute online și la ușă (POS), după comision, reduceri și taxe peste preț.</p>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Calculat la {{ $summary['computed_at'] }} · se actualizează la 5 minute sau din „Reîmprospătează".</p>
             </div>
@@ -268,19 +267,23 @@
         </div>
 
         {{-- Payout History --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="w-full px-6 py-4 flex items-center justify-between gap-4 text-left" x-bind:class="open ? 'border-b border-gray-200 dark:border-gray-700' : ''">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <x-heroicon-o-banknotes class="w-5 h-5 text-gray-400" />
                     Lista deconturi
+                    <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $payouts->count() }})</span>
                 </h3>
-            </div>
+                <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
+            </button>
+            <div x-show="open" x-cloak>
             @if($payouts->isEmpty())
                 <div class="text-center py-8">
                     <x-heroicon-o-banknotes class="mx-auto h-10 w-10 text-gray-400" />
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Nu există încă deconturi.</p>
                 </div>
             @else
+                <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
@@ -331,12 +334,15 @@
                                         <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-3 text-sm font-mono">
-                                    <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
-                                        {{ $payout->reference }}
-                                    </a>
+                                <td class="px-6 py-3 text-sm font-mono whitespace-nowrap">
+                                    {{-- Seria AmBilet întâi, cu link; referința internă dedesubt. --}}
                                     @if($payout->decont_series)
-                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $payout->decont_series }}</div>
+                                        <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-base font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">{{ $payout->decont_series }}</a>
+                                        @if($payout->reference)
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $payout->reference }}</div>
+                                        @endif
+                                    @else
+                                        <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">{{ $payout->reference ?: ('#' . $payout->id) }}</a>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
@@ -384,7 +390,9 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             @endif
+            </div>
         </div>
 
     </div>

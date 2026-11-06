@@ -38,15 +38,12 @@ class OrganizerBalance extends Page
 
     public function getTitle(): string
     {
-        return 'Sold: ' . ($this->organizer?->name ?? 'Organizator');
+        return $this->organizer?->name ?? 'Organizator';
     }
 
     public function getBreadcrumbs(): array
     {
-        return [
-            url('/marketplace/balances') => 'Solduri',
-            '#' => $this->organizer?->name ?? 'Organizator',
-        ];
+        return [];
     }
 
     protected function getHeaderActions(): array
@@ -273,7 +270,7 @@ class OrganizerBalance extends Page
     public function editPaymentReferenceAction(): Actions\Action
     {
         return Actions\Action::make('editPaymentReference')
-            ->label(fn (array $arguments) => $this->findPayout($arguments['payout'] ?? null)?->payment_reference ? 'Modifică referința' : 'Adaugă referință')
+            ->label(fn (array $arguments) => $this->findPayout($arguments['payout'] ?? null)?->payment_reference ? 'Modifică' : 'Adaugă referință')
             ->icon('heroicon-m-pencil-square')
             ->color('gray')
             ->size('sm')
