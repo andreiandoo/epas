@@ -398,8 +398,14 @@ class OrganizerBalance extends Page
             ->whereIn('status', ['approved', 'processing'])->sum('amount')
             - MarketplacePayout::advanceOffsetForOrganizer($this->organizerId, ['approved', 'processing']), 2);
 
+        // POS: încasat direct de organizator la ușă. Nu intră în sold, dar
+        // face parte din vânzări: plătit + POS + în procesare + sold = total.
+        $pos = round((float) collect($eventData['rows'])->sum('pos_net'), 2);
+
         return [
             'net' => $net,
+            'pos' => $pos,
+            'total_sales' => round($net + $pos, 2),
             'paid' => $paid,
             'pending' => $pending,
             'available' => round($net - $paid - $pending, 2),

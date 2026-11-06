@@ -11,6 +11,8 @@ use Filament\Tables;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\Url;
 
 class Balances extends Page implements HasForms, HasTable
 {
@@ -25,21 +27,44 @@ class Balances extends Page implements HasForms, HasTable
     protected static ?int $navigationSort = 3;
     protected string $view = 'filament.marketplace.pages.balances';
 
-    public function getSubheading(): ?string
+    /** Filtru rapid: all | pending | available */
+    #[Url]
+    public string $quick = 'all';
+
+    public function updatedQuick(): void
     {
-        return 'Cifrele din listă se actualizează la fiecare plată și se recalculează complet în fiecare noapte. '
-            . 'Pagina fiecărui organizator arată valorile live (inclusiv vânzările de azi), deci pot diferi ușor.';
+        $this->resetPage();
+    }
+
+    protected function baseQuery(): Builder
+    {
+        return MarketplaceOrganizer::query()
+            ->where('marketplace_client_id', static::getMarketplaceClient()?->id);
+    }
+
+    protected function applyQuickFilter(Builder $query, string $quick): Builder
+    {
+        return match ($quick) {
+            'pending' => $query->where('pending_balance', '>', 0.004),
+            'available' => $query->where('available_balance', '>', 0.004),
+            default => $query,
+        };
+    }
+
+    /** Filtrele rapide de deasupra tabelului, cu numărul de organizatori. */
+    public function quickFilters(): array
+    {
+        return [
+            'all' => ['label' => 'Toți', 'count' => $this->baseQuery()->count()],
+            'pending' => ['label' => 'Cu sume în procesare', 'count' => $this->applyQuickFilter($this->baseQuery(), 'pending')->count()],
+            'available' => ['label' => 'Cu sold disponibil', 'count' => $this->applyQuickFilter($this->baseQuery(), 'available')->count()],
+        ];
     }
 
     public function table(Table $table): Table
     {
-        $marketplace = static::getMarketplaceClient();
-
         return $table
-            ->query(
-                MarketplaceOrganizer::query()
-                    ->where('marketplace_client_id', $marketplace?->id)
-            )
+            ->query(fn () => $this->applyQuickFilter($this->baseQuery(), $this->quick))
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Organizator')

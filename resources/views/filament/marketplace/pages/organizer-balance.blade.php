@@ -1,71 +1,64 @@
 <x-filament-panels::page>
     <div class="space-y-6">
 
-        {{-- Carduri: aceeași formulă ca /organizator/sold (net − plătit − în procesare = disponibil) --}}
+        {{-- Rezumat sold: total vânzări și din ce se compune (plătit + POS + în procesare + sold) --}}
         @php
-            $card = 'bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4';
+            $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+            $total = (float) $summary['total_sales'];
+            $negative = $summary['available'] < -0.004;
+            $parts = [
+                ['key' => 'paid', 'label' => 'Plătit de AmBilet', 'value' => $summary['paid'], 'color' => '#3b82f6', 'text' => 'text-blue-600 dark:text-blue-400',
+                 'hint' => 'Deconturi marcate finalizate + avansuri.'],
+                ['key' => 'pos', 'label' => 'Încasat direct (POS)', 'value' => $summary['pos'], 'color' => '#8b5cf6', 'text' => 'text-gray-900 dark:text-white',
+                 'hint' => 'Vândut la ușă: banii sunt deja la organizator. Comisionul POS se facturează separat.'],
+                ['key' => 'pending', 'label' => 'În procesare', 'value' => $summary['pending'], 'color' => '#f59e0b', 'text' => 'text-yellow-600 dark:text-yellow-400',
+                 'hint' => 'Deconturi aprobate, încă nemarcate finalizate. Marchează-le din Lista deconturi după plată.'],
+                ['key' => 'available', 'label' => 'Sold disponibil', 'value' => $summary['available'], 'color' => $negative ? '#ef4444' : '#10b981',
+                 'text' => $negative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400',
+                 'hint' => $negative
+                    ? 'Negativ: s-a plătit mai mult decât vânzările — diferența se recuperează din vânzările următoare.'
+                    : 'Vânzări pentru care nu s-a emis încă decont.'],
+            ];
+            $barBase = collect($parts)->sum(fn ($p) => max(0, (float) $p['value']));
         @endphp
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="{{ $card }}">
-                <div class="flex items-center gap-3">
-                    <div class="flex-shrink-0 w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                        <x-heroicon-o-chart-bar class="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Total vânzări (net)</p>
-                        <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format((float) $summary['net'], 2, ',', '.') }} RON</p>
-                    </div>
+        <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5" aria-label="Rezumat sold">
+            <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total vânzări (net)</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{{ $fmt($total) }} RON</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Ce i se cuvine organizatorului din bilete vândute online și la ușă (POS), după comision, reduceri și taxe peste preț.</p>
                 </div>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Ce i se cuvine organizatorului din bilete vândute prin AmBilet, după comision, reduceri și taxe peste preț. Fără vânzările POS.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Calculat la {{ $summary['computed_at'] }} · se actualizează la 5 minute sau din „Reîmprospătează".</p>
             </div>
 
-            <div class="{{ $card }}">
-                <div class="flex items-center gap-3">
-                    <div class="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
-                        <x-heroicon-o-check-circle class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Total plătit</p>
-                        <p class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ number_format((float) $summary['paid'], 2, ',', '.') }} RON</p>
-                    </div>
+            @if($barBase > 0.004)
+                <div class="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700" role="img"
+                     aria-label="{{ collect($parts)->map(fn ($p) => $p['label'] . ' ' . $fmt($p['value']) . ' RON')->implode(', ') }}">
+                    @foreach($parts as $p)
+                        @if((float) $p['value'] > 0.004)
+                            <div style="width: {{ round(max(0, (float) $p['value']) / $barBase * 100, 3) }}%; background: {{ $p['color'] }};" title="{{ $p['label'] }}: {{ $fmt($p['value']) }} RON"></div>
+                        @endif
+                    @endforeach
                 </div>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Deconturi marcate finalizate + avansuri.</p>
-            </div>
+            @endif
 
-            <div class="{{ $card }}">
-                <div class="flex items-center gap-3">
-                    <div class="flex-shrink-0 w-10 h-10 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg flex items-center justify-center">
-                        <x-heroicon-o-clock class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                @foreach($parts as $p)
+                    <div class="min-w-0 border-t border-gray-200 dark:border-gray-700 pt-3">
+                        <dt class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {{ $p['color'] }};" aria-hidden="true"></span>
+                            {{ $p['label'] }}
+                        </dt>
+                        <dd class="mt-1 text-lg font-bold tabular-nums {{ $p['text'] }}">{{ $fmt($p['value']) }} RON</dd>
+                        <dd class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ $p['hint'] }}</dd>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">În procesare</p>
-                        <p class="text-xl font-bold text-yellow-600 dark:text-yellow-400">{{ number_format((float) $summary['pending'], 2, ',', '.') }} RON</p>
-                    </div>
-                </div>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Deconturi aprobate, încă nemarcate finalizate. Marchează-le din Lista deconturi după plată.</p>
-            </div>
+                @endforeach
+            </dl>
 
-            <div class="{{ $card }}">
-                <div class="flex items-center gap-3">
-                    <div class="flex-shrink-0 w-10 h-10 {{ $summary['available'] < 0 ? 'bg-red-100 dark:bg-red-900/50' : 'bg-green-100 dark:bg-green-900/50' }} rounded-lg flex items-center justify-center">
-                        <x-heroicon-o-wallet class="w-5 h-5 {{ $summary['available'] < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}" />
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Sold disponibil</p>
-                        <p class="text-xl font-bold {{ $summary['available'] < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">{{ number_format((float) $summary['available'], 2, ',', '.') }} RON</p>
-                    </div>
-                </div>
-                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    @if($summary['available'] < 0)
-                        Negativ: s-a plătit mai mult decât vânzările — diferența se recuperează din vânzările următoare.
-                    @else
-                        Vânzări pentru care nu s-a emis încă decont.
-                    @endif
-                </p>
-            </div>
-        </div>
-
-        <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">Datele se actualizează la 5 minute sau din „Reîmprospătează".</p>
+            <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                Plătit {{ $fmt($summary['paid']) }} + POS {{ $fmt($summary['pos']) }} + în procesare {{ $fmt($summary['pending']) }} + sold {{ $fmt($summary['available']) }} = <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $fmt($summary['paid'] + $summary['pos'] + $summary['pending'] + $summary['available']) }} RON</span> (total vânzări)
+            </p>
+        </section>
 
         {{-- Avansuri --}}
         @if($advances->isNotEmpty())
