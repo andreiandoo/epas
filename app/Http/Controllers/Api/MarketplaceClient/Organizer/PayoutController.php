@@ -193,8 +193,7 @@ class PayoutController extends BaseController
                 // POS sales stay out, same as in the decont: the organizer
                 // collected that money at the door, AmBilet never held it
                 // (event 4755: 700 lei of POS showed up as unpaid balance).
-                $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)
-                    ->build($event, excludePos: true, excludeLegacyImport: !$settledInTixello);
+                $breakdown = MarketplacePayout::balanceBreakdown($event, app(\App\Services\Marketplace\SalesBreakdownService::class));
                 $netRevenue = round((float) ($breakdown['total_net'] ?? 0), 2);
                 $commissionAmount = round((float) ($breakdown['total_commission'] ?? 0), 2);
                 $grossRevenue = round((float) ($breakdown['total_revenue'] ?? 0), 2);

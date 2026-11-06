@@ -687,8 +687,7 @@ class MarketplaceOrganizer extends Authenticatable
         // something AmBilet owes. $includePos is only for "total sales" figures.
         $net = 0.0;
         foreach ($events as $event) {
-            $settled = \App\Models\MarketplacePayout::eventHasLegacySettlement($event->id);
-            $breakdown = $service->build($event, excludePos: ! $includePos, excludeLegacyImport: !$settled);
+            $breakdown = \App\Models\MarketplacePayout::balanceBreakdown($event, $service, excludePos: ! $includePos);
             $net += (float) ($breakdown['total_net'] ?? 0);
         }
 

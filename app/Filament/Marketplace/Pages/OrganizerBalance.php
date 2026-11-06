@@ -340,7 +340,7 @@ class OrganizerBalance extends Page
                 // Fără POS, ca la decont: banii de la ușă i-a încasat
                 // organizatorul, nu trec prin AmBilet. Netul POS se arată
                 // separat, doar informativ.
-                $b = $service->build($event, excludePos: true, excludeLegacyImport: ! $settled);
+                $b = MarketplacePayout::balanceBreakdown($event, $service);
                 $pos = $service->build($event, onlyPos: true, excludeLegacyImport: ! $settled);
 
                 $title = is_array($event->title)
@@ -374,7 +374,7 @@ class OrganizerBalance extends Page
 
     protected function eventRowsCacheKey(): string
     {
-        return 'organizer_balance_page_events:v2:' . $this->organizerId;
+        return 'organizer_balance_page_events:v3:' . $this->organizerId;
     }
 
     /**

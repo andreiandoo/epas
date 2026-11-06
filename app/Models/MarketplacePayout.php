@@ -137,6 +137,48 @@ class MarketplacePayout extends Model
      * freeze — see LEGACY_SETTLEMENT_FREEZE. Callers pass the negation as
      * SalesBreakdownService::build(excludeLegacyImport: …).
      */
+    /**
+     * Vânzările evenimentului, pentru calculul soldului.
+     *
+     * Vânzările importate din vechiul sistem (legacy_import) intră doar dacă
+     * evenimentul avea decont înainte de LEGACY_SETTLEMENT_FREEZE, sau în
+     * măsura în care un decont de după chiar le-a plătit: deconturile se
+     * generează cu tot cu importuri, iar fără asta un decont plătit corect
+     * apărea „de regularizat” (Oddland 4258/4259: −316 / −237). Importurile
+     * neplătite nu apar niciodată ca sold de plătit.
+     */
+    public static function balanceBreakdown(Event $event, \App\Services\Marketplace\SalesBreakdownService $service, bool $excludePos = true): array
+    {
+        if (static::eventHasLegacySettlement($event->id)) {
+            return $service->build($event, excludePos: $excludePos);
+        }
+
+        $breakdown = $service->build($event, excludePos: $excludePos, excludeLegacyImport: true);
+        $net = (float) ($breakdown['total_net'] ?? 0);
+
+        $paid = (float) static::where('event_id', $event->id)
+            ->whereIn('status', ['approved', 'processing', 'completed'])
+            ->sum('amount');
+        if ($paid <= $net + 0.004) {
+            return $breakdown;
+        }
+
+        $full = $service->build($event, excludePos: $excludePos);
+        $legacy = (float) ($full['total_net'] ?? 0) - $net;
+        if ($legacy <= 0.004) {
+            return $breakdown;
+        }
+
+        $covered = min($legacy, $paid - $net);
+        if ($covered >= $legacy - 0.004) {
+            return $full;
+        }
+
+        $breakdown['total_net'] = round($net + $covered, 2);
+
+        return $breakdown;
+    }
+
     public static function eventHasLegacySettlement(?int $eventId): bool
     {
         if (!$eventId) {
