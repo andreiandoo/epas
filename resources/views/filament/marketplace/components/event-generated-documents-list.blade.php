@@ -48,15 +48,22 @@
     }
 
     // 2) OrganizerDocument — most likely decont PDFs; carry marketplace_payout_id
+    //    Deconturile se afișează după seria AmBilet (DECAMB…); referința
+    //    internă Tixello (PAY-…) rămâne alături, mai discret.
+    $docPayouts = \App\Models\MarketplacePayout::whereIn('id', $organizerDocs->pluck('marketplace_payout_id')->filter()->unique()->all())
+        ->get()->keyBy('id');
     foreach ($organizerDocs as $doc) {
-        $payout = $doc->marketplace_payout_id
-            ? \App\Models\MarketplacePayout::find($doc->marketplace_payout_id)
-            : null;
+        $payout = $doc->marketplace_payout_id ? $docPayouts->get($doc->marketplace_payout_id) : null;
         $title = $doc->title ?? ($doc->document_type ? ucfirst(str_replace('_', ' ', $doc->document_type)) : 'Document');
         $context = null;
+        $internalRef = null;
         if ($payout) {
             $amount = number_format((float) $payout->amount, 2, ',', '.');
-            $context = "Decont {$payout->reference} • {$amount} {$payout->currency} • {$payout->status}";
+            $context = "{$amount} {$payout->currency} • {$payout->status}";
+            if ($doc->document_type === 'decont' || str_starts_with((string) $doc->title, 'Decont ')) {
+                $title = 'Decont ' . ($payout->decont_series ?: $payout->reference);
+                $internalRef = $payout->decont_series ? $payout->reference : null;
+            }
         }
         $items->push([
             'source' => 'organizer_doc',
@@ -70,6 +77,7 @@
             'badge_color' => 'emerald',
             'icon' => 'decont',
             'payout_id' => $payout?->id,
+            'internal_ref' => $internalRef,
         ]);
     }
 
@@ -77,13 +85,18 @@
     foreach ($invoices as $invoice) {
         $payout = $invoice->payout;
         $amount = number_format((float) $invoice->amount, 2, ',', '.');
-        $context = "Factură {$invoice->number} • {$amount} {$invoice->currency} • {$invoice->status}";
+        $accountingNumber = $invoice->accountingNumber();
+        $context = "{$amount} {$invoice->currency} • {$invoice->status}";
+        if (! $accountingNumber) {
+            $context .= ' • neemisă în Oblio';
+        }
         if ($payout) {
-            $context .= " • pentru decont {$payout->reference}";
+            $context .= ' • pentru decont ' . ($payout->decont_series ?: $payout->reference);
         }
         $items->push([
             'source' => 'invoice',
-            'title' => 'Factură ' . $invoice->number,
+            'title' => 'Factură ' . ($accountingNumber ?: $invoice->number),
+            'internal_ref' => $accountingNumber ? $invoice->number : null,
             'type_label' => $invoice->type === 'pos' ? 'Factură POS' : 'Factură',
             'created_at' => $invoice->created_at,
             'file_path' => null,
@@ -138,6 +151,9 @@
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $item['title'] }}</span>
+                    @if(!empty($item['internal_ref']))
+                        <span class="text-[11px] font-mono text-gray-400 dark:text-gray-500" title="ID intern Tixello">{{ $item['internal_ref'] }}</span>
+                    @endif
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border {{ $badgeClass }}">{{ $item['type_label'] }}</span>
                 </div>
 

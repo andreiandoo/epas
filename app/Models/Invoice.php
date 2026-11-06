@@ -92,6 +92,24 @@ class Invoice extends Model
         return $this->belongsTo(\App\Models\MarketplacePayout::class, 'marketplace_payout_id');
     }
 
+    /**
+     * Seria și numărul din contabilitate (Oblio), ex. AMBFF2342 — numărul
+     * real al facturii. Factura fiscală are prioritate, apoi proforma.
+     * Null cât timp factura n-a fost emisă în contabilitate.
+     */
+    public function accountingNumber(): ?string
+    {
+        $meta = is_array($this->meta) ? $this->meta : [];
+        foreach (['accounting', 'accounting_proforma'] as $key) {
+            $number = $meta[$key]['invoice_number'] ?? $meta[$key]['external_ref'] ?? null;
+            if (is_string($number) && trim($number) !== '') {
+                return trim($number);
+            }
+        }
+
+        return null;
+    }
+
     public function anafQueue(): HasOne
     {
         return $this->hasOne(AnafQueue::class, 'invoice_id');
