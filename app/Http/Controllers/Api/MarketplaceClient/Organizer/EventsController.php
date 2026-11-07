@@ -5314,6 +5314,16 @@ class EventsController extends BaseController
      */
     protected function getEndsAt(Event $event): ?string
     {
+        // Finalul real in ora locala (amanare, final dupa miezul noptii),
+        // folosit de aplicatie ca sa nu treaca evenimentul in „trecut” prea devreme
+        try {
+            $end = $event->getEffectiveEndDatetime(true);
+            if ($end) {
+                return $end->copy()->setTimezone(\App\Support\MarketplaceTz::tz($event->marketplaceClient))->format('Y-m-d\TH:i:s');
+            }
+        } catch (\Throwable $e) {
+        }
+
         // Use end_date accessor for range/multi_day, fall back to start_date for single_day
         $endDate = $event->end_date ?? $event->start_date;
         if ($endDate) {

@@ -193,6 +193,8 @@ class EventsController extends BaseController
             // venue-owner events identically to organizer events.
             'name' => $event->getTranslation('title'),
             'starts_at' => $startsAt,
+            // finalul real, ora locala (vezi Organizer getEndsAt)
+            'ends_at' => $this->naiveEndsAt($event),
             'venue_name' => $venueName,
             'venue_city' => $venueCity,
             'image' => $event->poster_url,
@@ -279,6 +281,18 @@ class EventsController extends BaseController
     /**
      * Derive an organizer-compatible status string for an event.
      */
+    protected function naiveEndsAt(Event $event): ?string
+    {
+        try {
+            $end = $event->getEffectiveEndDatetime(true);
+            return $end
+                ? $end->copy()->setTimezone(\App\Support\MarketplaceTz::tz($event->marketplaceClient))->format('Y-m-d\TH:i:s')
+                : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     protected function derivedStatus(Event $event): string
     {
         if ($event->is_cancelled) return 'cancelled';

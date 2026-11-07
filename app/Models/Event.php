@@ -872,9 +872,31 @@ class Event extends Model
      * absolute UTC instant is correct — Carbon comparisons (>, isPast, etc.)
      * operate on instants, so callers don't need to think about TZ.
      */
-    public function getEffectiveEndDatetime(): ?\Carbon\Carbon
+    public function getEffectiveEndDatetime(bool $crossMidnight = false): ?\Carbon\Carbon
     {
         $tz = \App\Support\MarketplaceTz::tz($this->marketplaceClient);
+
+        // $crossMidnight: un final mai mic decat startul (22:00 - 02:00) e a
+        // doua zi. Optional, ca sa nu mute termenele fiscale calculate din endDay().
+        if ($crossMidnight) {
+            $end = $this->getEffectiveEndDatetime(false);
+            if (!$end) {
+                return null;
+            }
+            [$startTime, $endTime] = $this->is_postponed && $this->postponed_date
+                ? [$this->postponed_start_time, $this->postponed_end_time]
+                : match ($this->duration_mode) {
+                    'range' => [$this->range_start_time, $this->range_end_time],
+                    'multi_day' => !empty($this->multi_slots)
+                        ? [collect($this->multi_slots)->last()['start_time'] ?? null, collect($this->multi_slots)->last()['end_time'] ?? null]
+                        : [null, null],
+                    default => [$this->start_time, $this->end_time],
+                };
+            if ($startTime && $endTime && substr((string) $endTime, 0, 5) <= substr((string) $startTime, 0, 5)) {
+                $end->addDay();
+            }
+            return $end;
+        }
 
         // Postponed events: the "effective" end is the new postponed date +
         // postponed_end_time (or postponed_start_time as cutoff). This makes
