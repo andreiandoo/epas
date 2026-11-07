@@ -12,6 +12,7 @@ use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Models\User;
 use App\Models\Venue;
+use App\Services\Marketplace\PosOrderSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,12 @@ class OrdersController extends BaseController
             'tickets.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
             'tickets.*.quantity' => 'required|integer|min:1|max:20',
             'payment_method' => 'nullable|in:cash,card,tap',
+            // aceleasi campuri ca la organizator: locuri si cheie de idempotenta
+            'seat_uids' => 'nullable|array',
+            'seat_uids.*' => 'string|max:32',
+            'tickets.*.seat_uids' => 'nullable|array',
+            'tickets.*.seat_uids.*' => 'string|max:32',
+            'idempotency_key' => 'nullable|string|max:64',
             // Customer object kept for forward compat with the organizer
             // SalesScreen payload — but every field is optional here. The
             // venue owner UI sends the same placeholder ("pos@ambilet.ro"
@@ -160,8 +167,29 @@ class OrdersController extends BaseController
         $tenantName = $tenant->public_name ?? $tenant->company_name ?? $tenant->name ?? 'Venue';
         $soldByLabel = 'Venue: ' . $tenantName;
 
+        $idempotencyKey = PosOrderSupport::validKey($request->input('idempotency_key'));
+
         try {
             DB::beginTransaction();
+
+            // Aceeasi vanzare trimisa de doua ori (dublu tap, retry, sincronizare
+            // offline) intoarce comanda deja creata.
+            $existing = PosOrderSupport::lockAndFind($client->id, $idempotencyKey);
+            if ($existing) {
+                DB::rollBack();
+                return $this->success([
+                    'order' => [
+                        'id' => $existing->id,
+                        'order_number' => $existing->order_number,
+                        'status' => $existing->status,
+                        'payment_status' => $existing->payment_status,
+                        'total' => (float) $existing->total,
+                        'currency' => $existing->currency,
+                        'source' => $existing->source,
+                    ],
+                    'replayed' => true,
+                ], 'Order already processed');
+            }
 
             $orderItems = [];
             $subtotal = 0;
@@ -193,6 +221,10 @@ class OrdersController extends BaseController
                     throw new \Exception("Not enough tickets for {$ticketType->name}");
                 }
 
+                if ($ticketType->max_per_order && $quantity > $ticketType->max_per_order) {
+                    throw new \Exception("Maximum {$ticketType->max_per_order} tickets per order for {$ticketType->name}");
+                }
+
                 $unitPrice = $ticketType->display_price ?? (($ticketType->price_cents ?? 0) / 100);
                 $itemTotal = $unitPrice * $quantity;
                 $subtotal += $itemTotal;
@@ -219,6 +251,9 @@ class OrdersController extends BaseController
                 'venue_owner_pos' => true,
                 'payment_method' => in_array($payment, ['cash', 'card', 'tap'], true) ? $payment : 'cash',
             ];
+            if ($idempotencyKey) {
+                $meta['idempotency_key'] = $idempotencyKey;
+            }
 
             $orderId = DB::table('orders')->insertGetId([
                 'tenant_id' => $organizerTenantId,
@@ -245,7 +280,8 @@ class OrdersController extends BaseController
             ]);
             $order = Order::find($orderId);
 
-            foreach ($orderItems as $item) {
+            $ticketIdsByLine = [];
+            foreach ($orderItems as $lineIndex => $item) {
                 $orderItem = $order->items()->create([
                     'ticket_type_id' => $item['ticket_type']->id,
                     'name' => $item['ticket_type']->name,
@@ -255,7 +291,7 @@ class OrdersController extends BaseController
                 ]);
 
                 for ($i = 0; $i < $item['quantity']; $i++) {
-                    Ticket::create([
+                    $ticketIdsByLine[$lineIndex][] = Ticket::create([
                         'tenant_id' => $organizerTenantId,
                         'order_id' => $order->id,
                         'order_item_id' => $orderItem->id,
@@ -266,9 +302,19 @@ class OrdersController extends BaseController
                         'barcode' => Str::uuid()->toString(),
                         'status' => 'pending',
                         'price' => $item['unit_price'],
-                    ]);
+                    ])->id;
                 }
             }
+
+            // Locurile vandute de locatie se marcheaza ca vandute (inainte nu
+            // se marcau si acelasi loc se putea vinde de doua ori)
+            PosOrderSupport::applySeats(
+                $order,
+                $event,
+                $ticketIdsByLine,
+                PosOrderSupport::lineSeats($request->input('tickets', [])),
+                (array) $request->input('seat_uids', [])
+            );
 
             // Auto-confirm cash + card POS sales (operator confirms in app
             // that the money was collected). Raw DB updates to bypass

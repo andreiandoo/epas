@@ -35,6 +35,10 @@ class OrdersController extends BaseController
             'tickets.*.performance_id' => 'nullable|integer|exists:performances,id',
             'seat_uids' => 'nullable|array',
             'seat_uids.*' => 'string|max:32',
+            // locurile fiecarei linii (aplicatia noua); seat_uids ramane pentru cele vechi
+            'tickets.*.seat_uids' => 'nullable|array',
+            'tickets.*.seat_uids.*' => 'string|max:32',
+            'idempotency_key' => 'nullable|string|max:64',
             'customer' => 'required|array',
             'customer.email' => 'required|email',
             'customer.first_name' => 'required|string|max:255',
@@ -133,8 +137,28 @@ class OrdersController extends BaseController
             'updated_at' => now(),
         ]);
 
+        $idempotencyKey = \App\Services\Marketplace\PosOrderSupport::validKey($request->input('idempotency_key'));
+
         try {
             DB::beginTransaction();
+
+            // Idempotenta (dublu tap, retry dupa timeout, sincronizare offline):
+            // verificata inainte de stoc, cu lock pe cheie, ca doua cereri
+            // simultane sa nu creeze doua comenzi.
+            $existing = \App\Services\Marketplace\PosOrderSupport::lockAndFind($client->id, $idempotencyKey);
+            if ($existing) {
+                DB::rollBack();
+                return $this->success([
+                    'order' => [
+                        'id' => $existing->id,
+                        'order_number' => $existing->order_number,
+                        'status' => $existing->status,
+                        'total' => (float) $existing->total,
+                    ],
+                    'payment_url' => null,
+                    'replayed' => true,
+                ], 'Order already processed', 200);
+            }
 
             // Calculate totals and validate availability
             $orderItems = [];
@@ -266,31 +290,7 @@ class OrdersController extends BaseController
                 $orderMeta['team_member_name'] = $teamMemberName;
             }
 
-            // Idempotency for offline-mode POS retries. Client generates a
-            // UUID when queuing a sale offline, ships the same key on every
-            // sync attempt. If we've already booked an order with that key
-            // for this organizer we return the existing one instead of
-            // duplicating tickets (which would double-charge the customer).
-            $idempotencyKey = $request->input('idempotency_key');
-            if (is_string($idempotencyKey) && strlen($idempotencyKey) >= 8 && strlen($idempotencyKey) <= 64) {
-                $existingId = DB::table('orders')
-                    ->where('marketplace_client_id', $client->id)
-                    ->whereRaw("meta->>'idempotency_key' = ?", [$idempotencyKey])
-                    ->value('id');
-                if ($existingId) {
-                    $existing = Order::find($existingId);
-                    if ($existing) {
-                        return $this->success([
-                            'order' => [
-                                'id' => $existing->id,
-                                'order_number' => $existing->order_number,
-                                'status' => $existing->status,
-                                'total' => (float) $existing->total,
-                            ],
-                            'replayed' => true,
-                        ], 'Order already processed', 200);
-                    }
-                }
+            if ($idempotencyKey) {
                 $orderMeta['idempotency_key'] = $idempotencyKey;
             }
 
@@ -342,7 +342,8 @@ class OrdersController extends BaseController
             $order = Order::find($orderId);
 
             // Create order items and tickets
-            foreach ($orderItems as $item) {
+            $ticketIdsByLine = [];
+            foreach ($orderItems as $lineIndex => $item) {
                 $orderItem = $order->items()->create([
                     'ticket_type_id' => $item['ticket_type']->id,
                     'performance_id' => $item['performance_id'] ?? null,
@@ -383,7 +384,7 @@ class OrdersController extends BaseController
                         $nextSeriesNum++;
                     }
 
-                    Ticket::create([
+                    $ticketIdsByLine[$lineIndex][] = Ticket::create([
                         'tenant_id' => $tenantId,
                         'order_id' => $order->id,
                         'order_item_id' => $orderItem->id,
@@ -396,103 +397,18 @@ class OrdersController extends BaseController
                         'status' => 'pending',
                         'price' => $item['unit_price'],
                         'meta' => !empty($ticketMeta) ? $ticketMeta : null,
-                    ]);
+                    ])->id;
                 }
             }
 
-            // Handle seated ticket sales - mark selected seats as sold
-            $seatUids = $request->input('seat_uids', []);
-            if (!empty($seatUids)) {
-                $layout = EventSeatingLayout::where('event_id', $event->id)
-                    ->published()
-                    ->latest('published_at')
-                    ->first();
-
-                if (!$layout) {
-                    throw new \Exception('No seating layout found for this event');
-                }
-
-                // Validate and lock all requested seats atomically
-                $seats = EventSeat::where('event_seating_id', $layout->id)
-                    ->whereIn('seat_uid', $seatUids)
-                    ->lockForUpdate()
-                    ->get();
-
-                if ($seats->count() !== count($seatUids)) {
-                    $found = $seats->pluck('seat_uid')->toArray();
-                    $missing = array_diff($seatUids, $found);
-                    throw new \Exception('Seats not found: ' . implode(', ', $missing));
-                }
-
-                $unavailable = $seats->filter(fn($s) => $s->status !== 'available' && $s->status !== 'held');
-                if ($unavailable->isNotEmpty()) {
-                    $labels = $unavailable->map(fn($s) => "{$s->section_name} {$s->row_label}-{$s->seat_label}")->join(', ');
-                    throw new \Exception("Locuri indisponibile: {$labels}");
-                }
-
-                // Mark all seats as sold
-                EventSeat::where('event_seating_id', $layout->id)
-                    ->whereIn('seat_uid', $seatUids)
-                    ->update([
-                        'status' => 'sold',
-                        'last_change_at' => now(),
-                        'version' => DB::raw('version + 1'),
-                    ]);
-
-                // Real-time push so the browser canvas widget and mobile
-                // WebView turn these seats red instantly without polling.
-                // Bypasses SeatInventoryRepository because the loop above
-                // already did a raw bulk update — broadcast inline.
-                try {
-                    $payload = array_map(
-                        fn ($uid) => ['seat_uid' => $uid, 'status' => 'sold'],
-                        array_values($seatUids)
-                    );
-                    event(new \App\Events\Seating\SeatStatusChanged((int) $event->id, $payload));
-                } catch (\Throwable $e) {
-                    Log::warning('Seat sold broadcast failed', [
-                        'event_id' => $event->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-
-                // Clean up any seat holds for these seats
-                \App\Models\Seating\SeatHold::where('event_seating_id', $layout->id)
-                    ->whereIn('seat_uid', $seatUids)
-                    ->delete();
-
-                // Assign seat info to tickets (1:1 mapping seat_uid → ticket)
-                $tickets = $order->tickets()->orderBy('id')->get();
-                $seatIndex = 0;
-                foreach ($tickets as $ticket) {
-                    if ($seatIndex < count($seatUids)) {
-                        $seat = $seats->firstWhere('seat_uid', $seatUids[$seatIndex]);
-                        if ($seat) {
-                            $ticket->update([
-                                'seat_label' => $seat->section_name . ' ' . $seat->row_label . '-' . $seat->seat_label,
-                                'meta' => array_merge($ticket->meta ?? [], [
-                                    'seat_uid' => $seat->seat_uid,
-                                    'event_seating_id' => $layout->id,
-                                    'section_name' => $seat->section_name,
-                                    'row_label' => $seat->row_label,
-                                    'seat_number' => $seat->seat_label,
-                                ]),
-                            ]);
-                        }
-                        $seatIndex++;
-                    }
-                }
-
-                // Store seated items in order meta
-                $order->update([
-                    'meta' => array_merge($order->meta ?? [], [
-                        'seated_items' => [[
-                            'event_seating_id' => $layout->id,
-                            'seat_uids' => $seatUids,
-                        ]],
-                    ]),
-                ]);
-            }
+            // Locuri: pe linie (aplicatia noua) sau pe toata comanda (vechi)
+            \App\Services\Marketplace\PosOrderSupport::applySeats(
+                $order,
+                $event,
+                $ticketIdsByLine,
+                \App\Services\Marketplace\PosOrderSupport::lineSeats($request->input('tickets', [])),
+                (array) $request->input('seat_uids', [])
+            );
 
             // Auto-confirm POS cash / card orders and invitations immediately.
             // Card here means "physical card POS terminal" — the operator
