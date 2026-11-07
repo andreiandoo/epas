@@ -1577,7 +1577,8 @@ class EventsController extends BaseController
                 ticket_types.id AS ticket_type_id,
                 ticket_types.name AS name,
                 ticket_types.color AS color,
-                COUNT(*) AS sold_count
+                COUNT(*) AS sold_count,
+                COALESCE(SUM(tickets.price), 0) AS revenue
             ")
             ->groupBy('bucket', 'ticket_types.id', 'ticket_types.name', 'ticket_types.color')
             ->orderByDesc('sold_count')
@@ -1591,6 +1592,8 @@ class EventsController extends BaseController
                 'name' => (string) $row->name,
                 'color' => $row->color ?? null,
                 'sold_count' => (int) $row->sold_count,
+                // pretul fixat pe fiecare bilet (ca in raportul exportat), nu pretul de lista
+                'revenue' => round((float) $row->revenue, 2),
             ];
             if ($row->bucket === 'door') {
                 $byDoor[] = $entry;
