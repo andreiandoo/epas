@@ -348,6 +348,19 @@ class PosTicketClaimController extends Controller
      *
      * @return array{content: string, filename: string}
      */
+    /**
+     * Comanda Test POS: sursa de test sau numai bilete Test POS.
+     */
+    public static function isTestOrder(Order $order): bool
+    {
+        if (in_array($order->source, \App\Support\TestPos::ORDER_SOURCES, true)) {
+            return true;
+        }
+        $order->loadMissing('tickets.ticketType');
+        return $order->tickets->isNotEmpty()
+            && $order->tickets->every(fn ($t) => (bool) $t->ticketType?->isTestPos());
+    }
+
     public static function renderPdf(PosTicketClaim $claim, Order $order): array
     {
         $order->loadMissing(['tickets.ticketType', 'event.venue', 'marketplaceClient']);
@@ -394,6 +407,7 @@ class PosTicketClaimController extends Controller
             'accessTime' => $accessTime,
             'organizerName' => $organizerName,
             'organizerCui' => $organizerCui,
+            'isTest' => self::isTestOrder($order),
         ])->setOption('isRemoteEnabled', true)
           ->setPaper([0, 0, 396, 700], 'portrait');
 

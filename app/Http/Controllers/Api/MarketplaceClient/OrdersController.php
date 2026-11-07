@@ -1362,8 +1362,15 @@ class OrdersController extends BaseController
         $totalFormatted = number_format($order->total, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
         $marketplaceName = $client->name ?? 'AmBilet';
 
+        // Test POS: se poate trimite, dar trebuie sa se vada ca nu e bilet real
+        $isTest = \App\Http\Controllers\PosTicketClaimController::isTestOrder($order);
+        $testBanner = $isTest
+            ? "<div style='background:#fef2f2;border:2px solid #dc2626;color:#b91c1c;font-weight:bold;padding:12px;text-align:center;margin-bottom:16px;'>TEST – bilet nevalabil</div>"
+            : '';
+
         $html = "
         <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>
+            {$testBanner}
             <h2 style='color:#333;'>Biletele tale pentru " . e($eventName) . "</h2>
             <p>Comanda: <strong>{$order->order_number}</strong></p>
             <p>Total: <strong>{$totalFormatted}</strong></p>
@@ -1392,7 +1399,7 @@ class OrdersController extends BaseController
             ]);
         }
 
-        $this->sendMarketplaceEmail($client, $email, $order->customer_name ?? 'Client', "Biletele tale - {$eventName}", $html, [
+        $this->sendMarketplaceEmail($client, $email, $order->customer_name ?? 'Client', ($isTest ? 'TEST – bilet nevalabil - ' : '') . "Biletele tale - {$eventName}", $html, [
             'order_id' => $order->id,
             'template_slug' => 'pos_tickets',
             'attachments' => $attachments,

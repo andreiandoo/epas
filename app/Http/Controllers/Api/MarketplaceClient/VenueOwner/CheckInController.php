@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\VenueOwner;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\Concerns\FormatsVenueOwnerTicket;
 use App\Models\Event;
+use App\Services\Checkin\TicketCheckin;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\User;
@@ -84,23 +85,34 @@ class CheckInController extends BaseController
             return $this->error('This ticket has been ' . $ticket->status, 400);
         }
 
-        $scannerLabel = $this->scannerLabel($tenant, $user);
+        $result = TicketCheckin::attempt(
+            $ticket,
+            Event::with('marketplaceClient')->find($resolvedEventId),
+            $this->scannerLabel($tenant, $user),
+            'venue_app',
+            TicketCheckin::scanTime($request->input('scanned_at'))
+        );
 
-        if ($ticket->checked_in_at) {
-            $payload = $this->buildScanPayload($ticket, $isInvitation);
-            return response()->json(array_merge([
-                'success' => false,
-                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
-            ], $payload), 400);
+        return $this->checkinResponse($result, $ticket, $isInvitation);
+    }
+
+    /**
+     * Raspunsul comun dupa TicketCheckin::attempt (vezi organizer).
+     */
+    protected function checkinResponse(array $result, Ticket $ticket, bool $isInvitation): JsonResponse
+    {
+        $payload = $this->buildScanPayload($ticket, $isInvitation);
+        $payload['validity'] = $result['validity'];
+        $payload['code'] = $result['code'];
+
+        if ($result['status'] === 'ok') {
+            return $this->success($payload, $result['message']);
         }
 
-        $ticket->update([
-            'checked_in_at' => now(),
-            'checked_in_by' => $scannerLabel,
-            'checked_in_via' => 'venue_app',
-        ]);
-
-        return $this->success($this->buildScanPayload($ticket, $isInvitation), 'Ticket checked in successfully');
+        return response()->json(array_merge([
+            'success' => false,
+            'message' => $result['message'],
+        ], $payload), $result['status'] === 'duplicate' ? 400 : 422);
     }
 
     /**
@@ -154,23 +166,15 @@ class CheckInController extends BaseController
             return $this->error('This ticket has been ' . $ticket->status, 400);
         }
 
-        $scannerLabel = $this->scannerLabel($tenant, $user);
+        $result = TicketCheckin::attempt(
+            $ticket,
+            $venueEvent->loadMissing('marketplaceClient'),
+            $this->scannerLabel($tenant, $user),
+            'venue_app',
+            TicketCheckin::scanTime($request->input('scanned_at'))
+        );
 
-        if ($ticket->checked_in_at) {
-            $payload = $this->buildScanPayload($ticket, $isInvitation);
-            return response()->json(array_merge([
-                'success' => false,
-                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
-            ], $payload), 400);
-        }
-
-        $ticket->update([
-            'checked_in_at' => now(),
-            'checked_in_by' => $scannerLabel,
-            'checked_in_via' => 'venue_app',
-        ]);
-
-        return $this->success($this->buildScanPayload($ticket, $isInvitation), 'Ticket checked in successfully');
+        return $this->checkinResponse($result, $ticket, $isInvitation);
     }
 
     /**
@@ -197,11 +201,9 @@ class CheckInController extends BaseController
         if ($resolvedEventId === null || (int) $resolvedEventId !== (int) $venueEvent->id) {
             return $this->error('Biletul nu este pentru acest eveniment', 400);
         }
-        if (!$ticket->checked_in_at) {
+        if (!TicketCheckin::undo($ticket)) {
             return $this->error('Ticket is not checked in', 400);
         }
-
-        $ticket->update(['checked_in_at' => null, 'checked_in_by' => null]);
 
         return $this->success(null, 'Check-in undone');
     }
@@ -236,11 +238,9 @@ class CheckInController extends BaseController
             return $this->error('Ticket is not for an event at your venue', 403);
         }
 
-        if (!$ticket->checked_in_at) {
+        if (!TicketCheckin::undo($ticket)) {
             return $this->error('Ticket is not checked in', 400);
         }
-
-        $ticket->update(['checked_in_at' => null, 'checked_in_by' => null]);
 
         return $this->success(null, 'Check-in undone');
     }

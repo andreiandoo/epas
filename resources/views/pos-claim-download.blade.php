@@ -164,6 +164,9 @@
     </style>
 </head>
 <body>
+    @if(!empty($isTest))
+        <div style="background:#fef2f2;border:2px solid #dc2626;color:#b91c1c;font-weight:bold;padding:8px;text-align:center;margin-bottom:8px;">TEST – bilet nevalabil</div>
+    @endif
     <div class="order-info">
         Comanda: <strong>{{ $order->order_number }}</strong>
         @if($order->tickets->count() > 1)
@@ -173,6 +176,9 @@
 
     @foreach($order->tickets as $index => $ticket)
         <div class="ticket">
+            @if(!empty($isTest))
+                <div style="color:#b91c1c;font-weight:bold;text-align:center;font-size:12px;">TEST – bilet nevalabil</div>
+            @endif
             <div class="ticket-header">
                 <h1>{{ $claim->event_name }}</h1>
                 <p class="event-details">

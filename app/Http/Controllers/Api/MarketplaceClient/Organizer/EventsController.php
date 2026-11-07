@@ -1654,7 +1654,9 @@ class EventsController extends BaseController
             $peakHourLabel = null;
         }
 
-        return $this->paginated($tickets, function ($ticket) {
+        $event->loadMissing('marketplaceClient');
+
+        return $this->paginated($tickets, function ($ticket) use ($event) {
             $ticketType = $ticket->ticketType;
             $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
             $attendeePhone = $ticketMeta['attendee_phone'] ?? $ticketMeta['beneficiary_phone'] ?? null;
@@ -1713,6 +1715,8 @@ class EventsController extends BaseController
                 'source' => $orderSource,
                 'is_invitation' => $isInvitation,
                 'purchased_at' => $ticket->created_at->toIso8601String(),
+                // zilele valide, pentru scanarea offline
+                'validity' => \App\Services\Checkin\TicketCheckin::offlineInfo($ticket, $event),
             ];
         }, [
             'stats' => [
@@ -2033,29 +2037,41 @@ class EventsController extends BaseController
         // Venue-owner private notes (visible to marketplace scanners per product requirement)
         $venueNotes = $this->resolveVenueNotesForTicket($ticket);
 
-        if ($ticket->checked_in_at) {
-            $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'duplicate', 'already_checked_in');
-            $duplicate = $this->buildTicketScanPayload($ticket, $isInvitation);
-            // Timestamp: ALWAYS send ISO 8601 with offset so the mobile
-            // app can convert to Europe/Bucharest safely. The old naked
-            // "Y-m-d H:i:s" caused a 3h discrepancy — server runs UTC.
-            return response()->json(array_merge([
-                'success' => false,
-                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->toIso8601String(),
-                'venue_notes' => $venueNotes,
-            ], $duplicate), 400);
+        // Ziua si ora: abonamente, bilete pe o zi, fereastra de scanare
+        $result = \App\Services\Checkin\TicketCheckin::attempt(
+            $ticket,
+            Event::with('marketplaceClient')->find($resolvedEventId),
+            $organizer->contact_name ?? $organizer->name,
+            $this->detectOrganizerCheckinSource($request),
+            \App\Services\Checkin\TicketCheckin::scanTime($request->input('scanned_at'))
+        );
+        if ($result['status'] !== 'ok') {
+            $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, $result['status'] === 'duplicate' ? 'duplicate' : 'invalid', $result['code']);
         }
 
-        $ticket->update([
-            'checked_in_at' => now(),
-            'checked_in_by' => $organizer->contact_name ?? $organizer->name,
-            'checked_in_via' => $this->detectOrganizerCheckinSource($request),
-        ]);
+        return $this->checkinResponse($result, $ticket, $isInvitation, $venueNotes);
+    }
 
+    /**
+     * Raspunsul comun dupa TicketCheckin::attempt. Duplicatul ramane 400 cu
+     * "Ticket already checked in at ..." (aplicatiile vechi il recunosc asa);
+     * ziua gresita / prea devreme / incheiat vin cu 422 si mesaj in romana.
+     */
+    protected function checkinResponse(array $result, \App\Models\Ticket $ticket, bool $isInvitation, $venueNotes): JsonResponse
+    {
         $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
         $payload['venue_notes'] = $venueNotes;
+        $payload['validity'] = $result['validity'];
+        $payload['code'] = $result['code'];
 
-        return $this->success($payload, 'Ticket checked in successfully');
+        if ($result['status'] === 'ok') {
+            return $this->success($payload, $result['message']);
+        }
+
+        return response()->json(array_merge([
+            'success' => false,
+            'message' => $result['message'],
+        ], $payload), $result['status'] === 'duplicate' ? 400 : 422);
     }
 
     /**
@@ -2258,25 +2274,15 @@ class EventsController extends BaseController
 
         $venueNotes = $this->resolveVenueNotesForTicket($ticket);
 
-        if ($ticket->checked_in_at) {
-            $duplicate = $this->buildTicketScanPayload($ticket, $isInvitation);
-            return response()->json(array_merge([
-                'success' => false,
-                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
-                'venue_notes' => $venueNotes,
-            ], $duplicate), 400);
-        }
+        $result = \App\Services\Checkin\TicketCheckin::attempt(
+            $ticket,
+            $event->loadMissing('marketplaceClient'),
+            $organizer->contact_name ?? $organizer->name,
+            $this->detectOrganizerCheckinSource($request),
+            \App\Services\Checkin\TicketCheckin::scanTime($request->input('scanned_at'))
+        );
 
-        $ticket->update([
-            'checked_in_at' => now(),
-            'checked_in_by' => $organizer->contact_name ?? $organizer->name,
-            'checked_in_via' => $this->detectOrganizerCheckinSource($request),
-        ]);
-
-        $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
-        $payload['venue_notes'] = $venueNotes;
-
-        return $this->success($payload, 'Ticket checked in successfully');
+        return $this->checkinResponse($result, $ticket, $isInvitation, $venueNotes);
     }
 
     /**
@@ -2318,14 +2324,9 @@ class EventsController extends BaseController
             return $this->success(null, 'Check-in undone');
         }
 
-        if (!$ticket->checked_in_at) {
+        if (!\App\Services\Checkin\TicketCheckin::undo($ticket)) {
             return $this->error('Ticket is not checked in', 400);
         }
-
-        $ticket->update([
-            'checked_in_at' => null,
-            'checked_in_by' => null,
-        ]);
 
         return $this->success(null, 'Check-in undone');
     }

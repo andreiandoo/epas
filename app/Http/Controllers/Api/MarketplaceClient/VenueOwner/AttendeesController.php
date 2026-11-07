@@ -44,8 +44,12 @@ class AttendeesController extends BaseController
      */
     public function participants(Request $request, int $event): JsonResponse
     {
-        return $this->listTickets($request, $event, 200, function (Ticket $t, $notesMap) {
+        $eventForValidity = Event::with('marketplaceClient')->find($event);
+
+        return $this->listTickets($request, $event, 200, function (Ticket $t, $notesMap) use ($eventForValidity) {
             $data = $this->formatTicket($t, null, includeEvent: false);
+            // zilele valide, pentru scanarea offline
+            $data['validity'] = \App\Services\Checkin\TicketCheckin::offlineInfo($t, $eventForValidity);
             $order = $t->order;
             $customerName = $data['customer']['full_name'] ?? null;
 
