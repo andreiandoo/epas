@@ -2009,6 +2009,13 @@ class EventsController extends BaseController
             return $this->error('Ticket is not for one of your events', 403);
         }
 
+        // Evenimentul ales in aplicatie (trimis de versiunile noi)
+        $mismatch = \App\Support\ScanEventGuard::mismatchMessage($request->input('event_id'), $resolvedEventId);
+        if ($mismatch) {
+            $this->logScanAttempt($request, $resolvedEventId, $organizer, $barcode, 'invalid', 'other_event');
+            return $this->error($mismatch, 409);
+        }
+
         // For regular tickets, the order must be in a valid status. Invitations
         // have no order so we skip this check.
         if (!$isInvitation) {

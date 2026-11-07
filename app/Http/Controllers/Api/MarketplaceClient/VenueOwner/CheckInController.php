@@ -67,6 +67,12 @@ class CheckInController extends BaseController
             return $this->error('Ticket is not for an event at your venue', 403);
         }
 
+        // Evenimentul ales in aplicatie (trimis de versiunile noi)
+        $mismatch = \App\Support\ScanEventGuard::mismatchMessage($request->input('event_id'), $resolvedEventId);
+        if ($mismatch) {
+            return $this->error($mismatch, 409);
+        }
+
         if (!$isInvitation) {
             $validOrderStatuses = ['paid', 'confirmed', 'completed'];
             if (!$ticket->order || !in_array($ticket->order->status, $validOrderStatuses, true)) {
