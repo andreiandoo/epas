@@ -156,10 +156,22 @@ if (!$orderId) {
 }
 
 // Step 2: Initiate payment
+// The buyer's own IP and browser: a whitelabel order was created by the organizer's
+// server, so core keeps these for the server-side Purchase (Meta CAPI / TikTok).
+$visitorHeaders = [];
+$visitorIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+if (filter_var($visitorIp, FILTER_VALIDATE_IP)) {
+    $visitorHeaders[] = 'X-Visitor-IP: ' . $visitorIp;
+}
+$visitorUa = trim(preg_replace('/[\r\n]+/', ' ', (string) ($_SERVER['HTTP_USER_AGENT'] ?? '')));
+if ($visitorUa !== '') {
+    $visitorHeaders[] = 'X-Visitor-UA: ' . substr($visitorUa, 0, 500);
+}
+
 $payResult = api_post('/orders/' . $orderId . '/pay', [
     'return_url' => $returnUrl,
     'cancel_url' => $cancelUrl,
-]);
+], $visitorHeaders);
 
 $payData = $payResult['data'] ?? [];
 

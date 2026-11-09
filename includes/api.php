@@ -32,12 +32,13 @@ function api_get(string $endpoint, array $params = []): array
  *
  * @param string $endpoint The API endpoint
  * @param array $data The data to send
+ * @param array $extraHeaders Optional extra request headers ("Name: value")
  * @return array Response data with 'success' and 'data' keys
  */
-function api_post(string $endpoint, array $data = []): array
+function api_post(string $endpoint, array $data = [], array $extraHeaders = []): array
 {
     $url = API_BASE_URL . $endpoint;
-    return api_request('POST', $url, $data);
+    return api_request('POST', $url, $data, $extraHeaders);
 }
 
 /**
@@ -46,17 +47,18 @@ function api_post(string $endpoint, array $data = []): array
  * @param string $method HTTP method (GET, POST, etc.)
  * @param string $url Full URL to request
  * @param array|null $data Optional data for POST requests
+ * @param array $extraHeaders Optional extra request headers ("Name: value")
  * @return array Response data
  */
-function api_request(string $method, string $url, ?array $data = null): array
+function api_request(string $method, string $url, ?array $data = null, array $extraHeaders = []): array
 {
     $ch = curl_init();
 
-    $headers = [
+    $headers = array_merge([
         'Accept: application/json',
         'Content-Type: application/json',
         'X-API-Key: ' . API_KEY,
-    ];
+    ], $extraHeaders);
 
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
