@@ -5721,7 +5721,7 @@ class LeisureController extends BaseController
                 $doc = $p->decontDocument;
                 $docUrl = null;
                 if ($doc && $doc->file_path) {
-                    $docUrl = url('storage/' . $doc->file_path);
+                    $docUrl = $doc->download_url;
                 }
                 // Breakdown per tip bilet — reduce ticket_breakdown JSON la doar
                 // campurile de care are nevoie UI-ul (nume, qty, unit_price,

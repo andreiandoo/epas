@@ -1018,7 +1018,7 @@ class AuthController extends BaseController
             'contract' => [
                 'id' => $document->id,
                 'title' => $document->title,
-                'download_url' => url('storage/' . $document->file_path),
+                'download_url' => $document->download_url,
             ],
         ]);
     }

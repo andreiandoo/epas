@@ -157,7 +157,11 @@ class OrganizerDocument extends Model
             return null;
         }
 
-        return url('storage/' . $this->file_path);
+        // Versiunea in URL: la regenerare fisierul poate pastra aceeasi cale,
+        // iar browserul/cache-ul ar servi PDF-ul vechi (decont 3671).
+        $version = ($this->updated_at ?? $this->created_at)?->timestamp;
+
+        return url('storage/' . $this->file_path) . ($version ? '?v=' . $version : '');
     }
 
     /**

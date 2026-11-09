@@ -665,7 +665,7 @@ class OrganizerResource extends Resource
                                     if (! $doc) {
                                         return null;
                                     }
-                                    $url = \Illuminate\Support\Facades\Storage::disk('public')->url($doc->file_path);
+                                    $url = $doc->download_url;
                                     $signed = ! empty($doc->document_data['signed'] ?? null);
                                     $signedLabel = ! empty($doc->document_data['signed_offline'] ?? null) ? 'semnat offline' : 'semnat electronic';
                                     $badge = $signed
