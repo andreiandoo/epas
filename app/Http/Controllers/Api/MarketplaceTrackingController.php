@@ -581,7 +581,7 @@ class MarketplaceTrackingController extends Controller
             'ttclid' => $event->ttclid ?? null,
             'ttp' => $request->input('ttp') ?: null,
             'ip' => $event->ip_address ?: $request->ip(),
-            'user_agent' => $request->userAgent(),
+            'user_agent' => $this->visitorUserAgent($request),
         ], fn ($v) => $v !== null && $v !== '');
     }
 
@@ -613,6 +613,17 @@ class MarketplaceTrackingController extends Controller
         return $props;
     }
 
+    /**
+     * Browser User-Agent of the visitor: X-Visitor-UA from an authenticated
+     * marketplace / whitelabel proxy, otherwise the request's own.
+     */
+    protected function visitorUserAgent(Request $request): ?string
+    {
+        $forwarded = \App\Support\VisitorSignals::from($request)['client_user_agent'] ?? null;
+
+        return $forwarded ?: ($request->userAgent() ?: null);
+    }
+
     protected function buildCapiUserData(CoreCustomerEvent $event, Request $request): array
     {
         $email = $request->input('email') ?? $request->input('customer_email');
@@ -633,7 +644,8 @@ class MarketplaceTrackingController extends Controller
             'fn' => $nameParts[0] ?? null,
             'ln' => $nameParts[1] ?? null,
             'client_ip_address' => $event->ip_address ?: $request->ip(),
-            'client_user_agent' => $request->userAgent(),
+            // Behind a site proxy the request's own User-Agent is the proxy's.
+            'client_user_agent' => $this->visitorUserAgent($request),
             'fbp' => $request->input('fbp') ?: null,
             'fbc' => $fbc ?: null,
             'external_id' => $event->visitor_id ?: null,

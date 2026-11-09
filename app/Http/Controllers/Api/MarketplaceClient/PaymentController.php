@@ -16,6 +16,33 @@ use Illuminate\Support\Facades\Log;
 class PaymentController extends BaseController
 {
     /**
+     * Whitelabel orders are created by the organizer's site through its own server,
+     * so the order may lack the buyer's IP / browser. The buyer is on the payment
+     * page now (the marketplace forwards X-Visitor-IP / X-Visitor-UA), and the
+     * return URL is the whitelabel thank-you page the server-side Purchase reports.
+     */
+    protected function withWhitelabelPaymentSignals(array $meta, Request $request): array
+    {
+        $returnUrl = \App\Support\WhitelabelOrder::cleanUrl($request->input('return_url'));
+        if ($returnUrl) {
+            $meta['return_url'] = $returnUrl;
+        }
+
+        $ip = trim((string) $request->header('X-Visitor-IP', ''));
+        if (empty($meta['client_ip'])
+            && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            $meta['client_ip'] = $ip;
+        }
+
+        $ua = trim((string) $request->header('X-Visitor-UA', ''));
+        if (empty($meta['client_user_agent']) && $ua !== '') {
+            $meta['client_user_agent'] = mb_substr($ua, 0, 500);
+        }
+
+        return $meta;
+    }
+
+    /**
      * Initialize payment for a marketplace order
      */
     public function initiate(Request $request, int $orderId): JsonResponse
@@ -124,6 +151,9 @@ class PaymentController extends BaseController
             $existingMeta = is_array($order->meta) ? $order->meta : [];
             $existingMeta['payment_initiated_at'] = now()->toIso8601String();
             $existingMeta['payment_initiated_processor'] = $processorType;
+            if (\App\Support\WhitelabelOrder::is($order)) {
+                $existingMeta = $this->withWhitelabelPaymentSignals($existingMeta, $request);
+            }
             $order->update([
                 'payment_reference' => $paymentData['reference'] ?? $paymentData['payment_id'] ?? null,
                 'payment_processor' => $processorType,

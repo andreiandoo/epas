@@ -462,11 +462,17 @@ class FacebookCapiService
     {
         $hashedData = [];
 
-        // Fields that should be hashed
-        $hashFields = ['em', 'ph', 'fn', 'ln', 'ct', 'st', 'zp', 'country', 'db', 'ge'];
+        // Fields that should be hashed. external_id too: the browser pixel hashes
+        // it, so a plain value from the server would never match the browser's.
+        $hashFields = ['em', 'ph', 'fn', 'ln', 'ct', 'st', 'zp', 'country', 'db', 'ge', 'external_id'];
 
         foreach ($userData as $key => $value) {
             if (empty($value)) {
+                continue;
+            }
+
+            if ($key === 'external_id' && is_string($value) && preg_match('/^[a-f0-9]{64}$/', $value)) {
+                $hashedData[$key] = $value; // already a SHA-256
                 continue;
             }
 

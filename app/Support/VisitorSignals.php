@@ -29,8 +29,15 @@ class VisitorSignals
         $userAgent = trim((string) $request->header('X-Visitor-UA', ''));
         $visitorId = trim((string) $request->header('X-Visitor-ID', ''));
 
+        // A whitelabel site whose proxy does not forward X-Visitor-IP would give us
+        // its hosting server's IP for every buyer; better no IP than that one.
+        $clientIp = VisitorIp::from($request);
+        if ($request->attributes->get('whitelabel_organizer_id') && $clientIp === $request->ip()) {
+            $clientIp = null;
+        }
+
         return array_filter([
-            'client_ip' => VisitorIp::from($request),
+            'client_ip' => $clientIp,
             'client_user_agent' => $userAgent !== '' ? mb_substr($userAgent, 0, 500) : null,
             'fbp' => self::metaCookie($request->header('X-Visitor-Fbp')),
             'fbc' => self::metaCookie($request->header('X-Visitor-Fbc')),

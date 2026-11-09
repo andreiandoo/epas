@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\MarketplaceClient;
 use App\Models\Order;
+use App\Support\WhitelabelOrder;
 use App\Services\Integrations\FacebookCapi\FacebookCapiService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,7 +45,9 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
 
         $userData = $this->buildUserData($order);
         $customData = $this->buildCustomData($order);
-        $eventId = 'purchase_' . $order->id;
+        // Same id as the browser Purchase: purchase_{id}, or purchase_{id}_whitelabel
+        // for orders placed on an organizer's whitelabel site.
+        $eventId = WhitelabelOrder::purchaseEventId($order);
         $sourceUrl = $this->resolveThankYouUrl($order);
 
         try {
@@ -78,6 +81,7 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
         }
 
         $meta = $order->meta ?? [];
+        $isWhitelabel = WhitelabelOrder::is($order);
 
         $fbc = $meta['fbc'] ?? null;
         if (!$fbc && !empty($meta['fbclid'])) {
@@ -91,10 +95,19 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
             'fn' => $first ?: null,
             'ln' => $last ?: null,
             // Same id the browser funnel events (ViewContent, AddToCart, InitiateCheckout)
-            // send, so Meta can tie the purchase to them; order id only as a fallback.
-            'external_id' => !empty($meta['visitor_id']) ? (string) $meta['visitor_id'] : (string) $order->id,
-            'client_ip_address' => $meta['client_ip'] ?? $meta['ip'] ?? $meta['ip_address'] ?? null,
-            'client_user_agent' => $meta['client_user_agent'] ?? $meta['user_agent'] ?? $meta['ua'] ?? null,
+            // send, so Meta can tie the purchase to them; order id only as a fallback
+            // (not on whitelabel orders, where it would never match the browser's id).
+            'external_id' => !empty($meta['visitor_id'])
+                ? (string) $meta['visitor_id']
+                : ($isWhitelabel ? null : (string) $order->id),
+            // Whitelabel orders reach core through the site's server: the plain
+            // ip_address / user_agent keys are that server, not the buyer.
+            'client_ip_address' => $isWhitelabel
+                ? ($meta['client_ip'] ?? null)
+                : ($meta['client_ip'] ?? $meta['ip'] ?? $meta['ip_address'] ?? null),
+            'client_user_agent' => $isWhitelabel
+                ? ($meta['client_user_agent'] ?? null)
+                : ($meta['client_user_agent'] ?? $meta['user_agent'] ?? $meta['ua'] ?? null),
             'fbp' => $meta['fbp'] ?? null,
             'fbc' => $fbc,
         ], fn ($v) => $v !== null && $v !== '');
@@ -108,13 +121,22 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
         try {
             $tickets = $order->tickets;
             if ($tickets) {
-                $contentIds = $tickets->pluck('ticket_type_id')->filter()->unique()->values()->all();
                 $numItems = $tickets->count();
+
+                // Whitelabel pages report the event (show) id as content id, AmBilet
+                // the ticket type; the server follows the page so both match.
+                $contentKey = WhitelabelOrder::is($order)
+                    ? (fn ($t) => $t->event_id ?? $t->marketplace_event_id ?? $order->event_id)
+                    : (fn ($t) => $t->ticket_type_id ?? $t->marketplace_ticket_type_id);
+
+                $contentIds = WhitelabelOrder::is($order)
+                    ? $tickets->map($contentKey)->filter()->unique()->values()->all()
+                    : $tickets->pluck('ticket_type_id')->filter()->unique()->values()->all();
 
                 // Per-ticket-type quantities (+ unit price) so Meta receives HOW
                 // MANY tickets of each type were bought, not just the order total.
                 // Marketplace tickets may store the type in marketplace_ticket_type_id.
-                foreach ($tickets->groupBy(fn ($t) => $t->ticket_type_id ?? $t->marketplace_ticket_type_id) as $cid => $group) {
+                foreach ($tickets->groupBy($contentKey) as $cid => $group) {
                     if (!$cid) {
                         continue;
                     }
@@ -161,6 +183,10 @@ class SendFacebookCapiPurchaseJob implements ShouldQueue
     {
         if (!$order->marketplace_client_id) {
             return null;
+        }
+
+        if ($whitelabelUrl = WhitelabelOrder::returnUrl($order)) {
+            return $whitelabelUrl;
         }
 
         $client = $order->marketplaceClient

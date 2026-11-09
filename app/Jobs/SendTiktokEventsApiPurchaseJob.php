@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\MarketplaceClient;
 use App\Models\Order;
 use App\Models\TrackingIntegration;
+use App\Support\WhitelabelOrder;
 use App\Services\Integrations\TikTokEventsApi\TikTokEventsApiClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -66,7 +67,7 @@ class SendTiktokEventsApiPurchaseJob implements ShouldQueue
                 pixelCode: $pixelCode,
                 accessToken: $accessToken,
                 eventName: 'CompletePayment',
-                eventId: 'purchase_' . $order->id,
+                eventId: WhitelabelOrder::purchaseEventId($order),
                 userData: $userData,
                 properties: $properties,
                 page: $this->buildPage($order),
@@ -85,6 +86,9 @@ class SendTiktokEventsApiPurchaseJob implements ShouldQueue
     protected function buildUserData(Order $order): array
     {
         $meta = $order->meta ?? [];
+        // Whitelabel orders reach core through the site's server: the plain
+        // ip_address / user_agent keys are that server, not the buyer.
+        $isWhitelabel = WhitelabelOrder::is($order);
 
         return array_filter([
             'email' => $order->customer_email ?: null,
@@ -92,8 +96,12 @@ class SendTiktokEventsApiPurchaseJob implements ShouldQueue
             'external_id' => (string) $order->id,
             'ttclid' => $meta['ttclid'] ?? null,
             'ttp' => $meta['ttp'] ?? null,
-            'ip' => $meta['client_ip'] ?? $meta['ip'] ?? $meta['ip_address'] ?? null,
-            'user_agent' => $meta['client_user_agent'] ?? $meta['user_agent'] ?? $meta['ua'] ?? null,
+            'ip' => $isWhitelabel
+                ? ($meta['client_ip'] ?? null)
+                : ($meta['client_ip'] ?? $meta['ip'] ?? $meta['ip_address'] ?? null),
+            'user_agent' => $isWhitelabel
+                ? ($meta['client_user_agent'] ?? null)
+                : ($meta['client_user_agent'] ?? $meta['user_agent'] ?? $meta['ua'] ?? null),
         ], fn ($v) => $v !== null && $v !== '');
     }
 
@@ -131,6 +139,9 @@ class SendTiktokEventsApiPurchaseJob implements ShouldQueue
     {
         if (!$order->marketplace_client_id) {
             return [];
+        }
+        if ($whitelabelUrl = WhitelabelOrder::returnUrl($order)) {
+            return ['url' => $whitelabelUrl];
         }
         $client = $order->marketplaceClient
             ?? MarketplaceClient::find($order->marketplace_client_id);
