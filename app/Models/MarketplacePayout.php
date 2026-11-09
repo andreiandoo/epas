@@ -962,7 +962,7 @@ class MarketplacePayout extends Model
             $refundToSubtract = $this->deductible_refund_amount + $this->informational_refund_amount;
         } else {
             $baseAmount = ($totals['online']['net'] ?? 0) + ($totals['pos']['net'] ?? 0);
-            $refundToSubtract = $this->deductible_refund_amount;
+            $refundToSubtract = $this->refundsAlreadyExcludedFromNet() ? 0.0 : $this->deductible_refund_amount;
         }
 
         // Legacy fallback: very old payouts pre-ticket_breakdown snapshot
@@ -976,6 +976,30 @@ class MarketplacePayout extends Model
 
         $this->finalNetAmountCache = max(0.0, round($baseAmount - $advance - $refundToSubtract, 2));
         return $this->finalNetAmountCache;
+    }
+
+    /**
+     * Comision peste pret: suma platita (amount) e deja egala cu biletele din
+     * snapshot, iar biletele rambursate nu sunt in snapshot (status refunded).
+     * Rambursarile legate apar doar ca rand informativ (PDF 1a/2a); scaderea
+     * lor din net ar fi a doua oara. Ex.: decont 3671, 12844 platit, 940
+     * rambursari legate. Deconturile vechi cu amount = snapshot - rambursare
+     * (3055, 3079, 3437) raman pe calculul vechi.
+     */
+    public function refundsAlreadyExcludedFromNet(): bool
+    {
+        if (($this->commission_mode ?? 'included') !== 'added_on_top' || $this->net_override !== null) {
+            return false;
+        }
+        if ($this->deductible_refund_amount < 0.01 || empty($this->ticket_breakdown)) {
+            return false;
+        }
+
+        $totals = $this->getBreakdownTotals();
+        $snapshotNet = ($totals['online']['net'] ?? 0) + ($totals['pos']['net'] ?? 0);
+        $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
+
+        return $snapshotNet > 0.01 && abs((float) $this->amount - ($snapshotNet - $advance)) < 0.01;
     }
 
     /**
