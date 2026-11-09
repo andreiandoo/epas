@@ -824,7 +824,7 @@ class MarketplacePayout extends Model
         $cutoffEnd = $cutoffDate->copy()->endOfDay();
 
         return \App\Models\MarketplaceRefundRequest::query()
-            ->where('marketplace_event_id', $event->id)
+            ->touchingEvent($event->id)
             ->whereIn('status', ['refunded', 'partially_refunded'])
             ->where('created_at', '<=', $cutoffEnd)
             ->where(function ($q) use ($excludePayoutId) {
@@ -1020,6 +1020,7 @@ class MarketplacePayout extends Model
             })
             ->where('status', 'refunded')
             ->where('commission_refunded', true)
+            ->forEvent($this->event_id)
             ->sum('face_value');
         return round($sum, 2);
     }
@@ -1046,6 +1047,7 @@ class MarketplacePayout extends Model
             })
             ->where('status', 'refunded')
             ->where('commission_refunded', false)
+            ->forEvent($this->event_id)
             ->sum('face_value');
 
         // Legacy fallback only when ZERO refund_items found at all.
@@ -1489,6 +1491,7 @@ class MarketplacePayout extends Model
             ->join('marketplace_refund_requests as rr', 'rr.id', '=', 'marketplace_refund_items.refund_request_id')
             ->where('rr.marketplace_payout_id', $this->id)
             ->where('marketplace_refund_items.status', 'refunded')
+            ->forEvent($this->event_id)
             ->sum('marketplace_refund_items.face_value');
 
         $this->update(['refund_amount' => round($total, 2)]);
@@ -1759,6 +1762,7 @@ class MarketplacePayout extends Model
             })
             ->where('commission_refunded', true)
             ->where('status', 'refunded')
+            ->forEvent($this->event_id)
             ->tap(fn ($q) => $this->scopeRefundItemsBySaleDate($q, $soldFrom, $soldBefore))
             ->with('ticketType:id,name')
             ->get();

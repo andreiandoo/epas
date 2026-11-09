@@ -382,12 +382,7 @@ class ViewPayout extends ViewRecord
                                     \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
                                     \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
                                 ])
-                                ->where(function ($q) use ($event) {
-                                    $q->whereHas('order', function ($q2) use ($event) {
-                                        $q2->where('event_id', $event->id)
-                                            ->orWhere('marketplace_event_id', $event->id);
-                                    });
-                                })
+                                ->touchingEvent($event->id)
                                 ->where(function ($q) {
                                     // Show refunds that are unlinked OR already on this payout.
                                     $q->whereNull('marketplace_payout_id')
@@ -395,14 +390,17 @@ class ViewPayout extends ViewRecord
                                 })
                                 ->orderByDesc('completed_at')
                                 ->get(['id', 'reference', 'approved_amount', 'completed_at'])
-                                ->mapWithKeys(fn ($r) => [
-                                    $r->id => sprintf(
-                                        '%s · %s RON · %s',
-                                        $r->reference,
-                                        number_format((float) $r->approved_amount, 2),
-                                        MarketplaceTz::fmt($r->completed_at, 'd.m.Y', $this->record->marketplaceClient ?? null, fallback: '—')
-                                    ),
-                                ])
+                                ->pipe(function ($refunds) use ($event) {
+                                    $totals = \App\Models\MarketplaceRefundRequest::eventRefundTotals($refunds->pluck('id'), $event->id);
+                                    return $refunds->mapWithKeys(fn ($r) => [
+                                        $r->id => sprintf(
+                                            '%s · %s RON · %s',
+                                            $r->reference,
+                                            number_format((float) ($totals[$r->id] ?? $r->approved_amount), 2),
+                                            MarketplaceTz::fmt($r->completed_at, 'd.m.Y', $this->record->marketplaceClient ?? null, fallback: '—')
+                                        ),
+                                    ]);
+                                })
                                 ->all();
                         })
                         ->live()
@@ -461,6 +459,7 @@ class ViewPayout extends ViewRecord
                                 $refundTotal = (float) \App\Models\MarketplaceRefundItem::query()
                                     ->whereIn('refund_request_id', $refundIds)
                                     ->where('status', 'refunded')
+                                    ->forEvent($this->record->event_id)
                                     ->sum('face_value');
                             }
 
@@ -529,6 +528,7 @@ class ViewPayout extends ViewRecord
                         ? (float) \App\Models\MarketplaceRefundItem::query()
                             ->whereIn('refund_request_id', $includedRefundIds)
                             ->where('status', 'refunded')
+                            ->forEvent($this->record->event_id)
                             ->sum('face_value')
                         : 0.0;
 

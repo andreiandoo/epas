@@ -382,6 +382,43 @@ class MarketplaceRefundRequest extends Model
         return $query->where('marketplace_organizer_id', $organizerId);
     }
 
+    /**
+     * Suma rambursata clientului per cerere, doar pentru biletele evenimentului.
+     *
+     * @return array<int, float> [refund_request_id => suma]
+     */
+    public static function eventRefundTotals(iterable $refundIds, int $eventId): array
+    {
+        $ids = collect($refundIds)->map(fn ($id) => (int) $id)->filter()->values();
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        return MarketplaceRefundItem::query()
+            ->whereIn('refund_request_id', $ids)
+            ->where('status', 'refunded')
+            ->forEvent($eventId)
+            ->groupBy('refund_request_id')
+            ->selectRaw('refund_request_id, SUM(refund_amount) as total')
+            ->pluck('total', 'refund_request_id')
+            ->map(fn ($v) => round((float) $v, 2))
+            ->all();
+    }
+
+    /**
+     * Cereri care ating evenimentul: prin comanda, prin cerere sau prin
+     * evenimentul biletelor rambursate. Ultima varianta prinde comenzile cu
+     * bilete din mai multe evenimente (order.event_id = NULL).
+     */
+    public function scopeTouchingEvent($query, int $eventId)
+    {
+        return $query->where(function ($w) use ($eventId) {
+            $w->where('marketplace_event_id', $eventId)
+                ->orWhereHas('order', fn ($o) => $o->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                ->orWhereHas('refundItems.ticket', fn ($t) => $t->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId));
+        });
+    }
+
     public function scopePending($query)
     {
         return $query->where('status', self::STATUS_PENDING);

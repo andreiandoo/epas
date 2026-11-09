@@ -40,4 +40,28 @@ class MarketplaceRefundItem extends Model
     {
         return $this->belongsTo(TicketType::class);
     }
+
+    /**
+     * Doar itemii care tin de evenimentul dat. O comanda cu bilete din mai
+     * multe evenimente are o singura cerere de rambursare; fara filtrul asta
+     * biletele altui eveniment ar intra in decontul evenimentului curent.
+     * Itemii fara bilet sau cu bilet fara eveniment raman (date vechi).
+     */
+    public function scopeForEvent($query, ?int $eventId)
+    {
+        if (!$eventId) {
+            return $query;
+        }
+
+        $table = $query->getModel()->getTable();
+
+        return $query->whereNotExists(function ($q) use ($eventId, $table) {
+            $q->selectRaw('1')
+                ->from('tickets')
+                ->whereColumn('tickets.id', $table . '.ticket_id')
+                ->where(fn ($w) => $w->whereNotNull('tickets.event_id')->orWhereNotNull('tickets.marketplace_event_id'))
+                ->where(fn ($w) => $w->whereNull('tickets.event_id')->orWhere('tickets.event_id', '!=', $eventId))
+                ->where(fn ($w) => $w->whereNull('tickets.marketplace_event_id')->orWhere('tickets.marketplace_event_id', '!=', $eventId));
+        });
+    }
 }

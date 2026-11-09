@@ -2462,6 +2462,7 @@ class MarketplaceTaxTemplate extends Model
                           ->where('marketplace_payout_id', $payout->id);
                     })
                     ->where('status', 'refunded')
+                    ->forEvent($payout->event_id)
                     ->get();
 
                 // Legacy fallback: refund_requests may not be linked to the
@@ -2705,7 +2706,8 @@ class MarketplaceTaxTemplate extends Model
                         $q->whereIn('status', ['refunded', 'partially_refunded'])
                           ->where('marketplace_payout_id', $payout->id);
                     })
-                    ->where('status', 'refunded');
+                    ->where('status', 'refunded')
+                    ->forEvent($payout->event_id);
                 $refundedTicketsForMerge = $refundQ->get();
                 if ($refundedTicketsForMerge->isEmpty() && (float) ($payout->refund_amount ?? 0) > 0.01) {
                     $refundedTicketsForMerge = self::fetchLegacyPeriodRefundItems($payout);
@@ -3282,6 +3284,7 @@ class MarketplaceTaxTemplate extends Model
             fn ($q) => $q->where('marketplace_payout_id', $payout->id)
         )
             ->where('status', 'refunded')
+            ->forEvent($payout->event_id)
             ->get(['id', 'ticket_id', 'face_value']);
         $itemCount = $refundItems->count();
         if ($itemCount === 0) return [];
@@ -3530,6 +3533,7 @@ class MarketplaceTaxTemplate extends Model
                   ->where('marketplace_payout_id', $payout->id);
             })
             ->where('status', 'refunded')
+            ->forEvent($payout->event_id)
             ->with('ticketType:id,name,commission_type,commission_rate,commission_fixed,commission_mode')
             ->get();
 

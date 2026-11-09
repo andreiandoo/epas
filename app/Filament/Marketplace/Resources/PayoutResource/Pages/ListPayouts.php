@@ -348,20 +348,21 @@ class ListPayouts extends ListRecords
                                 \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
                                 \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
                             ])
-                            ->whereHas('order', function ($q) use ($eventId) {
-                                $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId);
-                            })
+                            ->touchingEvent((int) $eventId)
                             ->whereNull('marketplace_payout_id') // unlinked only — already-linked stay on their payout
                             ->orderByDesc('completed_at')
                             ->get(['id', 'reference', 'approved_amount', 'completed_at'])
-                            ->mapWithKeys(fn ($r) => [
-                                $r->id => sprintf(
-                                    '%s · %s RON · %s',
-                                    $r->reference,
-                                    number_format((float) $r->approved_amount, 2),
-                                    optional($r->completed_at)->format('d.m.Y') ?: '—'
-                                ),
-                            ])
+                            ->pipe(function ($refunds) use ($eventId) {
+                                $totals = \App\Models\MarketplaceRefundRequest::eventRefundTotals($refunds->pluck('id'), (int) $eventId);
+                                return $refunds->mapWithKeys(fn ($r) => [
+                                    $r->id => sprintf(
+                                        '%s · %s RON · %s',
+                                        $r->reference,
+                                        number_format((float) ($totals[$r->id] ?? $r->approved_amount), 2),
+                                        optional($r->completed_at)->format('d.m.Y') ?: '—'
+                                    ),
+                                ]);
+                            })
                             ->all();
                     })
                     ->live()
@@ -401,6 +402,7 @@ class ListPayouts extends ListRecords
                             $refundTotal = (float) \App\Models\MarketplaceRefundItem::query()
                                 ->whereIn('refund_request_id', $refundIds)
                                 ->where('status', 'refunded')
+                                ->forEvent($event->id)
                                 ->sum('face_value');
                         }
 
@@ -414,9 +416,7 @@ class ListPayouts extends ListRecords
                                 \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
                                 \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
                             ])
-                            ->whereHas('order', function ($q) use ($eventId) {
-                                $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId);
-                            })
+                            ->touchingEvent((int) $eventId)
                             ->whereNull('marketplace_payout_id')
                             ->exists();
                     }),
@@ -932,6 +932,7 @@ class ListPayouts extends ListRecords
                     ? (float) \App\Models\MarketplaceRefundItem::query()
                         ->whereIn('refund_request_id', $includedRefundIds)
                         ->where('status', 'refunded')
+                        ->forEvent($event?->id)
                         ->sum('face_value')
                     : 0.0;
 
@@ -1567,13 +1568,35 @@ class ListPayouts extends ListRecords
         // "Sold disponibil" for payouts where the operator expected
         // 3,200 RON — and the generated PDF didn't agree either, because
         // payout->refund_amount stayed at 0 until manually linked.
-        $refundedAmount = (float) Order::where(function ($q) use ($event) {
+        // Suma se ia din biletele rambursate ale evenimentului, nu din
+        // comenzile cu status 'refunded': asa intra si rambursarile partiale
+        // si comenzile cu bilete din mai multe evenimente (order.event_id
+        // NULL), doar cu partea acestui eveniment. Ex.: comanda 181520,
+        // 3 bilete 4669 rambursate + 3 bilete 4678 valide.
+        $posSources = \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES;
+        $refundedFromItems = (float) \App\Models\MarketplaceRefundItem::query()
+            ->join('tickets as t', 't.id', '=', 'marketplace_refund_items.ticket_id')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where(fn ($q) => $q->where('t.event_id', $event->id)->orWhere('t.marketplace_event_id', $event->id))
+            ->where('marketplace_refund_items.status', 'refunded')
+            ->whereNotIn('o.source', $posSources)
+            ->when($cutoff, fn ($q) => $q->where('o.created_at', '<=', $cutoff->copy()->endOfDay()))
+            ->sum('marketplace_refund_items.refund_amount');
+        // Comenzi rambursate vechi, fara itemi de rambursare: valoarea de pe comanda.
+        $refundedLegacy = (float) Order::where(function ($q) use ($event) {
                 $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
             })
             ->where('status', 'refunded')
-            ->whereNotIn('source', \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES)
+            ->whereNotIn('source', $posSources)
             ->when($cutoff, fn ($q) => $q->where('created_at', '<=', $cutoff->copy()->endOfDay()))
+            ->whereNotExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('marketplace_refund_requests as rr')
+                    ->join('marketplace_refund_items as ri', 'ri.refund_request_id', '=', 'rr.id')
+                    ->whereColumn('rr.order_id', 'orders.id');
+            })
             ->sum(\DB::raw('COALESCE(refund_amount, total)'));
+        $refundedAmount = $refundedFromItems + $refundedLegacy;
 
         // Kept commission from refunds where Ambilet chose "fara taxa"
         // (commission_refunded=false). This is real revenue Ambilet holds
@@ -1724,12 +1747,16 @@ class ListPayouts extends ListRecords
                 \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
                 \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
             ])
-            ->whereHas('order', function ($q) use ($event) {
-                $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
-            })
+            ->touchingEvent($event->id)
             ->whereNull('marketplace_payout_id')
-            ->get(['id', 'approved_amount']);
-        $totalRefundedAmount = (float) $availableRefunds->sum('approved_amount');
+            ->get(['id']);
+        // Doar biletele acestui eveniment din fiecare cerere (o comanda poate
+        // avea bilete din mai multe evenimente).
+        $totalRefundedAmount = $availableRefunds->isEmpty() ? 0.0 : (float) \App\Models\MarketplaceRefundItem::query()
+            ->whereIn('refund_request_id', $availableRefunds->pluck('id'))
+            ->where('status', 'refunded')
+            ->forEvent($event->id)
+            ->sum('refund_amount');
         $totalRefundedCount = $availableRefunds->count();
 
         // Previous payouts for this event (status badges + list)
