@@ -303,6 +303,9 @@ class MarketplaceTaxTemplate extends Model
             '{{payout_account_holder}}' => 'Payout Account Holder',
             '{{payout_sequence_number}}' => 'Nr. ordine decont per eveniment (1, 2, 3...)',
             '{{payout_advance_amount}}' => 'Sumă decontată în avans (lei)',
+            '{{payout_advance_date}}' => 'Data avansurilor compensate pe decont',
+            '{{payout_advance_reference}}' => 'Referințele avansurilor compensate (AV-...)',
+            '{{payout_advance_details}}' => 'Avansuri compensate: referință / dată: sumă (câte unul pe rând)',
         ],
         'Payout - Bilete' => [
             '{{tickets_breakdown_label}}' => 'Detaliu bilete vândute (ex: 50lei*2+60lei*16)',
@@ -2592,7 +2595,13 @@ class MarketplaceTaxTemplate extends Model
             // instead of 3,200 (and propagated the same double-subtraction
             // to the PDF's "VALOARE TOTALA").
             $refundDeduction = (float) ($payout->refund_amount ?? 0);
-            $advanceDeduction = (float) ($payout->payout_method['advance_amount'] ?? 0);
+            // Avans (rand C): campul vechi payout_method.advance_amount, iar daca
+            // lipseste, avansurile compensate automat pe decont (FIFO). Avansul
+            // compensat nu e scazut din amount, deci E = A - B - C iese exact
+            // suma de transferat (cashAmount).
+            $legacyAdvance = (float) ($payout->payout_method['advance_amount'] ?? 0);
+            $allocatedAdvance = $legacyAdvance > 0.004 ? 0.0 : $payout->advanceCoveredAmount();
+            $advanceDeduction = $legacyAdvance + $allocatedAdvance;
 
             // Read from the frozen ticket_breakdown snapshot (getBreakdownNetTotal)
             // instead of the live ticket recompute. Rationale: the live path uses
@@ -2623,7 +2632,8 @@ class MarketplaceTaxTemplate extends Model
             // impact. Mirrors the same override branch already in
             // MarketplacePayout::getFinalNetAmountAttribute (page display).
             if ($payout->net_override !== null) {
-                $organizerNetFromTickets = (float) $payout->net_override + $advanceDeduction;
+                // net_override e suma dupa avansul vechi; avansul compensat se scade in E.
+                $organizerNetFromTickets = (float) $payout->net_override + $legacyAdvance;
             }
 
             // Row 1a — gross sold incl. refunded tickets nominally added back.
@@ -2793,7 +2803,21 @@ class MarketplaceTaxTemplate extends Model
             $variables['payout_shipping_amount'] = number_format((float) ($preprintedData['shipping_cost'] ?? 0), 2);
 
             // Advance amount (previously settled amount)
-            $variables['payout_advance_amount'] = number_format((float) ($payout->payout_method['advance_amount'] ?? 0), 2);
+            $variables['payout_advance_amount'] = number_format((float) ($advanceDeduction ?? ($payout->payout_method['advance_amount'] ?? 0)), 2);
+            // Data si referinta avansurilor compensate pe decont (rand C).
+            $advanceRows = $payout->advanceAllocations()->with('advance:id,reference,created_at,completed_at')->get()
+                ->filter(fn ($a) => $a->advance !== null)
+                ->sortBy(fn ($a) => $a->advance->completed_at ?? $a->advance->created_at)
+                ->values();
+            $variables['payout_advance_date'] = $advanceRows
+                ->map(fn ($a) => \App\Support\MarketplaceTz::fmt($a->advance->completed_at ?? $a->advance->created_at, 'd.m.Y', $marketplace ?? null, fallback: ''))
+                ->filter()->unique()->implode(', ');
+            $variables['payout_advance_reference'] = $advanceRows->map(fn ($a) => $a->advance->reference)->filter()->implode(', ');
+            $variables['payout_advance_details'] = $advanceRows
+                ->map(fn ($a) => $a->advance->reference . ' / '
+                    . \App\Support\MarketplaceTz::fmt($a->advance->completed_at ?? $a->advance->created_at, 'd.m.Y', $marketplace ?? null, fallback: '')
+                    . ': ' . number_format((float) $a->amount, 2) . ' lei')
+                ->implode('<br>');
 
             // Marketplace invoice preparer
             $variables['marketplace_invoice_preparer'] = $marketplace?->settings['invoice_preparer'] ?? $marketplace?->contact_name ?? '';

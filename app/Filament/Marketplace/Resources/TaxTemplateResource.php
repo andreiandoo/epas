@@ -625,6 +625,9 @@ class TaxTemplateResource extends Resource
             'payout_adjustments_note' => 'Bilete returnate',
             'payout_sequence_number' => '1',
             'payout_advance_amount' => '0.00',
+            'payout_advance_date' => date('d.m.Y'),
+            'payout_advance_reference' => 'AV-EXEMPLU-1',
+            'payout_advance_details' => 'AV-EXEMPLU-1 / ' . date('d.m.Y') . ': 0.00 lei',
             'payout_net_amount' => '6,500.00',
             'payout_commission_mode' => 'included',
 
