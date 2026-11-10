@@ -23,16 +23,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <strong>Widget-urile nu sunt activate.</strong> Contactează administratorul marketplace-ului pentru a activa funcționalitatea de embed.
             </div>
 
-            <!-- Domain config — single domain input -->
+            <!-- Domain config — one or more sites -->
             <div id="domains-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
-                <h2 class="mb-2 text-lg font-bold text-secondary">Domeniu site</h2>
-                <p class="mb-4 text-sm text-muted">Introdu domeniul site-ului unde vei folosi widget-urile. Dacă folosești subdomenii, adaugă cu wildcard: <code class="px-1 py-0.5 bg-slate-100 rounded text-xs">*.numedomeniu.ro</code></p>
-                <div class="flex gap-2">
-                    <input type="text" id="domain-input" class="flex-1 input" placeholder="ex: https://site-meu.ro sau *.site-meu.ro">
-                    <button onclick="WidgetsPage.saveDomain()" class="px-6 btn btn-primary bg-primary">Salvează</button>
-                </div>
-                <p id="domain-current" class="hidden px-3 py-2 mt-3 text-sm text-green-700 rounded-lg bg-green-50"></p>
-                <p id="domains-save-hint" class="hidden mt-2 text-xs text-green-600">Domeniul a fost salvat.</p>
+                <h2 class="mb-2 text-lg font-bold text-secondary">Domenii site</h2>
+                <p class="mb-4 text-sm text-muted">Adaugă fiecare site pe care vinzi bilete cu widget-urile (poți avea mai multe, de exemplu câte un site pentru fiecare eveniment). Pentru toate subdomeniile unui site folosește <code class="px-1 py-0.5 bg-slate-100 rounded text-xs">*.numedomeniu.ro</code></p>
+                <ul id="domain-list" class="mb-3 space-y-2"></ul>
+                <p id="domain-empty" class="hidden px-3 py-2 mb-3 text-sm rounded-lg text-amber-700 bg-amber-50">Nu ai adăugat încă niciun domeniu.</p>
+                <form class="flex gap-2" onsubmit="event.preventDefault(); WidgetsPage.addDomain();">
+                    <label for="domain-input" class="sr-only">Domeniu nou</label>
+                    <input type="text" id="domain-input" class="flex-1 input" placeholder="ex: https://site-meu.ro sau *.site-meu.ro" autocomplete="off" spellcheck="false">
+                    <button type="submit" id="domain-add-btn" class="px-6 btn btn-primary bg-primary">Adaugă</button>
+                </form>
+                <p id="domain-msg" class="hidden mt-2 text-xs" role="status"></p>
             </div>
 
             <!-- Widget tabs -->
@@ -373,6 +375,11 @@ require_once dirname(__DIR__) . '/includes/scripts.php';
     font-size: 12px; color: #dc2626; line-height: 1.4;
 }
 .wl-upload-error.visible { display: block; }
+.wl-domain { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+.wl-domain-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; color: #1e293b; }
+.wl-domain-tag { margin-left: 4px; font-family: inherit; font-size: 12px; color: #64748b; }
+.wl-domain-del { flex: none; padding: 4px 12px; font-size: 12px; font-weight: 600; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; background: #fff; cursor: pointer; transition: background .15s ease; }
+.wl-domain-del:hover { background: #fef2f2; }
 </style>
 <script>
 const WidgetsPage = {
@@ -402,19 +409,10 @@ const WidgetsPage = {
         document.getElementById('whitelabel-section').classList.remove('hidden');
         document.getElementById('widget-tabs-section').classList.remove('hidden');
 
-        this.domain = embedDomains[0] || '';
-        if (this.domain) {
-            document.getElementById('domain-input').value = this.domain;
-            const $current = document.getElementById('domain-current');
-            $current.textContent = 'Domeniu configurat: ' + this.domain;
-            $current.classList.remove('hidden');
-        }
-
-        if (this.domain) {
-            const baseHost = this.domain.replace(/^\*\./, 'www.');
-            const returnBase = this.domain.startsWith('http') ? this.domain : 'https://' + baseHost;
-            document.getElementById('full-return-url').value = returnBase + '/multumim';
-        }
+        this.domains = (Array.isArray(embedDomains) ? embedDomains : [embedDomains])
+            .map(d => String(d || '').trim()).filter(Boolean);
+        this.domain = this.domains[0] || '';
+        this.renderDomains();
 
         const wc = this.organizer.settings?.widget_config || {};
         const _s = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
@@ -428,11 +426,6 @@ const WidgetsPage = {
         _s('full-theme', wc.theme);
         _s('full-accent', wc.accent);
         _s('full-accent-hex', wc.accent);
-        if (this.domain) {
-            const baseHost = this.domain.replace(/^\*\./, 'www.');
-            const returnBase = this.domain.startsWith('http') ? this.domain : 'https://' + baseHost;
-            _s('full-return-url', returnBase + '/multumim');
-        }
 
         ['logo', 'hero_image', 'bg_image'].forEach(key => {
             const url = wc[key];
@@ -474,30 +467,92 @@ const WidgetsPage = {
         this.updateCode('list');
     },
 
-    async saveDomain() {
-        const val = document.getElementById('domain-input').value.trim();
-        if (!val) return;
-        this.domain = val;
+    domains: [],
 
+    // "https://Site.ro/" -> "https://site.ro"; "*.site.ro" stays; anything else -> null
+    normalizeDomain(raw) {
+        let v = String(raw || '').trim().toLowerCase().replace(/\/+$/, '');
+        const m = v.match(/^(https?:\/\/)?(\*\.)?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+)(:\d+)?$/);
+        if (!m) return null;
+        return (m[2] ? '' : (m[1] || 'https://')) + (m[2] || '') + m[3] + (m[4] || '');
+    },
+
+    domainHost(d) { return String(d).replace(/^https?:\/\//, '').replace(/\/.*$/, ''); },
+
+    renderDomains() {
+        const $list = document.getElementById('domain-list');
+        $list.innerHTML = this.domains.map((d, i) =>
+            '<li class="wl-domain">'
+            + '<span class="wl-domain-name">' + this.esc(d) + (i === 0 ? ' <span class="wl-domain-tag">(principal)</span>' : '') + '</span>'
+            + '<button type="button" onclick="WidgetsPage.removeDomain(' + i + ')" class="wl-domain-del" aria-label="Șterge ' + this.esc(d) + '">Șterge</button>'
+            + '</li>'
+        ).join('');
+        document.getElementById('domain-empty').classList.toggle('hidden', this.domains.length > 0);
+
+        this.domain = this.domains[0] || '';
+        const $ret = document.getElementById('full-return-url');
+        if ($ret) {
+            const host = this.domain ? this.domainHost(this.domain).replace(/^\*\./, 'www.') : '';
+            $ret.value = host ? 'https://' + host + '/multumim' : '';
+        }
+    },
+
+    domainMessage(text, ok) {
+        const $msg = document.getElementById('domain-msg');
+        $msg.textContent = text;
+        $msg.className = 'mt-2 text-xs ' + (ok ? 'text-green-600' : 'text-red-600');
+        clearTimeout(this._domainMsgTimer);
+        if (ok) this._domainMsgTimer = setTimeout(() => $msg.classList.add('hidden'), 2500);
+    },
+
+    // The whole list is saved every time, so other domains are never dropped.
+    async saveDomains(list, okText) {
+        const btn = document.getElementById('domain-add-btn');
+        btn.disabled = true;
         try {
             await AmbiletAPI.put('/organizer/widget-settings', {
-                settings: { embed_domains: [val] }
+                settings: { embed_domains: list }
             });
-            const $current = document.getElementById('domain-current');
-            $current.textContent = 'Domeniu configurat: ' + val;
-            $current.classList.remove('hidden');
-            const hint = document.getElementById('domains-save-hint');
-            hint.classList.remove('hidden');
-            setTimeout(() => hint.classList.add('hidden'), 2000);
-
-            const baseHost = val.replace(/^\*\./, 'www.');
-            const returnBase = val.startsWith('http') ? val : 'https://' + baseHost;
-            document.getElementById('full-return-url').value = returnBase + '/multumim';
-
+            this.domains = list;
+            this.renderDomains();
+            this.domainMessage(okText, true);
+            return true;
         } catch (e) {
-            console.error('Failed to save domain:', e);
-            alert('Eroare la salvare. Încearcă din nou.');
+            console.error('Failed to save domains:', e);
+            this.domainMessage('Domeniile nu au putut fi salvate. Încearcă din nou.', false);
+            return false;
+        } finally {
+            btn.disabled = false;
         }
+    },
+
+    async addDomain() {
+        const $input = document.getElementById('domain-input');
+        if (!$input.value.trim()) return;
+        const d = this.normalizeDomain($input.value);
+        if (!d) {
+            this.domainMessage('Adresa nu pare un domeniu valid. Exemple: https://site-meu.ro sau *.site-meu.ro', false);
+            $input.focus();
+            return;
+        }
+        if (this.domains.some(x => this.domainHost(x).toLowerCase() === this.domainHost(d))) {
+            this.domainMessage(d + ' este deja în listă.', false);
+            return;
+        }
+        if (this.domains.length >= 20) {
+            this.domainMessage('Poți adăuga cel mult 20 de domenii.', false);
+            return;
+        }
+        if (await this.saveDomains(this.domains.concat(d), 'Domeniul ' + d + ' a fost adăugat.')) {
+            $input.value = '';
+        }
+    },
+
+    async removeDomain(i) {
+        const d = this.domains[i];
+        if (d === undefined) return;
+        if (!confirm('Ștergi ' + d + '? Widget-urile și vânzarea de pe acest site nu vor mai funcționa.')) return;
+        await this.saveDomains(this.domains.filter((_, k) => k !== i), 'Domeniul ' + d + ' a fost șters.');
     },
 
     _v(id) { return (document.getElementById(id)?.value || '').trim(); },

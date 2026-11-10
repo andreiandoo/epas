@@ -538,6 +538,19 @@ class AuthController extends BaseController
             'settings' => 'required|array',
         ]);
 
+        // embed_domains is a list of sites (one organizer can sell on several);
+        // keep it a clean list of strings, without duplicates
+        if (array_key_exists('embed_domains', $validated['settings'])) {
+            $domains = [];
+            foreach ((array) $validated['settings']['embed_domains'] as $d) {
+                $d = is_string($d) ? rtrim(trim($d), '/') : '';
+                if ($d !== '' && strlen($d) <= 255 && !in_array(strtolower($d), array_map('strtolower', $domains), true)) {
+                    $domains[] = $d;
+                }
+            }
+            $validated['settings']['embed_domains'] = array_slice($domains, 0, 20);
+        }
+
         // Merge new settings into existing (don't replace)
         $existingSettings = $organizer->settings ?? [];
         $newSettings = array_merge($existingSettings, $validated['settings']);
