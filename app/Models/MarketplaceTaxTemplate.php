@@ -2888,7 +2888,7 @@ class MarketplaceTaxTemplate extends Model
     }
 
     /** What the registration variables print before the document is registered. */
-    public const REGISTRATION_BLANK = '....................';
+    public const REGISTRATION_BLANK = '…………………';
 
     /**
      * Group ticket_breakdown rows by their commission rule (type + rate +

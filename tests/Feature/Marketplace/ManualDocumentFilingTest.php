@@ -489,6 +489,43 @@ class ManualDocumentFilingTest extends TestCase
         $this->assertSame("Nr. {$blank} / {$blank}", EventGeneratedDocument::fillRegistration($html, null, ''));
     }
 
+    public function test_the_command_puts_the_registration_fields_in_the_three_templates(): void
+    {
+        Schema::table('marketplace_tax_templates', function (Blueprint $t) {
+            $t->foreignId('marketplace_client_id')->nullable();
+            $t->string('name')->nullable();
+            $t->string('slug')->nullable();
+            $t->boolean('is_default')->default(false);
+            $t->longText('html_content')->nullable();
+        });
+        // Fragments as they are on the server (2026-11-10).
+        $cerere = '<td style="width:30%; padding-top:52px;"> Nr. inreg …………………' . "\n    " . '<br/>Din …………………</span> </td> <td>Seria… abonamentelor/biletelor de la nr.… pană la nr…. </td>';
+        $pv = '<td style="font-size:11px;">Cod de &icirc;nregistrare {{marketplace_vat}}</td><table><tr> <td style="font-size:11px; text-align:left;">Nr. …………………</td> <td style="font-size:11px; text-align:center;">din</td> <td style="font-size:11px; text-align:right;">…………………</td> </tr></table>';
+        $impozit = '<td style="text-align:right; padding-right:30px;"> Nr. ………………… / ………………… </td> <th>Nr.<br>crt.</th> seria <strong>{{proxy_id_series}}</strong>, nr. <strong>{{proxy_id_number}}</strong>';
+        DB::table('marketplace_tax_templates')->insert([
+            ['id' => 11, 'type' => 'cerere_avizare', 'marketplace_client_id' => 1, 'name' => 'Cerere', 'html_content' => $cerere],
+            ['id' => 15, 'type' => 'pv_distrugere', 'marketplace_client_id' => 1, 'name' => 'PV', 'html_content' => $pv],
+            ['id' => 14, 'type' => 'declaratie_impozite', 'marketplace_client_id' => 1, 'name' => 'Impozit', 'html_content' => $impozit],
+        ]);
+        $html = fn (int $id) => DB::table('marketplace_tax_templates')->where('id', $id)->value('html_content');
+
+        $this->artisan('tax-templates:registration-fields', ['--id' => [11, 14, 15]])->assertSuccessful();
+        $this->assertSame($cerere, $html(11));
+
+        $this->artisan('tax-templates:registration-fields', ['--id' => [11, 14, 15], '--apply' => true])->assertSuccessful();
+        $this->assertStringContainsString('Nr. inreg {{document_registration_number}}' . "\n    " . '<br/>Din {{document_registration_date}}</span>', $html(11));
+        $this->assertStringContainsString('Seria… abonamentelor', $html(11));
+        $this->assertStringContainsString('text-align:left;">Nr. {{document_registration_number}}</td>', $html(15));
+        $this->assertStringContainsString('text-align:right;">{{document_registration_date}}</td>', $html(15));
+        $this->assertStringContainsString('Nr. {{document_registration_number}} / {{document_registration_date}} </td>', $html(14));
+        $this->assertStringContainsString('nr. <strong>{{proxy_id_number}}</strong>', $html(14));
+
+        // Second run: nothing left to do.
+        $before = [$html(11), $html(14), $html(15)];
+        $this->artisan('tax-templates:registration-fields', ['--id' => [11, 14, 15], '--apply' => true])->assertSuccessful();
+        $this->assertSame($before, [$html(11), $html(14), $html(15)]);
+    }
+
     public function test_organizer_notices_are_on_hold(): void
     {
         $this->assertTrue(OrganizerFiscalDocuments::NOTICES_ON_HOLD);
