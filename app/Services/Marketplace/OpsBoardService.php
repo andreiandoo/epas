@@ -243,7 +243,7 @@ class OpsBoardService
      */
     protected function loadFacts(array $eventIds): array
     {
-        $facts = ['payouts' => [], 'invoiced' => [], 'invoice_actors' => [], 'admins' => [], 'docs' => [], 'filings' => [], 'tickets_changed' => [], 'sold' => []];
+        $facts = ['payouts' => [], 'invoiced' => [], 'invoice_actors' => [], 'admins' => [], 'docs' => [], 'filings' => [], 'cerere_fingerprint' => [], 'sold' => []];
         if (empty($eventIds)) {
             return $facts;
         }
@@ -307,12 +307,28 @@ class OpsBoardService
             }
         }
 
-        $facts['tickets_changed'] = DB::table('ticket_types')
-            ->whereIn('event_id', $eventIds)
-            ->groupBy('event_id')
-            ->selectRaw('event_id, MAX(updated_at) as last_at')
-            ->pluck('last_at', 'event_id')
-            ->all();
+        // Fingerprint stored on the latest cerere (what it declared about the
+        // tickets). Compared later with the current one; sales don't change it.
+        $cerereRows = DB::table('event_generated_documents as d')
+            ->join('marketplace_tax_templates as t', 't.id', '=', 'd.marketplace_tax_template_id')
+            ->whereIn('d.event_id', $eventIds)
+            ->where('t.type', self::DOC_TYPES['cerere'])
+            ->get(['d.event_id', 'd.created_at', 'd.meta as data'])
+            ->concat(
+                DB::table('organizer_documents')
+                    ->whereIn('event_id', $eventIds)
+                    ->where('document_type', self::DOC_TYPES['cerere'])
+                    ->get(['event_id', 'created_at', 'document_data as data'])
+            );
+        $latestCerere = [];
+        foreach ($cerereRows as $r) {
+            if (isset($latestCerere[$r->event_id]) && (string) $r->created_at <= $latestCerere[$r->event_id]) {
+                continue;
+            }
+            $latestCerere[$r->event_id] = (string) $r->created_at;
+            $data = is_string($r->data) ? json_decode($r->data, true) : null;
+            $facts['cerere_fingerprint'][$r->event_id] = is_array($data) ? ($data['fingerprint'] ?? null) : null;
+        }
 
         // Sold tickets per type, only where every decont is already paid —
         // the one case where "is anything left out of the deconts?" matters.
@@ -577,10 +593,11 @@ class OpsBoardService
             return $this->todoCell($due, $url);
         }
 
-        // Ticket types edited after the request was generated: the request no
-        // longer matches what is on sale. Irrelevant once the event is over.
-        $ticketsChangedAt = $facts['tickets_changed'][$event->id] ?? null;
-        if (! $ended && $ticketsChangedAt && strtotime((string) $ticketsChangedAt) > strtotime($generatedAt)) {
+        // The request no longer matches the tickets: names, prices, stock,
+        // series, ticket types added/removed or discount codes changed. Sales
+        // don't count. A request saved before fingerprints existed can't be
+        // judged and counts as fine. Irrelevant once the event is over.
+        if (! $ended && $this->cerereOutdated($event, $facts['cerere_fingerprint'][$event->id] ?? null)) {
             return $this->cell(
                 'redo',
                 'De refăcut',
@@ -593,6 +610,19 @@ class OpsBoardService
         }
 
         return $this->filedCell($facts['filings'][$event->id][self::DOC_TYPES['cerere']] ?? null, $generatedAt, $due, $url);
+    }
+
+    protected function cerereOutdated(Event $event, ?string $fingerprint): bool
+    {
+        if (! $fingerprint) {
+            return false;
+        }
+
+        try {
+            return $fingerprint !== app(SeriesAllocator::class)->fiscalFingerprint($event);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     protected function decontCell(Event $event, bool $ended, bool $cancelled, Collection $payouts, array $facts, Carbon $due): array
