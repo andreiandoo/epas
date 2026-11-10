@@ -442,6 +442,16 @@ function chip(text, tone) {
     return '<span class="px-2.5 py-1 text-xs font-semibold rounded-lg whitespace-nowrap ' + tones[tone] + '">' + escapeHtml(text) + '</span>';
 }
 
+// Registration by the city hall: number, date and the registered copy, if any.
+function registeredInfo(g, type) {
+    const r = g.registered ? g.registered[type] : null;
+    if (!r) return { line: '', button: '' };
+    return {
+        line: '<span class="block text-success">Înregistrat nr. ' + escapeHtml(r.number) + (r.date ? ' din ' + escapeHtml(r.date) : '') + '</span>',
+        button: r.ref ? '<button type="button" onclick="downloadDoc(\'' + r.ref + '\', this)" class="gap-1.5 btn btn-sm bg-success/10 text-success hover:bg-success/20">' + ICON_DOWNLOAD + 'Exemplar înregistrat</button>' : ''
+    };
+}
+
 function renderGroup(key, g, data) {
     const isCerere = key === 'cerere';
     const box = document.getElementById('group-' + key);
@@ -490,7 +500,9 @@ function renderGroup(key, g, data) {
         (primary ? 'bg-primary text-white hover:bg-primary-dark' : 'bg-surface text-secondary hover:bg-gray-200') + '">' + label + '</button>';
     html += '<ul class="mb-4 space-y-2">' + g.types.map(t => {
         const doc = g.documents[t.type];
+        const reg = registeredInfo(g, t.type);
         const buttons = [];
+        if (reg.button) buttons.push(reg.button);
         if (doc) {
             buttons.push('<button type="button" onclick="downloadDoc(\'' + doc.ref + '\', this)" class="gap-1.5 btn btn-sm bg-primary/10 text-primary hover:bg-primary/20">' + ICON_DOWNLOAD + 'Descarcă</button>');
             if (!g.blocked) buttons.push(generateBtn('Regenerează', g.stale));
@@ -499,7 +511,7 @@ function renderGroup(key, g, data) {
         }
         return '<li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border rounded-xl ' + (g.stale && doc ? 'border-error/30' : 'border-border') + '">' +
             '<div class="min-w-0"><p class="text-sm font-semibold text-secondary">' + escapeHtml(t.label) + '</p>' +
-            '<p class="text-xs text-muted">' + (doc ? 'Generat ' + escapeHtml(doc.generated_at) + (doc.by ? ' · ' + escapeHtml(doc.by) : '') : 'Negenerat') + '</p></div>' +
+            '<p class="text-xs text-muted">' + (doc ? 'Generat ' + escapeHtml(doc.generated_at) + (doc.by ? ' · ' + escapeHtml(doc.by) : '') : 'Negenerat') + reg.line + '</p></div>' +
             (buttons.length ? '<div class="flex flex-wrap gap-2">' + buttons.join('') + '</div>' : '') +
             '</li>';
     }).join('') + '</ul>';
@@ -533,10 +545,12 @@ function renderManagedGroup(box, title, subtitle, g) {
 
     html += '<ul class="space-y-2">' + g.types.map(t => {
         const doc = g.documents[t.type];
+        const reg = registeredInfo(g, t.type);
+        const download = doc ? '<button type="button" onclick="downloadDoc(\'' + doc.ref + '\', this)" class="gap-1.5 btn btn-sm bg-primary/10 text-primary hover:bg-primary/20">' + ICON_DOWNLOAD + 'Descarcă</button>' : '';
         return '<li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border rounded-xl border-border">' +
             '<div class="min-w-0"><p class="text-sm font-semibold text-secondary">' + escapeHtml(t.label) + '</p>' +
-            '<p class="text-xs text-muted">' + (doc ? 'Generat ' + escapeHtml(doc.generated_at) : 'Îl pregătește echipa AmBilet') + '</p></div>' +
-            (doc ? '<button type="button" onclick="downloadDoc(\'' + doc.ref + '\', this)" class="gap-1.5 btn btn-sm bg-primary/10 text-primary hover:bg-primary/20">' + ICON_DOWNLOAD + 'Descarcă</button>' : '') +
+            '<p class="text-xs text-muted">' + (doc ? 'Generat ' + escapeHtml(doc.generated_at) : 'Îl pregătește echipa AmBilet') + reg.line + '</p></div>' +
+            ((reg.button || download) ? '<div class="flex flex-wrap gap-2">' + reg.button + download + '</div>' : '') +
             '</li>';
     }).join('') + '</ul>';
 
