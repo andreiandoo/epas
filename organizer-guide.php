@@ -153,7 +153,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="p-5 my-5 border-l-4 border-blue-500 bg-blue-50 rounded-r-xl">
                 <p class="text-[15px] leading-[1.8] text-blue-900 mb-0">
                     <strong class="text-blue-700">Afișe necesare:</strong>
-                    Afiș orizontal <strong>obligatoriu</strong> (dimensiune minimă: 680 × 357 px, format .jpg sau .png) și/sau afiș vertical — opțional (dimensiune minimă: 600 × 840 px).
+                    Afiș orizontal <strong>obligatoriu</strong>, în formatul coverului de eveniment Facebook: <strong>1920 × 1005 px</strong> (raport 1,91:1), minim 1200 × 628 px. Dacă imaginea are alt raport, o poți decupa direct la încărcare. Afiș vertical opțional, recomandat 800 × 1200 px. Formate acceptate: .jpg, .png sau .webp, maxim 10 MB.
                 </p>
             </div>
         </section>
