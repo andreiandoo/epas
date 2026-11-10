@@ -60,12 +60,14 @@
                     <div style="opacity:.75;font-size:12px;">
                         @if($row['document'])
                             generat {{ Filing::stamp($row['document']['generated_at'], $event) }}
+                        @elseif($row['filing'])
+                            fără document în platformă
                         @else
                             negenerat
                         @endif
                         @if($row['filing'])
                             · {{ $row['filed'] ? 'depus' : 'versiunea anterioară depusă' }}
-                            {{ Filing::stamp($row['filing']['filed_at'], $event) }}
+                            {{ Filing::filedStamp($row['filing'], $event) }}
                             prin {{ $row['filing']['method_label'] }}@if($row['filing']['by']), de {{ $row['filing']['by'] }}@endif
                             @if($row['filed'] && $row['filing']['registration_number'])
                                 · nr. înregistrare <strong>{{ $row['filing']['registration_number'] }}</strong>
@@ -110,8 +112,9 @@
                 </div>
             @endif
 
-            @if($g['blocked'])
+            @if($g['blocked'] && !$g['filed'])
                 <div style="font-size:12px;color:#b45309;">{{ $g['blocked'] }}</div>
+            @elseif($g['blocked'])
             @elseif(!$g['filed'])
                 @if($isThirdParty)
                     <button type="button" style="{{ $button }}background:#2563eb;"

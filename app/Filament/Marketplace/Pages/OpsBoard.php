@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\Event;
 use App\Models\MarketplaceClientMicroservice;
+use App\Services\Marketplace\EventDocumentFilingService;
 use App\Services\Marketplace\OpsBoardService;
 use App\Support\MarketplaceTz;
 use Carbon\Carbon;
@@ -127,6 +128,68 @@ class OpsBoard extends Page
     public function toggleHistory(int $eventId): void
     {
         $this->historyFor = $this->historyFor === $eventId ? null : $eventId;
+    }
+
+    /**
+     * "Am depus" on an open document cell: the day it was really filed and,
+     * optionally, the number the city hall gave it. Same rules as the
+     * button in the event's Documente tab.
+     */
+    public function markFiledAction(): Actions\Action
+    {
+        $event = function (array $arguments): ?Event {
+            $marketplaceId = static::getMarketplaceClientId();
+
+            return $marketplaceId
+                ? Event::where('marketplace_client_id', $marketplaceId)->find((int) ($arguments['event'] ?? 0))
+                : null;
+        };
+        $label = fn (array $arguments) => EventDocumentFilingService::TYPE_LABELS[$arguments['type'] ?? ''] ?? 'Document';
+
+        return Actions\Action::make('markFiled')
+            ->label('Am depus')
+            ->modalHeading(fn (array $arguments) => 'Am depus: ' . $label($arguments))
+            ->modalDescription(function (array $arguments) use ($event) {
+                $record = $event($arguments);
+                $title = $record?->title;
+                $title = is_array($title) ? ($title['ro'] ?? $title['en'] ?? reset($title) ?: '') : (string) $title;
+
+                return $title !== '' ? $title : null;
+            })
+            ->modalWidth('md')
+            ->modalSubmitActionLabel('Confirmă depunerea')
+            ->fillForm(fn () => ['filed_on' => Carbon::now($this->tz())->toDateString()])
+            ->form([
+                Forms\Components\DatePicker::make('filed_on')
+                    ->label('Data depunerii')
+                    ->maxDate(Carbon::now($this->tz())->toDateString())
+                    ->required(),
+                Forms\Components\TextInput::make('registration_number')
+                    ->label('Nr. înregistrare')
+                    ->helperText('Opțional, se poate adăuga și mai târziu din tab-ul Documente.')
+                    ->maxLength(100),
+            ])
+            ->action(function (array $data, array $arguments) use ($event) {
+                $record = $event($arguments);
+                $admin = Auth::guard('marketplace_admin')->user();
+                if (! $record || ! $admin) {
+                    Notification::make()->danger()->title('Evenimentul nu a fost găsit.')->send();
+
+                    return;
+                }
+
+                $result = app(EventDocumentFilingService::class)->confirmManual(
+                    $record,
+                    (string) ($arguments['type'] ?? ''),
+                    $admin,
+                    $data['filed_on'] ? Carbon::parse($data['filed_on'])->toDateString() : null,
+                    (string) ($data['registration_number'] ?? ''),
+                );
+
+                $result['success']
+                    ? Notification::make()->success()->title($result['message'])->send()
+                    : Notification::make()->danger()->title($result['message'])->send();
+            });
     }
 
     protected function getHeaderActions(): array

@@ -57,6 +57,8 @@
         .opsb-cell small { display: block; font-size: .6875rem; opacity: .85; }
         .opsb-cell small.opsb-actor { margin-top: .15rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         a.opsb-cell:hover { filter: brightness(.96); }
+        .opsb-mark { display: block; width: 9.5rem; margin-top: .3rem; padding: .25rem .5rem; border-radius: .4rem; border: 1px solid var(--opsb-line); background: var(--opsb-card); color: var(--opsb-text); font-size: .75rem; font-weight: 600; text-align: center; cursor: pointer; }
+        .opsb-mark:hover { border-color: #2563eb; color: #2563eb; }
         .opsb-na { color: var(--opsb-muted); border-color: var(--opsb-line); border-style: dashed; }
         .opsb-waiting { color: var(--opsb-muted); border-color: var(--opsb-line); }
         .opsb-todo, .opsb-tofile, .opsb-redo, .opsb-warn { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
@@ -95,7 +97,7 @@
          event and organizer names do not contain what was typed. --}}
     {{-- Reîmprospătare la 30s cât tab-ul e vizibil: stările și cine le-a rezolvat apar fără reload. --}}
     <div class="opsb" wire:poll.30s.visible x-data="{ q: '', hit(el) { return this.q.trim() === '' || el.dataset.s.includes(this.q.trim().toLowerCase()); } }">
-        <p class="opsb-intro">Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual. Pe fiecare sarcină rezolvată apare cine a rezolvat-o și când; pagina se actualizează singură la 30 de secunde.</p>
+        <p class="opsb-intro">Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual. Pe fiecare sarcină rezolvată apare cine a rezolvat-o și când; pagina se actualizează singură la 30 de secunde. Un document depus deja se închide cu „Am depus”, cu data reală a depunerii.</p>
 
         <div class="opsb-bar">
             <div class="opsb-seg">
@@ -222,6 +224,13 @@
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
                                                         @if($cell['at'] ?? null)<small class="opsb-actor" title="Rezolvat{{ ($cell['by'] ?? null) ? ' de ' . $cell['by'] : '' }} la {{ $cell['at'] }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
                                                     </span>
+                                                @endif
+                                                @if($cell['file'] ?? null)
+                                                    <button type="button" class="opsb-mark"
+                                                        wire:click="mountAction('markFiled', { event: {{ $row['id'] }}, type: '{{ $cell['file'] }}' })"
+                                                        title="Marchează documentul ca depus: data depunerii și nr. de înregistrare">
+                                                        ✓ Am depus
+                                                    </button>
                                                 @endif
                                             </td>
                                         @endforeach

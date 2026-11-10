@@ -397,6 +397,16 @@ class OpsBoardService
                 : $this->documentCell($docs[self::DOC_TYPES['pv']] ?? null, $filings[self::DOC_TYPES['pv']] ?? null, $ended || $cancelled, $taxDue, $docsUrl),
         ];
 
+        // Open document cells can be closed from the board with "Am depus".
+        // Not a cerere to redo: that one needs regenerating first.
+        if (EventDocumentFilingService::available()) {
+            foreach (self::DOC_TYPES as $task => $type) {
+                if ($cells[$task]['open'] && in_array($cells[$task]['state'], ['todo', 'overdue', 'tofile'], true)) {
+                    $cells[$task]['file'] = $type;
+                }
+            }
+        }
+
         return [
             'id' => $event->id,
             'title' => $this->text($event->title) ?: ('Eveniment #' . $event->id),
@@ -489,9 +499,17 @@ class OpsBoardService
         if (EventDocumentFilingService::available()) {
             foreach (EventDocumentFiling::where('event_id', $event->id)->get() as $filing) {
                 $label = EventDocumentFilingService::TYPE_LABELS[$filing->document_type] ?? $filing->document_type;
+                // Marked on another day than it was filed: listed when it was
+                // marked, with the real filing day in the text.
+                $tzName = MarketplaceTz::tz($event->marketplaceClient);
+                $filedDay = $filing->filed_at->copy()->setTimezone($tzName)->format('d.m.Y');
+                $backdated = $filing->created_at
+                    && $filing->created_at->copy()->setTimezone($tzName)->format('d.m.Y') !== $filedDay;
                 $add(
-                    $filing->filed_at,
-                    'Depus: ' . $label . ' prin ' . $filing->methodLabel() . ($filing->sent_to ? ' la ' . $filing->sent_to : ''),
+                    $backdated ? $filing->created_at : $filing->filed_at,
+                    'Depus' . ($backdated ? ' pe ' . $filedDay : '') . ': ' . $label . ' prin ' . $filing->methodLabel()
+                        . ($filing->sent_to ? ' la ' . $filing->sent_to : '')
+                        . ($filing->registration_number ? ' · nr. ' . $filing->registration_number : ''),
                     $filing->filed_by_name,
                     $docsUrl,
                 );
@@ -588,9 +606,11 @@ class OpsBoardService
 
         $due = $start->copy()->subDays(self::CERERE_DAYS_BEFORE);
         $generatedAt = $docs[self::DOC_TYPES['cerere']] ?? null;
+        $filing = $facts['filings'][$event->id][self::DOC_TYPES['cerere']] ?? null;
 
         if (! $generatedAt) {
-            return $this->todoCell($due, $url);
+            // Filed outside the platform, nothing generated here.
+            return $filing ? $this->filedCell($filing, null, $due, $url) : $this->todoCell($due, $url);
         }
 
         // The request no longer matches the tickets: names, prices, stock,
@@ -609,7 +629,7 @@ class OpsBoardService
             );
         }
 
-        return $this->filedCell($facts['filings'][$event->id][self::DOC_TYPES['cerere']] ?? null, $generatedAt, $due, $url);
+        return $this->filedCell($filing, $generatedAt, $due, $url);
     }
 
     protected function cerereOutdated(Event $event, ?string $fingerprint): bool
@@ -710,7 +730,8 @@ class OpsBoardService
 
     protected function documentCell(?string $generatedAt, ?array $filing, bool $applies, Carbon $due, string $url): array
     {
-        if ($generatedAt) {
+        // A filing without a generated document: filed outside the platform.
+        if ($generatedAt || $filing) {
             return $this->filedCell($filing, $generatedAt, $due, $url);
         }
         if (! $applies) {
@@ -724,16 +745,18 @@ class OpsBoardService
      * A generated document: closed once filed, and open again when it was
      * regenerated after its filing.
      */
-    protected function filedCell(?array $filing, string $generatedAt, Carbon $due, string $url): array
+    protected function filedCell(?array $filing, ?string $generatedAt, Carbon $due, string $url): array
     {
         // Filings are not recorded yet on a database that was not migrated.
         if (! EventDocumentFilingService::available()) {
-            return $this->cell('generated', 'Generat', $this->stamp($generatedAt), null, false, false, $url);
+            return $this->cell('generated', 'Generat', $this->stamp((string) $generatedAt), null, false, false, $url);
         }
 
-        if ($filing && $filing['filed_at'] >= $generatedAt) {
+        if (EventDocumentFilingService::covers($filing, $generatedAt)) {
+            $detail = $filing['method_label'] . ($generatedAt ? '' : ', fără document în platformă');
+
             return $this->withActor(
-                $this->cell('done', 'Depus', $filing['method_label'], null, false, false, $url),
+                $this->cell('done', 'Depus', $detail, null, false, false, $url),
                 $filing['by'] ?? null,
                 $filing['filed_at'],
             );
@@ -800,6 +823,8 @@ class OpsBoardService
             'url' => $url,
             'by' => null,
             'at' => null,
+            // Document type the board's "Am depus" button files; null = none.
+            'file' => null,
         ];
     }
 

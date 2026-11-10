@@ -451,7 +451,13 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace/api')-
 
             try {
                 $result = request()->input('action') === 'confirm_manual'
-                    ? $service->confirmManual($event, $type, $admin)
+                    ? $service->confirmManual(
+                        $event,
+                        $type,
+                        $admin,
+                        request()->filled('filed_on') ? (string) request()->input('filed_on') : null,
+                        (string) request()->input('registration_number', ''),
+                    )
                     : $service->saveRegistrationNumber($event, $type, (string) request()->input('registration_number'), $admin);
 
                 return response()->json($result, $result['success'] ? 200 : 422);

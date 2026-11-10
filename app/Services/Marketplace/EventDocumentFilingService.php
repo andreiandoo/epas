@@ -127,7 +127,7 @@ class EventDocumentFilingService
         foreach ($types as $type) {
             $doc = $documents[$type] ?? null;
             $filing = $filings[$type] ?? null;
-            $filed = $doc && $filing && $filing['filed_at'] >= $doc['generated_at'];
+            $filed = static::covers($filing, $doc['generated_at'] ?? null);
             $allGenerated = $allGenerated && $doc !== null;
             $allFiled = $allFiled && $filed;
             $everFiled = $everFiled || $filing !== null;
@@ -140,6 +140,9 @@ class EventDocumentFilingService
         }
 
         $method = $registry?->submission_method;
+        // A document filed outside the platform counts as filed even when
+        // nothing was generated here (see covers()).
+        $filedAll = $allFiled;
         $blocked = match (true) {
             $event->marketplaceOrganizer?->marketplace_manages_documents === false => 'Organizatorul își gestionează singur documentele.',
             (bool) $event->marketplaceOrganizer?->isFilingException($event) => 'La această direcție fiscală nu putem depune în numele organizatorului (excepție pe organizator). Documentele se pot genera, depunerea o face organizatorul.',
@@ -157,8 +160,8 @@ class EventDocumentFilingService
             'registry' => $registry,
             'method' => $method,
             'recipient' => $registry?->submissionEmail(),
-            'filed' => $allGenerated && $allFiled,
-            'refile' => $everFiled && ! ($allGenerated && $allFiled),
+            'filed' => $filedAll,
+            'refile' => $everFiled && ! $filedAll,
             'blocked' => $blocked,
         ];
     }
@@ -265,13 +268,37 @@ class EventDocumentFilingService
     }
 
     /**
-     * Record that an operator filed one document by hand. Works whatever the
-     * registry and organizer settings say: those may not be filled in yet,
-     * and the document was filed anyway.
+     * Does a filing cover the latest version of its document? It does when
+     * it was made for that version or a later one. A filing made outside the
+     * platform, with no document generated here, covers whatever is
+     * generated afterwards.
+     */
+    public static function covers(?array $filing, ?string $generatedAt): bool
+    {
+        if (! $filing) {
+            return false;
+        }
+        if (! $generatedAt) {
+            return true;
+        }
+        if (array_key_exists('document_generated_at', $filing)) {
+            return $filing['document_generated_at'] === null
+                || $filing['document_generated_at'] >= $generatedAt;
+        }
+
+        return $filing['filed_at'] >= $generatedAt;
+    }
+
+    /**
+     * Record that an operator filed one document by hand ("Am depus"), on the
+     * day it was really filed. Works whatever the registry and organizer
+     * settings say, and without a document generated here: older documents
+     * were often filed before the platform tracked them.
      *
+     * @param  ?string  $filedOn  Y-m-d in the marketplace timezone; null = now
      * @return array{success: bool, message: string}
      */
-    public function confirmManual(Event $event, string $type, MarketplaceAdmin $admin): array
+    public function confirmManual(Event $event, string $type, MarketplaceAdmin $admin, ?string $filedOn = null, ?string $number = null): array
     {
         if (! static::available()) {
             return ['success' => false, 'message' => 'Depunerea manuală nu este disponibilă momentan.'];
@@ -282,27 +309,72 @@ class EventDocumentFilingService
             return ['success' => false, 'message' => 'Documentul nu este necesar pentru acest eveniment.'];
         }
         $row = $status['row'];
-        if (! $row['document']) {
-            return ['success' => false, 'message' => 'Generează întâi documentul.'];
-        }
         if ($row['filed']) {
             return ['success' => false, 'message' => 'Documentul este deja marcat ca depus.'];
         }
 
-        EventDocumentFiling::create([
+        $filedAt = $this->filedAt($event, $filedOn);
+        if (! $filedAt) {
+            return ['success' => false, 'message' => 'Alege o dată validă, cel târziu azi.'];
+        }
+
+        $number = trim((string) $number);
+        if (mb_strlen($number) > 100) {
+            return ['success' => false, 'message' => 'Numărul de înregistrare are maximum 100 de caractere.'];
+        }
+
+        $data = [
             'marketplace_client_id' => $event->marketplace_client_id,
             'event_id' => $event->id,
             'marketplace_tax_registry_id' => $status['registry']?->id,
             'document_type' => $type,
-            'document_generated_at' => $row['document']['generated_at'],
-            'file_name' => $row['document']['file_name'],
+            'document_generated_at' => $row['document']['generated_at'] ?? null,
+            'file_name' => $row['document']['file_name'] ?? null,
             'method' => EventDocumentFiling::METHOD_MANUAL,
             'filed_by_id' => $admin->id,
             'filed_by_name' => $admin->name,
-            'filed_at' => now(),
-        ]);
+            'filed_at' => $filedAt,
+        ];
+        if ($number !== '' && static::registrationAvailable()) {
+            $data += [
+                'registration_number' => $number,
+                'registration_number_at' => now(),
+                'registration_number_by_name' => $admin->name,
+            ];
+        }
+
+        EventDocumentFiling::create($data);
 
         return ['success' => true, 'message' => 'Depunere confirmată.'];
+    }
+
+    /**
+     * The filing moment for a day picked in the marketplace timezone: now for
+     * today, midday for an earlier day (so the UTC conversion never moves it
+     * to another day). Null for a bad or future date.
+     */
+    protected function filedAt(Event $event, ?string $filedOn): ?\Carbon\Carbon
+    {
+        if ($filedOn === null || trim($filedOn) === '') {
+            return now();
+        }
+
+        $tz = MarketplaceTz::tz($event->marketplaceClient);
+        try {
+            $day = \Carbon\Carbon::createFromFormat('!Y-m-d', trim($filedOn), $tz);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (! $day || $day->format('Y-m-d') !== trim($filedOn) || $day->year < 2000) {
+            return null;
+        }
+
+        $today = \Carbon\Carbon::now($tz)->startOfDay();
+        if ($day->gt($today)) {
+            return null;
+        }
+
+        return $day->eq($today) ? now() : $day->setTime(12, 0)->utc();
     }
 
     /**
@@ -399,7 +471,7 @@ class EventDocumentFilingService
     /**
      * Latest valid filing per event and document type.
      *
-     * @return array<int, array<string, array{id: int, filed_at: string, method: string, method_label: string, by: ?string, sent_to: ?string, registration_number: ?string}>>
+     * @return array<int, array<string, array{id: int, filed_at: string, document_generated_at: ?string, recorded_at: ?string, method: string, method_label: string, by: ?string, sent_to: ?string, registration_number: ?string}>>
      */
     public function currentFilings(array $eventIds): array
     {
@@ -408,16 +480,18 @@ class EventDocumentFilingService
         }
 
         $out = [];
+        // In write order, so the last one written wins — a filing recorded
+        // later with an earlier date ("Am depus" on a past day) included.
         $filings = EventDocumentFiling::valid()
             ->whereIn('event_id', $eventIds)
-            ->orderBy('filed_at')
             ->orderBy('id')
             ->get();
         foreach ($filings as $filing) {
-            // Ordered oldest first, so the last one written wins.
             $out[$filing->event_id][$filing->document_type] = [
                 'id' => $filing->id,
                 'filed_at' => $filing->filed_at->format('Y-m-d H:i:s'),
+                'document_generated_at' => $filing->document_generated_at?->format('Y-m-d H:i:s'),
+                'recorded_at' => $filing->created_at?->format('Y-m-d H:i:s'),
                 'method' => $filing->method,
                 'method_label' => $filing->methodLabel(),
                 'by' => $filing->filed_by_name,
@@ -545,6 +619,24 @@ class EventDocumentFilingService
                 'filed_at' => $now,
             ]);
         }
+    }
+
+    /**
+     * "depus 01.10.2026 · marcat 10.11.2026 14:05" for a filing recorded on
+     * another day than it happened; the usual stamp otherwise.
+     */
+    public static function filedStamp(array $filing, ?Event $event = null): string
+    {
+        $client = $event?->marketplaceClient;
+        $filedAt = \Carbon\Carbon::parse($filing['filed_at'], 'UTC');
+        $recordedAt = ! empty($filing['recorded_at']) ? \Carbon\Carbon::parse($filing['recorded_at'], 'UTC') : null;
+        $day = fn ($d) => MarketplaceTz::fmt($d, 'd.m.Y', $client);
+
+        if ($recordedAt && $day($recordedAt) !== $day($filedAt)) {
+            return $day($filedAt) . ' (marcat ' . static::stamp($filing['recorded_at'], $event) . ')';
+        }
+
+        return static::stamp($filing['filed_at'], $event);
     }
 
     /** "12 oct, 14:05" in the marketplace timezone, from a UTC timestamp string. */

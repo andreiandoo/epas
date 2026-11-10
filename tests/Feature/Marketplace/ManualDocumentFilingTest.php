@@ -169,11 +169,86 @@ class ManualDocumentFilingTest extends TestCase
         $this->assertSame(1, EventDocumentFiling::count());
     }
 
-    public function test_a_document_not_generated_cannot_be_filed(): void
+    public function test_a_document_not_generated_here_can_be_marked_as_filed_outside(): void
     {
-        $this->filing(['action' => 'confirm_manual', 'document_type' => 'pv_distrugere'])->assertStatus(422);
         $this->filing(['action' => 'confirm_manual', 'document_type' => 'decont'])->assertStatus(422);
+
+        $this->filing(['action' => 'confirm_manual', 'document_type' => 'pv_distrugere', 'filed_on' => '2026-10-01'])->assertOk();
+
+        $filing = EventDocumentFiling::sole();
+        $this->assertNull($filing->document_generated_at);
+        $this->assertNull($filing->file_name);
+
+        $service = app(EventDocumentFilingService::class);
+        $this->assertTrue($service->status(Event::find(10), EventDocumentFilingService::GROUP_IMPOZIT_PV)['rows']['pv_distrugere']['filed']);
+
+        // A PDF generated afterwards doesn't reopen a filing made outside the platform.
+        DB::table('marketplace_tax_templates')->insert(['id' => 3, 'type' => 'pv_distrugere']);
+        DB::table('event_generated_documents')->insert([
+            'event_id' => 10, 'marketplace_tax_template_id' => 3, 'file_path' => 'docs/pv.pdf',
+            'filename' => 'pv.pdf', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->assertTrue($service->status(Event::find(10), EventDocumentFilingService::GROUP_IMPOZIT_PV)['rows']['pv_distrugere']['filed']);
+    }
+
+    public function test_a_past_filing_day_covers_a_document_generated_after_it(): void
+    {
+        // The cerere was generated an hour ago; it was filed on paper weeks before.
+        $this->filing([
+            'action' => 'confirm_manual', 'document_type' => 'cerere_avizare',
+            'filed_on' => now('Europe/Bucharest')->subDays(20)->toDateString(), 'registration_number' => ' 45/2026 ',
+        ])->assertOk();
+
+        $filing = EventDocumentFiling::sole();
+        $this->assertSame('45/2026', $filing->registration_number);
+        $this->assertSame('Operator', $filing->registration_number_by_name);
+        $this->assertTrue($filing->filed_at->lt(now()->subDays(19)));
+
+        $status = app(EventDocumentFilingService::class)->status(Event::find(10), EventDocumentFilingService::GROUP_CERERE);
+        $this->assertTrue($status['filed']);
+
+        // Regenerated after the filing was recorded: the filed version is old now.
+        DB::table('event_generated_documents')->insert([
+            'event_id' => 10, 'marketplace_tax_template_id' => 1, 'file_path' => 'docs/cerere2.pdf',
+            'filename' => 'cerere2.pdf', 'created_at' => now()->addMinute(), 'updated_at' => now()->addMinute(),
+        ]);
+        $status = app(EventDocumentFilingService::class)->status(Event::find(10), EventDocumentFilingService::GROUP_CERERE);
+        $this->assertFalse($status['filed']);
+        $this->assertTrue($status['refile']);
+    }
+
+    public function test_a_future_or_invalid_day_is_refused_and_the_number_is_optional(): void
+    {
+        $base = ['action' => 'confirm_manual', 'document_type' => 'cerere_avizare'];
+
+        $this->filing($base + ['filed_on' => now('Europe/Bucharest')->addDays(2)->toDateString()])->assertStatus(422);
+        $this->filing($base + ['filed_on' => '2026-02-30'])->assertStatus(422);
+        $this->filing($base + ['filed_on' => 'ieri'])->assertStatus(422);
+        $this->filing($base + ['registration_number' => str_repeat('1', 101)])->assertStatus(422);
         $this->assertSame(0, EventDocumentFiling::count());
+
+        $this->filing($base + ['filed_on' => now('Europe/Bucharest')->toDateString()])->assertOk();
+        $this->assertNull(EventDocumentFiling::sole()->registration_number);
+    }
+
+    public function test_the_last_filing_written_wins_even_with_an_earlier_day(): void
+    {
+        // An old filing of a previous version, then the current version
+        // marked as filed on an earlier day.
+        EventDocumentFiling::create([
+            'marketplace_client_id' => 1, 'event_id' => 10, 'document_type' => 'cerere_avizare',
+            'document_generated_at' => now()->subDays(3), 'method' => EventDocumentFiling::METHOD_EMAIL,
+            'filed_at' => now()->subDays(2),
+        ]);
+        $service = app(EventDocumentFilingService::class);
+        $this->assertFalse($service->status(Event::find(10), EventDocumentFilingService::GROUP_CERERE)['filed']);
+
+        $this->filing([
+            'action' => 'confirm_manual', 'document_type' => 'cerere_avizare',
+            'filed_on' => now('Europe/Bucharest')->subDays(5)->toDateString(),
+        ])->assertOk();
+
+        $this->assertTrue($service->status(Event::find(10), EventDocumentFilingService::GROUP_CERERE)['filed']);
     }
 
     public function test_impozit_and_pv_are_marked_one_by_one(): void
@@ -241,7 +316,8 @@ class ManualDocumentFilingTest extends TestCase
         };
 
         $before = $render();
-        $this->assertStringContainsString('Depune manual', $before);
+        $this->assertStringContainsString('Am depus', $before);
+        $this->assertStringContainsString('Data depunerii', $before);
         $this->assertStringContainsString('DITL Sector 1', $before);
         $this->assertStringContainsString('Str. Exemplu 1', $before);
         $this->assertStringContainsString('taxe@primarie.test', $before);
@@ -263,6 +339,25 @@ class ManualDocumentFilingTest extends TestCase
         $this->assertStringContainsString('Depus', $page);
         $this->assertStringContainsString('77/A', $page);
         $this->assertStringContainsString('versiune mai nouă', $page);
+    }
+
+    public function test_ops_board_cells_close_with_a_past_or_outside_filing(): void
+    {
+        $board = app(\App\Services\Marketplace\OpsBoardService::class);
+        foreach (['tz' => 'Europe/Bucharest', 'today' => now('Europe/Bucharest')->startOfDay()] as $prop => $value) {
+            (new \ReflectionProperty($board, $prop))->setValue($board, $value);
+        }
+        $cell = fn (?string $generatedAt, ?array $filing) => (new \ReflectionMethod($board, 'documentCell'))
+            ->invoke($board, $generatedAt, $filing, true, now('Europe/Bucharest')->subDays(10)->startOfDay(), '/x');
+
+        $generatedAt = now()->subHour()->format('Y-m-d H:i:s');
+        $past = now()->subDays(20)->format('Y-m-d H:i:s');
+        $filing = ['filed_at' => $past, 'document_generated_at' => $generatedAt, 'method_label' => 'depunere manuală', 'by' => 'Operator'];
+
+        $this->assertSame('overdue', $cell(null, null)['state']);
+        $this->assertSame('done', $cell(null, ['document_generated_at' => null] + $filing)['state']);
+        $this->assertSame('done', $cell($generatedAt, $filing)['state']);
+        $this->assertSame('overdue', $cell(now()->format('Y-m-d H:i:s'), $filing)['state']);
     }
 
     public function test_organizer_notices_are_on_hold(): void

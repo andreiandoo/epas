@@ -22,7 +22,7 @@
     @if($filing)
         <div style="opacity:.75;font-size:12px;">
             {{ $row['filed'] ? 'depus' : 'versiunea anterioară depusă' }}
-            {{ Filing::stamp($filing['filed_at'], $event) }}
+            {{ Filing::filedStamp($filing, $event) }}
             prin {{ $filing['method_label'] }}@if($filing['by']), de {{ $filing['by'] }}@endif
             @if($row['filed'] && $filing['registration_number'])
                 · nr. înregistrare <strong>{{ $filing['registration_number'] }}</strong>

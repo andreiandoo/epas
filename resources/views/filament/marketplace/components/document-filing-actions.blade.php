@@ -7,7 +7,10 @@
     // $row, $registry, $recipient. Native <dialog>: it opens above the panel's
     // layout and the Enter key is stopped so it can't submit the event form.
     $number = $row['filing']['registration_number'] ?? null;
-    $canConfirm = $row['document'] && !$row['filed'];
+    // Also without a generated document: it may have been filed before the
+    // platform tracked it.
+    $canConfirm = !$row['filed'];
+    $today = \Carbon\Carbon::now(\App\Support\MarketplaceTz::tz($event->marketplaceClient))->toDateString();
     $canNumber = $row['filed'] && Filing::registrationAvailable();
     $fileUrl = !empty($row['document']['file_path'])
         ? \Illuminate\Support\Facades\Storage::disk('public')->url($row['document']['file_path'])
@@ -30,6 +33,8 @@
             busy: false,
             error: null,
             number: @js($number ?? ''),
+            filedOn: @js($today),
+            newNumber: '',
             open(ref) { this.error = null; this.$refs[ref].showModal(); },
             send(payload) {
                 this.busy = true;
@@ -55,11 +60,17 @@
     >
         @if($canConfirm)
             <button type="button" style="{{ $button }}background:#2563eb;color:#fff;" x-on:click="open('confirmDialog')">
-                Depune manual
+                Am depus
             </button>
 
             <dialog x-ref="confirmDialog" class="ep-filing" style="{{ $dialog }}">
-                <div style="font-size:15px;font-weight:700;margin-bottom:12px;">Depunere manuală: {{ $row['label'] }}</div>
+                <div style="font-size:15px;font-weight:700;margin-bottom:12px;">Am depus: {{ $row['label'] }}</div>
+
+                @if(!$row['document'])
+                    <div style="margin-bottom:8px;padding:6px 8px;border-radius:8px;background:rgba(245,158,11,.12);">
+                        Documentul nu e generat în platformă. Depunerea se înregistrează ca făcută în afara platformei.
+                    </div>
+                @endif
 
                 @if($registry)
                     <div style="margin-bottom:8px;">
@@ -111,12 +122,27 @@
                     </div>
                 @endif
 
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+                    <label style="display:block;">
+                        <span style="{{ $label }}display:block;margin-bottom:2px;">Data depunerii</span>
+                        <input type="date" x-model="filedOn" max="{{ $today }}" required
+                            x-on:keydown.enter.prevent
+                            style="width:100%;padding:7px 9px;border:1px solid rgba(128,128,128,.4);border-radius:8px;background:transparent;color:inherit;font-size:14px;">
+                    </label>
+                    <label style="display:block;">
+                        <span style="{{ $label }}display:block;margin-bottom:2px;">Nr. înregistrare (opțional)</span>
+                        <input type="text" maxlength="100" x-model="newNumber"
+                            x-on:keydown.enter.prevent
+                            style="width:100%;padding:7px 9px;border:1px solid rgba(128,128,128,.4);border-radius:8px;background:transparent;color:inherit;font-size:14px;">
+                    </label>
+                </div>
+
                 <div x-show="error" x-text="error" style="margin-top:8px;color:#dc2626;"></div>
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
                     <button type="button" style="{{ $button }}background:transparent;color:inherit;" x-on:click="$refs.confirmDialog.close()">Renunță</button>
-                    <button type="button" style="{{ $button }}background:#2563eb;color:#fff;" x-bind:disabled="busy"
-                        x-on:click="send({ action: 'confirm_manual' })">
+                    <button type="button" style="{{ $button }}background:#2563eb;color:#fff;" x-bind:disabled="busy || !filedOn"
+                        x-on:click="send({ action: 'confirm_manual', filed_on: filedOn, registration_number: newNumber })">
                         <span x-text="busy ? 'Se salvează...' : 'Confirmă depunerea'"></span>
                     </button>
                 </div>
