@@ -161,7 +161,7 @@ class AmbiletKnowledgeBaseSeeder extends Seeder
 <p>Completează numele evenimentului, data, ora și locația. Adaugă o descriere atractivă care să capteze atenția potențialilor participanți.</p>
 
 <h3>Pasul 2: Imagine și materiale</h3>
-<p>Încarcă o imagine de cover de înaltă calitate (minim 1200x630 pixeli). Aceasta va fi afișată pe pagina evenimentului și în promovări.</p>
+<p>Încarcă macheta orizontală în formatul coverului de eveniment Facebook: 1920×1005 px (raport 1,91:1), minim 1200×628 px. Dacă imaginea are alt raport, o poți decupa direct la încărcare. Macheta apare pe pagina evenimentului și în promovări. Afișul vertical e opțional, recomandat 800×1200 px. Formate acceptate: JPG, PNG sau WebP, maxim 10 MB.</p>
 
 <h3>Pasul 3: Categorii de bilete</h3>
 <p>Creează categoriile de bilete dorite:</p>
