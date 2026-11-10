@@ -7,12 +7,16 @@ use App\Models\EventDocumentFiling;
 use App\Models\MarketplaceAdmin;
 use App\Models\MarketplaceOrganizer;
 use App\Models\OrganizerDocument;
+use App\Models\EventGeneratedDocument;
 use App\Services\Marketplace\EventDocumentFilingService;
+use App\Services\Marketplace\EventDocumentRegistration;
 use App\Services\Marketplace\OrganizerFiscalDocuments;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /** Schemă redusă: istoricul complet de migrații nu rulează pe SQLite. */
@@ -89,14 +93,22 @@ class ManualDocumentFilingTest extends TestCase
             $t->foreignId('marketplace_tax_template_id');
             $t->string('file_path')->nullable();
             $t->string('filename')->nullable();
+            $t->text('meta')->nullable();
             $t->timestamps();
         });
         Schema::create('organizer_documents', function (Blueprint $t) {
             $t->id();
+            $t->foreignId('marketplace_client_id')->nullable();
+            $t->foreignId('marketplace_organizer_id')->nullable();
             $t->foreignId('event_id')->nullable();
+            $t->foreignId('tax_template_id')->nullable();
+            $t->string('title')->nullable();
             $t->string('document_type');
             $t->string('file_path')->nullable();
             $t->string('file_name')->nullable();
+            $t->unsignedBigInteger('file_size')->nullable();
+            $t->text('document_data')->nullable();
+            $t->timestamp('issued_at')->nullable();
             $t->timestamps();
         });
         Schema::create('event_document_filings', function (Blueprint $t) {
@@ -114,6 +126,13 @@ class ManualDocumentFilingTest extends TestCase
             $t->string('registration_number', 100)->nullable();
             $t->timestamp('registration_number_at')->nullable();
             $t->string('registration_number_by_name')->nullable();
+            $t->date('registration_date')->nullable();
+            $t->string('registered_file_path')->nullable();
+            $t->string('registered_file_name')->nullable();
+            $t->string('registered_source', 20)->nullable();
+            $t->timestamp('registered_at')->nullable();
+            $t->string('registered_by_name')->nullable();
+            $t->unsignedBigInteger('registered_organizer_document_id')->nullable();
             $t->foreignId('filed_by_id')->nullable();
             $t->string('filed_by_name')->nullable();
             $t->timestamp('filed_at');
@@ -126,6 +145,9 @@ class ManualDocumentFilingTest extends TestCase
         foreach (['tableExists', 'registrationColumn'] as $flag) {
             (new \ReflectionProperty(EventDocumentFilingService::class, $flag))->setValue(null, null);
         }
+        (new \ReflectionProperty(EventDocumentRegistration::class, 'columns'))->setValue(null, null);
+        Storage::fake('public');
+        Storage::fake('local');
 
         DB::table('marketplace_clients')->insert(['id' => 1, 'name' => 'Ambilet']);
         // Organizer the marketplace doesn't manage, and a registry with no method.
@@ -316,8 +338,9 @@ class ManualDocumentFilingTest extends TestCase
         };
 
         $before = $render();
-        $this->assertStringContainsString('Am depus', $before);
+        $this->assertStringContainsString('Depune manual', $before);
         $this->assertStringContainsString('Data depunerii', $before);
+        $this->assertStringNotContainsString('Am depus', $before);
         $this->assertStringContainsString('DITL Sector 1', $before);
         $this->assertStringContainsString('Str. Exemplu 1', $before);
         $this->assertStringContainsString('taxe@primarie.test', $before);
@@ -358,6 +381,112 @@ class ManualDocumentFilingTest extends TestCase
         $this->assertSame('done', $cell(null, ['document_generated_at' => null] + $filing)['state']);
         $this->assertSame('done', $cell($generatedAt, $filing)['state']);
         $this->assertSame('overdue', $cell(now()->format('Y-m-d H:i:s'), $filing)['state']);
+    }
+
+    /** The cerere's saved HTML, as generateDocument() keeps it. */
+    private function snapshotCerere(): void
+    {
+        Storage::disk('local')->put('document-snapshots/events/10/cerere.html',
+            '<html><body><p>Cerere</p><p>Nr. ' . EventGeneratedDocument::REGISTRATION_NUMBER_MARKER
+            . ' din ' . EventGeneratedDocument::REGISTRATION_DATE_MARKER . '</p></body></html>');
+        DB::table('event_generated_documents')->where('event_id', 10)->update([
+            'meta' => json_encode(['orientation' => 'portrait', 'html_snapshot' => 'document-snapshots/events/10/cerere.html']),
+        ]);
+    }
+
+    private function pdf(): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent('cerere-stampila.pdf', "%PDF-1.4\n% test\n");
+    }
+
+    public function test_registration_number_and_date_complete_the_pdf_without_reopening_the_filing(): void
+    {
+        $this->snapshotCerere();
+        $this->filing(['action' => 'confirm_manual', 'document_type' => 'cerere_avizare', 'filed_on' => now('Europe/Bucharest')->subDays(3)->toDateString()])->assertOk();
+
+        $this->filing([
+            'action' => 'registration_number', 'document_type' => 'cerere_avizare',
+            'registration_number' => '881/2026', 'registration_date' => now('Europe/Bucharest')->subDays(2)->toDateString(),
+        ])->assertOk()->assertJson(['success' => true]);
+
+        $filing = EventDocumentFiling::sole();
+        $this->assertSame('881/2026', $filing->registration_number);
+        $this->assertSame(now('Europe/Bucharest')->subDays(2)->toDateString(), $filing->registration_date->toDateString());
+        $this->assertSame(EventDocumentFiling::REGISTERED_COMPLETED, $filing->registered_source);
+        Storage::disk('public')->assertExists($filing->registered_file_path);
+        $this->assertStringStartsWith('%PDF', Storage::disk('public')->get($filing->registered_file_path));
+
+        // Shown to the organizer as its own document, not as a new version.
+        $copy = OrganizerDocument::sole();
+        $this->assertSame('cerere_avizare_inregistrat', $copy->document_type);
+        $this->assertSame($filing->registered_organizer_document_id, $copy->id);
+        $status = app(EventDocumentFilingService::class)->status(Event::find(10), EventDocumentFilingService::GROUP_CERERE);
+        $this->assertTrue($status['filed']);
+        $this->assertSame('881/2026', $status['rows']['cerere_avizare']['filing']['registration_number']);
+
+        // A changed number refreshes the same copy.
+        $this->filing(['action' => 'registration_number', 'document_type' => 'cerere_avizare', 'registration_number' => '882/2026'])->assertOk();
+        $this->assertSame(1, OrganizerDocument::count());
+        $this->assertStringContainsString('882/2026', OrganizerDocument::sole()->title);
+    }
+
+    public function test_without_saved_html_the_number_is_kept_and_the_copy_must_be_uploaded(): void
+    {
+        $this->filing(['action' => 'confirm_manual', 'document_type' => 'cerere_avizare'])->assertOk();
+        $response = $this->filing(['action' => 'registration_number', 'document_type' => 'cerere_avizare', 'registration_number' => '12'])->assertOk();
+
+        $this->assertStringContainsString('Încarcă exemplarul', $response->json('message'));
+        $filing = EventDocumentFiling::sole();
+        $this->assertSame('12', $filing->registration_number);
+        $this->assertNull($filing->registered_file_path);
+        $this->assertSame(0, OrganizerDocument::count());
+
+        $this->filing(['action' => 'registration_number', 'document_type' => 'cerere_avizare', 'registration_number' => '12', 'registration_date' => now('Europe/Bucharest')->addDay()->toDateString()])
+            ->assertStatus(422);
+    }
+
+    public function test_the_city_halls_copy_is_uploaded_and_wins_over_the_completed_one(): void
+    {
+        $this->snapshotCerere();
+        $upload = fn (array $extra) => $this->actingAs($this->admin, 'marketplace_admin')
+            ->post('/marketplace/api/events/10/document-filing', $extra + [
+                'action' => 'upload_registered', 'document_type' => 'cerere_avizare', 'registration_number' => '500/A',
+            ], ['Accept' => 'application/json']);
+
+        $upload(['file' => UploadedFile::fake()->createWithContent('poza.pdf', 'not a pdf')])->assertStatus(422);
+        $upload([])->assertStatus(422);
+        $this->assertSame(0, EventDocumentFiling::count());
+
+        // Not marked as filed yet: the upload marks it, on the registration day.
+        $day = now('Europe/Bucharest')->subDays(6)->toDateString();
+        $upload(['file' => $this->pdf(), 'registration_date' => $day])->assertOk();
+
+        $filing = EventDocumentFiling::sole();
+        $this->assertSame(EventDocumentFiling::METHOD_MANUAL, $filing->method);
+        $this->assertSame($day, $filing->filed_at->setTimezone('Europe/Bucharest')->toDateString());
+        $this->assertSame(EventDocumentFiling::REGISTERED_UPLOADED, $filing->registered_source);
+        $this->assertSame('cerere-stampila.pdf', $filing->registered_file_name);
+        Storage::disk('public')->assertExists($filing->registered_file_path);
+        $this->assertSame('cerere_avizare_inregistrat', OrganizerDocument::sole()->document_type);
+
+        // A later number change keeps the uploaded copy.
+        $path = $filing->registered_file_path;
+        $this->filing(['action' => 'registration_number', 'document_type' => 'cerere_avizare', 'registration_number' => '500/B'])->assertOk();
+        $this->assertSame($path, $filing->fresh()->registered_file_path);
+        $this->assertSame(EventDocumentFiling::REGISTERED_UPLOADED, $filing->fresh()->registered_source);
+
+        // Voiding the filing takes the copy out of the organizer's account.
+        app(EventDocumentFilingService::class)->undo(Event::find(10), EventDocumentFilingService::GROUP_CERERE, $this->admin);
+        $this->assertSame(0, OrganizerDocument::count());
+    }
+
+    public function test_registration_markers_are_filled_or_left_blank(): void
+    {
+        $html = 'Nr. ' . EventGeneratedDocument::REGISTRATION_NUMBER_MARKER . ' / ' . EventGeneratedDocument::REGISTRATION_DATE_MARKER;
+
+        $this->assertSame('Nr. 7&lt;b&gt; / 01.10.2026', EventGeneratedDocument::fillRegistration($html, '7<b>', '01.10.2026'));
+        $blank = \App\Models\MarketplaceTaxTemplate::REGISTRATION_BLANK;
+        $this->assertSame("Nr. {$blank} / {$blank}", EventGeneratedDocument::fillRegistration($html, null, ''));
     }
 
     public function test_organizer_notices_are_on_hold(): void

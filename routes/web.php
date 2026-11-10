@@ -440,25 +440,37 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace/api')-
 
     // File an event's fiscal documents with the city hall: email them, confirm
     // a filing made through the registry's third-party solution, or undo one.
-    // One document at a time: confirm a manual filing, save its registration number.
+    // One document at a time: confirm a manual filing, save its registration
+    // number and date, upload the registered copy sent back by the city hall.
     Route::post('/events/{eventId}/document-filing', function (int $eventId) {
         $admin = auth('marketplace_admin')->user();
         $event = \App\Models\Event::where('marketplace_client_id', $admin->marketplace_client_id)->findOrFail($eventId);
         $service = app(\App\Services\Marketplace\EventDocumentFilingService::class);
 
-        if (in_array(request()->input('action'), ['confirm_manual', 'registration_number'], true)) {
+        if (in_array(request()->input('action'), ['confirm_manual', 'registration_number', 'upload_registered'], true)) {
             $type = (string) request()->input('document_type');
+            $registrationDate = request()->filled('registration_date') ? (string) request()->input('registration_date') : null;
 
             try {
-                $result = request()->input('action') === 'confirm_manual'
-                    ? $service->confirmManual(
+                $result = match (request()->input('action')) {
+                    'confirm_manual' => $service->confirmManual(
                         $event,
                         $type,
                         $admin,
                         request()->filled('filed_on') ? (string) request()->input('filed_on') : null,
                         (string) request()->input('registration_number', ''),
-                    )
-                    : $service->saveRegistrationNumber($event, $type, (string) request()->input('registration_number'), $admin);
+                        $registrationDate,
+                    ),
+                    'upload_registered' => app(\App\Services\Marketplace\EventDocumentRegistration::class)->upload(
+                        $event,
+                        $type,
+                        request()->file('file'),
+                        (string) request()->input('registration_number', ''),
+                        $registrationDate,
+                        $admin,
+                    ),
+                    default => $service->saveRegistrationNumber($event, $type, (string) request()->input('registration_number'), $admin, $registrationDate),
+                };
 
                 return response()->json($result, $result['success'] ? 200 : 422);
             } catch (\Throwable $e) {

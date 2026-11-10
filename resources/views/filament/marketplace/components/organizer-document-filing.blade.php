@@ -25,7 +25,10 @@
             {{ Filing::filedStamp($filing, $event) }}
             prin {{ $filing['method_label'] }}@if($filing['by']), de {{ $filing['by'] }}@endif
             @if($row['filed'] && $filing['registration_number'])
-                · nr. înregistrare <strong>{{ $filing['registration_number'] }}</strong>
+                · nr. înregistrare <strong>{{ $filing['registration_number'] }}</strong>@if(!empty($filing['registration_date'])) din {{ $filing['registration_date'] }}@endif
+            @endif
+            @if($row['filed'] && !empty($filing['registered_file_path']))
+                · <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($filing['registered_file_path']) }}" target="_blank" rel="noopener" style="text-decoration:underline;">exemplar înregistrat</a>
             @endif
         </div>
     @endif

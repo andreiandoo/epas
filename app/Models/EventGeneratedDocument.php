@@ -10,6 +10,26 @@ use Illuminate\Support\Str;
 
 class EventGeneratedDocument extends Model
 {
+    /** Where {{document_registration_number}} / _date sit in the saved HTML. */
+    public const REGISTRATION_NUMBER_MARKER = '[[EP_REGISTRATION_NUMBER]]';
+
+    public const REGISTRATION_DATE_MARKER = '[[EP_REGISTRATION_DATE]]';
+
+    /**
+     * Put the registration number and date in a saved document's HTML, or
+     * blank lines while they are not known.
+     */
+    public static function fillRegistration(string $html, ?string $number, ?string $date): string
+    {
+        $blank = MarketplaceTaxTemplate::REGISTRATION_BLANK;
+
+        return str_replace(
+            [self::REGISTRATION_NUMBER_MARKER, self::REGISTRATION_DATE_MARKER],
+            [$number !== null && $number !== '' ? e($number) : $blank, $date !== null && $date !== '' ? e($date) : $blank],
+            $html
+        );
+    }
+
     protected static function booted(): void
     {
         // Any create/delete on an event's generated docs may resolve
@@ -185,6 +205,11 @@ class EventGeneratedDocument extends Model
             template: $template,
         );
 
+        // Markers where the city hall's registration number and date go, so
+        // the saved HTML can be completed later (EventDocumentRegistration).
+        $variables['document_registration_number'] = self::REGISTRATION_NUMBER_MARKER;
+        $variables['document_registration_date'] = self::REGISTRATION_DATE_MARKER;
+
         // Process the template
         $htmlContent = $template->processTemplate($variables);
 
@@ -241,6 +266,11 @@ class EventGeneratedDocument extends Model
             $htmlContent
         );
 
+        // The exact HTML of this document, markers included, and the PDF
+        // version with blank lines where the registration goes.
+        $snapshotHtml = $htmlContent;
+        $htmlContent = self::fillRegistration($htmlContent, null, null);
+
         // Generate PDF using DomPDF
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($htmlContent);
 
@@ -272,6 +302,19 @@ class EventGeneratedDocument extends Model
         // Get file size
         $fileSize = Storage::disk('public')->size($filePath);
 
+        // Kept off the public disk: only used to complete the document with
+        // its registration number. A failure here never stops the document.
+        $snapshotPath = null;
+        if (str_contains($snapshotHtml, self::REGISTRATION_NUMBER_MARKER) || str_contains($snapshotHtml, self::REGISTRATION_DATE_MARKER)) {
+            try {
+                $snapshotPath = "document-snapshots/events/{$event->id}/" . pathinfo($filename, PATHINFO_FILENAME) . '.html';
+                Storage::disk('local')->put($snapshotPath, $snapshotHtml);
+            } catch (\Throwable $e) {
+                $snapshotPath = null;
+                \Illuminate\Support\Facades\Log::warning('EventGeneratedDocument: html snapshot failed', ['event_id' => $event->id, 'error' => $e->getMessage()]);
+            }
+        }
+
         // What the document declared, so a later change of prices / stock /
         // codes can be spotted (see OrganizerFiscalDocuments::isStale).
         $fingerprint = null;
@@ -298,6 +341,7 @@ class EventGeneratedDocument extends Model
                 'orientation' => $orientation,
                 'variables_used' => array_keys($variables),
                 'fingerprint' => $fingerprint,
+                'html_snapshot' => $snapshotPath,
             ],
         ]);
 

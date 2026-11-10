@@ -694,7 +694,8 @@ class DocumentController extends BaseController
 
     /**
      * Stream one fiscal document (ref "g{id}" = generated document,
-     * "o{id}" = older organizer document) after an ownership check.
+     * "o{id}" = older organizer document or a registered copy) after an
+     * ownership check.
      */
     public function fiscalFile(Request $request, string $ref)
     {
@@ -710,8 +711,12 @@ class DocumentController extends BaseController
             $path = $doc?->file_path;
             $name = $doc?->filename;
         } else {
+            // Fiscal documents and their registered copies.
             $doc = OrganizerDocument::where('id', (int) $m[2])
-                ->whereIn('document_type', OrganizerFiscalDocuments::TYPES)
+                ->whereIn('document_type', array_merge(
+                    OrganizerFiscalDocuments::TYPES,
+                    array_map([\App\Models\EventDocumentFiling::class, 'registeredType'], OrganizerFiscalDocuments::TYPES)
+                ))
                 ->first();
             $path = $doc?->file_path;
             $name = $doc?->file_name;

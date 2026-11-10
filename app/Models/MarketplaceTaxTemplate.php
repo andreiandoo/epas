@@ -326,6 +326,10 @@ class MarketplaceTaxTemplate extends Model
             '{{payout_preprinted_shipping_date}}' => 'Data expediție curier',
             '{{payout_shipping_amount}}' => 'Taxă curierat (lei)',
         ],
+        'Înregistrare la primărie' => [
+            '{{document_registration_number}}' => 'Nr. înregistrare primit de document (linie punctată până se completează)',
+            '{{document_registration_date}}' => 'Data înregistrării documentului (linie punctată până se completează)',
+        ],
         'Date/Time' => [
             '{{current_day}}' => 'Current Day (01-31)',
             '{{current_month}}' => 'Current Month (01-12)',
@@ -2875,8 +2879,16 @@ class MarketplaceTaxTemplate extends Model
         $variables['current_date'] = $now->format('d.m.Y');
         $variables['current_datetime'] = $now->format('d.m.Y H:i');
 
+        // Filled in once the city hall registers the document (see
+        // EventDocumentRegistration); a blank line to write on until then.
+        $variables['document_registration_number'] = self::REGISTRATION_BLANK;
+        $variables['document_registration_date'] = self::REGISTRATION_BLANK;
+
         return $variables;
     }
+
+    /** What the registration variables print before the document is registered. */
+    public const REGISTRATION_BLANK = '....................';
 
     /**
      * Group ticket_breakdown rows by their commission rule (type + rate +

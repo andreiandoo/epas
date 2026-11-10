@@ -81,6 +81,10 @@ class OrganizerDocument extends Model
         'decont_ontop' => 'Decont (comision peste preț)',
         'decont_inclus' => 'Decont (comision inclus)',
         'pv_distrugere' => 'PV distrugere bilete',
+        // Registered copies (number + date from the city hall), see EventDocumentFiling::registeredType().
+        'cerere_avizare_inregistrat' => 'Cerere avizare (înregistrată)',
+        'declaratie_impozite_inregistrat' => 'Impozit spectacole (înregistrată)',
+        'pv_distrugere_inregistrat' => 'PV distrugere bilete (înregistrat)',
     ];
 
     // =========================================

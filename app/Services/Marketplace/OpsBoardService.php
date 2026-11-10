@@ -514,6 +514,14 @@ class OpsBoardService
                     $docsUrl,
                 );
                 $add($filing->voided_at, 'Depunere anulată: ' . $label, $filing->voided_by_name, $docsUrl);
+                if ($filing->registered_at && $filing->registered_file_path) {
+                    $add(
+                        $filing->registered_at,
+                        'Exemplar înregistrat ' . ($filing->registered_source === EventDocumentFiling::REGISTERED_UPLOADED ? 'încărcat' : 'completat') . ': ' . $label,
+                        $filing->registered_by_name,
+                        $file($filing->registered_file_path),
+                    );
+                }
             }
         }
 
@@ -753,7 +761,8 @@ class OpsBoardService
         }
 
         if (EventDocumentFilingService::covers($filing, $generatedAt)) {
-            $detail = $filing['method_label'] . ($generatedAt ? '' : ', fără document în platformă');
+            $detail = $filing['method_label'] . ($generatedAt ? '' : ', fără document în platformă')
+                . (! empty($filing['registration_number']) ? ' · nr. ' . $filing['registration_number'] : '');
 
             return $this->withActor(
                 $this->cell('done', 'Depus', $detail, null, false, false, $url),

@@ -390,10 +390,19 @@ class OrganizerFiscalDocuments
             $filing = $this->filing->status($event, $group);
             $deadline = $group === self::GROUP_CERERE ? $this->cerereDeadline($event) : $this->taxDeadline($event);
             $docs = [];
+            $registered = [];
             $allGenerated = true;
             foreach ($types as $type) {
                 $docs[$type] = $docOut($latest[$type] ?? null);
                 $allGenerated = $allGenerated && isset($latest[$type]);
+                // The city hall's registration of the filed document, with its registered copy.
+                $row = $filing['rows'][$type] ?? null;
+                $registration = ($row['filed'] ?? false) ? $row['filing'] : null;
+                $registered[$type] = $registration && ($registration['registration_number'] ?? null) ? [
+                    'number' => $registration['registration_number'],
+                    'date' => $registration['registration_date'] ?? null,
+                    'ref' => ! empty($registration['registered_document_id']) ? 'o' . $registration['registered_document_id'] : null,
+                ] : null;
             }
             $stale = $group === self::GROUP_CERERE && $this->isStale($event, $latest['cerere_avizare'] ?? null, $fingerprint);
             $lastFiling = collect($filing['rows'])->pluck('filing')->filter()->sortByDesc('filed_at')->first();
@@ -403,6 +412,7 @@ class OrganizerFiscalDocuments
                 'types' => array_map(fn ($t) => ['type' => $t, 'label' => self::LABELS[$t]], $types),
                 'blocked' => $this->blockedReason($event, $group),
                 'documents' => $docs,
+                'registered' => $registered,
                 'generated' => $allGenerated,
                 'stale' => $stale,
                 'filed' => $filing['filed'] && ! $stale,

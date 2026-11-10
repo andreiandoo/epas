@@ -24,6 +24,18 @@ class EventDocumentFiling extends Model
     /** An operator filed it outside the system and confirmed it here. */
     public const METHOD_MANUAL = 'manual';
 
+    /** Registered copy: our PDF completed with the number and date. */
+    public const REGISTERED_COMPLETED = 'completed';
+
+    /** Registered copy: the PDF the city hall sent back. */
+    public const REGISTERED_UPLOADED = 'uploaded';
+
+    /** organizer_documents type of a document's registered copy. */
+    public static function registeredType(string $type): string
+    {
+        return $type . '_inregistrat';
+    }
+
     protected $fillable = [
         'marketplace_client_id',
         'event_id',
@@ -38,6 +50,13 @@ class EventDocumentFiling extends Model
         'registration_number',
         'registration_number_at',
         'registration_number_by_name',
+        'registration_date',
+        'registered_file_path',
+        'registered_file_name',
+        'registered_source',
+        'registered_at',
+        'registered_by_name',
+        'registered_organizer_document_id',
         'filed_by_id',
         'filed_by_name',
         'filed_at',
@@ -48,6 +67,8 @@ class EventDocumentFiling extends Model
     protected $casts = [
         'document_generated_at' => 'datetime',
         'registration_number_at' => 'datetime',
+        'registration_date' => 'date',
+        'registered_at' => 'datetime',
         'filed_at' => 'datetime',
         'voided_at' => 'datetime',
     ];

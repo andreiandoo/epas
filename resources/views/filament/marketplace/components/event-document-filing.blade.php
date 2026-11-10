@@ -70,7 +70,11 @@
                             {{ Filing::filedStamp($row['filing'], $event) }}
                             prin {{ $row['filing']['method_label'] }}@if($row['filing']['by']), de {{ $row['filing']['by'] }}@endif
                             @if($row['filed'] && $row['filing']['registration_number'])
-                                · nr. înregistrare <strong>{{ $row['filing']['registration_number'] }}</strong>
+                                · nr. înregistrare <strong>{{ $row['filing']['registration_number'] }}</strong>@if(!empty($row['filing']['registration_date'])) din {{ $row['filing']['registration_date'] }}@endif
+                            @endif
+                            @if($row['filed'] && !empty($row['filing']['registered_file_path']))
+                                · <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($row['filing']['registered_file_path']) }}" target="_blank" rel="noopener" style="text-decoration:underline;">exemplar înregistrat</a>
+                                ({{ ($row['filing']['registered_source'] ?? null) === \App\Models\EventDocumentFiling::REGISTERED_UPLOADED ? 'primit de la primărie' : 'completat de noi' }})
                             @endif
                         @endif
                     </div>

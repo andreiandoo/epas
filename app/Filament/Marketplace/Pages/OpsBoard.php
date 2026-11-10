@@ -167,7 +167,13 @@ class OpsBoard extends Page
                 Forms\Components\TextInput::make('registration_number')
                     ->label('Nr. înregistrare')
                     ->helperText('Opțional, se poate adăuga și mai târziu din tab-ul Documente.')
-                    ->maxLength(100),
+                    ->maxLength(100)
+                    ->live(onBlur: true),
+                Forms\Components\DatePicker::make('registration_date')
+                    ->label('Data înregistrării')
+                    ->helperText('Implicit, ziua depunerii.')
+                    ->maxDate(Carbon::now($this->tz())->toDateString())
+                    ->visible(fn ($get) => filled($get('registration_number'))),
             ])
             ->action(function (array $data, array $arguments) use ($event) {
                 $record = $event($arguments);
@@ -184,6 +190,7 @@ class OpsBoard extends Page
                     $admin,
                     $data['filed_on'] ? Carbon::parse($data['filed_on'])->toDateString() : null,
                     (string) ($data['registration_number'] ?? ''),
+                    ! empty($data['registration_date']) ? Carbon::parse($data['registration_date'])->toDateString() : null,
                 );
 
                 $result['success']

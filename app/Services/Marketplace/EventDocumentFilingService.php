@@ -296,9 +296,10 @@ class EventDocumentFilingService
      * were often filed before the platform tracked them.
      *
      * @param  ?string  $filedOn  Y-m-d in the marketplace timezone; null = now
+     * @param  ?string  $registrationDate  Y-m-d; null = the filing day
      * @return array{success: bool, message: string}
      */
-    public function confirmManual(Event $event, string $type, MarketplaceAdmin $admin, ?string $filedOn = null, ?string $number = null): array
+    public function confirmManual(Event $event, string $type, MarketplaceAdmin $admin, ?string $filedOn = null, ?string $number = null, ?string $registrationDate = null): array
     {
         if (! static::available()) {
             return ['success' => false, 'message' => 'Depunerea manuală nu este disponibilă momentan.'];
@@ -322,6 +323,9 @@ class EventDocumentFilingService
         if (mb_strlen($number) > 100) {
             return ['success' => false, 'message' => 'Numărul de înregistrare are maximum 100 de caractere.'];
         }
+        if ($number !== '' && trim((string) $registrationDate) !== '' && ! $this->filedAt($event, $registrationDate)) {
+            return ['success' => false, 'message' => 'Alege o dată a înregistrării validă, cel târziu azi.'];
+        }
 
         $data = [
             'marketplace_client_id' => $event->marketplace_client_id,
@@ -335,15 +339,16 @@ class EventDocumentFilingService
             'filed_by_name' => $admin->name,
             'filed_at' => $filedAt,
         ];
-        if ($number !== '' && static::registrationAvailable()) {
-            $data += [
-                'registration_number' => $number,
-                'registration_number_at' => now(),
-                'registration_number_by_name' => $admin->name,
-            ];
-        }
 
         EventDocumentFiling::create($data);
+
+        // Number (and date) given right away: saved like the separate button
+        // does, which also completes the PDF.
+        if ($number !== '' && static::registrationAvailable()) {
+            $saved = app(EventDocumentRegistration::class)->save($event, $type, $number, $registrationDate, $admin);
+
+            return ['success' => true, 'message' => 'Depunere confirmată. ' . $saved['message']];
+        }
 
         return ['success' => true, 'message' => 'Depunere confirmată.'];
     }
@@ -382,32 +387,13 @@ class EventDocumentFilingService
      *
      * @return array{success: bool, message: string}
      */
-    public function saveRegistrationNumber(Event $event, string $type, string $number, MarketplaceAdmin $admin): array
+    public function saveRegistrationNumber(Event $event, string $type, string $number, MarketplaceAdmin $admin, ?string $date = null): array
     {
         if (! static::registrationAvailable()) {
             return ['success' => false, 'message' => 'Numărul de înregistrare nu poate fi salvat momentan.'];
         }
 
-        $number = trim($number);
-        if ($number === '' || mb_strlen($number) > 100) {
-            return ['success' => false, 'message' => 'Completează numărul de înregistrare (maximum 100 de caractere).'];
-        }
-
-        $row = $this->documentStatus($event, $type)['row'] ?? null;
-        if (! $row || ! $row['filed']) {
-            return ['success' => false, 'message' => 'Documentul nu este marcat ca depus.'];
-        }
-
-        EventDocumentFiling::valid()
-            ->where('event_id', $event->id)
-            ->whereKey($row['filing']['id'])
-            ->update([
-                'registration_number' => $number,
-                'registration_number_at' => now(),
-                'registration_number_by_name' => $admin->name,
-            ]);
-
-        return ['success' => true, 'message' => 'Număr de înregistrare salvat.'];
+        return app(EventDocumentRegistration::class)->save($event, $type, $number, $date, $admin);
     }
 
     /**
@@ -458,10 +444,16 @@ class EventDocumentFilingService
      */
     public function undo(Event $event, string $group, MarketplaceAdmin $admin): array
     {
-        $count = EventDocumentFiling::valid()
+        $ids = EventDocumentFiling::valid()
             ->where('event_id', $event->id)
             ->whereIn('document_type', $this->requiredTypes($event, $group))
-            ->update(['voided_at' => now(), 'voided_by_name' => $admin->name]);
+            ->pluck('id')
+            ->all();
+        $count = $ids
+            ? EventDocumentFiling::whereIn('id', $ids)->update(['voided_at' => now(), 'voided_by_name' => $admin->name])
+            : 0;
+        // A registered copy of a voided filing leaves the organizer's account.
+        app(EventDocumentRegistration::class)->removeOrganizerCopies($ids);
 
         return $count
             ? ['success' => true, 'message' => 'Depunere anulată.']
@@ -497,6 +489,10 @@ class EventDocumentFilingService
                 'by' => $filing->filed_by_name,
                 'sent_to' => $filing->sent_to,
                 'registration_number' => $filing->registration_number,
+                'registration_date' => $filing->registration_date?->format('d.m.Y'),
+                'registered_file_path' => $filing->registered_file_path,
+                'registered_source' => $filing->registered_source,
+                'registered_document_id' => $filing->registered_organizer_document_id,
             ];
         }
 
