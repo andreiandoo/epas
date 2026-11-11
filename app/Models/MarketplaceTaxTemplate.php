@@ -1732,12 +1732,8 @@ class MarketplaceTaxTemplate extends Model
                 } catch (\Throwable $e) {
                     $splitRows = [];
                 }
-                // Identify invitation rows so we can render them with a
-                // special "Invitatie-01..Invitatie-N" placeholder series and
-                // keep the total bilete count aligned with the payout
-                // (which DOES include invitations). Rows with price=0 that
-                // belong to a non-invitation type fall through and don't
-                // render (likely test/edge data).
+                // Invitations never go into cerere vizare / impozit spectacol /
+                // PV distrugere — drop them together with any other zero-priced row.
                 $ttIndex = $event->ticketTypes->keyBy('id');
                 $isInvitationRow = function ($row) use ($ttIndex) {
                     $tt = $ttIndex->get($row['ticket_type_id'] ?? null);
@@ -1746,16 +1742,10 @@ class MarketplaceTaxTemplate extends Model
                     return ($tt->name === 'Invitatie') || ((bool) ($m['is_invitation'] ?? false));
                 };
                 $splitRows = array_values(array_filter($splitRows, function ($r) use ($isInvitationRow) {
-                    $price = (float) ($r['price'] ?? 0);
-                    if ($price > 0) return true;
-                    return $isInvitationRow($r);
+                    return (float) ($r['price'] ?? 0) > 0 && !$isInvitationRow($r);
                 }));
-                // Sort: invitations LAST (after all priced rows), then by
-                // type name (alpha), non-reduced before reduced, price desc.
-                usort($splitRows, function ($a, $b) use ($isInvitationRow) {
-                    $aInv = $isInvitationRow($a);
-                    $bInv = $isInvitationRow($b);
-                    if ($aInv !== $bInv) return $aInv ? 1 : -1;
+                // Sort by type name (alpha), non-reduced before reduced, price desc.
+                usort($splitRows, function ($a, $b) {
                     $cmp = strcmp((string) ($a['ticket_type_name'] ?? ''), (string) ($b['ticket_type_name'] ?? ''));
                     if ($cmp !== 0) return $cmp;
                     $aRed = (bool) ($a['is_reduced'] ?? false);
@@ -1800,30 +1790,6 @@ class MarketplaceTaxTemplate extends Model
 
                     $deLa = '';
                     $panaLa = '';
-
-                    // Invitations render with a placeholder series
-                    // ("Invitatie-01" .. "Invitatie-N") so the row count
-                    // shows up in the document even though invitations
-                    // carry no AMB-… series of their own. Keeps the
-                    // declaratie impozite total bilete aligned with the
-                    // payout's bilete total (which includes invitations).
-                    if ($isInvitationRow($row)) {
-                        $deLa = 'Invitatie-' . str_pad('1', 2, '0', STR_PAD_LEFT);
-                        $panaLa = 'Invitatie-' . str_pad((string) $qty, 2, '0', STR_PAD_LEFT);
-                        $taxSituationTotalQty += $qty;
-                        $taxSituationTotalValue += 0.0; // value stays 0 for free invitations
-                        $taxSituationRowsHtml .= '<tr>'
-                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . $rowNum . '</td>'
-                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:left;">' . htmlspecialchars($ttName) . '</td>'
-                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($deLa) . '</td>'
-                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($panaLa) . '</td>'
-                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">' . $qty . '</td>'
-                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">0.00</td>'
-                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">0.00</td>'
-                            . '</tr>';
-                        $rowNum++;
-                        continue;
-                    }
 
                     // Look up persisted allocation by discount_code (universal
                     // key across organizer promos + coupons + parent).
