@@ -26,6 +26,7 @@ class SettleLegacyPayouts extends Command
         {--ended-before=2026-04-15 : Ultima zi de final a evenimentului (inclusiv, ora României)}
         {--event= : Doar acest eveniment (pentru test)}
         {--skip-event= : Evenimente de sărit, separate prin virgulă}
+        {--skip-payout= : Deconturi de sărit (ex. ciorne duplicate), separate prin virgulă}
         {--out= : Folderul pentru CSV + backup (implicit ~/settle-legacy)}
         {--apply : Scrie în DB}
         {--revert= : Restaurează deconturile din fișierul de backup (.jsonl) dat}';
@@ -48,6 +49,7 @@ class SettleLegacyPayouts extends Command
         $marketplaceId = (int) $this->option('marketplace');
         $cutoff = Carbon::parse($this->option('ended-before') . ' 23:59:59', 'Europe/Bucharest');
         $skip = array_filter(array_map('intval', explode(',', (string) $this->option('skip-event'))));
+        $skipPayouts = array_filter(array_map('intval', explode(',', (string) $this->option('skip-payout'))));
 
         $outDir = $this->option('out') ?: ((getenv('HOME') ?: storage_path('app')) . '/settle-legacy');
         if (! is_dir($outDir) && ! @mkdir($outDir, 0775, true)) {
@@ -61,6 +63,7 @@ class SettleLegacyPayouts extends Command
             ->whereIn('status', self::OPEN_STATUSES)
             ->whereNotNull('event_id')
             ->when($this->option('event'), fn ($q, $id) => $q->where('event_id', (int) $id))
+            ->when($skipPayouts, fn ($q) => $q->whereNotIn('id', $skipPayouts))
             ->with('event')
             ->orderBy('id')
             ->get();
