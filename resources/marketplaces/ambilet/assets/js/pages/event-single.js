@@ -4850,11 +4850,35 @@ const EventPage = {
         // proposition when picking a category on the map. Gated by
         // event.enable_ticket_perks like the main card.
         var perksEnabled = self.event && self.event.enable_ticket_perks;
+        var targetPrice = self.event && self.event.target_price ? parseFloat(self.event.target_price) : null;
         var html = this.ticketTypes.filter(function(tt) {
             return tt.has_seating && !tt.is_sold_out;
         }).map(function(tt) {
             var isActive = String(tt.id) === String(currentTicketTypeId);
             var seatColor = self.getTicketTypeColor(tt);
+
+            // Same crossed-out price rule as the ticket cards: target_price first,
+            // then the ticket's original_price.
+            var crossedOutPrice = null;
+            if (!tt.is_free_with_code) {
+                if (targetPrice && tt.price < targetPrice) {
+                    crossedOutPrice = targetPrice;
+                } else if (tt.original_price && tt.original_price > tt.price) {
+                    crossedOutPrice = parseFloat(tt.original_price);
+                }
+            }
+            var discountPercent = crossedOutPrice ? Math.round((1 - tt.price / crossedOutPrice) * 100) : 0;
+            var priceHtml = tt.is_free_with_code
+                ? '<span class="font-bold" style="color:#059669;">Gratuit</span>'
+                : '<span class="flex flex-col items-end flex-shrink-0 ml-2 leading-tight">' +
+                    (crossedOutPrice
+                        ? '<span class="flex items-center gap-1">' +
+                            (discountPercent > 0 ? '<span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full">-' + discountPercent + '%</span>' : '') +
+                            '<span class="text-xs text-muted line-through">' + crossedOutPrice.toFixed(0) + ' lei</span>' +
+                          '</span>'
+                        : '') +
+                    '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
+                  '</span>';
 
             var perksHtml = '';
             if (perksEnabled && tt.perks && tt.perks.length > 0) {
@@ -4874,9 +4898,7 @@ const EventPage = {
                 'onclick="EventPage.switchTicketType(\'' + tt.id + '\')">' +
                 '<div class="flex justify-between items-start mb-1">' +
                     '<span class="flex items-center gap-1.5 font-semibold text-secondary text-sm"><span class="w-3 h-3 rounded flex-shrink-0" style="background-color: ' + seatColor + '"></span>' + tt.name + '</span>' +
-                    (tt.is_free_with_code
-                        ? '<span class="font-bold" style="color:#059669;">Gratuit</span>'
-                        : '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>') +
+                    priceHtml +
                 '</div>' +
                 '<div class="text-xs text-muted">' + (tt.description || 'Acces general') + '</div>' +
                 perksHtml +
