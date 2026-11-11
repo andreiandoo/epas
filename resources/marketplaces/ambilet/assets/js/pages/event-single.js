@@ -4867,15 +4867,11 @@ const EventPage = {
                     crossedOutPrice = parseFloat(tt.original_price);
                 }
             }
-            var discountPercent = crossedOutPrice ? Math.round((1 - tt.price / crossedOutPrice) * 100) : 0;
             var priceHtml = tt.is_free_with_code
                 ? '<span class="font-bold" style="color:#059669;">Gratuit</span>'
                 : '<span class="flex flex-col items-end flex-shrink-0 ml-2 leading-tight">' +
                     (crossedOutPrice
-                        ? '<span class="flex items-center gap-1">' +
-                            (discountPercent > 0 ? '<span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full">-' + discountPercent + '%</span>' : '') +
-                            '<span class="text-xs text-muted line-through">' + crossedOutPrice.toFixed(0) + ' lei</span>' +
-                          '</span>'
+                        ? '<span class="text-xs text-muted line-through">' + crossedOutPrice.toFixed(0) + ' lei</span>'
                         : '') +
                     '<span class="font-bold text-primary">' + tt.price.toFixed(0) + ' lei</span>' +
                   '</span>';
