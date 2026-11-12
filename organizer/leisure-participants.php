@@ -70,7 +70,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Search + table -->
         <div class="bg-white border rounded-2xl border-border">
             <div class="px-5 py-4 border-b border-border flex flex-wrap items-center gap-3">
-                <input id="lv-search" type="text" placeholder="🔍 Caută după nume, email, cod bilet..." class="flex-1 min-w-[200px] px-3 py-2 text-sm border border-border rounded-lg">
+                <input id="lv-search" type="text" placeholder="🔍 Caută după nume, email, cod bilet, nr. comandă..." class="flex-1 min-w-[200px] px-3 py-2 text-sm border border-border rounded-lg">
                 <select id="lv-f-status" class="px-3 py-2 text-sm bg-white border border-border rounded-lg">
                     <option value="">Toate statusurile</option>
                     <option value="valid">Valid</option>
