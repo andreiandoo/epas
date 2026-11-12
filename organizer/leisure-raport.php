@@ -61,7 +61,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Bilete vândute</p>
                 <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-total-physical">0</span></p>
                 <p id="r-total-physical-breakdown" class="mt-1 text-[9px] leading-tight text-muted"></p>
-                <p class="mt-0.5 text-[9px] leading-tight text-muted">din <span id="r-total-tickets">0</span> produse (un pachet = 1)</p>
             </div>
             <div class="p-3 bg-white border rounded-xl border-border">
                 <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Comenzi</p>
@@ -291,7 +290,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // Skeleton loader: pentru schimbari de perioada arata bare gri animate in loc
     // de cifrele vechi + overlay spinner pe fiecare card breakdown. Consistent cu
     // leisure-sales.
-    const R_STAT_TARGETS = ['r-total-revenue', 'r-total-physical', 'r-total-tickets', 'r-total-orders', 'r-avg', 'r-total-commission', 'r-net-revenue',
+    const R_STAT_TARGETS = ['r-total-revenue', 'r-total-physical', 'r-total-orders', 'r-avg', 'r-total-commission', 'r-net-revenue',
         'r-issuer-primary-revenue', 'r-issuer-primary-net', 'r-issuer-primary-tickets', 'r-issuer-primary-commission', 'r-issuer-primary-vat',
         'r-issuer-secondary-revenue', 'r-issuer-secondary-net', 'r-issuer-secondary-tickets', 'r-issuer-secondary-commission', 'r-issuer-secondary-vat'];
     const R_LOADING_TARGETS = ['r-payment-rows', 'r-source-rows', 'r-cashier-rows', 'r-tt-rows'];
@@ -339,7 +338,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             lastReport = data;
             const t = data.totals || {};
             $('r-total-revenue').textContent = fmtMoney(t.revenue);
-            $('r-total-tickets').textContent = t.tickets || 0;
             $('r-total-physical').textContent = data.total_physical_tickets || 0;
             $('r-total-physical-breakdown').textContent = categoryBreakdown(data.physical_by_category);
             $('r-total-orders').textContent = t.orders || 0;
