@@ -33,6 +33,7 @@ if (!function_exists('amb_icon')) {
     function amb_icon(string $name, string $class = 'w-4 h-4'): string
     {
         $d = amb_icon_data();
+        $name = str_replace("\u{FE0F}", '', $name);
         $attrs = ' class="amb-icon ' . htmlspecialchars($class, ENT_QUOTES) . '" aria-hidden="true" focusable="false"';
 
         if (strpos($name, 'flag-') === 0 && isset($d['flags'][substr($name, 5)])) {
@@ -42,7 +43,7 @@ if (!function_exists('amb_icon')) {
         if ($inner === null && isset($d['emoji'][$name])) {
             return amb_icon($d['emoji'][$name], $class);
         }
-        $inner = $inner ?? ($d['icons']['circle'] ?? '');
+        $inner = $inner ?? ($d['icons']['ticket'] ?? '');
 
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' . $attrs . '>' . $inner . '</svg>';
     }

@@ -70,7 +70,7 @@ $tabs = $scanVenue ? [
     <!-- AmbiletAuth + AmbiletAPI from main panel (shared, additive use only) -->
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/api.js"></script>
-    <style>.amb-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0}</style>
+    <style>:where(.amb-icon){display:inline-block;width:1em;height:1em;vertical-align:-0.125em;flex-shrink:0}</style>
     <script src="<?= asset('assets/js/utils/icons.js') ?>"></script>
 
     <script>

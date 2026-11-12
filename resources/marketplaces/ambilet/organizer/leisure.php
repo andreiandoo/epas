@@ -24,11 +24,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- Tab switcher -->
             <div class="inline-flex flex-wrap rounded-xl bg-white border border-border p-1 gap-1">
                 <button type="button" id="tab-btn-overview" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-white">Sumar & raport</button>
-                <button type="button" id="tab-btn-products" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
-                <button type="button" id="tab-btn-gates" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🚪 Porți acces</button>
-                <a href="/organizator/echipa" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">👥 Angajați →</a>
-                <button type="button" id="tab-btn-issuers" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🏢 Societăți</button>
-                <button type="button" id="tab-btn-content" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">⚙️ Setări</button>
+                <button type="button" id="tab-btn-products" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50"><?= amb_icon('ticket', 'w-4 h-4') ?> Produse</button>
+                <button type="button" id="tab-btn-gates" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50"><?= amb_icon('door-open', 'w-4 h-4') ?> Porți acces</button>
+                <a href="/organizator/echipa" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50"><?= amb_icon('users', 'w-4 h-4') ?> Angajați →</a>
+                <button type="button" id="tab-btn-issuers" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50"><?= amb_icon('building-2', 'w-4 h-4') ?> Societăți</button>
+                <button type="button" id="tab-btn-content" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50"><?= amb_icon('settings', 'w-4 h-4') ?> Setări</button>
             </div>
         </div>
 
@@ -65,7 +65,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="bg-white border rounded-2xl border-border p-5">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h2 class="text-lg font-bold text-secondary">🚪 Porți de acces</h2>
+                        <h2 class="text-lg font-bold text-secondary"><?= amb_icon('door-open', 'w-5 h-5') ?> Porți de acces</h2>
                         <p class="text-xs text-muted">Configurează porțile fizice și asociază-le membrilor echipei pentru scanare.</p>
                     </div>
                     <button type="button" id="gates-add-btn" class="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">+ Adaugă poartă</button>
@@ -98,7 +98,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </label>
                 </div>
                 <div class="mt-5 flex justify-between">
-                    <button id="gate-f-delete" type="button" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">🗑 Șterge</button>
+                    <button id="gate-f-delete" type="button" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg"><?= amb_icon('trash-2', 'w-4 h-4') ?> Șterge</button>
                     <div class="ml-auto flex gap-2">
                         <button id="gate-f-cancel" type="button" class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
                         <button id="gate-f-save" type="button" class="px-4 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">Salvează</button>
@@ -111,7 +111,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="tab-products" class="hidden space-y-6">
             <div class="p-5 bg-white border rounded-2xl border-border flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">🎫</div>
+                    <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center"><?= amb_icon('ticket', 'w-5 h-5') ?></div>
                     <div>
                         <h2 class="text-lg font-bold text-secondary">Bilete și servicii</h2>
                         <p class="text-xs text-muted">Adaugă, editează sau dezactivează produsele oferite la locație.</p>
@@ -126,14 +126,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <details class="bg-white border border-border rounded-2xl">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
                     <span class="flex items-center gap-2">
-                        🗂️ Categorii afișare bilete
-                        <span title="Grupează vizual tipurile de bilete pe pagina publică (ex: „Bilete individuale", „Bilete de familie", „Bilete de grup"). Ordinea categoriilor o stabilești prin drag&drop. La fiecare produs alegi categoria din modalul de editare." class="cursor-help text-primary text-base">ℹ️</span>
+                        <?= amb_icon('folders', 'w-4 h-4') ?> Categorii afișare bilete
+                        <span title="Grupează vizual tipurile de bilete pe pagina publică (ex: „Bilete individuale", „Bilete de familie", „Bilete de grup"). Ordinea categoriilor o stabilești prin drag&drop. La fiecare produs alegi categoria din modalul de editare." class="cursor-help text-primary text-base"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         <span id="cat-count" class="text-xs text-muted font-normal"></span>
                     </span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
-                    <p class="text-xs text-muted">💡 Categoriile permit gruparea biletelor pe pagina publică (ex: „Bilete individuale", „Pachete familie"). Trage rândurile pentru a re-ordona. Produsele neasignate vor apărea în secțiunea „Alte produse".</p>
+                    <p class="text-xs text-muted"><?= amb_icon('lightbulb', 'w-3.5 h-3.5 text-amber-500') ?> Categoriile permit gruparea biletelor pe pagina publică (ex: „Bilete individuale", „Pachete familie"). Trage rândurile pentru a re-ordona. Produsele neasignate vor apărea în secțiunea „Alte produse".</p>
                     <div id="cat-list" class="space-y-2"></div>
                     <div class="flex items-center justify-between gap-2">
                         <button type="button" id="cat-add-btn" class="px-3 py-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă categorie</button>
@@ -158,14 +158,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <label class="block md:col-span-2">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Nume *</span>
-                            <span title="Numele afișat clienților pe pagina publică ambilet.ro și pe biletul PDF. Ex: „Bilet adult", „Parcare auto", „Ghidaj"." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Numele afișat clienților pe pagina publică ambilet.ro și pe biletul PDF. Ex: „Bilet adult", „Parcare auto", „Ghidaj"." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Bilet adult, Parcare auto, Ghidaj…">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Categorie serviciu *</span>
-                            <span title="Determină grupul în care apare produsul + ce reguli aplică:&#10;• Acces = bilet de intrare în locație&#10;• Parcare = loc parcare auto&#10;• Închiriere = bărci, kayak, sănii — cu inventar fizic limitat&#10;• Activitate = ghidaj, ture cu operator — slots pe oră&#10;• Extra = servicii adiționale (apă, hartă)&#10;• Pachet = combinație de produse cu preț redus" class="cursor-help text-primary">ℹ️</span>
+                            <span title="Determină grupul în care apare produsul + ce reguli aplică:&#10;• Acces = bilet de intrare în locație&#10;• Parcare = loc parcare auto&#10;• Închiriere = bărci, kayak, sănii — cu inventar fizic limitat&#10;• Activitate = ghidaj, ture cu operator — slots pe oră&#10;• Extra = servicii adiționale (apă, hartă)&#10;• Pachet = combinație de produse cu preț redus" class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <select id="pr-f-category" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
                             <option value="access">🎟️ Acces (bilet intrare)</option>
@@ -179,7 +179,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Societate emitentă</span>
-                            <span title="Care din cele 2 societăți fiscale ale tale emite biletul + factura pentru acest produs. Important pentru raportare contabilă separată." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Care din cele 2 societăți fiscale ale tale emite biletul + factura pentru acest produs. Important pentru raportare contabilă separată." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <select id="pr-f-issuer" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
                             <option value="primary">Principală</option>
@@ -193,7 +193,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Categorie afișare</span>
-                            <span title="Grupul în care apare produsul pe pagina publică. Setezi categoriile disponibile în secțiunea „🗂️ Categorii afișare bilete" de mai sus.&#10;Lasă „Alte produse" dacă nu vrei să-l grupezi." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Grupul în care apare produsul pe pagina publică. Setezi categoriile disponibile în secțiunea „🗂️ Categorii afișare bilete" de mai sus.&#10;Lasă „Alte produse" dacă nu vrei să-l grupezi." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <select id="pr-f-group" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
                             <option value="">— Alte produse —</option>
@@ -202,50 +202,50 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Preț online (RON) *</span>
-                            <span title="Prețul afișat și plătit pe pagina publică ambilet.ro (vânzare online). Include sau exclude comisionul în funcție de modul setat pe contul tău." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Prețul afișat și plătit pe pagina publică ambilet.ro (vânzare online). Include sau exclude comisionul în funcție de modul setat pe contul tău." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="0.00">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Preț POS (la fața locului)</span>
-                            <span title="Prețul folosit la vânzarea on-site prin /organizator/leisure-pos (casierie fizică). De obicei mai mare decât prețul online (fără reducere booking).&#10;Lasă gol = se folosește prețul online.&#10;Setarea acestui preț activează produsul în panoul POS." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Prețul folosit la vânzarea on-site prin /organizator/leisure-pos (casierie fizică). De obicei mai mare decât prețul online (fără reducere booking).&#10;Lasă gol = se folosește prețul online.&#10;Setarea acestui preț activează produsul în panoul POS." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-pos-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="lasă gol = preț online">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Stoc total (opțional)</span>
-                            <span title="Stocul TOTAL disponibil pentru tot sezonul / toată durata evenimentului.&#10;Lasă gol = stoc nelimitat (folosit pentru bilete acces care nu au cap)." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Stocul TOTAL disponibil pentru tot sezonul / toată durata evenimentului.&#10;Lasă gol = stoc nelimitat (folosit pentru bilete acces care nu au cap)." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-capacity" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="lăsa gol = nelimitat">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Capacitate zilnică (opțional)</span>
-                            <span title="Stoc disponibil PE ZI calendaristică. Util când vrei să limitezi câți clienți poți primi într-o zi (ex: 500 bilete/zi).&#10;Lasă gol pentru fără limită zilnică." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Stoc disponibil PE ZI calendaristică. Util când vrei să limitezi câți clienți poți primi într-o zi (ex: 500 bilete/zi).&#10;Lasă gol pentru fără limită zilnică." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-dailycap" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 500">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Cantitate minimă coș</span>
-                            <span title="Câte bucăți minim trebuie să adauge clientul în coș pentru acest produs.&#10;Implicit: 1.&#10;Util pentru bilete de grup (ex: 10 persoane minimum)." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Câte bucăți minim trebuie să adauge clientul în coș pentru acest produs.&#10;Implicit: 1.&#10;Util pentru bilete de grup (ex: 10 persoane minimum)." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-min-qty" type="number" min="1" step="1" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="1">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Pas incrementare (+/-)</span>
-                            <span title="Cu cât crește sau scade cantitatea la apăsarea butoanelor + / -.&#10;Implicit: 1.&#10;Folosit pentru bilete grup (de ex pas 5 = adaugi câte 5 deodată)." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Cu cât crește sau scade cantitatea la apăsarea butoanelor + / -.&#10;Implicit: 1.&#10;Folosit pentru bilete grup (de ex pas 5 = adaugi câte 5 deodată)." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-step-qty" type="number" min="1" step="1" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="1">
                     </label>
                     <label class="block md:col-span-2 p-3 border border-amber-300 bg-amber-50 rounded-lg">
                         <div class="flex items-center gap-2">
                             <input id="pr-f-is-group" type="checkbox" class="w-4 h-4 accent-amber-600">
-                            <span class="text-xs font-semibold text-amber-900 uppercase tracking-wider">🎟️ Bilet de grup</span>
-                            <span title="Marchează acest produs ca bilet de grup.&#10;Pentru biletele de grup, prețul afișat pe pagina publică devine „de la {cantitate_minima × pret}"." class="cursor-help text-amber-700">ℹ️</span>
+                            <span class="text-xs font-semibold text-amber-900 uppercase tracking-wider"><?= amb_icon('ticket', 'w-3.5 h-3.5') ?> Bilet de grup</span>
+                            <span title="Marchează acest produs ca bilet de grup.&#10;Pentru biletele de grup, prețul afișat pe pagina publică devine „de la {cantitate_minima × pret}"." class="cursor-help text-amber-700"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </div>
                         <div id="pr-f-group-extra" class="hidden mt-3 space-y-2 pl-6">
                             <label class="flex items-center gap-2">
@@ -261,28 +261,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Durată serviciu (min)</span>
-                            <span title="Cât durează serviciul, în minute. Folosit pentru închirieri (calupuri de timp) sau activități (slots pe oră).&#10;Ex: barcă 30 min = 30, ghidaj 2h = 120." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Cât durează serviciul, în minute. Folosit pentru închirieri (calupuri de timp) sau activități (slots pe oră).&#10;Ex: barcă 30 min = 30, ghidaj 2h = 120." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-duration" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 60">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Iconiță (emoji)</span>
-                            <span title="Emoji afișat în badge-ul rotund din stânga numelui pe pagina publică. Ex: 🎟️ pentru bilet, 🚗 pentru parcare, 🛶 pentru barcă." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Emoji afișat în badge-ul rotund din stânga numelui pe pagina publică. Ex: 🎟️ pentru bilet, 🚗 pentru parcare, 🛶 pentru barcă." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-icon" type="text" maxlength="6" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="🎟️">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Etichetă unitate</span>
-                            <span title="Mic, gri, afișat sub preț. Spune clientului ce unitate de măsură reprezintă prețul.&#10;Ex: „/ bilet", „/ mașină / 3h", „/ persoană / zi"." class="cursor-help text-primary">ℹ️</span>
+                            <span title="Mic, gri, afișat sub preț. Spune clientului ce unitate de măsură reprezintă prețul.&#10;Ex: „/ bilet", „/ mașină / 3h", „/ persoană / zi"." class="cursor-help text-primary"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-unit" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="bilet, persoană, oră, zi…">
                     </label>
                     <div class="block md:col-span-2">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Imagine card (opțional)</span>
-                            <span title="Imagine afișată în cardul de serviciu pe pagina publică ambilet.ro. Recomandat: 800×600px sau 4:3. Maxim 10MB.&#10;Pentru servicii ne-acces (parcare, închiriere, activitate) — apare ca preview deasupra prețului.&#10;Pentru bilete acces — opțional, înlocuiește iconița emoji." class="cursor-help text-primary text-base">ℹ️</span>
+                            <span title="Imagine afișată în cardul de serviciu pe pagina publică ambilet.ro. Recomandat: 800×600px sau 4:3. Maxim 10MB.&#10;Pentru servicii ne-acces (parcare, închiriere, activitate) — apare ca preview deasupra prețului.&#10;Pentru bilete acces — opțional, înlocuiește iconița emoji." class="cursor-help text-primary text-base"><?= amb_icon('info', 'w-3.5 h-3.5') ?></span>
                         </span>
                         <input id="pr-f-image" type="hidden">
                         <!-- Drag & drop zone pentru imagine card produs -->
@@ -294,9 +294,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
                             <div id="pr-f-image-preview" class="hidden">
                                 <img id="pr-f-image-thumb" src="" alt="" class="mx-auto h-32 w-auto rounded">
-                                <button type="button" id="pr-f-image-remove" class="mt-2 text-[11px] text-rose-600 hover:text-rose-800 font-medium">🗑 Șterge imagine</button>
+                                <button type="button" id="pr-f-image-remove" class="mt-2 text-[11px] text-rose-600 hover:text-rose-800 font-medium"><?= amb_icon('trash-2', 'w-3 h-3') ?> Șterge imagine</button>
                             </div>
-                            <div id="pr-f-image-uploading" class="hidden text-xs text-primary">⏳ Se încarcă...</div>
+                            <div id="pr-f-image-uploading" class="hidden text-xs text-primary"><?= amb_icon('hourglass', 'w-3.5 h-3.5') ?> Se încarcă...</div>
                         </div>
                     </div>
                     <label class="block md:col-span-2">
@@ -315,15 +315,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <!-- 🌐 Traduceri opt-in (HU + EN) — stocate in meta.translations -->
                     <div class="md:col-span-2 border border-amber-200 bg-amber-50 rounded-lg p-3">
                         <button type="button" id="pr-f-tr-toggle" class="w-full flex items-center justify-between text-sm font-semibold text-amber-900 hover:text-amber-700">
-                            <span class="flex items-center gap-2">🌐 Traduceri (HU + EN) — opțional</span>
+                            <span class="flex items-center gap-2"><?= amb_icon('globe', 'w-4 h-4') ?> Traduceri (HU + EN) — opțional</span>
                             <svg id="pr-f-tr-chevron" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <p class="text-[11px] text-amber-800 mt-1">Completează doar limbile dorite. Câmpurile goale rămân în limba română (textele de mai sus).</p>
                         <div id="pr-f-tr-fields" class="hidden mt-3 space-y-3">
                             <!-- Tabs limbi -->
                             <div class="flex gap-1 border-b border-amber-300">
-                                <button type="button" data-tr-lang="hu" class="pr-f-tr-tab px-3 py-1.5 text-xs font-semibold border-b-2 border-amber-600 text-amber-900">🇭🇺 Maghiară</button>
-                                <button type="button" data-tr-lang="en" class="pr-f-tr-tab px-3 py-1.5 text-xs font-semibold border-b-2 border-transparent text-amber-700 hover:text-amber-900">🇬🇧 Engleză</button>
+                                <button type="button" data-tr-lang="hu" class="pr-f-tr-tab px-3 py-1.5 text-xs font-semibold border-b-2 border-amber-600 text-amber-900"><?= amb_icon('flag-hu', 'w-4 h-3 rounded-sm') ?> Maghiară</button>
+                                <button type="button" data-tr-lang="en" class="pr-f-tr-tab px-3 py-1.5 text-xs font-semibold border-b-2 border-transparent text-amber-700 hover:text-amber-900"><?= amb_icon('flag-gb', 'w-4 h-3 rounded-sm') ?> Engleză</button>
                             </div>
 
                             <!-- HU tab -->
@@ -398,7 +398,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                             <label class="flex items-center gap-2 text-sm font-semibold mb-3">
                                 <input type="checkbox" id="pr-f-slots-enabled" class="w-4 h-4 accent-primary">
-                                <span>🕐 Activează booking pe slot-uri (curse repetitive)</span>
+                                <span><?= amb_icon('clock', 'w-4 h-4') ?> Activează booking pe slot-uri (curse repetitive)</span>
                             </label>
                             <div id="pr-f-slots-fields" class="hidden grid-cols-2 md:grid-cols-4 gap-2">
                                 <label class="block">
@@ -436,7 +436,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                             <label class="flex items-center gap-2 text-sm font-semibold mb-3">
                                 <input type="checkbox" id="pr-f-physical-enabled" class="w-4 h-4 accent-primary">
-                                <span>🔒 Inventar fizic cu lock pe interval</span>
+                                <span><?= amb_icon('lock', 'w-4 h-4') ?> Inventar fizic cu lock pe interval</span>
                             </label>
                             <div id="pr-f-physical-fields" class="hidden">
                                 <label class="block">
@@ -472,11 +472,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </label>
                         <label id="pr-f-child-wrap" class="flex items-center gap-2 text-sm hidden">
                             <input id="pr-f-child" type="checkbox" class="w-4 h-4 accent-primary">
-                            <span>🧒 Bilet copil (gratuit)</span>
+                            <span><?= amb_icon('baby', 'w-4 h-4') ?> Bilet copil (gratuit)</span>
                         </label>
                         <label class="flex items-center gap-2 text-sm" title="Cand e bifat, produsul apare DOAR in POS si este ascuns de pe pagina publica.">
                             <input id="pr-f-pos-only" type="checkbox" class="w-4 h-4 accent-primary">
-                            <span>🏪 Doar pentru vânzare POS (ascuns online)</span>
+                            <span><?= amb_icon('store', 'w-4 h-4') ?> Doar pentru vânzare POS (ascuns online)</span>
                         </label>
                     </div>
                     <!-- F6: Asociere acces (vizibil doar pentru rental/activity) -->
@@ -492,7 +492,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <!-- F10: Blocare intervale orare (informativ) -->
                     <div id="pr-f-blocks-wrap" class="md:col-span-2 hidden">
                         <div class="flex items-center justify-between mb-2">
-                            <p class="text-xs font-semibold text-muted uppercase tracking-wider">🚫 Blocare intervale orare (informativ)</p>
+                            <p class="text-xs font-semibold text-muted uppercase tracking-wider"><?= amb_icon('ban', 'w-3.5 h-3.5') ?> Blocare intervale orare (informativ)</p>
                             <button type="button" id="pr-f-block-add" class="px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded">+ Adaugă</button>
                         </div>
                         <p class="text-[11px] text-muted mb-2">Afișează banner-uri pe pagina publică + POS pentru date/ore specifice când produsul are grup organizat. NU blochează vânzarea automată.</p>
@@ -500,7 +500,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
                 <div class="mt-6 flex justify-between gap-2">
-                    <button id="pr-f-delete" type="button" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">🗑 Șterge</button>
+                    <button id="pr-f-delete" type="button" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg"><?= amb_icon('trash-2', 'w-4 h-4') ?> Șterge</button>
                     <div class="ml-auto flex gap-2">
                         <button id="pr-f-cancel" type="button" class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
                         <button id="pr-f-save" type="button" class="px-5 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">Salvează</button>
@@ -516,7 +516,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="tab-issuers" class="hidden space-y-6">
             <div class="p-5 bg-white border rounded-2xl border-border">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">🏢</div>
+                    <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center"><?= amb_icon('building-2', 'w-5 h-5') ?></div>
                     <div>
                         <h2 class="text-lg font-bold text-secondary">Societăți emitente</h2>
                         <p class="text-xs text-muted">Editezi datele fiscale ale celor 2 societăți care pot emite facturi/bonuri pentru acest organizator. Setezi seria, numărul de pornire și flag-ul TVA pentru fiecare în parte.</p>
@@ -620,7 +620,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="p-5 bg-white border rounded-2xl border-border">
                 <div class="flex items-center gap-3 mb-2">
                     <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-                        ✏️
+                        <?= amb_icon('pencil', 'w-5 h-5') ?>
                     </div>
                     <div>
                         <h2 class="text-lg font-bold text-secondary">Editor conținut pagină publică</h2>
@@ -632,7 +632,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- HERO & IDENTITATE -->
             <details class="bg-white border rounded-2xl border-border" open>
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>🎨 Hero & Identitate</span>
+                    <span><?= amb_icon('palette', 'w-4 h-4') ?> Hero & Identitate</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-4 border-t border-border">
@@ -676,71 +676,71 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                     <!-- 🌐 Traduceri Hero (HU + EN) — opt-in -->
                     <details class="border border-amber-200 bg-amber-50 rounded-lg p-3">
-                        <summary class="text-sm font-semibold text-amber-900 cursor-pointer">🌐 Traduceri Hero (HU + EN) — opțional</summary>
+                        <summary class="text-sm font-semibold text-amber-900 cursor-pointer"><?= amb_icon('globe', 'w-4 h-4') ?> Traduceri Hero (HU + EN) — opțional</summary>
                         <p class="text-[11px] text-amber-800 mt-1 mb-3">Câmpurile goale rămân în limba română (textul de mai sus).</p>
                         <div class="grid md:grid-cols-2 gap-3">
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu principal (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Titlu principal (HU)</span>
                                 <input type="text" data-vc-nested="translations.title_primary.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Primary title (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Primary title (EN)</span>
                                 <input type="text" data-vc-nested="translations.title_primary.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Subtitlu italic (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Subtitlu italic (HU)</span>
                                 <input type="text" data-vc-nested="translations.title_secondary.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Italic subtitle (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Italic subtitle (EN)</span>
                                 <input type="text" data-vc-nested="translations.title_secondary.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Kicker (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Kicker (HU)</span>
                                 <input type="text" data-vc-nested="translations.hero_kicker.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Kicker (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Kicker (EN)</span>
                                 <input type="text" data-vc-nested="translations.hero_kicker.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block md:col-span-2">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Badge-uri hero (HU, separate prin virgulă)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Badge-uri hero (HU, separate prin virgulă)</span>
                                 <input type="text" data-vc-list-nested="translations.hero_badges.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="🌿 Natura 2000 hely, 🏔️ 950m magasság">
                             </label>
                             <label class="block md:col-span-2">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Hero badges (EN, comma-separated)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Hero badges (EN, comma-separated)</span>
                                 <input type="text" data-vc-list-nested="translations.hero_badges.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="🌿 Natura 2000 site, 🏔️ 950m altitude">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Etichetă locație (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Etichetă locație (HU)</span>
                                 <input type="text" data-vc-nested="translations.location_label.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="ex: Lázárfalva">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Location label (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Location label (EN)</span>
                                 <input type="text" data-vc-nested="translations.location_label.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="ex: Lăzărești">
                             </label>
                             <label class="block md:col-span-2">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Subtitlu hero (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Subtitlu hero (HU)</span>
                                 <textarea data-vc-nested="translations.hero_subtitle.hu" rows="2" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
                             </label>
                             <label class="block md:col-span-2">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Hero subtitle (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Hero subtitle (EN)</span>
                                 <textarea data-vc-nested="translations.hero_subtitle.en" rows="2" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu "Despre" (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Titlu "Despre" (HU)</span>
                                 <input type="text" data-vc-nested="translations.about_title.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 "About" title (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> "About" title (EN)</span>
                                 <input type="text" data-vc-nested="translations.about_title.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu "Floră & faună" (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Titlu "Floră & faună" (HU)</span>
                                 <input type="text" data-vc-nested="translations.flora_title.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="Növény- és állatvilág">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 "Flora & Fauna" title (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> "Flora & Fauna" title (EN)</span>
                                 <input type="text" data-vc-nested="translations.flora_title.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="Flora & Fauna">
                             </label>
                         </div>
@@ -751,7 +751,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- CONTACT & LINK-URI -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>📞 Contact & Link-uri</span>
+                    <span><?= amb_icon('phone', 'w-4 h-4') ?> Contact & Link-uri</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-4 border-t border-border">
@@ -780,7 +780,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- SAFETY WARNING -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>⚠️ Atenționare siguranță (afișată sub trasee)</span>
+                    <span><?= amb_icon('triangle-alert', 'w-4 h-4 text-amber-600') ?> Atenționare siguranță (afișată sub trasee)</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-4 border-t border-border">
@@ -801,22 +801,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                     <!-- 🌐 Traduceri safety_warning -->
                     <details class="border border-amber-200 bg-amber-50 rounded-lg p-3">
-                        <summary class="text-sm font-semibold text-amber-900 cursor-pointer">🌐 Traduceri (HU + EN) — opțional</summary>
+                        <summary class="text-sm font-semibold text-amber-900 cursor-pointer"><?= amb_icon('globe', 'w-4 h-4') ?> Traduceri (HU + EN) — opțional</summary>
                         <div class="grid md:grid-cols-2 gap-3 mt-3">
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Titlu (HU)</span>
                                 <input type="text" data-vc-nested="safety_warning.translations.hu.title" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Title (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Title (EN)</span>
                                 <input type="text" data-vc-nested="safety_warning.translations.en.title" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
                             </label>
                             <label class="block md:col-span-2">
-                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Mesaj (HU)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-hu', 'w-3.5 h-2.5 rounded-sm') ?> Mesaj (HU)</span>
                                 <textarea data-vc-nested="safety_warning.translations.hu.body" rows="3" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
                             </label>
                             <label class="block md:col-span-2">
-                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Body (EN)</span>
+                                <span class="text-[10px] uppercase text-amber-800"><?= amb_icon('flag-gb', 'w-3.5 h-2.5 rounded-sm') ?> Body (EN)</span>
                                 <textarea data-vc-nested="safety_warning.translations.en.body" rows="3" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
                             </label>
                         </div>
@@ -827,7 +827,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- FAQ -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>❓ Întrebări frecvente (FAQ)</span>
+                    <span><?= amb_icon('circle-help', 'w-4 h-4') ?> Întrebări frecvente (FAQ)</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -839,7 +839,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- STATS HIGHLIGHTS -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>📊 Statistici mari (numere)</span>
+                    <span><?= amb_icon('chart-column', 'w-4 h-4') ?> Statistici mari (numere)</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -851,7 +851,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- ATRACȚII -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>🏞️ Atracții (carduri principale)</span>
+                    <span><?= amb_icon('trees', 'w-4 h-4') ?> Atracții (carduri principale)</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -863,7 +863,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- TRASEE -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>🥾 Trasee turistice</span>
+                    <span><?= amb_icon('footprints', 'w-4 h-4') ?> Trasee turistice</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -875,7 +875,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- GALERIE -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>📷 Galerie foto</span>
+                    <span><?= amb_icon('camera', 'w-4 h-4') ?> Galerie foto</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -887,7 +887,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- VIDEO -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>🎥 Video (YouTube / Vimeo)</span>
+                    <span><?= amb_icon('video', 'w-4 h-4') ?> Video (YouTube / Vimeo)</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -899,7 +899,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- HARTĂ - centru + POIs -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>📍 Hartă (centru + puncte de interes)</span>
+                    <span><?= amb_icon('map-pin', 'w-4 h-4') ?> Hartă (centru + puncte de interes)</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-4 border-t border-border">
@@ -928,7 +928,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- HOTELURI -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>🏨 Hoteluri / cazări apropiate</span>
+                    <span><?= amb_icon('hotel', 'w-4 h-4') ?> Hoteluri / cazări apropiate</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -940,7 +940,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- FLORA -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>🌿 Floră & faună</span>
+                    <span><?= amb_icon('leaf', 'w-4 h-4') ?> Floră & faună</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -952,7 +952,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- PROGRAM / SEZOANE -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>📅 Program / sezoane operaționale</span>
+                    <span><?= amb_icon('calendar', 'w-4 h-4') ?> Program / sezoane operaționale</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -964,7 +964,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- GETTING THERE -->
             <details class="bg-white border rounded-2xl border-border">
                 <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
-                    <span>🚗 Cum ajungi (instrucțiuni)</span>
+                    <span><?= amb_icon('car', 'w-4 h-4') ?> Cum ajungi (instrucțiuni)</span>
                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </summary>
                 <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
@@ -975,7 +975,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             <!-- INFO: pagina publică -->
             <div class="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-xs text-blue-900">
-                💡 Salvează apoi vezi modificările pe <a id="admin-edit-link" href="#" target="_blank" class="font-bold underline">pagina publică</a> (deschide cu <code class="bg-blue-100 px-1 rounded">?preview=1</code> pentru a vedea draft).
+                <?= amb_icon('lightbulb', 'w-3.5 h-3.5 text-amber-500') ?> Salvează apoi vezi modificările pe <a id="admin-edit-link" href="#" target="_blank" class="font-bold underline">pagina publică</a> (deschide cu <code class="bg-blue-100 px-1 rounded">?preview=1</code> pentru a vedea draft).
             </div>
 
             <!-- Save bar -->
@@ -986,7 +986,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span id="vc-save-status" class="text-sm font-medium">Modificările sunt salvate manual.</span>
                     </div>
                     <button type="button" id="vc-save-btn" class="px-5 py-2 bg-white text-primary font-bold rounded-lg hover:bg-primary-dark hover:text-white transition-colors disabled:opacity-50">
-                        💾 Salvează
+                        <?= amb_icon('save', 'w-4 h-4') ?> Salvează
                     </button>
                 </div>
             </div>
@@ -1465,7 +1465,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('gates-empty').classList.add('hidden');
         $('gates-list').innerHTML = gatesCache.map(g => `
             <div class="p-3 bg-slate-50 rounded-lg flex items-center gap-3">
-                <div class="w-10 h-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold">${escapeHtml(g.code || '🚪')}</div>
+                <div class="w-10 h-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold">${g.code ? escapeHtml(g.code) : ambIcon('door-open', 'w-5 h-5')}</div>
                 <div class="flex-1 min-w-0">
                     <div class="font-semibold text-secondary">${escapeHtml(g.name || '—')}</div>
                     ${g.description ? `<div class="text-xs text-muted truncate">${escapeHtml(g.description)}</div>` : ''}
@@ -1539,7 +1539,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     let productsCache = [];
     let editingProductId = null;
 
-    const CAT_LABEL = { access: '🎟️ Acces', parking: '🚗 Parcare', rental: '🛶 Închiriere', activity: '🎯 Activitate', extra: '➕ Extra', package: '🎁 Pachet' };
+    const CAT_LABEL = { access: ambIcon('ticket', 'w-3 h-3') + ' Acces', parking: ambIcon('car', 'w-3 h-3') + ' Parcare', rental: ambIcon('sailboat', 'w-3 h-3') + ' Închiriere', activity: ambIcon('target', 'w-3 h-3') + ' Activitate', extra: ambIcon('plus', 'w-3 h-3') + ' Extra', package: ambIcon('gift', 'w-3 h-3') + ' Pachet' };
     const CAT_COLOR = { access: 'blue', parking: 'violet', rental: 'amber', activity: 'emerald', extra: 'slate', package: 'rose' };
 
     let categoriesCache = [];
@@ -1600,15 +1600,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <input type="file" accept="image/jpeg,image/png,image/webp" class="absolute inset-0 opacity-0 cursor-pointer" data-cat-img-file>
                         ${hasImg
                             ? `<img src="${escapeHtml(imgUrl)}" class="w-full h-full object-cover" data-cat-img-thumb>`
-                            : `<span class="text-xl text-muted" data-cat-img-placeholder>🖼️</span>`}
+                            : `<span class="text-xl text-muted" data-cat-img-placeholder>${ambIcon('image', 'w-5 h-5')}</span>`}
                         <span class="hidden absolute inset-0 bg-black/50 text-white text-[10px] flex items-center justify-center" data-cat-img-loading>...</span>
                     </label>
                     <input type="text" data-cat-name data-tr-locale="ro" class="flex-1 px-2 py-1 text-sm border border-border rounded bg-white" placeholder="🇷🇴 ex: Bilete individuale" value="${escapeHtml(nameRo(c))}">
                     <code class="text-[10px] text-muted bg-white border border-border rounded px-1.5 py-1" title="ID intern, folosit la asocierea biletelor. Nu se schimbă după creare.">${escapeHtml(c.id)}</code>
-                    <button type="button" data-cat-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded text-sm" title="Șterge categoria (biletele rămân ne-asignate)">🗑</button>
+                    <button type="button" data-cat-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded text-sm" title="Șterge categoria (biletele rămân ne-asignate)">${ambIcon('trash-2', 'w-4 h-4')}</button>
                 </div>
                 <details class="mt-1.5">
-                    <summary class="text-[10px] text-amber-900 cursor-pointer hover:underline pl-7">🌐 Traduceri HU + EN (opțional)</summary>
+                    <summary class="text-[10px] text-amber-900 cursor-pointer hover:underline pl-7">${ambIcon('globe', 'w-3 h-3')} Traduceri HU + EN (opțional)</summary>
                     <div class="grid grid-cols-2 gap-2 mt-1.5 pl-7">
                         <input type="text" data-cat-name data-tr-locale="hu" class="px-2 py-1 text-xs border border-amber-300 rounded bg-white" placeholder="🇭🇺 nume HU" value="${escapeHtml(nameHu(c))}">
                         <input type="text" data-cat-name data-tr-locale="en" class="px-2 py-1 text-xs border border-amber-300 rounded bg-white" placeholder="🇬🇧 EN name" value="${escapeHtml(nameEn(c))}">
@@ -1773,7 +1773,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return `<div class="pr-row bg-white border rounded-2xl border-border ${inactive ? 'opacity-60' : ''}" draggable="true" data-product-id="${p.id}">
             <div class="px-5 py-4 flex items-center gap-4">
                 <span class="text-muted text-lg select-none cursor-move" title="Trage pentru a reordona">⋮⋮</span>
-                <div class="text-2xl">${icon || '🎫'}</div>
+                <div class="text-2xl">${icon || ambIcon('ticket', 'w-6 h-6 text-primary')}</div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="font-bold text-secondary truncate">${escapeHtml(p.name)}</span>
@@ -1783,7 +1783,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                     ${p.description ? `<div class="text-xs text-muted mt-0.5 truncate">${escapeHtml(p.description)}</div>` : ''}
                     <div class="text-xs text-muted mt-1">
-                        ${p.daily_capacity ? `📅 ${p.daily_capacity}/zi · ` : ''}${p.capacity ? `Stoc total: ${p.capacity}` : 'Stoc nelimitat'}
+                        ${p.daily_capacity ? `${ambIcon('calendar', 'w-3.5 h-3.5')} ${p.daily_capacity}/zi · ` : ''}${p.capacity ? `Stoc total: ${p.capacity}` : 'Stoc nelimitat'}
                     </div>
                 </div>
                 <div class="text-right">
@@ -1985,7 +1985,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="time" data-bl="start_time" value="${escapeHtml(b.start_time || '')}" required class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="time" data-bl="end_time" value="${escapeHtml(b.end_time || '')}" required class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="text" data-bl="reason" placeholder="Motiv (ex: Grup privat)" maxlength="200" value="${escapeHtml(b.reason || '')}" class="col-span-4 px-2 py-1.5 text-sm border border-border rounded bg-white">
-                <button type="button" data-bl-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+                <button type="button" data-bl-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">${ambIcon('trash-2', 'w-3.5 h-3.5')}</button>
             </div>
         `;
         row.querySelector('[data-bl-rm]').addEventListener('click', () => row.remove());
@@ -2058,7 +2058,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="number" data-ao="price" placeholder="RON/buc" min="0" step="0.01" required value="${a.price ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="number" data-ao="included_qty" placeholder="Gratuite/bilet" min="0" value="${a.included_qty ?? 0}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white" title="Câte sunt gratuite per bilet cumpărat">
                 <input type="number" data-ao="max_per_unit" placeholder="Max plătite/bilet" min="0" value="${a.max_per_unit ?? 5}" class="col-span-1 px-2 py-1.5 text-sm border border-border rounded bg-white" title="Câte se pot adăuga plătit pe lângă cele incluse">
-                <button type="button" data-ao-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+                <button type="button" data-ao-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">${ambIcon('trash-2', 'w-3.5 h-3.5')}</button>
             </div>
         `;
         row.querySelector('[data-ao-rm]').addEventListener('click', () => row.remove());
@@ -2108,7 +2108,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="text" data-pkg="variant_id" placeholder="Variantă" maxlength="32" value="${escapeHtml(o.variant_id || '')}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="number" data-pkg="qty" placeholder="Cant." min="1" value="${o.qty ?? 1}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="number" data-pkg="price" placeholder="Aloc. (RON)" min="0" step="0.01" value="${o.price != null ? o.price : ''}" title="Cât din prețul pachetului se alocă acestei componente. Suma tuturor = prețul pachetului." class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
-                <button type="button" data-pkg-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+                <button type="button" data-pkg-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">${ambIcon('trash-2', 'w-3.5 h-3.5')}</button>
             </div>
             <div class="mt-1 flex items-center justify-between text-[10px] text-muted px-1">
                 <span data-pkg-issuer-badge>&nbsp;</span>
@@ -2210,10 +2210,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const badge = ok
                 ? `<span class="text-emerald-700 font-semibold">✓ Alocare corectă</span>`
                 : (Math.abs(delta) < 0.01
-                    ? `<span class="text-amber-700">⚠ ${outputs.length - allocCount} componente fără alocare</span>`
+                    ? `<span class="text-amber-700">${ambIcon('triangle-alert', 'w-3.5 h-3.5')} ${outputs.length - allocCount} componente fără alocare</span>`
                     : (delta > 0
-                        ? `<span class="text-rose-700 font-semibold">⚠ Alocat +${delta.toFixed(2)} RON peste prețul pachetului</span>`
-                        : `<span class="text-rose-700 font-semibold">⚠ Mai trebuie alocați ${Math.abs(delta).toFixed(2)} RON</span>`));
+                        ? `<span class="text-rose-700 font-semibold">${ambIcon('triangle-alert', 'w-3.5 h-3.5')} Alocat +${delta.toFixed(2)} RON peste prețul pachetului</span>`
+                        : `<span class="text-rose-700 font-semibold">${ambIcon('triangle-alert', 'w-3.5 h-3.5')} Mai trebuie alocați ${Math.abs(delta).toFixed(2)} RON</span>`));
             html += (html ? '<br>' : '') + `Alocare pachet: <strong>${allocSum.toFixed(2)}</strong> / ${price.toFixed(2)} RON · ${badge}`;
         }
 
@@ -2263,7 +2263,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="text" data-vr="label" placeholder="Etichetă (30 minute)" required value="${escapeHtml(v.label || '')}" class="col-span-4 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="number" data-vr="duration_minutes" placeholder="min" min="0" value="${v.duration_minutes ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
                 <input type="number" data-vr="price" placeholder="RON" min="0" step="0.01" required value="${v.price ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
-                <button type="button" data-vr-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+                <button type="button" data-vr-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">${ambIcon('trash-2', 'w-3.5 h-3.5')}</button>
             </div>
         `;
         row.querySelector('[data-vr-rm]').addEventListener('click', () => row.remove());
@@ -2623,7 +2623,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function makeTranslationFields(d, fields) {
         const inputs = ['hu', 'en'].map(loc => {
-            const flag = loc === 'hu' ? '🇭🇺 HU' : '🇬🇧 EN';
+            const flag = loc === 'hu' ? ambIcon('flag-hu', 'w-3.5 h-2.5 rounded-sm') + ' HU' : ambIcon('flag-gb', 'w-3.5 h-2.5 rounded-sm') + ' EN';
             const items = fields.map(f => {
                 const value = escapeHtml(getNested(d, `translations.${loc}.${f.key}`) || '');
                 const inputClass = 'w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white mt-1';
@@ -2638,7 +2638,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
         return `
             <details class="mt-2 border border-amber-200 bg-amber-50 rounded p-2">
-                <summary class="text-xs font-semibold text-amber-900 cursor-pointer">🌐 Traduceri (HU + EN) — opțional</summary>
+                <summary class="text-xs font-semibold text-amber-900 cursor-pointer">${ambIcon('globe', 'w-3.5 h-3.5')} Traduceri (HU + EN) — opțional</summary>
                 <div class="mt-2 space-y-2">${inputs}</div>
             </details>
         `;
@@ -2657,7 +2657,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 {key: 'name', label: 'Titlu'},
                 {key: 'description', label: 'Descriere', type: 'textarea'},
             ])}
-            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-3.5 h-3.5')} Șterge</button></div>
         `);
     }
 
@@ -2680,7 +2680,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 {key: 'name', label: 'Nume'},
                 {key: 'description', label: 'Descriere', type: 'textarea'},
             ])}
-            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-3.5 h-3.5')} Șterge</button></div>
         `);
     }
 
@@ -2689,7 +2689,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="flex items-center gap-2">
                 <input type="url" data-rep="url" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine" value="${escapeHtml(d.url || d)}">
                 <input type="text" data-rep="caption" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Caption (opțional)" value="${escapeHtml(d.caption || '')}">
-                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-4 h-4')}</button>
             </div>
         `);
     }
@@ -2699,7 +2699,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="flex items-center gap-2">
                 <input type="url" data-rep="url" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL YouTube / Vimeo" value="${escapeHtml(d.url || d)}">
                 <input type="text" data-rep="title" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu (opțional)" value="${escapeHtml(d.title || '')}">
-                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-4 h-4')}</button>
             </div>
         `);
     }
@@ -2713,7 +2713,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="text" data-rep="title" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu POI" value="${escapeHtml(d.title || '')}">
                 <input type="text" data-rep="description" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere scurtă" value="${escapeHtml(d.description || '')}">
             </div>
-            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-3.5 h-3.5')} Șterge</button></div>
         `);
     }
 
@@ -2726,7 +2726,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="url" data-rep="url" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Link" value="${escapeHtml(d.url || '')}">
                 <input type="url" data-rep="image" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine (opțional)" value="${escapeHtml(d.image || '')}">
             </div>
-            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-3.5 h-3.5')} Șterge</button></div>
         `);
     }
 
@@ -2743,15 +2743,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="hidden" data-rep="image_url" value="${escapeHtml(d.image_url || '')}">
                     <div data-flora-img-wrap class="relative w-14 h-14 rounded-lg border-2 border-dashed ${hasImage ? 'border-primary' : 'border-border'} bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-primary" title="Adaugă imagine">
                         <input type="file" data-flora-img-file accept="image/jpeg,image/png,image/webp" class="absolute inset-0 opacity-0 cursor-pointer z-10">
-                        <div data-flora-img-empty class="text-[10px] text-muted ${hasImage ? 'hidden' : ''}">📷 img</div>
+                        <div data-flora-img-empty class="text-[10px] text-muted ${hasImage ? 'hidden' : ''}">${ambIcon('camera', 'w-3 h-3')} img</div>
                         <img data-flora-img-thumb src="${escapeHtml(imageUrl)}" class="${hasImage ? '' : 'hidden'} absolute inset-0 w-full h-full object-cover">
-                        <div data-flora-img-loading class="hidden absolute inset-0 bg-white/70 flex items-center justify-center text-[10px] text-primary">⏳</div>
+                        <div data-flora-img-loading class="hidden absolute inset-0 bg-white/70 flex items-center justify-center text-[10px] text-primary">${ambIcon('hourglass', 'w-4 h-4')}</div>
                     </div>
-                    ${hasImage ? '<button type="button" data-flora-img-remove class="text-[10px] text-rose-600 hover:text-rose-800">🗑 img</button>' : ''}
+                    ${hasImage ? '<button type="button" data-flora-img-remove class="text-[10px] text-rose-600 hover:text-rose-800">' + ambIcon('trash-2', 'w-3 h-3') + ' img</button>' : ''}
                 </div>
                 <input type="text" data-rep="name" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume specie" value="${escapeHtml(d.name || '')}">
                 <input type="text" data-rep="description" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii (opțional)" value="${escapeHtml(d.description || '')}">
-                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-4 h-4')}</button>
             </div>
             ${makeTranslationFields(d, [
                 {key: 'name', label: 'Nume'},
@@ -2815,7 +2815,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             ${makeTranslationFields(d, [
                 {key: 'name', label: 'Nume sezon'},
             ])}
-            <div class="text-right"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge sezon</button></div>
+            <div class="text-right"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-3.5 h-3.5')} Șterge sezon</button></div>
         `;
         const rm = wrap.querySelector('[data-rm]');
         if (rm) rm.addEventListener('click', () => wrap.remove());
@@ -2834,7 +2834,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 {key: 'title', label: 'Titlu'},
                 {key: 'description', label: 'Descriere', type: 'textarea'},
             ])}
-            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">${ambIcon('trash-2', 'w-3.5 h-3.5')} Șterge</button></div>
         `);
     }
 
@@ -3069,7 +3069,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             btn.type = 'button';
                             btn.dataset.floraImgRemove = '1';
                             btn.className = 'text-[10px] text-rose-600 hover:text-rose-800';
-                            btn.textContent = '🗑 img';
+                            btn.innerHTML = ambIcon('trash-2', 'w-3 h-3') + ' img';
                             row.querySelector('.flex.flex-col').appendChild(btn);
                         }
                     } else {

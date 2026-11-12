@@ -14,15 +14,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
                 <div class="flex items-center gap-2 text-xs text-muted mb-1">
-                    <a href="/organizator/leisure-raport" class="hover:text-primary">📑 Raport general</a>
+                    <a href="/organizator/leisure-raport" class="hover:text-primary"><?= amb_icon('files', 'w-3.5 h-3.5') ?> Raport general</a>
                     <span>›</span>
                     <span class="text-secondary font-semibold">Raport personal</span>
                 </div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">👥 Raport activitate angajați</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('users', 'w-7 h-7') ?> Raport activitate angajați</h1>
                 <p class="mt-1 text-sm text-muted">Toate scanările QR ale angajaților permanenți în perioada selectată. Sursa: <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">leisure_staff_checkins</code>.</p>
             </div>
             <a href="/organizator/echipa" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-border rounded-lg hover:bg-slate-50">
-                ⚙️ Gestionează angajați →
+                <?= amb_icon('settings', 'w-4 h-4') ?> Gestionează angajați →
             </a>
         </div>
 
@@ -38,7 +38,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </label>
             <button id="staff-rep-refresh" type="button" class="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark">Actualizează</button>
             <div class="ml-auto">
-                <button id="staff-rep-export" type="button" class="px-3 py-1.5 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50">📥 Export CSV</button>
+                <button id="staff-rep-export" type="button" class="px-3 py-1.5 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50"><?= amb_icon('download', 'w-3.5 h-3.5') ?> Export CSV</button>
             </div>
         </div>
 

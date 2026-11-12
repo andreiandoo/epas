@@ -441,7 +441,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <!-- Points Earned -->
                                 <div class="flex items-center justify-between p-3 mb-4 bg-accent/10 rounded-xl">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-xl">🎁</span>
+                                        <?= amb_icon('gift', 'w-5 h-5 text-accent') ?>
                                         <span class="text-sm font-medium text-secondary">Vei câștiga</span>
                                     </div>
                                     <span id="pointsEarned" class="text-lg font-bold text-accent points-counter">0</span>

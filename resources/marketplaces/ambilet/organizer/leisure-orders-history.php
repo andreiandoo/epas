@@ -12,7 +12,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">📜 Istoric ștergeri comenzi</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('scroll-text', 'w-7 h-7') ?> Istoric ștergeri comenzi</h1>
                 <p class="mt-1 text-sm text-muted">Toate ștergerile de comenzi + motiv + user + detalii complete.</p>
             </div>
             <a href="/organizator/leisure-orders" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border rounded-lg text-secondary bg-white border-border hover:bg-slate-50">
@@ -86,15 +86,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
     function esc(v) { return String(v == null ? '' : v).replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
     function sourceBadge(s) {
-        if (s === 'pos') return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">🏪 POS</span>';
-        return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">🌐 Online</span>';
+        if (s === 'pos') return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">' + ambIcon('store', 'w-3 h-3') + ' POS</span>';
+        return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">' + ambIcon('globe', 'w-3 h-3') + ' Online</span>';
     }
     function paymentLabel(pm) {
-        const map = { cash: '💵 Cash', card: '💳 Card', invoice: '📧 Via email', online: '🌐 Online' };
+        const map = { cash: ambIcon('banknote', 'w-3.5 h-3.5') + ' Cash', card: ambIcon('credit-card', 'w-3.5 h-3.5') + ' Card', invoice: ambIcon('mail', 'w-3.5 h-3.5') + ' Via email', online: ambIcon('globe', 'w-3.5 h-3.5') + ' Online' };
         return pm ? '<div class="text-[10px] text-muted mt-0.5">' + (map[pm] || pm) + '</div>' : '';
     }
     function actorBadge(type, name, email) {
-        const t = type === 'team_member' ? '👤 Angajat' : (type === 'admin' ? '👨‍💼 Admin' : '👥 Organizator');
+        const t = type === 'team_member' ? ambIcon('user', 'w-3 h-3') + ' Angajat' : (type === 'admin' ? ambIcon('briefcase', 'w-3 h-3') + ' Admin' : ambIcon('users', 'w-3 h-3') + ' Organizator');
         return `<div class="text-xs"><strong>${esc(name) || '—'}</strong>${email ? '<div class="text-[10px] text-muted">'+esc(email)+'</div>' : ''}<div class="text-[10px] text-muted">${t}</div></div>`;
     }
 
@@ -110,7 +110,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <td class="px-3 py-3">
                     <div class="text-sm">${esc(l.customer_name) || '—'}</div>
                     <div class="text-xs text-muted">${esc(l.customer_email) || ''}</div>
-                    ${l.customer_phone ? '<div class="text-[10px] text-muted">📞 '+esc(l.customer_phone)+'</div>' : ''}
+                    ${l.customer_phone ? '<div class="text-[10px] text-muted">' + ambIcon('phone', 'w-3 h-3') + ' '+esc(l.customer_phone)+'</div>' : ''}
                 </td>
                 <td class="px-3 py-3">
                     ${sourceBadge(l.order_source)}

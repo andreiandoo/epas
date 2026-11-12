@@ -571,7 +571,7 @@
                 if (item.qty >= minPerGroup) {
                     const guideLabel = (meta.group_guide_label || '').toString().trim() || 'Ghid grup';
                     html += '<div class="flex justify-between text-amber-700 text-sm pl-3">' +
-                        '<span>🎁 +1 × ' + escHtml(guideLabel) + ' <span class="text-gray-500">(gratuit)</span></span>' +
+                        '<span class="inline-flex items-center gap-1">' + ambIcon('gift','w-4 h-4') + ' +1 × ' + escHtml(guideLabel) + ' <span class="text-gray-500">(gratuit)</span></span>' +
                         '<span class="font-medium text-emerald-600">0.00 ' + (item.tt.currency || 'RON') + '</span>' +
                     '</div>';
                 }

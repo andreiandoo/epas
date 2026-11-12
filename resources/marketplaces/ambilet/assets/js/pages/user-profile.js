@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (levelBadge) levelBadge.textContent = customer.points || 0;
 
     const typeBadge = document.getElementById('user-type-badge');
-    if (typeBadge) typeBadge.innerHTML = `${customerTypeEmoji} ${customerType}`;
+    if (typeBadge) typeBadge.innerHTML = `${profileData.customer_type_emoji ? customerTypeEmoji : ambIcon('star','w-4 h-4')} ${customerType}`;
 
     const levelText = document.getElementById('user-level-text');
     if (levelText) levelText.textContent = (customer.points || 0) + ' puncte';
@@ -139,7 +139,7 @@ function renderTasteProfile(profile) {
         <div>
             <div class="flex items-center justify-between mb-2 text-sm">
                 <span class="flex items-center gap-2 font-medium text-secondary">
-                    <span class="text-lg">${genre.emoji || '🎵'}</span> ${genre.name}
+                    <span class="text-lg inline-flex">${ambIcon((genre.emoji || '').replace(/\uFE0F/g, '') || 'music', 'w-5 h-5 text-primary')}</span> ${genre.name}
                 </span>
                 <span class="font-bold text-primary">${genre.percentage}%</span>
             </div>
@@ -241,7 +241,7 @@ function renderBadges(badges) {
 
     const badgeGradients = ['from-red-400 to-pink-500', 'from-blue-400 to-indigo-500', 'from-green-400 to-emerald-500', 'from-amber-400 to-orange-500', 'from-purple-400 to-violet-500'];
     const badgesHtml = badges.slice(0, 5).map((badge, i) => {
-        const emoji = badge.icon ? `<img src="${badge.icon}" class="w-8 h-8" alt="${badge.name}">` : '🏆';
+        const emoji = badge.icon ? `<img src="${badge.icon}" class="w-8 h-8" alt="${badge.name}">` : ambIcon('trophy','w-7 h-7 text-white');
         return `
         <div class="w-14 h-14 bg-gradient-to-br ${badgeGradients[i % badgeGradients.length]} rounded-xl flex items-center justify-center text-2xl" title="${badge.name}${badge.rarity ? ' (' + badge.rarity + ')' : ''}">${emoji}</div>
     `;

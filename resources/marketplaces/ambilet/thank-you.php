@@ -204,7 +204,7 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- Points Earned -->
                 <div id="pointsEarned" class="flex items-center justify-between p-4 mt-6 bg-accent/10 rounded-xl">
                     <div class="flex items-center gap-3">
-                        <span class="text-3xl">🎁</span>
+                        <?= amb_icon('gift', 'w-8 h-8 text-accent') ?>
                         <div>
                             <p class="font-semibold text-secondary" data-i18n="points_earned">Ai câștigat puncte!</p>
                             <p class="text-sm text-muted"><span data-i18n="new_balance">Sold nou</span>: <span id="newPoints">0</span> <span data-i18n="points">puncte</span></p>

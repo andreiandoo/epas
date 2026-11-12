@@ -615,7 +615,7 @@ $eventId = $_GET['event'] ?? null;
             </div>
             <div id="globe-live-activity" class="p-2 overflow-y-auto max-h-64">
                 <div class="flex items-center gap-3 p-2 rounded-lg">
-                    <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">🇷🇴</div>
+                    <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100"><?= amb_icon('flag-ro', 'w-5 h-5 rounded-sm') ?></div>
                     <div class="flex-1 min-w-0">
                         <div class="text-sm truncate text-slate-800">No live visitors</div>
                         <div class="text-xs text-slate-400">-</div>
@@ -1358,8 +1358,8 @@ function updateTrafficSources(sources) {
     }
 
     const icons = {
-        'Facebook': '📘', 'Google': '🔍', 'Instagram': '📷', 'TikTok': '🎵',
-        'Direct': '🔗', 'Email': '📧', 'Admin': '🛠️', 'Other': '🌐'
+        'Facebook': 'book-open', 'Google': 'search', 'Instagram': 'camera', 'TikTok': 'music',
+        'Direct': 'link', 'Email': 'mail', 'Admin': 'wrench', 'Other': 'globe'
     };
     const colors = {
         'Facebook': '#1877f2', 'Google': '#ea4335', 'Instagram': '#e4405f',
@@ -1376,7 +1376,7 @@ function updateTrafficSources(sources) {
         return `
         <div class="flex items-center gap-4 p-3 transition-colors rounded-xl hover:bg-gray-50">
             <div class="flex items-center justify-center w-10 h-10 rounded-xl" style="background: ${color}22">
-                <span class="text-lg">${icon}</span>
+                <span style="color: ${color}">${ambIcon(icon, 'w-5 h-5')}</span>
             </div>
             <div class="flex-1">
                 <div class="flex items-center justify-between mb-1">
@@ -1437,7 +1437,7 @@ function updateCampaigns(data) {
         <div class="p-3 transition-colors border border-gray-100 rounded-xl hover:border-violet-200 milestone-card">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
-                    <span>${c.type_icon || '📌'}</span>
+                    <span>${ambIcon(c.type_icon || 'pin', 'w-4 h-4')}</span>
                     <span class="text-sm font-medium text-gray-800">${c.title || c.name || 'Campanie'}</span>
                 </div>
                 <span class="text-[10px] px-1.5 py-0.5 rounded-full ${c.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}">
@@ -2011,7 +2011,7 @@ function renderEventsList(events) {
         return `
             <a href="/organizator/analytics/${e.id}" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'bg-primary/5 border-l-2 border-primary' : ''}">
                 <div class="flex-shrink-0 w-10 h-10 overflow-hidden bg-gray-200 rounded-lg">
-                    ${e.image ? `<img src="${fixImageUrl(e.image)}" class="object-cover w-full h-full">` : '<div class="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-300">📅</div>'}
+                    ${e.image ? `<img src="${fixImageUrl(e.image)}" class="object-cover w-full h-full">` : '<div class="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-300">' + ambIcon('calendar', 'w-4 h-4') + '</div>'}
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="text-sm font-medium text-gray-800 truncate">${eventName}</div>
@@ -2107,20 +2107,20 @@ async function loadLiveVisitors() {
 
 // Country flags
 const countryFlags = {
-    'RO': '🇷🇴', 'Romania': '🇷🇴',
-    'DE': '🇩🇪', 'Germany': '🇩🇪',
-    'GB': '🇬🇧', 'UK': '🇬🇧', 'United Kingdom': '🇬🇧',
-    'US': '🇺🇸', 'USA': '🇺🇸', 'United States': '🇺🇸',
-    'FR': '🇫🇷', 'France': '🇫🇷',
-    'IT': '🇮🇹', 'Italy': '🇮🇹',
-    'ES': '🇪🇸', 'Spain': '🇪🇸',
-    'MD': '🇲🇩', 'Moldova': '🇲🇩',
-    'HU': '🇭🇺', 'Hungary': '🇭🇺',
-    'BG': '🇧🇬', 'Bulgaria': '🇧🇬',
+    'RO': 'flag-ro', 'Romania': 'flag-ro',
+    'DE': 'flag-de', 'Germany': 'flag-de',
+    'GB': 'flag-gb', 'UK': 'flag-gb', 'United Kingdom': 'flag-gb',
+    'US': 'flag-us', 'USA': 'flag-us', 'United States': 'flag-us',
+    'FR': 'flag-fr', 'France': 'flag-fr',
+    'IT': 'flag-it', 'Italy': 'flag-it',
+    'ES': 'flag-es', 'Spain': 'flag-es',
+    'MD': 'flag-md', 'Moldova': 'flag-md',
+    'HU': 'flag-hu', 'Hungary': 'flag-hu',
+    'BG': 'flag-bg', 'Bulgaria': 'flag-bg',
 };
 
 function getFlag(country) {
-    return countryFlags[country] || '🌍';
+    return countryFlags[country] || 'earth';
 }
 
 function renderGlobeData(locations, liveVisitors) {
@@ -2132,7 +2132,7 @@ function renderGlobeData(locations, liveVisitors) {
         liveCountEl.textContent = formatNumber(liveVisitors || 0);
         activityEl.innerHTML = `
             <div class="flex items-center gap-3 p-2 rounded-lg">
-                <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">🌍</div>
+                <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">${ambIcon('earth', 'w-5 h-5')}</div>
                 <div class="flex-1 min-w-0">
                     <div class="text-sm truncate text-slate-800">No live visitors</div>
                     <div class="text-xs text-slate-400">-</div>
@@ -2157,7 +2157,7 @@ function renderGlobeData(locations, liveVisitors) {
         const country = l.country || 'RO';
         return `
             <div class="flex items-center gap-3 p-2 transition-colors rounded-lg hover:bg-slate-50">
-                <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">${flag}</div>
+                <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">${ambIcon(flag, 'w-5 h-5 rounded-sm')}</div>
                 <div class="flex-1 min-w-0">
                     <div class="text-sm truncate text-slate-800">${action}</div>
                     <div class="text-xs text-slate-400">${city}, ${country}</div>
@@ -2176,7 +2176,7 @@ function renderGlobeData(locations, liveVisitors) {
         return `
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <span>${flag}</span>
+                    <span>${ambIcon(flag, 'w-4 h-4 rounded-sm')}</span>
                     <span class="text-sm text-slate-600">${l.city || 'Unknown'}</span>
                 </div>
                 <div class="flex items-center gap-2">

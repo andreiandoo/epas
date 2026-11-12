@@ -507,7 +507,7 @@ function updateCampaigns(data) {
             <div class="p-4 border border-gray-100 rounded-xl">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
-                        <span class="text-lg">${c.type_icon || '📌'}</span>
+                        <span class="text-lg">${ambIcon(c.type_icon || 'pin', 'w-5 h-5')}</span>
                         <span class="text-sm font-medium text-gray-800">${c.title || c.name || 'Campanie'}</span>
                     </div>
                     <span class="text-xs px-2 py-0.5 rounded-full ${roi >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">

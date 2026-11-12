@@ -12,7 +12,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">👨‍💼 Echipă & schimburi</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('briefcase', 'w-7 h-7') ?> Echipă & schimburi</h1>
                 <p class="mt-1 text-sm text-muted">Calendar săptămânal: alocă membrii echipei pe zile cu rol și poartă.</p>
             </div>
             <div class="flex items-center gap-2">
@@ -48,7 +48,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <div class="mt-4 text-xs text-muted">
-            💡 Apasă pe o celulă goală ca să adaugi o turnetă. Click pe o turnetă existentă ca s-o editezi.
+            <?= amb_icon('lightbulb', 'w-3.5 h-3.5') ?> Apasă pe o celulă goală ca să adaugi o turnetă. Click pe o turnetă existentă ca s-o editezi.
         </div>
     </main>
 </div>
@@ -94,7 +94,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </label>
         </div>
         <div class="mt-5 flex justify-between">
-            <button id="lv-f-delete" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">🗑 Șterge</button>
+            <button id="lv-f-delete" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg"><?= amb_icon('trash-2', 'w-4 h-4') ?> Șterge</button>
             <div class="ml-auto flex gap-2">
                 <button id="lv-f-cancel" class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
                 <button id="lv-f-save" class="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary-dark">Salvează</button>

@@ -97,7 +97,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input id="lv-f-visit-to" type="date" title="Data vizită până la" class="px-2 py-1.5 text-sm border border-border rounded-lg">
                 </div>
                 <button id="lv-reset" class="hidden px-3 py-2 text-xs font-medium border rounded-lg text-rose-600 bg-rose-50 border-rose-200 hover:bg-rose-100">✕ Resetează filtrele</button>
-                <button id="lv-export" class="px-3 py-2 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50">📥 Export CSV</button>
+                <button id="lv-export" class="px-3 py-2 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50"><?= amb_icon('download', 'w-3.5 h-3.5') ?> Export CSV</button>
             </div>
             <div id="lv-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
             <div id="lv-table-wrap" class="hidden overflow-x-auto">

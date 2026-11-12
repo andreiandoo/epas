@@ -169,25 +169,25 @@ const ProfileCompletionModal = {
                 id: 'event_types',
                 title: 'Ce tip de evenimente preferi?',
                 subtitle: 'Selectează tipurile de evenimente care te interesează',
-                icon: '🎭',
+                icon: 'drama',
             },
             event_genres: {
                 id: 'event_genres',
                 title: 'Ce genuri muzicale îți plac?',
                 subtitle: 'Bazat pe tipurile de evenimente alese, iată genurile disponibile',
-                icon: '🎵',
+                icon: 'music',
             },
             preferred_cities: {
                 id: 'preferred_cities',
                 title: 'În ce orașe mergi la evenimente?',
                 subtitle: 'Selectează orașele în care participi sau vrei să participi la evenimente',
-                icon: '📍',
+                icon: 'map-pin',
             },
             preferred_venues: {
                 id: 'preferred_venues',
                 title: 'Care sunt locațiile tale preferate?',
                 subtitle: 'Alege locațiile din orașele tale unde mergi cel mai des',
-                icon: '🏟️',
+                icon: 'landmark',
             },
         };
         return configs[step];
@@ -237,7 +237,7 @@ const ProfileCompletionModal = {
                 id: 'personal',
                 title: 'Despre tine',
                 subtitle: 'Ajută-ne să îți personalizăm experiența',
-                icon: '👤',
+                icon: 'user',
             });
         }
 
@@ -246,7 +246,7 @@ const ProfileCompletionModal = {
                 id: 'location',
                 title: 'De unde ești?',
                 subtitle: 'Îți vom recomanda evenimente din zona ta',
-                icon: '📍',
+                icon: 'map-pin',
             });
         }
     },
@@ -369,11 +369,11 @@ const ProfileCompletionModal = {
 
         const incentiveBadge = isInterest
             ? `<div style="display:flex;align-items:center;gap:0.375rem;margin-top:0.75rem;padding:0.375rem 0.75rem;background:rgba(255,255,255,0.15);border-radius:2rem;width:fit-content;font-size:0.8125rem">
-                    <span>🎯</span>
+                    <span style="display:inline-flex">${(window.ambIcon ? ambIcon('target','w-4 h-4') : '')}</span>
                     <span>Descoperă <strong>recomandări personalizate</strong></span>
                </div>`
             : `<div style="display:flex;align-items:center;gap:0.375rem;margin-top:0.75rem;padding:0.375rem 0.75rem;background:rgba(255,255,255,0.15);border-radius:2rem;width:fit-content;font-size:0.8125rem">
-                    <span>⚡</span>
+                    <span style="display:inline-flex">${(window.ambIcon ? ambIcon('zap','w-4 h-4') : '')}</span>
                     <span>Completează pentru <strong>+20 XP</strong></span>
                </div>`;
 
@@ -400,7 +400,7 @@ const ProfileCompletionModal = {
                 <div style="background:linear-gradient(135deg,${headerGradient});padding:1.25rem 1.5rem;color:white;position:relative">
                     <button onclick="ProfileCompletionModal.dismiss()" style="position:absolute;top:0.75rem;right:0.75rem;background:rgba(255,255,255,0.2);border:none;color:white;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem">&times;</button>
                     <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem">
-                        <span style="font-size:1.25rem">${step.icon}</span>
+                        <span style="font-size:1.25rem;display:inline-flex">${(window.ambIcon ? ambIcon(step.icon,'w-5 h-5') : '')}</span>
                         <span style="font-weight:700;font-size:1.125rem">${step.title}</span>
                     </div>
                     <p style="font-size:0.8125rem;opacity:0.9">${step.subtitle}</p>
@@ -575,17 +575,17 @@ const ProfileCompletionModal = {
             const topCities = this.smartSuggestions.suggested_cities.slice(0, 3);
             if (topCities.length === 1) {
                 html += `<div class="pcm-suggestion">
-                    <p class="pcm-suggestion-text">💡 Din ce știm până acum, bănuim că orașul tău preferat este <strong>${topCities[0].name}</strong></p>
+                    <p class="pcm-suggestion-text">${(window.ambIcon ? ambIcon('lightbulb','w-4 h-4') : '')} Din ce știm până acum, bănuim că orașul tău preferat este <strong>${topCities[0].name}</strong></p>
                 </div>`;
             } else {
                 const cityNames = topCities.map(c => `<strong>${c.name}</strong>`).join(', ');
                 html += `<div class="pcm-suggestion">
-                    <p class="pcm-suggestion-text">💡 Din ce știm până acum, orașele tale preferate par a fi ${cityNames}</p>
+                    <p class="pcm-suggestion-text">${(window.ambIcon ? ambIcon('lightbulb','w-4 h-4') : '')} Din ce știm până acum, orașele tale preferate par a fi ${cityNames}</p>
                 </div>`;
             }
         } else if (this.customer.city) {
             html += `<div class="pcm-suggestion">
-                <p class="pcm-suggestion-text">💡 Din profilul tău, orașul tău este <strong>${this.customer.city}</strong>. Mergi la evenimente și în alte orașe?</p>
+                <p class="pcm-suggestion-text">${(window.ambIcon ? ambIcon('lightbulb','w-4 h-4') : '')} Din profilul tău, orașul tău este <strong>${this.customer.city}</strong>. Mergi la evenimente și în alte orașe?</p>
             </div>`;
         }
 
@@ -604,7 +604,7 @@ const ProfileCompletionModal = {
         allCities.forEach(city => {
             const isSelected = this.selectedCities.includes(city);
             const isSuggested = suggestedNames.includes(city);
-            html += `<div class="pcm-chip ${isSelected ? 'selected' : ''}" onclick="ProfileCompletionModal.toggleCity(this, '${city.replace(/'/g, "\\'")}')">${isSuggested ? '⭐ ' : ''}${city}</div>`;
+            html += `<div class="pcm-chip ${isSelected ? 'selected' : ''}" onclick="ProfileCompletionModal.toggleCity(this, '${city.replace(/'/g, "\\'")}')">${isSuggested ? (window.ambIcon ? ambIcon('star','w-3.5 h-3.5') : '') : ''}${city}</div>`;
         });
         html += '</div>';
 
@@ -624,7 +624,7 @@ const ProfileCompletionModal = {
             const topVenues = this.smartSuggestions.suggested_venues.slice(0, 2);
             const venueNames = topVenues.map(v => `<strong>${v.name}</strong> (${v.city})`).join(' și ');
             html += `<div class="pcm-suggestion">
-                <p class="pcm-suggestion-text">💡 Ai mai fost la ${venueNames}. Adaugă-le la favorite?</p>
+                <p class="pcm-suggestion-text">${(window.ambIcon ? ambIcon('lightbulb','w-4 h-4') : '')} Ai mai fost la ${venueNames}. Adaugă-le la favorite?</p>
             </div>`;
         }
 
@@ -875,11 +875,11 @@ const ProfileCompletionModal = {
         if (isInterest) {
             card.innerHTML = `
                 <div style="padding:2.5rem 1.5rem;text-align:center">
-                    <div style="font-size:3rem;margin-bottom:0.75rem">✨</div>
+                    <div style="font-size:3rem;margin-bottom:0.75rem;display:flex;justify-content:center">${(window.ambIcon ? ambIcon('sparkles','w-12 h-12 text-indigo-600') : '')}</div>
                     <h3 style="font-size:1.25rem;font-weight:700;color:#1E293B;margin-bottom:0.5rem">Mulțumim!</h3>
                     <p style="color:#64748B;font-size:0.9375rem;margin-bottom:1rem">Preferințele tale au fost salvate.</p>
                     <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;border-radius:2rem;font-weight:600;font-size:0.9375rem;margin-bottom:1.5rem">
-                        <span>🎯</span> Recomandări mai bune activate
+                        <span style="display:inline-flex">${(window.ambIcon ? ambIcon('target','w-4 h-4') : '')}</span> Recomandări mai bune activate
                     </div>
                     <p style="color:#94A3B8;font-size:0.8125rem;margin-bottom:1.5rem">Vom folosi aceste preferințe pentru a-ți arăta evenimentele potrivite!</p>
                     <button onclick="ProfileCompletionModal.dismiss()" style="padding:0.75rem 2rem;border-radius:0.75rem;border:none;background:#4F46E5;color:white;cursor:pointer;font-size:0.9375rem;font-weight:600;width:100%">Super!</button>
@@ -888,11 +888,11 @@ const ProfileCompletionModal = {
         } else {
             card.innerHTML = `
                 <div style="padding:2.5rem 1.5rem;text-align:center">
-                    <div style="font-size:3rem;margin-bottom:0.75rem">🎉</div>
+                    <div style="font-size:3rem;margin-bottom:0.75rem;display:flex;justify-content:center">${(window.ambIcon ? ambIcon('party-popper','w-12 h-12 text-primary') : '')}</div>
                     <h3 style="font-size:1.25rem;font-weight:700;color:#1E293B;margin-bottom:0.5rem">Felicitări!</h3>
                     <p style="color:#64748B;font-size:0.9375rem;margin-bottom:1rem">Profilul tău a fost actualizat cu succes.</p>
                     <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:linear-gradient(135deg,#A51C30,#E8336D);color:white;border-radius:2rem;font-weight:700;font-size:1.125rem;margin-bottom:1.5rem">
-                        <span>⚡</span> +20 XP
+                        <span style="display:inline-flex">${(window.ambIcon ? ambIcon('zap','w-5 h-5') : '')}</span> +20 XP
                     </div>
                     <p style="color:#94A3B8;font-size:0.8125rem;margin-bottom:1.5rem">Vei primi recomandări mai bune de acum înainte!</p>
                     <button onclick="ProfileCompletionModal.dismiss()" style="padding:0.75rem 2rem;border-radius:0.75rem;border:none;background:#A51C30;color:white;cursor:pointer;font-size:0.9375rem;font-weight:600;width:100%">Gata!</button>

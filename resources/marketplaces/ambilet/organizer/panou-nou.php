@@ -28,7 +28,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </span>
                             Panou organizator
                         </span>
-                        <h1 class="text-2xl font-extrabold text-white lg:text-3xl" id="pn-greeting">Bine ai revenit 👋</h1>
+                        <h1 class="text-2xl font-extrabold text-white lg:text-3xl" id="pn-greeting">Bine ai revenit <?= amb_icon('hand', 'w-7 h-7') ?></h1>
                     </div>
                     <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
                         <a href="/organizator/events?action=create" class="inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold text-white transition-all shadow-lg rounded-xl bg-primary hover:opacity-90">
@@ -225,7 +225,7 @@ const OrgPanouNou = {
         const org = AmbiletAuth.getOrganizerData();
         const name = (org && (org.public_name || org.name)) || '';
         const gEl = document.getElementById('pn-greeting');
-        if (gEl) gEl.textContent = name ? ('Bună, ' + name + ' 👋') : 'Bine ai revenit 👋';
+        if (gEl) { gEl.textContent = name ? ('Bună, ' + name + ' ') : 'Bine ai revenit '; gEl.insertAdjacentHTML('beforeend', ambIcon('hand', 'w-7 h-7')); }
 
         this.bindControls();
         await Promise.all([this.loadEvents(), this.loadChart(this.chartDays)]);

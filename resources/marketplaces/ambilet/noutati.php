@@ -129,7 +129,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- End marker shown when all pages have loaded. -->
         <div id="noutati-end" class="hidden text-center py-16">
             <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-slate-100 text-slate-500 text-sm font-medium">
-                <span class="text-lg">✨</span>
+                <?= amb_icon('sparkles', 'w-5 h-5') ?>
                 <span>Ai văzut toate noutățile</span>
             </div>
         </div>

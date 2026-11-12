@@ -522,13 +522,13 @@ const UserDashboard = {
         ];
 
         container.innerHTML = badges.map((badge, i) => {
-            const icon = badge.icon || badge.emoji || '🏆';
+            const icon = badge.icon || badge.emoji || '';
             const name = badge.name || badge.title || 'Badge';
             const desc = badge.description || '';
             const gradient = gradients[i % gradients.length];
 
             return '<div class="flex items-center gap-3 p-3 bg-surface rounded-xl">' +
-                '<div class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-2xl bg-gradient-to-br ' + gradient + ' rounded-xl">' + this.escapeHtml(icon) + '</div>' +
+                '<div class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-2xl bg-gradient-to-br ' + gradient + ' rounded-xl">' + (icon ? this.escapeHtml(icon) : ambIcon('trophy', 'w-7 h-7 text-white')) + '</div>' +
                 '<div class="min-w-0">' +
                 '<p class="text-sm font-semibold truncate text-secondary">' + this.escapeHtml(name) + '</p>' +
                 (desc ? '<p class="text-xs truncate text-muted">' + this.escapeHtml(desc) + '</p>' : '') +

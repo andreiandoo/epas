@@ -313,9 +313,9 @@ $ambiletBackendDown = isBackendUnreachable();
                                         <?php elseif ($heroiconPath): ?>
                                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $heroiconPath ?></svg>
                                         <?php elseif ($hasEmoji): ?>
-                                        <span class="text-xl"><?= $cat['icon_emoji'] ?></span>
+                                        <?= amb_category_icon($cat['icon_emoji'], 'w-5 h-5') ?>
                                         <?php else: ?>
-                                        <span class="text-xl">🎫</span>
+                                        <?= amb_icon('ticket', 'w-5 h-5') ?>
                                         <?php endif; ?>
                                     </div>
                                     <div class="flex-1">
@@ -722,9 +722,9 @@ $ambiletBackendDown = isBackendUnreachable();
                     <?php elseif ($heroiconPath): ?>
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $heroiconPath ?></svg>
                     <?php elseif ($hasEmoji): ?>
-                    <span class="text-lg"><?= $cat['icon_emoji'] ?></span>
+                    <?= amb_category_icon($cat['icon_emoji'], 'w-[18px] h-[18px]') ?>
                     <?php else: ?>
-                    <span class="text-lg">🎫</span>
+                    <?= amb_icon('ticket', 'w-[18px] h-[18px]') ?>
                     <?php endif; ?>
                 </div>
                 <span class="text-base font-semibold"><?= htmlspecialchars($cat['name']) ?></span>

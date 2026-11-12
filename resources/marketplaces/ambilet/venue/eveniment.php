@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
     html += `<section class="grid grid-cols-2 gap-4">
         <div class="p-5 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-2">
-                <div class="text-2xl">🎫</div>
+                <div class="text-2xl leading-none text-blue-600">${ambIcon('ticket', 'w-7 h-7')}</div>
                 <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Bilete</span>
             </div>
             <p class="text-3xl font-black text-slate-900">${fmtInt(insights.sold)}${insights.cap > 0 ? `<span class="text-sm text-slate-400 font-normal">/${fmtInt(insights.cap)}</span>` : ''}</p>
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         </div>
         <div class="p-5 bg-white border rounded-2xl border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-2">
-                <div class="text-2xl">✅</div>
+                <div class="text-2xl leading-none text-emerald-600">${ambIcon('circle-check', 'w-7 h-7')}</div>
                 <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Prezență (Check-in)</span>
             </div>
             <p class="text-3xl font-black text-slate-900">${fmtInt(insights.ci)}</p>

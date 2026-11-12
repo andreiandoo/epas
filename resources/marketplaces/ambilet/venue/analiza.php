@@ -450,12 +450,12 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const healthScore = Math.round(h.score || 0);
         const healthColor = h.color || (healthScore >= 75 ? '#10b981' : healthScore >= 50 ? '#f59e0b' : '#ef4444');
         const kpiCards = [
-            { label: 'Evenimente',     value: fmtInt(k.total_events),                  icon: '🎪', tint: '#3b82f6' },
-            { label: 'Bilete',         value: fmtInt(k.total_tickets),                 icon: '🎫', tint: '#06b6d4' },
-            { label: 'Venit',          value: fmtMoney(k.total_revenue) + ' RON',      icon: '💰', tint: '#d97706' },
-            { label: 'Cumpărători',    value: fmtInt(uniqueBuyers),                    icon: '👥', tint: '#8b5cf6' },
-            { label: 'Ocupare medie',  value: (Number(k.avg_occupancy || 0)).toFixed(1) + '%', icon: '📊', tint: stColor(k.avg_occupancy || 0) },
-            { label: 'Preț mediu',     value: fmtMoney(k.avg_ticket_price) + ' RON',   icon: '🏷️', tint: '#059669' },
+            { label: 'Evenimente',     value: fmtInt(k.total_events),                  icon: 'tent', tint: '#3b82f6' },
+            { label: 'Bilete',         value: fmtInt(k.total_tickets),                 icon: 'ticket', tint: '#06b6d4' },
+            { label: 'Venit',          value: fmtMoney(k.total_revenue) + ' RON',      icon: 'wallet', tint: '#d97706' },
+            { label: 'Cumpărători',    value: fmtInt(uniqueBuyers),                    icon: 'users', tint: '#8b5cf6' },
+            { label: 'Ocupare medie',  value: (Number(k.avg_occupancy || 0)).toFixed(1) + '%', icon: 'chart-column', tint: stColor(k.avg_occupancy || 0) },
+            { label: 'Preț mediu',     value: fmtMoney(k.avg_ticket_price) + ' RON',   icon: 'tag', tint: '#059669' },
         ];
 
         const components = Array.isArray(h.components) ? h.components : [];
@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     ${kpiCards.map(c => `
                         <div class="a-hero-kpi-card" style="--tint:${c.tint};">
                             <div class="a-hero-kpi-card__row">
-                                <span class="a-hero-kpi-card__icon">${c.icon}</span>
+                                <span class="a-hero-kpi-card__icon" style="color:${c.tint};">${ambIcon(c.icon, 'w-4 h-4')}</span>
                                 <span class="a-hero-kpi-card__label">${c.label}</span>
                             </div>
                             <div class="a-hero-kpi-card__value">${c.value}</div>
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // ── Impuls lunar ── premium cards cu gradient subtil per direction
         if (m && Array.isArray(m.metrics) && m.metrics.length) {
             html += `<div class="a-card">
-                <div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">📈</span>Impuls lunar
+                <div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">${ambIcon('trending-up', 'w-4 h-4')}</span>Impuls lunar
                     <span class="a-card-sub">${escapeHtml(m.current_label || '')} vs ${escapeHtml(m.previous_label || '')}</span>
                 </div>
                 <div class="a-mm-grid">${m.metrics.map(x => {
@@ -544,10 +544,10 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // ── Grafice: Evenimente & Bilete + Venit & Ocupare ── ambele într-un card 2‑cols
         if (d.months && d.months.length) {
             html += `<div class="a-g2">
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📊</span>Evenimente & Bilete<span class="a-card-sub">Ultimele 12 luni</span></div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('chart-column', 'w-4 h-4')}</span>Evenimente & Bilete<span class="a-card-sub">Ultimele 12 luni</span></div>
                     <div style="height:230px;position:relative;"><canvas id="chart-yearly-evtx"></canvas></div>
                 </div>
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">💰</span>Venit & Ocupare<span class="a-card-sub">Ultimele 12 luni</span></div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('wallet', 'w-4 h-4')}</span>Venit & Ocupare<span class="a-card-sub">Ultimele 12 luni</span></div>
                     <div style="height:230px;position:relative;"><canvas id="chart-yearly-revocc"></canvas></div>
                 </div>
             </div>`;
@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const evPerf = d.eventPerformance || [];
         if (evPerf.length) {
             html += `<div class="a-card">
-                <div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🎪</span>Performanță evenimente<span class="a-card-sub">${evPerf.length} evenimente</span></div>
+                <div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('tent', 'w-4 h-4')}</span>Performanță evenimente<span class="a-card-sub">${evPerf.length} evenimente</span></div>
                 <div class="a-tbl-wrap">
                     <table class="a-tbl a-tbl--premium">
                         <thead><tr>
@@ -597,14 +597,14 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         if (dayType.length || (yoy.last_12 || 0) > 0) {
             html += `<div class="a-g2">
                 ${dayType.length ? `
-                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">📅</span>Weekend vs zi lucrătoare</div>
+                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('calendar', 'w-4 h-4')}</span>Weekend vs zi lucrătoare</div>
                         <div class="a-daytype">${dayType.map(dt => {
                             const st = dt.avg_st || 0;
                             const barCol = stColor(st);
                             const isWknd = /weekend|weeken|Wknd/i.test(dt.day_type || '');
                             return `<div class="a-daytype__row">
                                 <div class="a-daytype__head">
-                                    <span class="a-daytype__ico">${isWknd ? '🎉' : '💼'}</span>
+                                    <span class="a-daytype__ico">${isWknd ? ambIcon('party-popper', 'w-4 h-4') : ambIcon('briefcase', 'w-4 h-4')}</span>
                                     <span class="a-daytype__name">${escapeHtml(tr(T_DAYTYPE, dt.day_type || ''))}</span>
                                     <span class="a-daytype__pct" style="color:${barCol};">${st}%</span>
                                 </div>
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     const max = Math.max(yoy.last_12 || 0, yoy.prev_12 || 0) || 1;
                     const wCurr = ((yoy.last_12 || 0) / max) * 100;
                     const wPrev = ((yoy.prev_12 || 0) / max) * 100;
-                    return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">📆</span>An vs an
+                    return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">${ambIcon('calendar-days', 'w-4 h-4')}</span>An vs an
                         ${chg !== null ? `<span class="a-yoy-chip" style="background:${chgCol}18;color:${chgCol};">${isUp ? '↑' : '↓'} ${isUp ? '+' : ''}${chg}%</span>` : ''}
                     </div>
                     <div class="a-yoy">
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     const vsCol = vs === null ? 'var(--v-muted)' : (vs >= 0 ? 'var(--v-success)' : 'var(--v-danger)');
                     const wMy = Math.min(100, my);
                     const wCity = Math.min(100, city);
-                    return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">🏙️</span>Comparație oraș
+                    return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('building', 'w-4 h-4')}</span>Comparație oraș
                         ${vs !== null ? `<span class="a-yoy-chip" style="background:${vsCol}18;color:${vsCol};">${vs >= 0 ? '+' : ''}${vs}%</span>` : ''}
                     </div>
                     <div class="a-cmp">
@@ -683,13 +683,13 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     </div>`;
                 })() : ''}
                 ${(rps.avg_rev_per_seat || 0) > 0 ? `
-                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">💺</span>Venit pe loc<span class="a-card-sub">${fmtInt(rps.capacity)} locuri capacitate</span></div>
+                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('armchair', 'w-4 h-4')}</span>Venit pe loc<span class="a-card-sub">${fmtInt(rps.capacity)} locuri capacitate</span></div>
                         <div class="a-rps__hero">
                             <div class="a-rps__value">${fmtMoney(rps.avg_rev_per_seat)}<span class="a-rps__unit"> RON</span></div>
                             <div class="a-rps__sub">venit mediu / loc / eveniment</div>
                         </div>
                         ${rps.best_event ? `<div class="a-rps__best">
-                            <div class="a-rps__best-lbl">🏆 Cel mai bun eveniment</div>
+                            <div class="a-rps__best-lbl">${ambIcon('trophy', 'w-3.5 h-3.5')} Cel mai bun eveniment</div>
                             <div class="a-rps__best-title">${escapeHtml(rps.best_event.title)}</div>
                             <div class="a-rps__best-stats"><strong>${fmtMoney(rps.best_event.rev_per_seat)} RON/loc</strong> · total <strong>${fmtMoney(rps.best_event.revenue)} RON</strong></div>
                         </div>` : ''}
@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // ── Comparație evenimente ── selects premium
         if (evPerf.length >= 2) {
             const cmpSelStyle = 'width:100%;padding:.55rem .7rem;border:1px solid var(--v-ring);border-radius:.5rem;font-size:.8125rem;background:#fff;font-weight:500;';
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">⚖️</span>Comparație evenimente<span class="a-card-sub">Selectează 2 evenimente pentru analiză lângă‑lângă</span></div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">${ambIcon('scale', 'w-4 h-4')}</span>Comparație evenimente<span class="a-card-sub">Selectează 2 evenimente pentru analiză lângă‑lângă</span></div>
                 <div class="a-cmp-form">
                     <div class="a-cmp-form__col">
                         <label class="a-cmp-form__lbl">Eveniment A</label>
@@ -776,7 +776,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Top Artists by Revenue
         if (rb.top_artists_by_revenue && rb.top_artists_by_revenue.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">🎤</span>Top artiști după venit</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('mic', 'w-4 h-4')}</span>Top artiști după venit</div>
                 <table class="a-tbl"><thead><tr><th>Artist</th><th style="text-align:right">Ev.</th><th style="text-align:right">Venit</th><th style="text-align:right">ST med</th></tr></thead>
                 <tbody>${rb.top_artists_by_revenue.map(a => `
                     <tr><td style="font-weight:600;">${escapeHtml(a.name)}</td><td style="text-align:right;">${fmtInt(a.events)}</td><td style="text-align:right;font-family:monospace;color:var(--v-warn);">${fmtMoney(a.total_revenue)}</td><td style="text-align:right;">${a.avg_st}%</td></tr>
@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Genre + Channel
         html += `<div class="a-g2">
             ${rb.revenue_by_genre && rb.revenue_by_genre.length ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🎵</span>Venit pe gen muzical</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('music', 'w-4 h-4')}</span>Venit pe gen muzical</div>
                     ${rb.revenue_by_genre.map(g => `
                         <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px dashed var(--v-ring);font-size:.8125rem;">
                             <span>${escapeHtml(g.genre)} <span style="color:var(--v-muted);font-size:.7rem;">(${g.events} ev)</span></span>
@@ -796,7 +796,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 </div>
             ` : ''}
             ${rb.revenue_by_channel && rb.revenue_by_channel.length ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📡</span>Venit pe canal</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('radio', 'w-4 h-4')}</span>Venit pe canal</div>
                     ${rb.revenue_by_channel.map(c => `
                         <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px dashed var(--v-ring);font-size:.8125rem;">
                             <span>${escapeHtml(c.source || 'unknown')} <span style="color:var(--v-muted);font-size:.7rem;">(${c.orders || 0} comenzi)</span></span>
@@ -810,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Pricing Intelligence
         if (pi.price_buckets && pi.price_buckets.length) {
             html += `<div class="a-g2">
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">🎯</span>Sensibilitate preț ${pi.sweet_spot ? `<span style="color:var(--v-success);font-size:.7rem;margin-left:.5rem;">Sweet spot: ${pi.sweet_spot} RON</span>` : ''}</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('target', 'w-4 h-4')}</span>Sensibilitate preț ${pi.sweet_spot ? `<span style="color:var(--v-success);font-size:.7rem;margin-left:.5rem;">Sweet spot: ${pi.sweet_spot} RON</span>` : ''}</div>
                     ${pi.price_buckets.map(pb => `
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;">
                             <span style="font-size:.8125rem;">${escapeHtml(pb.range)} RON</span>
@@ -838,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Revenue Forecast
         if (rf.forecast && rf.forecast.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🔮</span>Prognoză venituri (6 luni) ${rf.yoy_change_pct !== null ? `<span style="color:${rf.yoy_change_pct >= 0 ? 'var(--v-success)' : 'var(--v-danger)'};font-size:.7rem;margin-left:.5rem;">YoY: ${rf.yoy_change_pct >= 0 ? '+' : ''}${rf.yoy_change_pct}%</span>` : ''}</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('sparkles', 'w-4 h-4')}</span>Prognoză venituri (6 luni) ${rf.yoy_change_pct !== null ? `<span style="color:${rf.yoy_change_pct >= 0 ? 'var(--v-success)' : 'var(--v-danger)'};font-size:.7rem;margin-left:.5rem;">YoY: ${rf.yoy_change_pct >= 0 ? '+' : ''}${rf.yoy_change_pct}%</span>` : ''}</div>
                 <table class="a-tbl"><thead><tr><th>Lună</th><th style="text-align:right">Pesimist</th><th style="text-align:right">Realist</th><th style="text-align:right">Optimist</th></tr></thead>
                 <tbody>${rf.forecast.map(f => `
                     <tr><td>${escapeHtml(f.month)}</td><td style="text-align:right;color:var(--v-muted);font-family:monospace;">${fmtMoney(f.pessimistic)}</td><td style="text-align:right;font-weight:600;color:var(--v-warn);font-family:monospace;">${fmtMoney(f.realistic)}</td><td style="text-align:right;color:var(--v-success);font-family:monospace;">${fmtMoney(f.optimistic)}</td></tr>
@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Refunds
         if ((refunds.total_refunds || 0) > 0) {
             const refColor = refunds.refund_rate > 5 ? 'var(--v-danger)' : refunds.refund_rate > 2 ? 'var(--v-warn)' : 'var(--v-success)';
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">↩️</span>Rambursări & anulări</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">${ambIcon('refresh-cw', 'w-4 h-4')}</span>Rambursări & anulări</div>
                 <div class="a-g3" style="margin-bottom:.75rem;">
                     <div><div style="color:var(--v-muted);font-size:.7rem;">Total comenzi</div><div style="font-size:1.25rem;font-weight:700;">${fmtInt(refunds.total_orders)}</div></div>
                     <div><div style="color:var(--v-muted);font-size:.7rem;">Rambursări</div><div style="font-size:1.25rem;font-weight:700;color:var(--v-danger);">${fmtInt(refunds.total_refunds)}</div></div>
@@ -881,7 +881,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Personas
         if (personas.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">👥</span>Persoane public (${totals.total_customers || 0} cumpărători)</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('users', 'w-4 h-4')}</span>Persoane public (${totals.total_customers || 0} cumpărători)</div>
                 <div class="a-g3">${personas.map(p => `
                     <div style="padding:.875rem;border-radius:.5rem;background:rgba(59,130,246,.04);border:1px solid var(--v-ring);">
                         <div style="font-size:.7rem;font-weight:600;color:var(--v-accent);text-transform:uppercase;margin-bottom:.4rem;">${escapeHtml(p.label || '')}</div>
@@ -902,7 +902,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
             const totalGender = Math.max(1, Object.values(genderDist).reduce((a, b) => a + Number(b || 0), 0));
             html += `<div class="a-g2">
                 ${Object.keys(ageDist).length ? `
-                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">📊</span>Distribuție vârste</div>
+                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">${ambIcon('chart-column', 'w-4 h-4')}</span>Distribuție vârste</div>
                         ${Object.entries(ageDist).map(([ag, c]) => `
                             <div style="display:flex;align-items:center;gap:.5rem;padding:.25rem 0;">
                                 <span style="width:3rem;font-size:.75rem;font-weight:600;">${escapeHtml(ag)}</span>
@@ -916,7 +916,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     </div>
                 ` : ''}
                 ${Object.keys(genderDist).length ? `
-                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(236,72,153,0.1);color:#ec4899;">⚧</span>Distribuție gen</div>
+                    <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(236,72,153,0.1);color:#ec4899;">${ambIcon('user', 'w-4 h-4')}</span>Distribuție gen</div>
                         <div style="display:flex;gap:1rem;align-items:center;justify-content:center;padding:.5rem 0;flex-wrap:wrap;">
                             ${Object.entries(genderDist).map(([g, c]) => {
                                 const pct = Math.round(c / totalGender * 1000) / 10;
@@ -941,7 +941,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Loyalty + Geographic
         html += `<div class="a-g2">
             ${(loyalty.total || 0) > 0 ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">❤️</span>Loialitate cumpărători</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">${ambIcon('heart', 'w-4 h-4')}</span>Loialitate cumpărători</div>
                     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;text-align:center;">
                         ${[['total','Total','var(--v-text)'],['one_time','O dată','var(--v-muted)'],['repeat','Repeat','var(--v-primary)'],['regulars','Regulari','var(--v-accent)'],['superfan','Superfani','var(--v-warn)']].map(([k, l, c]) => `
                             <div><div style="font-size:1.25rem;font-weight:700;color:${c};">${fmtInt(loyalty[k])}</div><div style="font-size:.625rem;color:var(--v-muted);">${l}</div></div>
@@ -969,7 +969,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                     .map(r => ({ ...r, display: prettyCity(normalizeCity(r.display)), avg_spend: r.customer_count > 0 ? r.total_revenue / r.customer_count : 0 }))
                     .sort((a, b) => b.customer_count - a.customer_count)
                     .slice(0, 15);
-                return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">🗺️</span>De unde vin cumpărătorii <span style="color:var(--v-accent);font-size:.7rem;margin-left:.5rem;">${geo.out_of_town_ratio}% din alt oraș</span></div>
+                return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">${ambIcon('map', 'w-4 h-4')}</span>De unde vin cumpărătorii <span style="color:var(--v-accent);font-size:.7rem;margin-left:.5rem;">${geo.out_of_town_ratio}% din alt oraș</span></div>
                     <div style="max-height:18rem;overflow-y:auto;">
                     <table class="a-tbl"><thead><tr><th>Oraș</th><th style="text-align:right">Cumpărători</th><th style="text-align:right">Venit</th><th style="text-align:right">Chelt. medie</th></tr></thead>
                     <tbody>${merged.map(c => `
@@ -981,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Superfans
         if (loyalty.superfan_details && loyalty.superfan_details.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">⭐</span>Top superfani</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('star', 'w-4 h-4')}</span>Top superfani</div>
                 <table class="a-tbl"><thead><tr><th>Nume</th><th>Email</th><th>Oraș</th><th style="text-align:right">Evenimente</th><th style="text-align:right">Total cheltuit</th></tr></thead>
                 <tbody>${loyalty.superfan_details.slice(0, 15).map(sf => `
                     <tr><td style="font-weight:600;">${escapeHtml(sf.name)}</td><td style="color:var(--v-muted);">${escapeHtml(sf.email)}</td><td>${escapeHtml(sf.city || '')}</td><td style="text-align:right;">${fmtInt(sf.events)}</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(sf.total_spent)}</td></tr>
@@ -990,7 +990,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Genre Loyalty
         if (gLoyalty.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🔁</span>Cumpărători recurenți pe gen — Ce genuri construiesc loialitate?</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('repeat', 'w-4 h-4')}</span>Cumpărători recurenți pe gen — Ce genuri construiesc loialitate?</div>
                 <table class="a-tbl"><thead><tr><th>Gen</th><th style="text-align:right">Total</th><th style="text-align:right">Recurenți</th><th style="text-align:right">Rată</th><th style="text-align:right">Ev./cumpărător</th></tr></thead>
                 <tbody>${gLoyalty.map(g => `
                     <tr><td style="font-weight:600;">${escapeHtml(g.genre)}</td><td style="text-align:right;">${fmtInt(g.total_buyers)}</td><td style="text-align:right;color:var(--v-accent);">${fmtInt(g.repeat_buyers)}</td><td style="text-align:right;font-weight:700;color:${g.repeat_rate >= 20 ? 'var(--v-success)' : g.repeat_rate >= 10 ? 'var(--v-warn)' : 'var(--v-muted)'};">${g.repeat_rate}%</td><td style="text-align:right;font-family:monospace;">${g.avg_events_per_buyer}</td></tr>
@@ -1009,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         let html = '';
 
         if (ap.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">🎤</span>Performanță artiști la locație (${ap.length})</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('mic', 'w-4 h-4')}</span>Performanță artiști la locație (${ap.length})</div>
                 <div style="overflow-x:auto;">
                 <table class="a-tbl"><thead><tr><th>Artist</th><th style="text-align:right">Ev.</th><th style="text-align:right">Bilete</th><th style="text-align:right">ST med</th><th style="text-align:right">Best ST</th><th style="text-align:right">Venit med</th></tr></thead>
                 <tbody>${ap.slice(0, 20).map(a => `
@@ -1019,7 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         }
 
         if (gp.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">🎼</span>Performanță pe gen</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('music', 'w-4 h-4')}</span>Performanță pe gen</div>
                 <table class="a-tbl"><thead><tr><th>Gen</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th><th style="text-align:right">Preț med</th><th style="text-align:right">Bilete</th></tr></thead>
                 <tbody>${gp.map(g => `
                     <tr><td style="font-weight:600;">${escapeHtml(g.genre)}</td><td style="text-align:right;">${g.events_count}</td><td style="text-align:right;font-weight:700;color:${g.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${g.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(g.avg_revenue)}</td><td style="text-align:right;color:var(--v-muted);font-family:monospace;">${g.avg_ticket_price}</td><td style="text-align:right;font-family:monospace;">${fmtInt(g.total_tickets)}</td></tr>
@@ -1027,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         }
 
         if (np.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">💡</span>Artiști de considerat pentru bookings</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('lightbulb', 'w-4 h-4')}</span>Artiști de considerat pentru bookings</div>
                 <table class="a-tbl"><thead><tr><th>Artist</th><th style="text-align:right">Ev. în oraș</th><th style="text-align:right">ST med</th><th style="text-align:right">Public estimat</th></tr></thead>
                 <tbody>${np.slice(0, 15).map(n => `
                     <tr><td style="font-weight:600;">${escapeHtml(n.artist_name)}</td><td style="text-align:right;">${n.city_events}</td><td style="text-align:right;font-weight:700;color:var(--v-success);">${n.avg_sell_through}%</td><td style="text-align:right;font-family:monospace;">${fmtInt(n.estimated_draw)}</td></tr>
@@ -1052,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Heatmap
         if (heatmap.matrix) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">🔥</span>Heatmap performanță (zi × lună)</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">${ambIcon('flame', 'w-4 h-4')}</span>Heatmap performanță (zi × lună)</div>
                 <div style="overflow-x:auto;"><table style="width:100%;font-size:.75rem;border-collapse:collapse;">
                     <thead><tr><th style="padding:.4rem;"></th>${(heatmap.months || []).map(m => `<th style="padding:.4rem;color:var(--v-muted);text-align:center;font-weight:600;">${escapeHtml(tr(T_MONTH, m) || m)}</th>`).join('')}</tr></thead>
                     <tbody>${(heatmap.days || []).map((dayName, di) => `
@@ -1070,7 +1070,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Day of Week + Seasonality
         html += `<div class="a-g2">
             ${dow.length ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📅</span>Zi a săptămânii</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('calendar', 'w-4 h-4')}</span>Zi a săptămânii</div>
                     <table class="a-tbl"><thead><tr><th>Zi</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th></tr></thead>
                     <tbody>${dow.map(x => `
                         <tr><td style="font-weight:600;">${escapeHtml(tr(T_DAY, x.day || ''))}</td><td style="text-align:right;">${x.events}</td><td style="text-align:right;font-weight:700;color:${x.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${x.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(x.avg_revenue)}</td></tr>
@@ -1078,7 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 </div>
             ` : ''}
             ${season.length ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">🌡️</span>Sezonalitate</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('thermometer', 'w-4 h-4')}</span>Sezonalitate</div>
                     <table class="a-tbl"><thead><tr><th>Lună</th><th style="text-align:right">Ev.</th><th style="text-align:right">ST med</th><th style="text-align:right">Venit med</th><th style="text-align:right">Idle</th></tr></thead>
                     <tbody>${season.map(s => `
                         <tr><td style="font-weight:600;">${escapeHtml(translateMonthLabel(s.month || ''))}</td><td style="text-align:right;">${s.events}</td><td style="text-align:right;font-weight:700;color:${s.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${s.avg_sell_through}%</td><td style="text-align:right;color:var(--v-warn);font-family:monospace;">${fmtMoney(s.avg_revenue)}</td><td style="text-align:right;color:${s.idle_days > 20 ? 'var(--v-danger)' : 'var(--v-muted)'};">${s.idle_days}</td></tr>
@@ -1090,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Idle + Frequency
         html += `<div class="a-g2">
             ${(idle.total_idle_weekend_days || 0) > 0 ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">⏳</span>Zile weekend libere (ultimele 12 luni)</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">${ambIcon('hourglass', 'w-4 h-4')}</span>Zile weekend libere (ultimele 12 luni)</div>
                     <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
                         <div><div style="color:var(--v-muted);font-size:.7rem;">Vin/Sâm/Dum libere</div><div style="font-size:1.75rem;font-weight:700;color:var(--v-danger);">${idle.total_idle_weekend_days}</div></div>
                         <div><div style="color:var(--v-muted);font-size:.7rem;">Venit mediu / ev.</div><div style="font-size:1.125rem;font-weight:700;color:var(--v-warn);">${fmtMoney(idle.avg_revenue_per_event)} RON</div></div>
@@ -1099,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 </div>
             ` : ''}
             ${optFreq.length ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">⏱️</span>Frecvență optimă</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">${ambIcon('timer', 'w-4 h-4')}</span>Frecvență optimă</div>
                     <table class="a-tbl"><thead><tr><th>Frecvență</th><th style="text-align:right">Săpt.</th><th style="text-align:right">ST med</th></tr></thead>
                     <tbody>${optFreq.map(o => `
                         <tr><td style="font-weight:600;">${escapeHtml(o.frequency)}</td><td style="text-align:right;">${o.weeks}</td><td style="text-align:right;font-weight:700;color:${o.avg_sell_through >= 70 ? 'var(--v-success)' : 'var(--v-muted)'};">${o.avg_sell_through}%</td></tr>
@@ -1111,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Purchase Timing + Sales Velocity
         html += `<div class="a-g2">
             ${Object.keys(timing).length ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">⏰</span>Timing achiziții <span style="color:var(--v-muted);font-size:.7rem;margin-left:.5rem;">(medie ${si.avg_lead_days || 0}z înainte)</span></div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('alarm-clock', 'w-4 h-4')}</span>Timing achiziții <span style="color:var(--v-muted);font-size:.7rem;margin-left:.5rem;">(medie ${si.avg_lead_days || 0}z înainte)</span></div>
                     ${(() => {
                         const labels = { super_early: '90+ zile', early_bird: '31-90 zile', last_month: '8-30 zile', last_week: '2-7 zile', last_minute: 'În ultima zi' };
                         return Object.entries(labels).filter(([k]) => timing[k] > 0).map(([k, l]) => `
@@ -1127,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                 </div>
             ` : ''}
             ${velCurves.length ? `
-                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">🚀</span>Viteză vânzări (ultimele 5 evenimente)</div>
+                <div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('rocket', 'w-4 h-4')}</span>Viteză vânzări (ultimele 5 evenimente)</div>
                     <div style="font-size:.75rem;">${velCurves.map((vc, i) => `
                         <div style="margin-bottom:.875rem;padding-bottom:.875rem;${i < velCurves.length - 1 ? 'border-bottom:1px dashed var(--v-ring);' : ''}">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
@@ -1163,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Opportunities list
         const findings = opps.findings || opps || [];
-        html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">💎</span>Oportunități</div>
+        html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('gem', 'w-4 h-4')}</span>Oportunități</div>
             <div class="space-y-2">${(Array.isArray(findings) ? findings : []).slice(0, 12).map(o => `
                 <div style="padding:.75rem;border:1px solid var(--v-ring);border-radius:.5rem;background:#f8fafc;">
                     <p style="font-size:.8125rem;font-weight:600;color:var(--v-text);">${escapeHtml(o.title || o.name || '')}</p>
@@ -1174,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Churn Alerts
         if (churn.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">⚠️</span>Alerte churn</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(220,38,38,0.1);color:#dc2626;">${ambIcon('triangle-alert', 'w-4 h-4')}</span>Alerte churn</div>
                 <table class="a-tbl"><thead><tr><th>Cumpărător</th><th>Ultima achiziție</th><th style="text-align:right">Zile</th><th style="text-align:right">Risc</th></tr></thead>
                 <tbody>${churn.slice(0, 15).map(c => {
                     const risk = c.risk || 'medium';
@@ -1194,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const dowList = simDows.length ? simDows : dowFallback;
         const DOW_RO = { Monday: 'Luni', Tuesday: 'Marți', Wednesday: 'Miercuri', Thursday: 'Joi', Friday: 'Vineri', Saturday: 'Sâmbătă', Sunday: 'Duminică' };
         const selStyle = 'padding:.45rem .625rem;border:1px solid var(--v-ring);border-radius:.375rem;font-size:.8125rem;background:#fff;';
-        html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">🧪</span>Simulator eveniment</div>
+        html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('flask-conical', 'w-4 h-4')}</span>Simulator eveniment</div>
             <p style="font-size:.75rem;color:var(--v-muted);margin-bottom:.75rem;">Alege gen, zi și un preț ipotetic — sistemul îți spune câte bilete și cât venit ai putea avea, pe baza istoricului locației.</p>
             <div class="a-g3">
                 <div>
@@ -1233,7 +1233,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Announcement window
         if (aw.optimal_announce_days !== undefined) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📢</span>Fereastră optimă de anunț</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">${ambIcon('megaphone', 'w-4 h-4')}</span>Fereastră optimă de anunț</div>
                 <div class="a-g3" style="margin-bottom:.75rem;">
                     <div style="text-align:center;padding:.75rem;background:#f8fafc;border-radius:.5rem;">
                         <div style="font-size:1.5rem;font-weight:700;color:var(--v-primary);">${aw.optimal_announce_days} zile</div>
@@ -1254,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Ad budget with phases
         if (ab.recommended_budget !== undefined) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">💵</span>Buget recomandat reclame</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(217,119,6,0.1);color:#d97706;">${ambIcon('banknote', 'w-4 h-4')}</span>Buget recomandat reclame</div>
                 <div style="display:flex;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;">
                     <div><div style="color:var(--v-muted);font-size:.7rem;">Venit estimat / eveniment</div><div style="font-size:1.375rem;font-weight:700;">${fmtMoney(ab.estimated_revenue)} RON</div></div>
                     <div><div style="color:var(--v-muted);font-size:.7rem;">Buget recomandat (12%)</div><div style="font-size:1.375rem;font-weight:700;color:var(--v-warn);">${fmtMoney(ab.recommended_budget)} RON</div></div>
@@ -1275,7 +1275,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // custom, segments}, formats: [], phases: [], tips: '...'}].
         if (ps.length) {
             const T_PHASE_IN = { 'Announce': 'Anunț', 'Peak': 'Maxim', 'Urgency': 'Urgență', 'Last Call': 'Ultimul apel' };
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">📱</span>Strategie pe platforme</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">${ambIcon('smartphone', 'w-4 h-4')}</span>Strategie pe platforme</div>
                 <div class="space-y-3">${ps.map(p => `
                     <div style="padding:1rem;border:1px solid var(--v-ring);border-radius:.75rem;background:${p.recommended ? 'rgba(59,130,246,0.03)' : '#f8fafc'};">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;margin-bottom:.75rem;">
@@ -1291,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
                         ${p.audience && Object.keys(p.audience).length ? `
                             <div style="padding:.625rem;background:#fff;border-radius:.5rem;margin-bottom:.5rem;">
-                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">🎯 Public țintă</p>
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">${ambIcon('target', 'w-3.5 h-3.5')} Public țintă</p>
                                 ${Object.entries(p.audience).map(([k, v]) => {
                                     const label = { age: 'Vârstă', location: 'Locație', interests: 'Interese', keywords: 'Cuvinte cheie', custom: 'Custom', segments: 'Segmente' }[k] || k;
                                     return v ? `<p style="font-size:.75rem;color:var(--v-text);margin-top:.2rem;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(v)}</p>` : '';
@@ -1301,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
                         ${p.formats && p.formats.length ? `
                             <div style="padding:.625rem;background:#fff;border-radius:.5rem;margin-bottom:.5rem;">
-                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">📱 Formate</p>
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">${ambIcon('smartphone', 'w-3.5 h-3.5')} Formate</p>
                                 <div style="display:flex;flex-wrap:wrap;gap:.25rem;">
                                     ${p.formats.map(f => `<span style="padding:.125rem .4rem;font-size:.7rem;background:rgba(59,130,246,0.08);color:var(--v-primary);border-radius:.25rem;">${escapeHtml(f)}</span>`).join('')}
                                 </div>
@@ -1310,7 +1310,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
                         ${p.phases && p.phases.length ? `
                             <div style="padding:.625rem;background:#fff;border-radius:.5rem;margin-bottom:.5rem;">
-                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">⏱ Faze active</p>
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-muted);text-transform:uppercase;margin-bottom:.375rem;">${ambIcon('timer', 'w-3.5 h-3.5')} Faze active</p>
                                 <div style="display:flex;flex-wrap:wrap;gap:.25rem;">
                                     ${p.phases.map(ph => `<span style="padding:.125rem .4rem;font-size:.7rem;background:rgba(16,185,129,0.08);color:var(--v-success);border-radius:.25rem;">${escapeHtml(tr(T_PHASE_IN, ph) || ph)}</span>`).join('')}
                                 </div>
@@ -1319,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
                         ${p.tips ? `
                             <div style="padding:.625rem;background:rgba(217,119,6,0.05);border-left:3px solid var(--v-warn);border-radius:.375rem;">
-                                <p style="font-size:.7rem;font-weight:700;color:var(--v-warn);text-transform:uppercase;margin-bottom:.25rem;">💡 Sfat</p>
+                                <p style="font-size:.7rem;font-weight:700;color:var(--v-warn);text-transform:uppercase;margin-bottom:.25rem;">${ambIcon('lightbulb', 'w-3.5 h-3.5')} Sfat</p>
                                 <p style="font-size:.75rem;color:var(--v-text);">${escapeHtml(p.tips)}</p>
                             </div>
                         ` : ''}
@@ -1330,7 +1330,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
 
         // Top genres for targeting
         if (topGenres.length) {
-            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">🎯</span>Genuri principale pentru targetare</div>
+            html += `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(6,182,212,0.1);color:#06b6d4;">${ambIcon('target', 'w-4 h-4')}</span>Genuri principale pentru targetare</div>
                 <div class="a-g3">${topGenres.map(g => `
                     <div style="padding:.75rem;background:#f8fafc;border-radius:.5rem;">
                         <div style="font-size:.875rem;font-weight:700;">${escapeHtml(g.genre || g.name || '')}</div>
@@ -1349,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         const upcoming = d.upcomingEvents || [];
         if (!upcoming.length) return '<div class="a-card"><p class="text-sm text-slate-500">Niciun eveniment programat.</p></div>';
 
-        return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">🗓️</span>Evenimente ce urmează (${upcoming.length})</div>
+        return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">${ambIcon('calendar-days', 'w-4 h-4')}</span>Evenimente ce urmează (${upcoming.length})</div>
             <table class="a-tbl"><thead><tr><th>Data</th><th>Eveniment</th><th>Locație</th><th style="text-align:right">Zile</th><th style="text-align:right">Vândute</th></tr></thead>
             <tbody>${upcoming.slice(0, 30).map(e => {
                 const title = e.title || e.name || '—';
@@ -1409,7 +1409,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
         // Sort by priority (1 = most urgent) → shown at top.
         const sorted = items.slice().sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
-        return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">✅</span>Priorități acțiune (${sorted.length})</div>
+        return `<div class="a-card"><div class="a-card-h"><span class="a-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">${ambIcon('circle-check', 'w-4 h-4')}</span>Priorități acțiune (${sorted.length})</div>
             <div class="space-y-3">${sorted.slice(0, 15).map(a => {
                 const urg = a.urgency || 'medium';
                 const urgColors = { critical: 'var(--v-danger)', high: 'var(--v-danger)', medium: 'var(--v-warn)', low: 'var(--v-primary)' };

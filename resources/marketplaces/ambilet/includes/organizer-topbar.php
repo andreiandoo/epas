@@ -55,11 +55,11 @@ $skipJsComponents = true;
         <div id="pos-cashier-nav" class="hidden flex-1 items-center justify-center gap-2">
             <a href="/organizator/leisure-pos" data-nav-pos class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-700 text-white hover:bg-slate-800 transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                <span>🎫 Emite bilete</span>
+                <span>Emite bilete</span>
             </a>
             <a href="/organizator/leisure-dashboard" data-nav-dashboard class="px-4 py-2 text-sm font-semibold rounded-xl border border-slate-700 text-white hover:bg-slate-800 transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span>📊 Dashboard live</span>
+                <span>Dashboard live</span>
             </a>
         </div>
 

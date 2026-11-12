@@ -625,6 +625,7 @@ const UserTickets = {
     .event-name { font-size: 20px; font-weight: 700; margin-bottom: 6px; word-break: break-word; }
     .event-details { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; color: #4b5563; font-size: 13px; margin-top: 8px; }
     .event-details span { display: flex; align-items: center; gap: 4px; }
+    .event-details .amb-icon { width: 14px; height: 14px; flex-shrink: 0; }
     .ticket-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 15px 0; }
     .qr-section { text-align: center; }
     .qr-section img { width: 180px; height: 180px; max-width: 50vw; }
@@ -648,9 +649,9 @@ ${tickets.map((t, i) => {
         <div class="ticket-header">
             <div class="event-name">${event.name || 'Eveniment'}</div>
             <div class="event-details">
-                <span>📅 ${this.formatDateDisplay(event)}</span>
-                ${timeDisplay ? `<span>🕐 ${timeDisplay}</span>` : ''}
-                ${event.venue ? `<span>📍 ${event.venue}${event.city ? ', ' + event.city : ''}</span>` : ''}
+                <span>${ambIcon('calendar','w-3.5 h-3.5')} ${this.formatDateDisplay(event)}</span>
+                ${timeDisplay ? `<span>${ambIcon('clock','w-3.5 h-3.5')} ${timeDisplay}</span>` : ''}
+                ${event.venue ? `<span>${ambIcon('map-pin','w-3.5 h-3.5')} ${event.venue}${event.city ? ', ' + event.city : ''}</span>` : ''}
             </div>
         </div>
         <div class="ticket-body">
@@ -744,7 +745,7 @@ ${tickets.map((t, i) => {
                 <p class="text-sm text-muted mb-4">Eveniment: <strong class="text-secondary">${escAttr(grp.event && grp.event.name)}</strong></p>
 
                 <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
-                    <p class="font-semibold mb-1">⚠️ Important</p>
+                    <p class="font-semibold mb-1 flex items-center gap-1.5">${ambIcon('triangle-alert','w-4 h-4 text-amber-600')} Important</p>
                     <p>Destinatarul trebuie să aibă deja un cont activ pe această platformă. Dacă nu are, primești un link de înregistrare pe care poți să-l transmiți pentru a-și crea contul.</p>
                 </div>
 

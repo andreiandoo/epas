@@ -82,7 +82,7 @@ const CategoryPage = {
                     const descEl = document.getElementById(this.elements.pageDescription);
                     const bannerEl = document.getElementById(this.elements.categoryBanner);
 
-                    if (titleEl) titleEl.innerHTML = (cat.icon_emoji || '🎫') + ' ' + cat.name;
+                    if (titleEl) titleEl.innerHTML = ambIcon((cat.icon_emoji || '').replace(/\uFE0F/g, '') || 'ticket', 'w-10 h-10') + ' ' + cat.name;
                     if (breadcrumbEl) breadcrumbEl.textContent = cat.name;
                     if (descEl && cat.description) descEl.textContent = cat.description;
                     if (bannerEl && cat.image) bannerEl.src = cat.image;

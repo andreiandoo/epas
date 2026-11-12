@@ -416,7 +416,7 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     </script>
 
     <!-- Iconite SVG comune: ambIcon('ticket', 'w-4 h-4') -->
-    <style>.amb-icon{display:inline-block;vertical-align:-0.125em;flex-shrink:0}</style>
+    <style>:where(.amb-icon){display:inline-block;width:1em;height:1em;vertical-align:-0.125em;flex-shrink:0}</style>
     <script src="<?= asset('assets/js/utils/icons.js') ?>"></script>
 
     <!-- Page-specific head content -->

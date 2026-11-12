@@ -130,16 +130,16 @@ function getVenueIconPath($icon) {
     return $icons[$icon] ?? $icons['building'];
 }
 
-// Get type emoji
+// Iconita tipului de locatie
 $typeEmoji = match($typeSlug) {
-    'arene' => '🏟️',
-    'teatre' => '🎭',
-    'cluburi' => '🎵',
-    'open-air' => '☀️',
-    'sali-de-concerte' => '🎶',
-    'stadiane' => '⚽',
-    'centre-culturale' => '🏛️',
-    default => '📍'
+    'arene' => 'landmark',
+    'teatre' => 'drama',
+    'cluburi' => 'music',
+    'open-air' => 'sun',
+    'sali-de-concerte' => 'music-3',
+    'stadiane' => 'volleyball',
+    'centre-culturale' => 'landmark',
+    default => 'map-pin'
 };
 ?>
 
@@ -275,7 +275,7 @@ $typeEmoji = match($typeSlug) {
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-slate-800">
-                <span class="mr-2"><?= $typeEmoji ?></span>
+                <span class="inline-flex mr-2 align-middle"><?= amb_icon($typeEmoji, 'w-5 h-5') ?></span>
                 Toate <?= strtolower($currentType['name']) ?>
             </h2>
             <div class="flex gap-1 p-1 rounded-lg bg-slate-100">
@@ -325,7 +325,7 @@ $typeEmoji = match($typeSlug) {
     <section id="eventsSection" class="hidden mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-slate-800">
-                <span class="mr-2">🎫</span>
+                <span class="inline-flex mr-2 align-middle"><?= amb_icon('ticket', 'w-5 h-5') ?></span>
                 Evenimente în <?= htmlspecialchars($currentType['short_name']) ?>
             </h2>
             <a href="/evenimente?venue_type=<?= urlencode($typeSlug) ?>" class="flex items-center gap-1 text-sm font-semibold transition-colors text-primary">
@@ -348,7 +348,7 @@ $typeEmoji = match($typeSlug) {
     <!-- Other Venue Types -->
     <section class="mb-12">
         <h2 class="mb-6 text-xl font-bold text-slate-800">
-            <span class="mr-2">🏛️</span>
+            <span class="inline-flex mr-2 align-middle"><?= amb_icon('landmark', 'w-5 h-5') ?></span>
             Alte tipuri de locații
         </h2>
         <div class="grid gap-4 md:grid-cols-3 lg:grid-cols-5">

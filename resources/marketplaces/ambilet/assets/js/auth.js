@@ -777,7 +777,7 @@ const AmbiletAuth = {
 
         banner.innerHTML = `
             <div class="flex items-center justify-center gap-3 px-4 mx-auto max-w-7xl flex-wrap">
-                <span class="text-lg">🎉</span>
+                <span class="text-lg">${(window.ambIcon ? ambIcon('party-popper','w-5 h-5') : '')}</span>
                 <span class="font-medium">${bannerText}</span>
                 ${ctaButton}
                 <button onclick="this.closest('#referral-banner').remove()" aria-label="Închide" class="ml-2 text-white/80 hover:text-white">

@@ -1574,7 +1574,7 @@ async function loadEventForEdit(eventId) {
                     notice = document.createElement('div');
                     notice.id = 'tickets-locked-notice';
                     notice.className = 'p-3 mb-3 text-xs border rounded-lg bg-amber-50 border-amber-200 text-amber-800';
-                    notice.innerHTML = '⚠ <strong>Eveniment publicat.</strong> Detaliile biletelor existente nu mai pot fi modificate (afectează comenzile deja plasate). Pentru schimbări pe biletele existente, contactează un operator AmBilet. Poți adăuga tipuri noi de bilete oricând.';
+                    notice.innerHTML = ambIcon('triangle-alert', 'w-3.5 h-3.5 text-amber-600') + ' <strong>Eveniment publicat.</strong> Detaliile biletelor existente nu mai pot fi modificate (afectează comenzile deja plasate). Pentru schimbări pe biletele existente, contactează un operator AmBilet. Poți adăuga tipuri noi de bilete oricând.';
                     container.parentNode.insertBefore(notice, container);
                 }
             } else if (notice) {

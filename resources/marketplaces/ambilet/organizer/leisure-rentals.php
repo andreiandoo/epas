@@ -13,7 +13,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-bold text-secondary lg:text-3xl flex items-center gap-2">
-                    🛶 Curse bărci active
+                    <?= amb_icon('sailboat', 'w-7 h-7') ?> Curse bărci active
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Live"></span>
                 </h1>
                 <p class="mt-1 text-sm text-muted">Panou operator pentru pornire, închidere și finalizare curse. Refresh automat la 10s.</p>
@@ -60,7 +60,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
         <div class="mt-5 flex gap-2">
             <button id="lv-start-cancel" class="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
-            <button id="lv-start-confirm" class="flex-1 px-4 py-2 text-sm bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700">🚣 Pornește cursa</button>
+            <button id="lv-start-confirm" class="flex-1 px-4 py-2 text-sm bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700"><?= amb_icon('sailboat', 'w-4 h-4') ?> Pornește cursa</button>
         </div>
     </div>
 </div>
@@ -150,7 +150,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="text-3xl font-bold text-secondary">#${r.boat_number}</p>
                     </div>
                     <span class="text-[10px] uppercase font-bold ${overdue ? 'text-rose-700 bg-rose-100' : 'text-emerald-700 bg-emerald-100'} px-2 py-1 rounded">
-                        ${overdue ? '⚠️ Depășit' : '✓ În progres'}
+                        ${overdue ? ambIcon('triangle-alert', 'w-3 h-3') + ' Depășit' : '✓ În progres'}
                     </span>
                 </div>
                 <div class="text-xs text-muted">${r.ticket_type || ''}</div>
@@ -169,7 +169,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
                 <div class="mt-4 flex gap-2">
-                    <button data-end="${r.id}" class="flex-1 px-3 py-2 text-sm font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600">⏹ Închide timer</button>
+                    <button data-end="${r.id}" class="flex-1 px-3 py-2 text-sm font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600">${ambIcon('square', 'w-4 h-4')} Închide timer</button>
                 </div>
                 <div id="lv-end-result-${r.id}" class="hidden mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm"></div>
             </div>`;
@@ -194,7 +194,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const extra = parseInt(data.extra_calupuri || 0, 10);
                 const total = parseFloat(data.extra_charge_total || 0);
                 if (extra > 0) {
-                    resultEl.innerHTML = `<div class="text-amber-900 font-semibold mb-2">⚠️ Depășire: ${extra} calup(uri) extra · <strong>${total.toFixed(2)} RON</strong></div>
+                    resultEl.innerHTML = `<div class="text-amber-900 font-semibold mb-2">${ambIcon('triangle-alert', 'w-4 h-4 text-amber-600')} Depășire: ${extra} calup(uri) extra · <strong>${total.toFixed(2)} RON</strong></div>
                         <button class="px-3 py-1.5 text-xs bg-rose-600 text-white rounded font-semibold" onclick="window.lvFinalize(${rentalId}, ${total})">Încasează ${total.toFixed(2)} RON + Finalizează</button>`;
                 } else {
                     resultEl.innerHTML = `<div class="text-emerald-700 font-semibold mb-2">✓ În limita planificată</div>

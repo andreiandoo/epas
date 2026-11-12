@@ -145,7 +145,7 @@
         '<div class="scanapp-ticket" data-id="' + escapeHtml(t.id) + '"' + testFrame + '>' +
           '<div class="scanapp-ticket__color" style="background:' + escapeHtml(effectiveColor) + ';"></div>' +
           '<div class="scanapp-ticket__body">' +
-            '<div class="scanapp-ticket__name">' + escapeHtml(t.name) + testBadge + (seated ? ' <span style="font-size:10px; color:var(--scanapp-warning);">📍 cu loc</span>' : '') + '</div>' +
+            '<div class="scanapp-ticket__name">' + escapeHtml(t.name) + testBadge + (seated ? ' <span style="font-size:10px; color:var(--scanapp-warning);">' + (window.ambIcon ? ambIcon('map-pin', '').replace('<svg', '<svg width="10" height="10"') : '') + ' cu loc</span>' : '') + '</div>' +
             '<div class="scanapp-ticket__price">' + escapeHtml(formatLei(price)) + '</div>' +
             '<div class="scanapp-ticket__hint">' + hint + escapeHtml(testHint) + '</div>' +
           '</div>' +

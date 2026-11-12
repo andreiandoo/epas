@@ -23,6 +23,17 @@ define('NAV_PREVIEW_MODE', !empty($_GET['preview']));
 define('NAV_API_URL', '/api/v1/public/navigation/counts');
 
 /**
+ * Iconita SVG pentru o categorie. icon_emoji vine din API (emoticon) sau din
+ * fallback (nume de iconita); amb_icon le accepta pe amandoua.
+ */
+if (!function_exists('amb_category_icon')) {
+    function amb_category_icon(?string $icon, string $class = 'w-4 h-4'): string {
+        $icon = trim(str_replace("\u{FE0F}", '', (string) $icon));
+        return amb_icon($icon !== '' ? $icon : 'ticket', $class);
+    }
+}
+
+/**
  * Check if a slug is valid (no corrupted characters)
  * Valid slugs contain only: a-z, 0-9, hyphen
  */
@@ -624,7 +635,7 @@ function fetchEventCategoriesFromAPI(): array|false {
             'name' => $category['name'],
             'slug' => $category['slug'],
             'icon' => $category['icon'] ?? '',
-            'icon_emoji' => $category['icon_emoji'] ?? '🎫',
+            'icon_emoji' => $category['icon_emoji'] ?? 'ticket',
             'description' => $category['description'] ?? '',
             'image' => $category['image'] ?? '',
             'color' => $category['color'] ?? '#A51C30',
@@ -1377,7 +1388,7 @@ function getDefaultEventCategories(): array {
             'name' => 'Concerte',
             'slug' => 'concerte',
             'icon' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-            'icon_emoji' => '🎸',
+            'icon_emoji' => 'guitar',
             'description' => 'Descopera cele mai tari concerte din Romania.',
             'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1920&q=80',
             'color' => '#A51C30',
@@ -1387,7 +1398,7 @@ function getDefaultEventCategories(): array {
             'name' => 'Festivaluri',
             'slug' => 'festivaluri',
             'icon' => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-            'icon_emoji' => '🎪',
+            'icon_emoji' => 'tent',
             'description' => 'Cele mai mari festivaluri de muzica din Romania.',
             'image' => 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=1920&q=80',
             'color' => '#E67E22',
@@ -1397,7 +1408,7 @@ function getDefaultEventCategories(): array {
             'name' => 'Teatru',
             'slug' => 'teatru',
             'icon' => '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
-            'icon_emoji' => '🎭',
+            'icon_emoji' => 'drama',
             'description' => 'Spectacole de teatru, opere si balet.',
             'image' => 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=1920&q=80',
             'color' => '#8B1728',
@@ -1407,7 +1418,7 @@ function getDefaultEventCategories(): array {
             'name' => 'Stand-up',
             'slug' => 'stand-up',
             'icon' => '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
-            'icon_emoji' => '😂',
+            'icon_emoji' => 'laugh',
             'description' => 'Show-uri de stand-up comedy.',
             'image' => 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=1920&q=80',
             'color' => '#F59E0B',
@@ -1417,7 +1428,7 @@ function getDefaultEventCategories(): array {
             'name' => 'Sport',
             'slug' => 'sport',
             'icon' => '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
-            'icon_emoji' => '⚽',
+            'icon_emoji' => 'volleyball',
             'description' => 'Evenimente sportive din Romania.',
             'image' => 'https://images.unsplash.com/photo-1461896836934-474a6c1d0f75?w=1920&q=80',
             'color' => '#3B82F6',
@@ -1427,7 +1438,7 @@ function getDefaultEventCategories(): array {
             'name' => 'Expozitii',
             'slug' => 'expozitii',
             'icon' => '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
-            'icon_emoji' => '🖼️',
+            'icon_emoji' => 'image',
             'description' => 'Expozitii de arta, fotografie si cultura.',
             'image' => 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=1920&q=80',
             'color' => '#8B5CF6',

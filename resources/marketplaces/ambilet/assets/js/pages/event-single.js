@@ -1404,7 +1404,7 @@ const EventPage = {
                     '<span>' + this.escapeHtml(fomo.sold_last_24h) + ' bilete vândute în ultimele 24h</span>' +
                 '</span>' +
                 '<span class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full bg-sky-50 text-sky-700">' +
-                    '<span>👁</span>' +
+                    ambIcon('eye','w-3.5 h-3.5') +
                     '<span id="fomo-viewers">' + this.escapeHtml(fomo.viewers_now) + ' persoane se uită acum</span>' +
                 '</span>';
             titleEl.parentNode.insertBefore(pills, titleEl);
@@ -1432,7 +1432,7 @@ const EventPage = {
         var scarcityHtml =
             '<div class="flex items-center justify-between gap-3">' +
                 '<div class="flex items-center gap-2 text-sm font-bold text-amber-900">' +
-                    '<span>🔥</span><span>Cerere ridicată</span>' +
+                    ambIcon('flame','w-4 h-4 text-amber-600') + '<span>Cerere ridicată</span>' +
                 '</div>' +
                 '<span class="text-xs font-semibold text-amber-700">' +
                     this.escapeHtml(remainingLabel) +

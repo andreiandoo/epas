@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => (async function () {
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="font-semibold text-sm text-slate-900 truncate group-hover:text-blue-700">${title}</p>
-                                <p class="text-xs text-slate-500 mt-0.5">📍 ${venue} · 🎪 ${organizer}</p>
+                                <p class="text-xs text-slate-500 mt-0.5">${ambIcon('map-pin', 'w-3.5 h-3.5')} ${venue} · ${ambIcon('tent', 'w-3.5 h-3.5')} ${organizer}</p>
                                 ${cap > 0 ? `
                                     <div class="mt-2 flex items-center gap-2">
                                         <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">

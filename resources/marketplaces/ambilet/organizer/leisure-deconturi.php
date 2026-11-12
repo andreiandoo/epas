@@ -14,10 +14,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">💰 Deconturi</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('wallet', 'w-7 h-7') ?> Deconturi</h1>
                 <p class="mt-1 text-sm text-muted">Toate deconturile emise pentru acest eveniment, cu detalii per bilet și link către PDF-ul generat.</p>
             </div>
-            <button id="dc-refresh" class="px-3 py-1.5 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50">🔄 Reîmprospătează</button>
+            <button id="dc-refresh" class="px-3 py-1.5 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50"><?= amb_icon('refresh-cw', 'w-3.5 h-3.5') ?> Reîmprospătează</button>
         </div>
 
         <div id="dc-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900"></div>
@@ -26,24 +26,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Sumar cumulat de la 16.07.2026 pana azi -->
         <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
             <div class="p-4 bg-white border-2 rounded-2xl border-slate-300">
-                <p class="text-[10px] uppercase tracking-wider text-slate-600 font-bold">📅 Zile activitate</p>
+                <p class="text-[10px] uppercase tracking-wider text-slate-600 font-bold"><?= amb_icon('calendar', 'w-3 h-3') ?> Zile activitate</p>
                 <p class="text-2xl font-extrabold text-slate-900"><span id="dc-cum-days">—</span></p>
                 <p class="text-[10px] text-muted mt-0.5" id="dc-cum-period">de la 16 iul 2026</p>
             </div>
             <div class="p-4 bg-white border-2 rounded-2xl border-sky-200">
-                <p class="text-[10px] uppercase tracking-wider text-sky-700 font-bold">🌐 Vânzări online</p>
+                <p class="text-[10px] uppercase tracking-wider text-sky-700 font-bold"><?= amb_icon('globe', 'w-3 h-3') ?> Vânzări online</p>
                 <p class="text-2xl font-extrabold text-sky-900"><span id="dc-cum-online-gross">—</span> <span class="text-xs text-sky-700">RON</span></p>
             </div>
             <div class="p-4 bg-white border-2 rounded-2xl border-amber-200">
-                <p class="text-[10px] uppercase tracking-wider text-amber-700 font-bold">🏪 Vânzări POS</p>
+                <p class="text-[10px] uppercase tracking-wider text-amber-700 font-bold"><?= amb_icon('store', 'w-3 h-3') ?> Vânzări POS</p>
                 <p class="text-2xl font-extrabold text-amber-900"><span id="dc-cum-pos-gross">—</span> <span class="text-xs text-amber-700">RON</span></p>
             </div>
             <div class="p-4 bg-white border-2 rounded-2xl border-indigo-200">
-                <p class="text-[10px] uppercase tracking-wider text-indigo-700 font-bold">🧾 Comisioane online</p>
+                <p class="text-[10px] uppercase tracking-wider text-indigo-700 font-bold"><?= amb_icon('receipt', 'w-3 h-3') ?> Comisioane online</p>
                 <p class="text-2xl font-extrabold text-indigo-900"><span id="dc-cum-online-comm">—</span> <span class="text-xs text-indigo-700">RON</span></p>
             </div>
             <div class="p-4 bg-white border-2 rounded-2xl border-purple-200">
-                <p class="text-[10px] uppercase tracking-wider text-purple-700 font-bold">🧾 Comisioane POS</p>
+                <p class="text-[10px] uppercase tracking-wider text-purple-700 font-bold"><?= amb_icon('receipt', 'w-3 h-3') ?> Comisioane POS</p>
                 <p class="text-2xl font-extrabold text-purple-900"><span id="dc-cum-pos-comm">—</span> <span class="text-xs text-purple-700">RON</span></p>
             </div>
         </div>
@@ -51,7 +51,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <section class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
             <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border bg-slate-50">
                 <div>
-                    <h2 class="font-bold text-secondary">⚖️ Decontare (compensare)</h2>
+                    <h2 class="font-bold text-secondary"><?= amb_icon('scale', 'w-5 h-5') ?> Decontare (compensare)</h2>
                     <p class="text-xs text-muted">Online-ul e încasat de AmBilet; POS-ul (cash/card) e încasat în locație. Se compensează comisioanele.</p>
                 </div>
                 <label class="flex items-center gap-2 text-sm">
@@ -579,12 +579,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                     <div class="space-y-2 text-sm">
                         <div class="p-2 rounded bg-sky-50 border border-sky-200">
-                            <p class="text-[10px] uppercase font-bold text-sky-700 mb-1">🌐 Online</p>
+                            <p class="text-[10px] uppercase font-bold text-sky-700 mb-1">${ambIcon('globe', 'w-3 h-3')} Online</p>
                             <div class="flex justify-between text-xs"><span class="text-muted">Vânzări</span><strong class="tabular-nums">${M(iss.online_gross)}</strong></div>
                             <div class="flex justify-between text-xs"><span class="text-muted">Comisioane</span><strong class="text-blue-700 tabular-nums">${M(iss.online_commission)}</strong></div>
                         </div>
                         <div class="p-2 rounded bg-amber-50 border border-amber-200">
-                            <p class="text-[10px] uppercase font-bold text-amber-700 mb-1">🏪 POS</p>
+                            <p class="text-[10px] uppercase font-bold text-amber-700 mb-1">${ambIcon('store', 'w-3 h-3')} POS</p>
                             <div class="flex justify-between text-xs"><span class="text-muted">Vânzări</span><strong class="tabular-nums">${M(iss.pos_gross)}</strong></div>
                             <div class="flex justify-between text-xs"><span class="text-muted">Comisioane</span><strong class="text-amber-700 tabular-nums">${M(iss.pos_commission)}</strong></div>
                         </div>
@@ -599,14 +599,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const issuerCards = societyCard(byIssuer.primary) + societyCard(byIssuer.secondary);
         const issuerSection = issuerCards ? `
             <div class="mt-6 pt-4 border-t border-border">
-                <h3 class="text-sm font-bold text-secondary mb-3">🏢 Breakdown pe societate</h3>
+                <h3 class="text-sm font-bold text-secondary mb-3">${ambIcon('building-2', 'w-4 h-4')} Breakdown pe societate</h3>
                 <div class="grid gap-4 lg:grid-cols-2">${issuerCards}</div>
             </div>` : '';
 
         $('dc-settle-body').innerHTML = `
             <div class="grid gap-4 lg:grid-cols-3">
                 <div class="p-4 border rounded-xl border-border">
-                    <p class="text-[11px] uppercase tracking-wider font-bold text-blue-700 mb-2">🌐 Online (încasat de AmBilet)</p>
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-blue-700 mb-2">${ambIcon('globe', 'w-3.5 h-3.5')} Online (încasat de AmBilet)</p>
                     <div class="space-y-1 text-sm">
                         <div class="flex justify-between"><span class="text-muted">Brut</span><strong>${M(on.gross)}</strong></div>
                         <div class="flex justify-between"><span class="text-muted">Comision AmBilet</span><strong class="text-blue-700">${M(on.commission)}</strong></div>
@@ -614,11 +614,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
                 <div class="p-4 border rounded-xl border-border">
-                    <p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700 mb-2">🏪 POS (încasat în locație)</p>
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700 mb-2">${ambIcon('store', 'w-3.5 h-3.5')} POS (încasat în locație)</p>
                     <div class="space-y-1 text-sm">
                         <div class="flex justify-between"><span class="text-muted">Brut</span><strong>${M(pos.gross)}</strong></div>
-                        <div class="flex justify-between"><span class="text-muted">💵 Cash</span><strong>${M(pos.cash)}</strong></div>
-                        <div class="flex justify-between"><span class="text-muted">💳 Card</span><strong>${M(pos.card)}</strong></div>
+                        <div class="flex justify-between"><span class="text-muted">${ambIcon('banknote', 'w-4 h-4')} Cash</span><strong>${M(pos.cash)}</strong></div>
+                        <div class="flex justify-between"><span class="text-muted">${ambIcon('credit-card', 'w-4 h-4')} Card</span><strong>${M(pos.card)}</strong></div>
                         <div class="flex justify-between pt-1 border-t border-border"><span class="text-muted">Comision (locația datorează)</span><strong class="text-amber-700">${M(pos.commission)}</strong></div>
                     </div>
                 </div>

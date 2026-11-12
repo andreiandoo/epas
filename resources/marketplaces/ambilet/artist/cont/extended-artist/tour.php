@@ -178,9 +178,9 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <template x-for="alert in opportunities.dormant_alerts || []" :key="alert.city">
                             <div class="p-5 border-2 border-warning/30 bg-warning/5 rounded-2xl">
                                 <div class="flex items-start gap-3">
-                                    <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 bg-warning/20 rounded-xl">⚠️</div>
+                                    <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 bg-warning/20 rounded-xl text-amber-600"><?= amb_icon('triangle-alert', 'w-5 h-5') ?></div>
                                     <div class="flex-1">
-                                        <p class="mb-1 font-bold text-secondary" x-text="'⚠️ ' + alert.message"></p>
+                                        <p class="mb-1 font-bold text-secondary"><?= amb_icon('triangle-alert', 'w-4 h-4 text-amber-600') ?> <span x-text="alert.message"></span></p>
                                         <p class="mb-3 text-sm text-muted">Risc churn ridicat. O dată pe an ar putea recupera 60-70% din audiență.</p>
                                         <button @click="addCityToPlanner(alert.city); setTab('planner')" class="to-btn to-btn-primary to-btn-sm">Planifică <span x-text="alert.city"></span></button>
                                     </div>
@@ -240,7 +240,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <!-- Setări tour: organizate pe secțiuni clare -->
                                 <div class="p-5 bg-white border border-border rounded-2xl">
                                     <button @click="planner.configOpen = !planner.configOpen" class="flex items-center justify-between w-full">
-                                        <span class="text-xs font-bold tracking-wider uppercase text-muted">⚙️ Setări tour</span>
+                                        <span class="text-xs font-bold tracking-wider uppercase text-muted"><?= amb_icon('settings', 'w-3.5 h-3.5') ?> Setări tour</span>
                                         <svg class="w-4 h-4 transition-transform text-muted" :class="planner.configOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </button>
 
@@ -248,7 +248,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                         <!-- 📍 Plecare turneu -->
                                         <div>
-                                            <p class="to-section-title"><span class="icon">📍</span> Plecare turneu
+                                            <p class="to-section-title"><span class="icon"><?= amb_icon('map-pin', 'w-4 h-4') ?></span> Plecare turneu
                                                 <span class="to-tip" data-tip="Locația de bază (home base) — orașul de unde pleacă echipa la primul concert și unde se întoarce la final. Folosit pentru calculul combustibilului total dus-întors.">ⓘ</span>
                                             </p>
                                             <div x-data="{ open: false, query: '' }" @click.outside="open = false" class="relative">
@@ -278,7 +278,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                         <!-- 🚐 Vehicule -->
                                         <div>
-                                            <p class="to-section-title"><span class="icon">🚐</span> Vehicule transport
+                                            <p class="to-section-title"><span class="icon"><?= amb_icon('bus', 'w-4 h-4') ?></span> Vehicule transport
                                                 <span class="to-tip" data-tip="Toate vehiculele cu care călătorește echipa. Combustibilul total = suma per vehicul × distanța × consum / 100 × preț/L. Adaugă o linie nouă pentru fiecare tip de vehicul (poate avea mai multe bucăți).">ⓘ</span>
                                             </p>
                                             <div class="grid grid-cols-12 gap-1 px-1 mb-1 text-xs font-semibold text-muted">
@@ -310,7 +310,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                         <!-- ⛽ Combustibil -->
                                         <div>
-                                            <p class="to-section-title"><span class="icon">⛽</span> Combustibil
+                                            <p class="to-section-title"><span class="icon"><?= amb_icon('fuel', 'w-4 h-4') ?></span> Combustibil
                                                 <span class="to-tip" data-tip="Tipul și prețul actual al combustibilului. Default 7.50 RON/L (referință 2026). Verifică pe peco.ro pentru prețul curent.">ⓘ</span>
                                             </p>
                                             <div class="grid grid-cols-2 gap-2">
@@ -331,7 +331,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                         <!-- 👥 Echipă & cazare -->
                                         <div>
-                                            <p class="to-section-title"><span class="icon">👥</span> Echipă & cazare
+                                            <p class="to-section-title"><span class="icon"><?= amb_icon('users', 'w-4 h-4') ?></span> Echipă & cazare
                                                 <span class="to-tip" data-tip="Persoanele care călătoresc + împărțirea pe camere (single, double = 2 pers, apartament = 4 pers). Capacitatea trebuie să acopere persoanele.">ⓘ</span>
                                             </p>
                                             <label class="block mb-1 text-xs text-muted">Persoane în turneu</label>
@@ -356,13 +356,13 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             </div>
                                             <p class="mt-2 text-xs" :class="roomCapacityValid ? 'text-success' : 'text-warning'">
                                                 Capacitate: <span x-text="totalRoomCapacity"></span> persoane &middot; configurat pentru <span x-text="planner.config.people_count"></span>
-                                                <span x-show="!roomCapacityValid"> &middot; ⚠️ camere insuficiente</span>
+                                                <span x-show="!roomCapacityValid"> &middot; <?= amb_icon('triangle-alert', 'w-3.5 h-3.5') ?> camere insuficiente</span>
                                             </p>
                                         </div>
 
                                         <!-- 🍽️ Diurnă -->
                                         <div>
-                                            <p class="to-section-title"><span class="icon">🍽️</span> Diurnă
+                                            <p class="to-section-title"><span class="icon"><?= amb_icon('utensils', 'w-4 h-4') ?></span> Diurnă
                                                 <span class="to-tip" data-tip="Mâncare RON/persoană/zi. Total = persoane × preț/zi × durata totală a tour-ului, distribuit egal per concert.">ⓘ</span>
                                             </p>
                                             <label class="block mb-1 text-xs text-muted">Preț RON / persoană / zi</label>
@@ -371,7 +371,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                         <!-- 🎟️ Venit -->
                                         <div>
-                                            <p class="to-section-title"><span class="icon">🎟️</span> Venit estimat
+                                            <p class="to-section-title"><span class="icon"><?= amb_icon('ticket', 'w-4 h-4') ?></span> Venit estimat
                                                 <span class="to-tip" data-tip="Preț mediu de bilet (RON). Folosit pentru a calcula venitul prognozat per concert și per tour total. Influențează profit + ROI.">ⓘ</span>
                                             </p>
                                             <label class="block mb-1 text-xs text-muted">Preț mediu bilet (RON)</label>
@@ -396,7 +396,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
 
                                 <button @click="optimizeRoute()" :disabled="planner.cities.length < 2 || tabLoading" class="w-full to-btn to-btn-primary">
-                                    ⚡ Optimizează rută
+                                    <?= amb_icon('zap', 'w-4 h-4') ?> Optimizează rută
                                 </button>
                             </div>
                         </div>
@@ -404,7 +404,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <div :class="sidebarCollapsed ? '' : 'lg:col-span-8'">
                             <div x-show="!planner.optimized">
                                 <div class="p-12 text-center border border-dashed bg-surface border-border rounded-2xl">
-                                    <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-white rounded-full">🎯</div>
+                                    <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-white rounded-full text-primary"><?= amb_icon('target', 'w-8 h-8') ?></div>
                                     <p class="font-medium text-secondary">Adaugă orașe și apasă „Optimizează rută"</p>
                                     <p class="mt-1 text-sm text-muted">Algoritm-ul calculează ordinea optimă, distanțe și predicții bilete.</p>
                                 </div>
@@ -438,19 +438,19 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                 <div class="grid grid-cols-2 gap-3 mb-4 sm:grid-cols-4">
                                     <div class="p-3 text-center border bg-surface rounded-xl border-border">
-                                        <p class="text-xs font-semibold uppercase text-muted">⛽ Combustibil</p>
+                                        <p class="text-xs font-semibold uppercase text-muted"><?= amb_icon('fuel', 'w-3.5 h-3.5') ?> Combustibil</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.fuel_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                     <div class="p-3 text-center border bg-surface rounded-xl border-border">
-                                        <p class="text-xs font-semibold uppercase text-muted">🛏️ Cazare</p>
+                                        <p class="text-xs font-semibold uppercase text-muted"><?= amb_icon('bed', 'w-3.5 h-3.5') ?> Cazare</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.accommodation_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                     <div class="p-3 text-center border bg-surface rounded-xl border-border">
-                                        <p class="text-xs font-semibold uppercase text-muted">🍽️ Mâncare</p>
+                                        <p class="text-xs font-semibold uppercase text-muted"><?= amb_icon('utensils', 'w-3.5 h-3.5') ?> Mâncare</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.meal_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                     <div class="p-3 text-center rounded-xl" :class="(planner.summary?.extra_cost_ron ?? 0) > 0 ? 'bg-warning/5 border border-warning/20' : 'bg-surface border border-border'">
-                                        <p class="text-xs font-semibold uppercase text-muted">➕ Extra</p>
+                                        <p class="text-xs font-semibold uppercase text-muted"><?= amb_icon('plus', 'w-3.5 h-3.5') ?> Extra</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.extra_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                 </div>
@@ -459,11 +459,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                 <div class="grid grid-cols-3 gap-3 mb-4">
                                     <div class="p-3 text-center border bg-success/5 border-success/20 rounded-xl">
-                                        <p class="text-xs font-semibold uppercase text-success">💰 Venit estimat</p>
+                                        <p class="text-xs font-semibold uppercase text-success"><?= amb_icon('wallet', 'w-3.5 h-3.5') ?> Venit estimat</p>
                                         <p class="text-base font-bold text-success">~<span x-text="formatNumber(planner.summary?.predicted_revenue_ron ?? 0)"></span> RON</p>
                                     </div>
                                     <div class="p-3 text-center border rounded-xl" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
-                                        <p class="text-xs font-semibold uppercase" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'text-success' : 'text-error'">📈 Profit estimat</p>
+                                        <p class="text-xs font-semibold uppercase" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'text-success' : 'text-error'"><?= amb_icon('trending-up', 'w-3.5 h-3.5') ?> Profit estimat</p>
                                         <p class="text-base font-bold" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'text-success' : 'text-error'">~<span x-text="formatNumber(planner.summary?.profit_ron ?? 0)"></span> RON</p>
                                     </div>
                                     <div class="p-3 text-center border rounded-xl" :class="(planner.summary?.margin_pct ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
@@ -483,17 +483,17 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     <span class="inline-block w-3 h-3 border-2 rounded-full border-primary border-t-transparent animate-spin"></span>
                                                     Se recalculează...
                                                 </span>
-                                                <span x-show="!tabLoading && planner.dirty" class="text-xs font-semibold text-warning">⏳ recalcul în curând...</span>
+                                                <span x-show="!tabLoading && planner.dirty" class="text-xs font-semibold text-warning"><?= amb_icon('hourglass', 'w-3.5 h-3.5') ?> recalcul în curând...</span>
                                                 <span x-show="!tabLoading && !planner.dirty && planner.optimized" class="text-xs font-semibold text-success">✓ actualizat</span>
                                                 <!-- Buton Sortează cronologic — apare DOAR când există inconsistențe cronologice -->
                                                 <button x-show="outOfOrderStops.length > 0" @click="sortChronologically()" :disabled="tabLoading"
                                                     class="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-error/5 text-error border-error/30 hover:bg-error/10 transition-colors"
                                                     :title="outOfOrderStops.length + ' stop-uri în afara ordinii cronologice'">
-                                                    🕒 Sortează cronologic (<span x-text="outOfOrderStops.length"></span>)
+                                                    <?= amb_icon('clock', 'w-3.5 h-3.5') ?> Sortează cronologic (<span x-text="outOfOrderStops.length"></span>)
                                                 </button>
                                                 <button @click="saveScenario()" :disabled="planner.saving || tabLoading"
                                                     class="to-btn to-btn-primary to-btn-sm">
-                                                    <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează'"></span>
+                                                    <span x-html="planner.saving ? 'Se salvează...' : ambIcon('save', 'w-3.5 h-3.5') + ' Salvează'"></span>
                                                 </button>
                                             </div>
                                         </div>
@@ -508,7 +508,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 :class="isStopOutOfOrder(idx) ? 'border-2 border-error bg-error/5' : (stop.fixed ? 'border-2 border-success bg-success/5' : (stop.is_home ? 'border border-accent/40 bg-accent/5' : 'border border-border hover:bg-surface/50'))">
                                                 <div class="flex items-start gap-3">
                                                     <span x-show="!stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none select-none cursor-grab text-muted route-handle" title="Trage pentru reordonare">⋮⋮</span>
-                                                    <span x-show="stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none text-success" title="Concert confirmat — drag dezactivat">🔒</span>
+                                                    <span x-show="stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none text-success" title="Concert confirmat — drag dezactivat"><?= amb_icon('lock', 'w-5 h-5') ?></span>
                                                     <button @click="expanded = !expanded" type="button"
                                                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors bg-surface text-muted border-border hover:bg-primary/5 hover:text-primary hover:border-primary/30">
                                                         <span x-text="expanded ? '▲ ' : '▼ '"></span>
@@ -517,21 +517,21 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     <div class="flex-1 min-w-0">
                                                         <div class="flex flex-wrap items-center gap-2 mb-1">
                                                             <p class="font-bold text-secondary" x-text="stop.city"></p>
-                                                            <span x-show="isStopOutOfOrder(idx)" class="text-xs to-badge bg-error/15 text-error" :title="'Data ' + stop.date + ' e mai veche decât concertul precedent'">⚠️ dată în afara ordinii</span>
-                                                            <span x-show="stop.is_home" class="text-xs to-badge bg-accent/15 text-accent">🏠 acasă</span>
+                                                            <span x-show="isStopOutOfOrder(idx)" class="text-xs to-badge bg-error/15 text-error" :title="'Data ' + stop.date + ' e mai veche decât concertul precedent'"><?= amb_icon('triangle-alert', 'w-3 h-3') ?> dată în afara ordinii</span>
+                                                            <span x-show="stop.is_home" class="text-xs to-badge bg-accent/15 text-accent"><?= amb_icon('house', 'w-3 h-3') ?> acasă</span>
                                                             <span x-show="stop.fixed" class="text-xs to-badge bg-success/15 text-success">✓ confirmat</span>
                                                             <span x-show="stop.from_start && !stop.is_home" class="text-xs to-badge bg-accent/10 text-accent">↩ din <span x-text="planner.config.start_location"></span></span>
                                                             <span x-show="stop.venue_name" class="text-xs font-medium text-secondary" x-text="'· ' + stop.venue_name"></span>
                                                             <span x-show="stop.effective_capacity" class="text-xs to-badge bg-primary/10 text-primary"><span x-text="formatNumber(stop.effective_capacity)"></span> loc</span>
                                                             <span x-show="stop.manual_capacity && !stop.venue_capacity" class="to-badge bg-warning/10 text-warning text-[9px]" title="Capacitate setată manual">manual</span>
                                                         </div>
-                                                        <p class="text-xs text-muted"><span x-text="stop.day" class="font-semibold capitalize"></span> · <span x-text="stop.date" class="font-semibold"></span> <span x-show="stop.arrival_road_km > 0"> · sosire ~<span x-text="formatNumber(stop.arrival_road_km)"></span> km (<span x-text="formatDuration(stop.arrival_drive_time_min)"></span>)</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
+                                                        <p class="text-xs text-muted"><span x-text="stop.day" class="font-semibold capitalize"></span> · <span x-text="stop.date" class="font-semibold"></span> <span x-show="stop.arrival_road_km > 0"> · sosire ~<span x-text="formatNumber(stop.arrival_road_km)"></span> km (<span x-text="formatDuration(stop.arrival_drive_time_min)"></span>)</span><span x-show="stop.is_home"> · <?= amb_icon('house', 'w-3 h-3') ?> nu e drum (concertul e acasă)</span></p>
                                                     </div>
                                                     <div class="flex flex-wrap items-center gap-2">
                                                         <button @click="toggleStopFixed(idx); expanded = !stop.fixed"
                                                             :class="stop.fixed ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border hover:bg-success/5 hover:text-success hover:border-success/30'"
                                                             class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors">
-                                                            <span x-text="stop.fixed ? '🔓 Anulează confirmarea' : '🔒 Confirmă concert'"></span>
+                                                            <span x-html="stop.fixed ? ambIcon('lock-open', 'w-3.5 h-3.5') + ' Anulează confirmarea' : ambIcon('lock', 'w-3.5 h-3.5') + ' Confirmă concert'"></span>
                                                         </button>
                                                         <span class="text-xs text-muted" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
                                                     </div>
@@ -552,11 +552,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <!-- Inline edit row: data + venue -->
                                                 <div class="grid grid-cols-1 gap-2 my-3 sm:grid-cols-2 ml-7 sm:ml-12">
                                                     <div>
-                                                        <label class="block mb-1 text-xs text-muted">📅 Data eveniment</label>
+                                                        <label class="block mb-1 text-xs text-muted"><?= amb_icon('calendar', 'w-3.5 h-3.5') ?> Data eveniment</label>
                                                         <input type="date" :value="stop.date_iso" @change="updateStopDate(idx, $event.target.value)" class="text-xs to-input disabled:bg-surface disabled:cursor-not-allowed" :min="planner.startDate" :max="planner.endDate" :disabled="stop.fixed">
                                                     </div>
                                                     <div x-data="{ open: false, query: '' }" @click.outside="open = false">
-                                                        <label class="block mb-1 text-xs text-muted">🏟️ Locație (caută & alege)</label>
+                                                        <label class="block mb-1 text-xs text-muted"><?= amb_icon('landmark', 'w-3.5 h-3.5') ?> Locație (caută & alege)</label>
                                                         <div class="relative">
                                                             <input type="text"
                                                                 :value="open ? query : (stop.venue_name || '')"
@@ -598,7 +598,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <div class="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2 ml-7 sm:ml-12">
                                                     <div>
                                                         <label class="block mb-1 text-xs text-muted">
-                                                            🎟️ Capacitate locație
+                                                            <?= amb_icon('ticket', 'w-3.5 h-3.5') ?> Capacitate locație
                                                             <span class="to-tip" data-tip="Dacă venue-ul nu are capacitatea înregistrată sau vrei să o suprascrii pentru această ocazie. Lasă gol pentru a folosi capacitatea din DB.">ⓘ</span>
                                                         </label>
                                                         <input type="number" min="0" max="200000"
@@ -609,7 +609,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </div>
                                                     <div>
                                                         <label class="block mb-1 text-xs text-muted">
-                                                            📊 Estimat vânzări (manual)
+                                                            <?= amb_icon('chart-column', 'w-3.5 h-3.5') ?> Estimat vânzări (manual)
                                                             <span class="to-tip" data-tip="Dacă ai propria estimare pentru numărul de bilete vândute, scrie-o aici. Va suprascrie predicția automată. Lasă gol pentru predicția algoritmului.">ⓘ</span>
                                                         </label>
                                                         <input type="number" min="0" max="200000"
@@ -624,7 +624,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <div class="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-3 ml-7 sm:ml-12">
                                                     <div>
                                                         <label class="block mb-1 text-xs text-muted">
-                                                            ➕ Costuri suplimentare (RON)
+                                                            <?= amb_icon('plus', 'w-3.5 h-3.5') ?> Costuri suplimentare (RON)
                                                             <span class="to-tip" data-tip="Costuri ad-hoc pentru acest stop care nu intră în combustibil/cazare/diurnă: tehnică, securitate, transport echipament local, etc. Se adaugă la totalul stop-ului. Lasă gol = 0.">ⓘ</span>
                                                         </label>
                                                         <input type="number" min="0" max="1000000" step="0.01"
@@ -635,7 +635,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </div>
                                                     <div class="sm:col-span-2">
                                                         <label class="block mb-1 text-xs text-muted">
-                                                            📝 Descriere costuri suplimentare
+                                                            <?= amb_icon('notebook-pen', 'w-3.5 h-3.5') ?> Descriere costuri suplimentare
                                                             <span class="to-tip" data-tip="Ce reprezintă cei X RON. Doar pentru evidență — nu afectează calculele.">ⓘ</span>
                                                         </label>
                                                         <input type="text" maxlength="300"
@@ -653,7 +653,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                         class="w-4 h-4 rounded text-primary">
                                                     <span class="text-xs text-secondary">
                                                         <template x-if="idx === 0">
-                                                            <span>🚀 Plecare din <strong x-text="planner.config.start_location"></strong> (primul concert)</span>
+                                                            <span><?= amb_icon('rocket', 'w-3.5 h-3.5') ?> Plecare din <strong x-text="planner.config.start_location"></strong> (primul concert)</span>
                                                         </template>
                                                         <template x-if="idx > 0">
                                                             <span>↩ Plecare din <strong x-text="planner.config.start_location"></strong> (nu din concertul precedent)</span>
@@ -665,7 +665,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <!-- Cost breakdown extended cu tooltip cu formula -->
                                                 <div class="grid grid-cols-2 gap-2 mb-3 text-xs sm:grid-cols-5">
                                                     <div class="p-2 rounded bg-surface">
-                                                        <p class="flex items-center gap-1 text-sm text-muted">⛽ Combustibil
+                                                        <p class="flex items-center gap-1 text-sm text-muted"><?= amb_icon('fuel', 'w-4 h-4') ?> Combustibil
                                                             <span class="to-tip" :data-tip="fuelFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.fuel_cost ?? 0)"></span> RON</p>
@@ -677,25 +677,25 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                         </p>
                                                     </div>
                                                     <div class="p-2 rounded bg-surface">
-                                                        <p class="flex items-center gap-1 text-sm text-muted">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)
+                                                        <p class="flex items-center gap-1 text-sm text-muted"><?= amb_icon('bed', 'w-4 h-4') ?> Cazare (<span x-text="stop.nights ?? 1"></span>n)
                                                             <span class="to-tip" :data-tip="accommodationFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.accommodation_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 rounded bg-surface">
-                                                        <p class="flex items-center gap-1 text-sm text-muted">🍽️ Diurnă
+                                                        <p class="flex items-center gap-1 text-sm text-muted"><?= amb_icon('utensils', 'w-4 h-4') ?> Diurnă
                                                             <span class="to-tip" :data-tip="mealFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.meal_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 rounded bg-surface" :class="(stop.extra_cost ?? 0) > 0 ? 'bg-warning/5 border border-warning/20' : ''">
-                                                        <p class="flex items-center gap-1 text-sm text-muted">➕ Extra
+                                                        <p class="flex items-center gap-1 text-sm text-muted"><?= amb_icon('plus', 'w-4 h-4') ?> Extra
                                                             <span class="to-tip" :data-tip="(stop.extra_cost_description || 'Costuri suplimentare introduse manual de tine pentru acest stop.')">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.extra_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 border rounded bg-error/5 border-error/20">
-                                                        <p class="text-sm font-bold text-error">💸 Cost total*</p>
+                                                        <p class="text-sm font-bold text-error"><?= amb_icon('banknote', 'w-4 h-4') ?> Cost total*</p>
                                                         <p class="font-bold text-error"><span x-text="formatNumber(stop.stop_total_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                 </div>
@@ -703,11 +703,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <!-- Revenue + profit row -->
                                                 <div class="grid grid-cols-3 gap-2 mb-3 text-xs">
                                                     <div class="p-2 border rounded bg-success/5 border-success/20">
-                                                        <p class="text-xs font-bold text-success">💰 Venit estimat</p>
+                                                        <p class="text-xs font-bold text-success"><?= amb_icon('wallet', 'w-3.5 h-3.5') ?> Venit estimat</p>
                                                         <p class="font-bold text-success"><span x-text="formatNumber(stop.revenue_estimate ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 border rounded" :class="(stop.profit_estimate ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
-                                                        <p class="text-xs font-bold" :class="(stop.profit_estimate ?? 0) >= 0 ? 'text-success' : 'text-error'">📈 Profit</p>
+                                                        <p class="text-xs font-bold" :class="(stop.profit_estimate ?? 0) >= 0 ? 'text-success' : 'text-error'"><?= amb_icon('trending-up', 'w-3.5 h-3.5') ?> Profit</p>
                                                         <p class="font-bold" :class="(stop.profit_estimate ?? 0) >= 0 ? 'text-success' : 'text-error'"><span x-text="formatNumber(stop.profit_estimate ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 border rounded" :class="(stop.margin_pct ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
@@ -727,10 +727,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     <div x-show="stayOpen" x-transition class="mt-3">
                                                         <iframe :id="'stay22-frame-' + idx" :src="stay22Url(stop)" class="to-stay22-iframe" loading="lazy" referrerpolicy="origin"></iframe>
                                                         <p class="mt-2 text-xs text-muted">
-                                                            🛏️ <strong x-text="totalRoomsCount()"></strong> camere &middot;
-                                                            👥 <strong x-text="planner.config.people_count"></strong> persoane &middot;
-                                                            💰 max <strong><span x-text="formatNumber(maxRoomPrice())"></span> RON</strong>/cameră &middot;
-                                                            📅 <span x-text="stop.nights ?? 1"></span> noapte/nopți (<span x-text="stop.date_iso"></span>)
+                                                            <?= amb_icon('bed', 'w-3.5 h-3.5') ?> <strong x-text="totalRoomsCount()"></strong> camere &middot;
+                                                            <?= amb_icon('users', 'w-3.5 h-3.5') ?> <strong x-text="planner.config.people_count"></strong> persoane &middot;
+                                                            <?= amb_icon('wallet', 'w-3.5 h-3.5') ?> max <strong><span x-text="formatNumber(maxRoomPrice())"></span> RON</strong>/cameră &middot;
+                                                            <?= amb_icon('calendar', 'w-3.5 h-3.5') ?> <span x-text="stop.nights ?? 1"></span> noapte/nopți (<span x-text="stop.date_iso"></span>)
                                                         </p>
                                                     </div>
                                                 </div>
@@ -739,7 +739,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     → Distanța până la <span x-text="(planner.route[idx+1]?.from_start ? planner.config.start_location : (planner.route[idx+1]?.city ?? '—'))"></span>: <strong><span x-text="formatNumber(stop.distance_to_next_km)"></span> km</strong>
                                                 </p>
                                                 <p x-show="!stop.distance_to_next_km && stop.return_distance_km" class="text-[11px] text-muted mt-3 pt-2 border-t border-border/50">
-                                                    → Întoarcere la <strong x-text="planner.config.start_location"></strong>: <strong><span x-text="formatNumber(stop.return_distance_km)"></span> km</strong> · ⛽ <span x-text="formatNumber(stop.return_fuel_cost ?? 0)"></span> RON
+                                                    → Întoarcere la <strong x-text="planner.config.start_location"></strong>: <strong><span x-text="formatNumber(stop.return_distance_km)"></span> km</strong> · <?= amb_icon('fuel', 'w-3 h-3') ?> <span x-text="formatNumber(stop.return_fuel_cost ?? 0)"></span> RON
                                                 </p>
                                                 </div><!-- end x-show=expanded -->
                                             </div>
@@ -827,7 +827,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     </div>
 
                     <div class="flex items-start gap-3 p-4 mt-6 border border-blue-200 bg-blue-50 rounded-xl">
-                        <span class="flex-shrink-0">ℹ️</span>
+                        <span class="flex-shrink-0 text-blue-600"><?= amb_icon('info', 'w-5 h-5') ?></span>
                         <p class="text-sm text-blue-900">Predicțiile combină fani locali, retenție istorică, ziua săptămânii și sezonalitatea. Confidence-ul reflectă cât de bine sunt calibrate de date reale (vs inferențe).</p>
                     </div>
                 </div>
@@ -877,9 +877,9 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div class="flex flex-shrink-0 gap-1">
                                     <button @click="loadScenarioToPlanner(s)" class="to-btn to-btn-primary to-btn-sm">Deschide</button>
                                     <button @click="toggleActive(s)" class="to-btn to-btn-secondary to-btn-sm" :title="s.status === 'active' ? 'Marchează draft' : 'Marchează activ'">
-                                        <span x-text="s.status === 'active' ? '⭐' : '☆'"></span>
+                                        <span x-html="s.status === 'active' ? ambIcon('star', 'w-4 h-4 text-amber-500') : '☆'"></span>
                                     </button>
-                                    <button @click="deleteScenario(s)" class="to-btn to-btn-secondary to-btn-sm" title="Șterge">🗑️</button>
+                                    <button @click="deleteScenario(s)" class="to-btn to-btn-secondary to-btn-sm" title="Șterge"><?= amb_icon('trash-2', 'w-4 h-4') ?></button>
                                 </div>
                             </div>
                         </template>

@@ -71,7 +71,7 @@ require_once __DIR__ . '/includes/header.php';
             </button>
             <?php foreach ($eventCategories as $category): ?>
             <button onclick="EventsPage.setCategory('<?= addslashes($category['slug']) ?>')" data-category="<?= htmlspecialchars($category['slug']) ?>" class="category-btn flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer snap-start <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>" aria-label="Filtrează categoria <?= htmlspecialchars($category['name']) ?>">
-                <span class="text-base"><?= $category['icon_emoji'] ?? '🎫' ?></span>
+                <span class="text-base"><?= amb_category_icon($category['icon_emoji'] ?? 'ticket', 'w-4 h-4') ?></span>
                 <?= htmlspecialchars($category['name']) ?>
             </button>
             <?php endforeach; ?>

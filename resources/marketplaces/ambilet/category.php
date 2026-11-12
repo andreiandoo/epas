@@ -30,7 +30,7 @@ if ($apiCategory) {
     // Use API data (from DB)
     $pageTitle = $apiCategory['name'];
     $pageDescription = $apiCategory['description'] ?? 'Descopera evenimentele din aceasta categorie.';
-    $categoryIcon = $apiCategory['icon_emoji'] ?? '🎫';
+    $categoryIcon = $apiCategory['icon_emoji'] ?? 'ticket';
     $categoryHeroImage = $apiCategory['image'] ?? getHeroImage($categorySlug, 'category');
     $categoryColor = $apiCategory['color'] ?? '#A51C30';
 } else {
@@ -46,7 +46,7 @@ if ($apiCategory) {
     } else {
         $pageTitle = $categorySlug ? ucfirst(str_replace('-', ' ', $categorySlug)) : 'Toate evenimentele';
         $pageDescription = 'Descopera evenimentele din aceasta categorie.';
-        $categoryIcon = '🎫';
+        $categoryIcon = 'ticket';
         $categoryHeroImage = getHeroImage('concerte', 'category');
         $categoryColor = '#A51C30';
     }
@@ -68,7 +68,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             <span class="text-white" id="breadcrumbTitle"><?= htmlspecialchars($pageTitle) ?></span>
         </nav>
-        <h1 id="pageTitle" class="mb-3 text-4xl font-extrabold text-white md:text-5xl"><?= $categoryIcon ?> <?= htmlspecialchars($pageTitle) ?></h1>
+        <h1 id="pageTitle" class="mb-3 text-4xl font-extrabold text-white md:text-5xl"><?= amb_category_icon($categoryIcon, 'inline-block w-9 h-9 align-middle') ?> <?= htmlspecialchars($pageTitle) ?></h1>
         <p id="pageDescription" class="max-w-xl text-lg text-white/80"><?= htmlspecialchars($pageDescription) ?></p>
         <div class="flex items-center gap-4 mt-6">
             <span id="eventsCount" class="px-4 py-2 text-sm font-medium text-white rounded-full bg-white/10 backdrop-blur-sm">-- evenimente</span>

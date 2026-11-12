@@ -106,15 +106,15 @@ $THEME = [
 
 // Categories with icons
 $CATEGORY_ICONS = [
-    'concert' => '🎵',
-    'festival' => '🎪',
-    'theater' => '🎭',
-    'sport' => '⚽',
-    'comedy' => '😂',
-    'conference' => '🎤',
-    'exhibition' => '🖼️',
-    'workshop' => '🛠️',
-    'default' => '📅'
+    'concert' => 'music',
+    'festival' => 'tent',
+    'theater' => 'drama',
+    'sport' => 'volleyball',
+    'comedy' => 'laugh',
+    'conference' => 'mic',
+    'exhibition' => 'image',
+    'workshop' => 'wrench',
+    'default' => 'calendar'
 ];
 
 /**

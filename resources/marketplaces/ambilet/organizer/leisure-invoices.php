@@ -12,7 +12,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">📄 Facturi persoane juridice</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('file-text', 'w-7 h-7') ?> Facturi persoane juridice</h1>
                 <p class="mt-1 text-sm text-muted">Comenzile POS în care operatorul a bifat „Generează factură fiscală" și a introdus date de firmă (CUI, denumire, adresă).</p>
             </div>
             <a href="/organizator/leisure-sales" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border rounded-lg text-secondary bg-white border-border hover:bg-slate-50">← Înapoi la Vânzări</a>
@@ -210,7 +210,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             // Datele firmei
             html += `<div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                <h4 class="font-bold text-blue-900 mb-3 flex items-center gap-2">🏢 Date firmă (client B2B)</h4>
+                <h4 class="font-bold text-blue-900 mb-3 flex items-center gap-2">${ambIcon('building-2', 'w-4 h-4')} Date firmă (client B2B)</h4>
                 <div class="grid grid-cols-2 gap-3 text-sm">
                     ${row('Denumire', cb.name)}
                     ${row('CUI', cb.cui)}
@@ -223,7 +223,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             // Datele comenzii
             html += `<div class="mb-6 p-4 bg-white border border-border rounded-xl">
-                <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">📋 Detalii comandă</h4>
+                <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">${ambIcon('clipboard-list', 'w-4 h-4')} Detalii comandă</h4>
                 <div class="grid grid-cols-2 gap-3 text-sm">
                     ${row('Nr. comandă', d.order_number || ('#' + d.id))}
                     ${row('Nr. factură', meta.invoice_number || (meta.invoice_requested ? 'Cerută (nefinalizată)' : '—'))}
@@ -238,7 +238,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             // Datele clientului (contact)
             html += `<div class="mb-6 p-4 bg-white border border-border rounded-xl">
-                <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">👤 Contact client</h4>
+                <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">${ambIcon('user', 'w-4 h-4')} Contact client</h4>
                 <div class="grid grid-cols-2 gap-3 text-sm">
                     ${row('Nume', d.customer_name)}
                     ${row('Email', d.customer_email)}
@@ -249,7 +249,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             // Bilete
             if (Array.isArray(d.tickets) && d.tickets.length) {
                 html += `<div class="p-4 bg-white border border-border rounded-xl">
-                    <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">🎟️ Bilete emise (${d.tickets.length})</h4>
+                    <h4 class="font-bold text-secondary mb-3 flex items-center gap-2">${ambIcon('ticket', 'w-4 h-4')} Bilete emise (${d.tickets.length})</h4>
                     <div class="overflow-x-auto">
                         <table class="w-full text-xs">
                             <thead class="text-muted uppercase text-[10px]">

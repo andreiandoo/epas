@@ -785,7 +785,7 @@ const CheckoutPage = {
                         const guideLabel = (ticket.groupGuideLabel || '').toString().trim() || 'Ghid grup';
                         itemsHtml += `
                             <div class="flex justify-between text-sm text-amber-700 pl-3">
-                                <span>🎁 +1 × ${guideLabel} <span class="text-gray-500 text-xs">(gratuit)</span></span>
+                                <span class="inline-flex items-center gap-1">${ambIcon('gift','w-4 h-4')} +1 × ${guideLabel} <span class="text-gray-500 text-xs">(gratuit)</span></span>
                                 <span class="font-medium text-emerald-600">0,00 RON</span>
                             </div>
                         `;

@@ -142,7 +142,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-3">
                                         <div class="flex items-center justify-center w-10 h-10 rounded-full bg-accent/20">
-                                            <span class="text-xl">🎁</span>
+                                            <?= amb_icon('gift', 'w-5 h-5 text-accent') ?>
                                         </div>
                                         <div>
                                             <p class="text-sm font-medium text-secondary"><?= htmlspecialchars(ct('will_earn')) ?></p>

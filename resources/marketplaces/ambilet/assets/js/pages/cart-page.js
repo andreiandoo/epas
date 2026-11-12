@@ -267,7 +267,7 @@ const CartPage = {
         const minPerOrderGB = Math.max(1, parseInt(item.ticketType?.min_per_order || item.min_per_order || 1, 10) || 1);
         const showGuideBonus = isGroupTicket && groupIncludesGuide && quantity >= minPerOrderGB;
         const guideBonusHtml = showGuideBonus
-            ? '<p class="mt-0.5 text-xs text-emerald-700 font-medium">🎁 +1 × ' + groupGuideLabel + ' <span class="text-muted font-normal">(gratuit)</span></p>'
+            ? '<p class="mt-0.5 text-xs text-emerald-700 font-medium inline-flex items-center gap-1">' + ambIcon('gift','w-3.5 h-3.5') + ' +1 × ' + groupGuideLabel + ' <span class="text-muted font-normal">(gratuit)</span></p>'
             : '';
         // "Bilet gratuit cu cod": label the free companion line and warn when
         // no paid ticket of the same event is left in the cart (the backend

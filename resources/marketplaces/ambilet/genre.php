@@ -25,7 +25,7 @@ if ($genreConfig) {
 } else {
     $pageTitle = $genreSlug ? ucfirst(str_replace('-', ' ', $genreSlug)) : 'Gen muzical';
     $pageDescription = 'Descopera cele mai tari evenimente din acest gen.';
-    $genreIcon = '🎵';
+    $genreIcon = 'music';
     $genreHeroImage = getHeroImage('rock', 'genre');
     $genreColor = '#A51C30';
     $parentCategory = 'concerte';
@@ -51,7 +51,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
             <span class="text-white" id="genreBreadcrumb"><?= htmlspecialchars($pageTitle) ?></span>
         </nav>
         <div class="flex items-center gap-4 mb-4">
-            <span id="genreIcon" class="flex items-center justify-center w-16 h-16 text-3xl shadow-lg rounded-2xl" style="background-color: <?= htmlspecialchars($genreColor) ?>"><?= $genreIcon ?></span>
+            <span id="genreIcon" class="flex items-center justify-center w-16 h-16 text-3xl shadow-lg rounded-2xl text-white" style="background-color: <?= htmlspecialchars($genreColor) ?>"><?= amb_icon($genreIcon, 'w-8 h-8') ?></span>
             <div>
                 <span class="text-sm font-medium tracking-wider uppercase text-white/90">Gen muzical</span>
                 <h1 id="pageTitle" class="text-4xl font-extrabold text-white md:text-5xl"><?= htmlspecialchars($pageTitle) ?></h1>

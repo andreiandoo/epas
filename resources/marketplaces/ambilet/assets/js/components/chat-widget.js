@@ -392,7 +392,7 @@
         var intro = document.createElement('div');
         intro.className = 'amb-intro';
         intro.innerHTML =
-            '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:4px">Bună! 👋 Ce bine că ești aici.</div>'
+            '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:4px">Bună! ' + (window.ambIcon ? ambIcon('hand','w-4 h-4') : '') + ' Ce bine că ești aici.</div>'
           + '<div>Spune-ne cu ce te putem ajuta — o comandă, un bilet, o plată sau orice altă întrebare. Suntem alături de tine și rezolvăm împreună, rapid.</div>'
           + '<div class="amb-benefit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>'
           + '<span>Autentifică-te și îți vedem pe loc comenzile, biletele și istoricul — ca să te ajutăm și mai repede.</span></div>';

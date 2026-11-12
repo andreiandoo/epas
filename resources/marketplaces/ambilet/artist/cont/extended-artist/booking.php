@@ -217,8 +217,8 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <h3 class="text-lg font-bold text-secondary" x-text="currentRequest && currentRequest.guest ? currentRequest.guest.name : ''"></h3>
                                         <p class="text-sm text-muted" x-text="currentRequest && currentRequest.guest ? (currentRequest.guest.company || '—') : ''"></p>
                                         <p class="mt-1 text-xs text-muted">
-                                            <span x-show="currentRequest && currentRequest.guest && currentRequest.guest.email">📧 <span x-text="currentRequest && currentRequest.guest ? currentRequest.guest.email : ''"></span></span>
-                                            <span x-show="currentRequest && currentRequest.guest && currentRequest.guest.phone"> · 📞 <span x-text="currentRequest && currentRequest.guest ? currentRequest.guest.phone : ''"></span></span>
+                                            <span x-show="currentRequest && currentRequest.guest && currentRequest.guest.email"><?= amb_icon('mail', 'w-3.5 h-3.5') ?> <span x-text="currentRequest && currentRequest.guest ? currentRequest.guest.email : ''"></span></span>
+                                            <span x-show="currentRequest && currentRequest.guest && currentRequest.guest.phone"> · <?= amb_icon('phone', 'w-3.5 h-3.5') ?> <span x-text="currentRequest && currentRequest.guest ? currentRequest.guest.phone : ''"></span></span>
                                         </p>
                                     </div>
                                     <span :class="currentRequest ? statusBadgeClass(currentRequest.status) : ''" class="px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap">
@@ -323,8 +323,8 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             <!-- Reply / Counter / Accept / Reject panel -->
                             <div x-show="currentRequest && currentRequest.status !== 'accepted' && currentRequest.status !== 'rejected' && currentRequest.status !== 'expired'" class="p-5 border-t border-border bg-surface">
                                 <div class="flex flex-wrap gap-2 mb-3">
-                                    <button @click="replyMode = 'message'" :class="replyMode === 'message' ? 'bk-btn-primary' : 'bk-btn-secondary'" class="bk-btn bk-btn-sm">💬 Mesaj</button>
-                                    <button @click="replyMode = 'counter'" :class="replyMode === 'counter' ? 'bk-btn-primary' : 'bk-btn-secondary'" class="bk-btn bk-btn-sm">🔄 Contraofertă</button>
+                                    <button @click="replyMode = 'message'" :class="replyMode === 'message' ? 'bk-btn-primary' : 'bk-btn-secondary'" class="bk-btn bk-btn-sm"><?= amb_icon('message-circle', 'w-3.5 h-3.5') ?> Mesaj</button>
+                                    <button @click="replyMode = 'counter'" :class="replyMode === 'counter' ? 'bk-btn-primary' : 'bk-btn-secondary'" class="bk-btn bk-btn-sm"><?= amb_icon('refresh-cw', 'w-3.5 h-3.5') ?> Contraofertă</button>
                                     <button @click="replyMode = 'accept'" :class="replyMode === 'accept' ? 'bk-btn-success' : 'bk-btn-secondary'" class="bk-btn bk-btn-sm">✓ Acceptă</button>
                                     <button @click="replyMode = 'reject'" :class="replyMode === 'reject' ? 'bk-btn-danger' : 'bk-btn-secondary'" class="bk-btn bk-btn-sm">✕ Refuză</button>
                                 </div>
@@ -580,7 +580,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-200"></span> Zi blocată manual</span>
                         </div>
 
-                        <p class="mt-3 text-xs text-muted">💡 Click pe o zi liberă pentru a o marca ca indisponibilă. Zilele cu booking sau cerere te duc direct la conversație.</p>
+                        <p class="mt-3 text-xs text-muted"><?= amb_icon('lightbulb', 'w-3.5 h-3.5 text-amber-500') ?> Click pe o zi liberă pentru a o marca ca indisponibilă. Zilele cu booking sau cerere te duc direct la conversație.</p>
                     </div>
                 </div>
 
@@ -632,7 +632,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div class="flex gap-1">
                                     <input type="text" :value="icalUrl" readonly @click="$el.select()" class="flex-1 px-3 py-2 text-xs font-mono bg-white border rounded-lg border-border text-secondary">
                                     <button @click="copyIcalUrl()" class="bk-btn bk-btn-secondary bk-btn-sm" :title="icalCopied ? 'Copiat!' : 'Copiază'">
-                                        <span x-show="!icalCopied">📋</span>
+                                        <span x-show="!icalCopied"><?= amb_icon('clipboard-list', 'w-3.5 h-3.5') ?></span>
                                         <span x-show="icalCopied">✓</span>
                                     </button>
                                 </div>
@@ -656,7 +656,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             </details>
 
                             <button @click="regenerateIcalToken()" :disabled="regeneratingToken" class="bk-btn bk-btn-secondary bk-btn-sm w-full">
-                                <span x-show="!regeneratingToken">🔄 Regenerează URL (invalidează linkul curent)</span>
+                                <span x-show="!regeneratingToken"><?= amb_icon('refresh-cw', 'w-3.5 h-3.5') ?> Regenerează URL (invalidează linkul curent)</span>
                                 <span x-show="regeneratingToken">Se regenerează...</span>
                             </button>
                         </div>

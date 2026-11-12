@@ -57,7 +57,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 <div class="flex items-end gap-2 ml-auto">
                     <button id="lv-export-csv" type="button" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1">
-                        <span>📥</span>
+                        <span><?= amb_icon('download', 'w-3.5 h-3.5') ?></span>
                         <span>Export CSV vânzări</span>
                     </button>
                 </div>
@@ -68,47 +68,47 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Stats principale: Total vandut / Comision / Net (cu split online-vs-POS) -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
             <div class="p-4 bg-white border-2 rounded-2xl border-emerald-200">
-                <p class="text-xs uppercase tracking-wider text-emerald-700 font-bold mb-1">💰 Total vândut</p>
+                <p class="text-xs uppercase tracking-wider text-emerald-700 font-bold mb-1"><?= amb_icon('wallet', 'w-3.5 h-3.5') ?> Total vândut</p>
                 <p class="text-2xl font-extrabold text-emerald-900"><span id="lv-stat-total">0</span> <span class="text-sm text-emerald-700">RON</span></p>
                 <div class="mt-2 pt-2 border-t border-emerald-100 text-xs space-y-0.5">
-                    <div class="flex justify-between"><span class="text-muted">🌐 Online</span><span class="tabular-nums font-semibold" id="lv-rev-online">0</span></div>
-                    <div class="flex justify-between"><span class="text-muted">🏪 POS</span><span class="tabular-nums font-semibold" id="lv-rev-pos">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted"><?= amb_icon('globe', 'w-4 h-4') ?> Online</span><span class="tabular-nums font-semibold" id="lv-rev-online">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted"><?= amb_icon('store', 'w-4 h-4') ?> POS</span><span class="tabular-nums font-semibold" id="lv-rev-pos">0</span></div>
                 </div>
             </div>
             <div class="p-4 bg-white border-2 rounded-2xl border-amber-200">
-                <p class="text-xs uppercase tracking-wider text-amber-700 font-bold mb-1">🧾 Comision ticketing</p>
+                <p class="text-xs uppercase tracking-wider text-amber-700 font-bold mb-1"><?= amb_icon('receipt', 'w-3.5 h-3.5') ?> Comision ticketing</p>
                 <p class="text-2xl font-extrabold text-amber-900"><span id="lv-stat-comm">0</span> <span class="text-sm text-amber-700">RON</span></p>
                 <div class="mt-2 pt-2 border-t border-amber-100 text-xs space-y-0.5">
-                    <div class="flex justify-between"><span class="text-muted">🌐 Online</span><span class="tabular-nums font-semibold" id="lv-comm-online">0</span></div>
-                    <div class="flex justify-between"><span class="text-muted">🏪 POS</span><span class="tabular-nums font-semibold" id="lv-comm-pos">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted"><?= amb_icon('globe', 'w-4 h-4') ?> Online</span><span class="tabular-nums font-semibold" id="lv-comm-online">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted"><?= amb_icon('store', 'w-4 h-4') ?> POS</span><span class="tabular-nums font-semibold" id="lv-comm-pos">0</span></div>
                 </div>
             </div>
             <div class="p-4 bg-white border-2 rounded-2xl border-sky-200">
-                <p class="text-xs uppercase tracking-wider text-sky-700 font-bold mb-1">✅ Total net (după comision)</p>
+                <p class="text-xs uppercase tracking-wider text-sky-700 font-bold mb-1"><?= amb_icon('circle-check', 'w-3.5 h-3.5') ?> Total net (după comision)</p>
                 <p class="text-2xl font-extrabold text-sky-900"><span id="lv-stat-net">0</span> <span class="text-sm text-sky-700">RON</span></p>
                 <div class="mt-2 pt-2 border-t border-sky-100 text-xs space-y-0.5">
-                    <div class="flex justify-between"><span class="text-muted">🌐 Online</span><span class="tabular-nums font-semibold" id="lv-net-online">0</span></div>
-                    <div class="flex justify-between"><span class="text-muted">🏪 POS</span><span class="tabular-nums font-semibold" id="lv-net-pos">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted"><?= amb_icon('globe', 'w-4 h-4') ?> Online</span><span class="tabular-nums font-semibold" id="lv-net-online">0</span></div>
+                    <div class="flex justify-between"><span class="text-muted"><?= amb_icon('store', 'w-4 h-4') ?> POS</span><span class="tabular-nums font-semibold" id="lv-net-pos">0</span></div>
                 </div>
             </div>
         </div>
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🧾 Comenzi</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('receipt', 'w-3.5 h-3.5') ?> Comenzi</p>
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-orders">0</span></p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🛒 Coș mediu</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('shopping-cart', 'w-3.5 h-3.5') ?> Coș mediu</p>
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-avg">0</span> <span class="text-sm text-muted">RON</span></p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🎟️ Bilete emise</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('ticket', 'w-3.5 h-3.5') ?> Bilete emise</p>
                 <p class="text-2xl font-bold text-secondary"><span id="lv-stat-tickets-physical">0</span></p>
                 <p class="mt-1 text-[10px] leading-tight text-muted"><span id="lv-stat-tickets-transactions">0</span> tranzacții cu valoare (pachet = 1)</p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">📂 Pe categorie</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('folder-open', 'w-3.5 h-3.5') ?> Pe categorie</p>
                 <div id="lv-cat-breakdown" class="text-xs space-y-0.5">
                     <p class="text-muted">—</p>
                 </div>
@@ -118,22 +118,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Cash POS / Card POS / Online (brut) + sesiuni operatori POS -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">💵 Cash POS (brut)</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('banknote', 'w-3.5 h-3.5') ?> Cash POS (brut)</p>
                 <p class="text-xl font-bold text-secondary"><span id="lv-stat-cash">0</span> <span class="text-xs text-muted">RON</span></p>
                 <p class="mt-1 text-[11px] text-muted"><span id="lv-stat-cash-pct" class="font-semibold text-emerald-700">0%</span> din total încasări</p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">💳 Card POS (brut)</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('credit-card', 'w-3.5 h-3.5') ?> Card POS (brut)</p>
                 <p class="text-xl font-bold text-secondary"><span id="lv-stat-card">0</span> <span class="text-xs text-muted">RON</span></p>
                 <p class="mt-1 text-[11px] text-muted"><span id="lv-stat-card-pct" class="font-semibold text-emerald-700">0%</span> din total încasări</p>
             </div>
             <div class="p-4 bg-white border rounded-2xl border-border">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">🌐 Online (brut)</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('globe', 'w-3.5 h-3.5') ?> Online (brut)</p>
                 <p class="text-xl font-bold text-secondary"><span id="lv-stat-online">0</span> <span class="text-xs text-muted">RON</span></p>
                 <p class="mt-1 text-[11px] text-muted"><span id="lv-stat-online-pct" class="font-semibold text-emerald-700">0%</span> din total încasări</p>
             </div>
             <a href="/organizator/leisure-sessions" class="p-4 bg-white border rounded-2xl border-border hover:bg-slate-50 hover:border-primary transition-colors block">
-                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">👤 Sesiuni casă POS</p>
+                <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1"><?= amb_icon('user', 'w-3.5 h-3.5') ?> Sesiuni casă POS</p>
                 <p class="text-xl font-bold text-secondary" id="lv-sessions-count">0</p>
                 <p class="mt-1 text-[10px] leading-tight text-primary font-semibold">→ Vezi toate detaliile ture</p>
             </a>
@@ -142,7 +142,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Facturi persoane juridice (B2B) -->
         <div class="mb-6">
             <a href="/organizator/leisure-invoices" class="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl hover:from-blue-100 hover:to-indigo-100 transition-colors">
-                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-blue-200 text-lg">📄</div>
+                <div class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-blue-200 text-lg"><?= amb_icon('file-text', 'w-5 h-5 text-blue-700') ?></div>
                 <div class="flex-1">
                     <p class="text-sm font-bold text-blue-900">Facturi emise (persoane juridice)</p>
                     <p class="text-xs text-blue-700/80">Comenzile POS cu factură B2B — filtrează perioada + vezi detalii firmă și comandă</p>
@@ -323,7 +323,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!currentFrom || !currentTo) { alert('Selectează perioada înainte de export.'); return; }
         const btn = $('lv-export-csv');
         const orig = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = '<span>⏳</span><span>Se generează...</span>';
+        btn.disabled = true; btn.innerHTML = '<span>' + ambIcon('hourglass', 'w-3.5 h-3.5') + '</span><span>Se generează...</span>';
         try {
             const proxyBase = (window.AMBILET && window.AMBILET.apiUrl) || '/api/proxy.php';
             const csvUrl = proxyBase + '?action=organizer.event.leisure.sales.range-csv'

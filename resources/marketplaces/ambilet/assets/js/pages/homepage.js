@@ -574,15 +574,15 @@ async function loadCategories() {
 function renderCategories(categories) {
     var container = document.getElementById('categoriesGrid');
     var icons = {
-        'concerte': '🎸',
-        'festivaluri': '🎪',
-        'teatru': '🎭',
-        'stand-up': '😂',
-        'copii': '👶',
-        'sport': '⚽',
-        'moto': '🏍️',
-        'expozitii': '🖼️',
-        'conferinte': '💼'
+        'concerte': 'guitar',
+        'festivaluri': 'tent',
+        'teatru': 'drama',
+        'stand-up': 'laugh',
+        'copii': 'baby',
+        'sport': 'volleyball',
+        'moto': 'bike',
+        'expozitii': 'image',
+        'conferinte': 'briefcase'
     };
 
     if (!categories || categories.length === 0) {
@@ -593,7 +593,7 @@ function renderCategories(categories) {
     container.innerHTML = categories.slice(0, 6).map(function(cat) {
         return '<a href="/' + cat.slug + '" class="flex items-center gap-3 px-3 py-2 bg-white border rounded-lg category-pill border-border group">' +
             '<div class="flex items-center justify-center w-8 h-8 transition-colors rounded-lg bg-primary/10 group-hover:bg-white/20">' +
-                '<span class="text-lg">' + (icons[cat.slug] || '🎫') + '</span>' +
+                ambIcon(icons[cat.slug] || 'ticket', 'w-5 h-5 text-primary transition-colors group-hover:text-white') +
             '</div>' +
             '<span class="text-sm font-semibold transition-colors md:text-base text-secondary group-hover:text-white">' + cat.name + '</span>' +
         '</a>';

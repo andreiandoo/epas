@@ -87,11 +87,11 @@ $currentPage = $currentPage ?? getCurrentPage();
         <?php if (false): ?>
         <a data-org-show="leisure" href="/organizator/leisure-rentals" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_rentals' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
             <svg class="w-5 h-5 text-muted group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            🛶 Curse bărci
+            Curse bărci
         </a>
         <a data-org-show="leisure" href="/organizator/leisure-boats" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_boats' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
             <svg class="w-5 h-5 text-muted group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-1.41-1.41L10 14.17l-3.59-3.58L5 12l5 5z M3 21h18"/></svg>
-            🧰 Gestiune
+            Gestiune
         </a>
         <?php endif; ?>
         <a data-org-show="leisure" href="/organizator/echipa" style="display:none" class="sidebar-link <?= $currentPage === 'team' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">

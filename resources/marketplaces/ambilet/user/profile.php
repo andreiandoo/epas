@@ -93,7 +93,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <div class="p-5 mb-6 border bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-primary/10">
                             <div class="flex items-center gap-4">
                                 <div class="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-xl">
-                                    <span class="text-3xl">🎸</span>
+                                    <span class="flex text-white"><?= amb_icon('guitar', 'w-8 h-8') ?></span>
                                 </div>
                                 <div>
                                     <h3 class="text-xl font-bold text-secondary" id="user-type-title">...</h3>

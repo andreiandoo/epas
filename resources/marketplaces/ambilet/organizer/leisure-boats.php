@@ -20,13 +20,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">🧰 Gestiune — inventar fizic</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('briefcase-business', 'w-7 h-7') ?> Gestiune — inventar fizic</h1>
                 <p class="mt-1 text-sm text-muted">Unitățile fizice ale produselor (bărci, sănii, kayak-uri, vaporașe). QR-uri printabile pentru fiecare unitate.</p>
             </div>
             <div class="flex items-center gap-2">
                 <select id="lv-tt-select" class="px-3 py-2 text-sm border border-border rounded-lg bg-white hidden"></select>
-                <button id="lv-sync-btn" class="px-3 py-2 text-sm font-medium bg-white border border-border rounded-lg hover:bg-slate-50 hidden">🔄 Sincronizează</button>
-                <button id="lv-print-btn" class="px-3 py-2 text-sm font-semibold bg-primary text-white rounded-lg hidden">🖨 Print QR-uri</button>
+                <button id="lv-sync-btn" class="px-3 py-2 text-sm font-medium bg-white border border-border rounded-lg hover:bg-slate-50 hidden"><?= amb_icon('refresh-cw', 'w-4 h-4') ?> Sincronizează</button>
+                <button id="lv-print-btn" class="px-3 py-2 text-sm font-semibold bg-primary text-white rounded-lg hidden"><?= amb_icon('printer', 'w-4 h-4') ?> Print QR-uri</button>
             </div>
         </div>
 
@@ -36,7 +36,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Empty state: nu există produse cu inventar fizic activat -->
         <div id="lv-empty" class="hidden p-6 bg-white border border-border rounded-2xl print:hidden">
             <div class="flex items-start gap-4">
-                <div class="text-4xl">📦</div>
+                <div class="text-4xl"><?= amb_icon('package', 'w-10 h-10 text-primary') ?></div>
                 <div class="flex-1">
                     <h2 class="text-lg font-bold text-secondary mb-2">Nu există produse cu inventar fizic activat</h2>
                     <p class="text-sm text-muted mb-4">Pentru a gestiona bărci, sănii, kayak-uri sau alte unități fizice, trebuie să activezi <strong>inventarul fizic</strong> pe produs.</p>
@@ -46,14 +46,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <li>Activează „Inventar fizic limitat" și setează numărul de unități</li>
                         <li>Revino aici și apasă „Sincronizează" pentru a genera QR-urile</li>
                     </ol>
-                    <a href="/organizator/leisure" class="inline-block px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg">⚙ Mergi la Setări produse</a>
+                    <a href="/organizator/leisure" class="inline-block px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg"><?= amb_icon('settings', 'w-4 h-4') ?> Mergi la Setări produse</a>
                 </div>
             </div>
         </div>
 
         <!-- Info bar — produsul curent + cum se procedează -->
         <div id="lv-info-bar" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 print:hidden flex items-center gap-3">
-            <span>ℹ️</span>
+            <span><?= amb_icon('info', 'w-4 h-4') ?></span>
             <span id="lv-info-text"></span>
         </div>
 
@@ -78,7 +78,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return { available: 'emerald', in_use: 'amber', maintenance: 'slate', retired: 'rose' }[s] || 'slate';
     }
     function statusLabel(s) {
-        return { available: '✓ Disponibilă', in_use: '🛶 În uz', maintenance: '🔧 Mentenanță', retired: '🗑 Retrasă' }[s] || s;
+        return { available: '✓ Disponibilă', in_use: ambIcon('sailboat', 'w-3 h-3') + ' În uz', maintenance: ambIcon('wrench', 'w-3 h-3') + ' Mentenanță', retired: ambIcon('trash-2', 'w-3 h-3') + ' Retrasă' }[s] || s;
     }
 
     async function loadEvent() {
@@ -131,7 +131,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function renderBoats(boats) {
         const grid = $('lv-boats-grid');
         if (!boats.length) {
-            grid.innerHTML = '<div class="col-span-full p-6 bg-amber-50 border border-amber-200 rounded-xl text-center"><p class="text-sm text-amber-900 mb-3">Nu există încă unități pentru acest produs.</p><p class="text-xs text-amber-700">Apasă <strong>🔄 Sincronizează</strong> sus pentru a genera unitățile + QR-urile bazate pe „Inventar fizic" din Setări produs.</p></div>';
+            grid.innerHTML = '<div class="col-span-full p-6 bg-amber-50 border border-amber-200 rounded-xl text-center"><p class="text-sm text-amber-900 mb-3">Nu există încă unități pentru acest produs.</p><p class="text-xs text-amber-700">Apasă <strong>' + ambIcon('refresh-cw', 'w-3.5 h-3.5') + ' Sincronizează</strong> sus pentru a genera unitățile + QR-urile bazate pe „Inventar fizic" din Setări produs.</p></div>';
             return;
         }
         grid.innerHTML = boats.map(b => {

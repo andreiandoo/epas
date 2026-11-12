@@ -18,6 +18,8 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
   function pad(n) { return String(n).padStart(2,'0'); }
+  // scan-app nu are Tailwind: dimensiunea se da direct pe svg
+  function scanIcon(name) { return window.ambIcon ? ambIcon(name, '').replace('<svg', '<svg width="13" height="13"') : ''; }
   function formatLei(amount) {
     var n = Number(amount) || 0;
     return n.toLocaleString('ro-RO', { maximumFractionDigits: 2 }) + ' lei';
@@ -135,7 +137,7 @@
         var when = pad(d.getHours()) + ':' + pad(d.getMinutes());
         var color = s.valid ? 'var(--scanapp-success)' : 'var(--scanapp-warning)';
         return '<div style="display:flex; justify-content:space-between; padding:6px 0; font-size:12.5px; border-bottom:1px solid var(--scanapp-border);">' +
-                 '<span style="color:' + color + ';">' + (s.valid ? '✓' : '⚠') + ' ' + escapeHtml(s.customerName || s.code) + '</span>' +
+                 '<span style="color:' + color + ';">' + (s.valid ? '✓' : scanIcon('triangle-alert')) + ' ' + escapeHtml(s.customerName || s.code) + '</span>' +
                  '<span style="color:var(--scanapp-text-ter);">' + when + '</span>' +
                '</div>';
       }).join('');
@@ -147,7 +149,7 @@
         var when = pad(d.getHours()) + ':' + pad(d.getMinutes());
         var desc = (s.items || []).map(function (i) { return i.quantity + 'x ' + i.name; }).join(', ');
         return '<div style="display:flex; justify-content:space-between; padding:6px 0; font-size:12.5px; border-bottom:1px solid var(--scanapp-border);">' +
-                 '<span>' + (s.paymentMethod === 'cash' ? '💵' : '💳') + ' ' + escapeHtml(desc || 'Vânzare') + '</span>' +
+                 '<span>' + scanIcon(s.paymentMethod === 'cash' ? 'banknote' : 'credit-card') + ' ' + escapeHtml(desc || 'Vânzare') + '</span>' +
                  '<span style="color:var(--scanapp-text);"><b>' + escapeHtml(formatLei(s.total)) + '</b> · <span style="color:var(--scanapp-text-ter);">' + when + '</span></span>' +
                '</div>';
       }).join('');
