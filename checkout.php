@@ -252,7 +252,7 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                     <div class="flex items-center gap-2 mobile:hidden">
                                         <img src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Visa_Inc._logo_%282021%E2%80%93present%29.svg" alt="Visa" class="h-5">
-                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/200px-Mastercard-logo.svg.png" alt="Mastercard" class="h-5">
+                                        <svg class="h-5 w-auto" viewBox="0 0 38 24" role="img" aria-label="Mastercard"><circle cx="13" cy="12" r="10" fill="#EB001B"/><circle cx="25" cy="12" r="10" fill="#F79E1B"/><path d="M19 4a10 10 0 0 1 0 16 10 10 0 0 1 0-16z" fill="#FF5F00"/></svg>
                                     </div>
                                 </div>
                                 <input type="radio" name="payment" value="card" class="hidden" checked>
@@ -368,7 +368,6 @@ require_once __DIR__ . '/includes/header.php';
                                 <!-- Cultural Card Surcharge Row (shown if card cultural selected) -->
                                 <div id="cultural-card-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-purple-50">
                                     <span class="flex items-center gap-1 text-purple-700">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                                         <span id="cultural-card-surcharge-label"><?= htmlspecialchars(ct('cultural_surcharge_label')) ?></span>
                                     </span>
                                     <span id="cultural-card-amount" class="font-medium text-purple-700">+0.00 lei</span>
