@@ -866,8 +866,7 @@ const CheckoutPage = {
         if (culturalCardRow) {
             if (culturalCardSurcharge > 0) {
                 culturalCardRow.classList.remove('hidden');
-                document.getElementById('cultural-card-amount').textContent = '+' + AmbiletUtils.formatCurrency(culturalCardGross)
-                    + (this.vatRate > 0 ? ' (incl. TVA ' + AmbiletUtils.formatCurrency(culturalCardGross - culturalCardSurcharge) + ')' : '');
+                document.getElementById('cultural-card-amount').textContent = '+' + AmbiletUtils.formatCurrency(culturalCardGross);
             } else {
                 culturalCardRow.classList.add('hidden');
             }
