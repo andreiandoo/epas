@@ -111,10 +111,10 @@ class TenantDataExport
         return response()->streamDownload(function () use ($tenant, $type, $header, $rows, $user, $ip) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, $header);
+            fputcsv($out, $header, ',', '"', '\\');
             $count = 0;
             $rows(function (array $row) use ($out, &$count) {
-                fputcsv($out, $row);
+                fputcsv($out, $row, ',', '"', '\\');
                 $count++;
             });
             fclose($out);

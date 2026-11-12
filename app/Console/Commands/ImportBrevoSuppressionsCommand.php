@@ -66,7 +66,7 @@ class ImportBrevoSuppressionsCommand extends Command
         $emails = [];
         $line = 0;
         $emailColIdx = null;
-        while (($cells = fgetcsv($fh)) !== false) {
+        while (($cells = fgetcsv($fh, null, ',', '"', '\\')) !== false) {
             $line++;
             if ($line === 1) {
                 // Try to detect email column from headers

@@ -32,7 +32,7 @@ class ProductImportService
             throw new \InvalidArgumentException('CSV file must have at least a header row and one data row.');
         }
 
-        $header = str_getcsv(array_shift($lines));
+        $header = str_getcsv(array_shift($lines), ',', '"', '\\');
         $header = array_map(fn ($h) => strtolower(trim($h)), $header);
 
         $requiredColumns = ['name'];
@@ -48,7 +48,7 @@ class ProductImportService
         $errorDetails = [];
 
         foreach ($lines as $lineNumber => $line) {
-            $row = str_getcsv($line);
+            $row = str_getcsv($line, ',', '"', '\\');
             $data = [];
 
             foreach ($header as $i => $col) {

@@ -79,7 +79,7 @@ class IabiletParser implements ImportParserInterface
         }
 
         $headerLine = array_shift($lines);
-        $headers = str_getcsv($headerLine, $separator);
+        $headers = str_getcsv($headerLine, $separator, '"', '\\');
         $headers = array_map('trim', $headers);
 
         // Build column index map
@@ -87,7 +87,7 @@ class IabiletParser implements ImportParserInterface
 
         $rows = [];
         foreach ($lines as $line) {
-            $fields = str_getcsv($line, $separator);
+            $fields = str_getcsv($line, $separator, '"', '\\');
             if (count($fields) < 3) {
                 continue; // skip malformed rows
             }

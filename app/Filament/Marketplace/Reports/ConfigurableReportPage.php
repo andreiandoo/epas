@@ -693,7 +693,7 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
         return response()->streamDownload(function () use ($catalog, $keys, $query) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, array_merge(array_map(fn ($k) => $catalog[$k]['label'], $keys), ['Link']), ';');
+            fputcsv($out, array_merge(array_map(fn ($k) => $catalog[$k]['label'], $keys), ['Link']), ';', '"', '\\');
 
             $query->chunk(500, function ($records) use ($out, $catalog, $keys) {
                 foreach ($records as $record) {
@@ -702,7 +702,7 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
                         $row[] = (string) ($this->formatValue($catalog[$key], $this->rawState($key, $catalog[$key], $record), $record) ?? '');
                     }
                     $row[] = $this->editUrl($record);
-                    fputcsv($out, $row, ';');
+                    fputcsv($out, $row, ';', '"', '\\');
                 }
             });
 

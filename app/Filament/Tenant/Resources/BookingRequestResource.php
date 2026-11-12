@@ -116,11 +116,11 @@ class BookingRequestResource extends Resource
                         return response()->streamDownload(function () use ($tenantId) {
                             $out = fopen('php://output', 'w');
                             fwrite($out, "\xEF\xBB\xBF");
-                            fputcsv($out, ['primita', 'artist', 'nume', 'email', 'telefon', 'companie', 'tip', 'data', 'oras', 'locatie', 'capacitate', 'buget', 'stare', 'mesaj']);
+                            fputcsv($out, ['primita', 'artist', 'nume', 'email', 'telefon', 'companie', 'tip', 'data', 'oras', 'locatie', 'capacitate', 'buget', 'stare', 'mesaj'], ',', '"', '\\');
                             TenantBookingRequest::where('tenant_id', $tenantId)->orderBy('id')->chunk(500, function ($rows) use ($out) {
                                 foreach ($rows as $r) {
                                     fputcsv($out, [$r->created_at?->format('Y-m-d H:i'), $r->artist_name, $r->name, $r->email, $r->phone, $r->company, $r->event_type,
-                                        $r->event_date?->format('Y-m-d'), $r->city, $r->venue, $r->capacity, $r->budget, $r->status, $r->message]);
+                                        $r->event_date?->format('Y-m-d'), $r->city, $r->venue, $r->capacity, $r->budget, $r->status, $r->message], ',', '"', '\\');
                                 }
                             });
                             fclose($out);

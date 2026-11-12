@@ -23,7 +23,7 @@ class PromoCodeImportService
     public function importFromCSV(string $tenantId, string $csvContent): array
     {
         $lines = explode("\n", trim($csvContent));
-        $header = str_getcsv(array_shift($lines));
+        $header = str_getcsv(array_shift($lines), ',', '"', '\\');
 
         $results = [
             'success' => 0,
@@ -37,7 +37,7 @@ class PromoCodeImportService
             }
 
             try {
-                $data = str_getcsv($line);
+                $data = str_getcsv($line, ',', '"', '\\');
                 $row = array_combine($header, $data);
 
                 $promoCodeData = [
