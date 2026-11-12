@@ -58,9 +58,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-total-revenue">0.00</span> <span class="text-xs text-muted">RON</span></p>
             </div>
             <div class="p-3 bg-white border rounded-xl border-border">
-                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Produse vândute</p>
-                <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-total-tickets">0</span></p>
-                <p class="mt-1 text-[9px] leading-tight text-muted">tranzacții — un pachet = 1</p>
+                <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Bilete vândute</p>
+                <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-total-physical">0</span></p>
+                <p id="r-total-physical-breakdown" class="mt-1 text-[9px] leading-tight text-muted"></p>
+                <p class="mt-0.5 text-[9px] leading-tight text-muted">din <span id="r-total-tickets">0</span> produse (un pachet = 1)</p>
             </div>
             <div class="p-3 bg-white border rounded-xl border-border">
                 <p class="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Comenzi</p>
@@ -94,7 +95,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <p class="text-2xl font-bold text-secondary"><span id="r-issuer-primary-revenue">0.00</span> <span class="text-sm text-muted">RON</span> <span class="text-[10px] text-muted uppercase tracking-wider">brut</span></p>
                             <p id="r-issuer-primary-net-wrap" class="hidden text-sm font-semibold text-emerald-700">Net: <span id="r-issuer-primary-net">0.00</span> RON</p>
                         </div>
-                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-primary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-primary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-primary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-primary-vat-rate">19</span>%): <span id="r-issuer-primary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
+                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-primary-tickets">0</span> bilete<span id="r-issuer-primary-breakdown"></span> · Comision AmBilet: <span id="r-issuer-primary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-primary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-primary-vat-rate">19</span>%): <span id="r-issuer-primary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
                         <div id="r-issuer-primary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
                     <div class="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
@@ -112,7 +113,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <p class="text-2xl font-bold text-secondary"><span id="r-issuer-secondary-revenue">0.00</span> <span class="text-sm text-muted">RON</span> <span class="text-[10px] text-muted uppercase tracking-wider">brut</span></p>
                             <p id="r-issuer-secondary-net-wrap" class="hidden text-sm font-semibold text-emerald-700">Net: <span id="r-issuer-secondary-net">0.00</span> RON</p>
                         </div>
-                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-secondary-tickets">0</span> bilete · Comision AmBilet: <span id="r-issuer-secondary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-secondary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-secondary-vat-rate">19</span>%): <span id="r-issuer-secondary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
+                        <p class="text-[11px] text-muted mt-1"><span id="r-issuer-secondary-tickets">0</span> bilete<span id="r-issuer-secondary-breakdown"></span> · Comision AmBilet: <span id="r-issuer-secondary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-secondary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-secondary-vat-rate">19</span>%): <span id="r-issuer-secondary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
                         <div id="r-issuer-secondary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
                     <div class="w-11 h-11 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
@@ -290,7 +291,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // Skeleton loader: pentru schimbari de perioada arata bare gri animate in loc
     // de cifrele vechi + overlay spinner pe fiecare card breakdown. Consistent cu
     // leisure-sales.
-    const R_STAT_TARGETS = ['r-total-revenue', 'r-total-tickets', 'r-total-orders', 'r-avg', 'r-total-commission', 'r-net-revenue',
+    const R_STAT_TARGETS = ['r-total-revenue', 'r-total-physical', 'r-total-tickets', 'r-total-orders', 'r-avg', 'r-total-commission', 'r-net-revenue',
         'r-issuer-primary-revenue', 'r-issuer-primary-net', 'r-issuer-primary-tickets', 'r-issuer-primary-commission', 'r-issuer-primary-vat',
         'r-issuer-secondary-revenue', 'r-issuer-secondary-net', 'r-issuer-secondary-tickets', 'r-issuer-secondary-commission', 'r-issuer-secondary-vat'];
     const R_LOADING_TARGETS = ['r-payment-rows', 'r-source-rows', 'r-cashier-rows', 'r-tt-rows'];
@@ -339,6 +340,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const t = data.totals || {};
             $('r-total-revenue').textContent = fmtMoney(t.revenue);
             $('r-total-tickets').textContent = t.tickets || 0;
+            $('r-total-physical').textContent = data.total_physical_tickets || 0;
+            $('r-total-physical-breakdown').textContent = categoryBreakdown(data.physical_by_category);
             $('r-total-orders').textContent = t.orders || 0;
             $('r-avg').textContent = fmtMoney(t.avg_order);
             // Comision AmBilet
@@ -426,6 +429,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
+    // Bilete fizice pe categorie: acces / parcare / activitati (+ inchirieri / alte produse daca exista)
+    const PHYS_CATS = [
+        ['access', 'acces'], ['parking', 'parcare'], ['activity', 'activități'],
+        ['rental', 'închirieri'], ['extra', 'alte produse'],
+    ];
+    function categoryBreakdown(byCat) {
+        const c = byCat || {};
+        const known = PHYS_CATS.map(x => x[0]);
+        const parts = PHYS_CATS
+            .filter(([k]) => ['access', 'parking', 'activity'].includes(k) || Number(c[k] || 0) > 0)
+            .map(([k, label]) => `${label} ${Number(c[k] || 0)}`);
+        const other = Object.keys(c).filter(k => !known.includes(k)).reduce((s, k) => s + Number(c[k] || 0), 0);
+        if (other > 0) parts.push(`altele ${other}`);
+        return parts.join(' · ');
+    }
+
     function renderIssuers(byIssuer) {
         const cards = $('r-issuer-cards');
         const prim = byIssuer.primary || {};
@@ -434,7 +453,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Primary
         $('r-issuer-primary-name').textContent = prim.name || 'Societatea principală';
         $('r-issuer-primary-revenue').textContent = fmtMoney(prim.revenue || 0);
-        $('r-issuer-primary-tickets').textContent = prim.tickets || 0;
+        $('r-issuer-primary-tickets').textContent = prim.physical_tickets ?? 0;
+        $('r-issuer-primary-breakdown').textContent = ' (' + categoryBreakdown(prim.physical_by_category) + ')';
         $('r-issuer-primary-commission').textContent = fmtMoney(prim.commission || 0);
         renderIssuerPaymentBreakdown($('r-issuer-primary-payment'), prim.by_payment);
         renderIssuerVat('r-issuer-primary', prim);
@@ -444,7 +464,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             secCard.classList.remove('hidden');
             $('r-issuer-secondary-name').textContent = sec.name || 'Societatea secundară';
             $('r-issuer-secondary-revenue').textContent = fmtMoney(sec.revenue || 0);
-            $('r-issuer-secondary-tickets').textContent = sec.tickets || 0;
+            $('r-issuer-secondary-tickets').textContent = sec.physical_tickets ?? 0;
+            $('r-issuer-secondary-breakdown').textContent = ' (' + categoryBreakdown(sec.physical_by_category) + ')';
             $('r-issuer-secondary-commission').textContent = fmtMoney(sec.commission || 0);
             renderIssuerPaymentBreakdown($('r-issuer-secondary-payment'), sec.by_payment);
             renderIssuerVat('r-issuer-secondary', sec);
@@ -655,7 +676,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         rows.push([]);
         rows.push(['TOTALURI']);
         rows.push(['Comenzi', lastReport.totals?.orders || 0]);
-        rows.push(['Bilete', lastReport.totals?.tickets || 0]);
+        rows.push(['Bilete vândute', lastReport.total_physical_tickets || 0, categoryBreakdown(lastReport.physical_by_category)]);
+        rows.push(['Produse vândute (un pachet = 1)', lastReport.totals?.tickets || 0]);
+        ['primary', 'secondary'].forEach(k => {
+            const iss = lastReport.by_issuer?.[k];
+            if (iss) rows.push(['Bilete ' + (iss.name || k), iss.physical_tickets || 0, categoryBreakdown(iss.physical_by_category)]);
+        });
         rows.push(['Venit brut', lastReport.totals?.revenue || 0, 'RON']);
         rows.push(['Comision AmBilet', lastReport.totals?.commission || 0, 'RON']);
         rows.push(['Venit net (dupa comision)', lastReport.totals?.net_revenue || 0, 'RON']);

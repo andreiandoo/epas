@@ -521,9 +521,10 @@ class LeisureController extends BaseController
                 $q->where(function ($sq) use ($search) {
                     $sq->where('code', 'ilike', "%{$search}%")
                       ->orWhere('barcode', 'ilike', "%{$search}%")
-                      ->orWhereHas('order', fn ($oq) => $oq
-                          ->where('customer_name', 'ilike', "%{$search}%")
-                          ->orWhere('customer_email', 'ilike', "%{$search}%"));
+                      ->orWhereHas('order', fn ($oq) => $oq->where(fn ($w) => $w
+                          ->where('order_number', 'ilike', "%{$search}%")
+                          ->orWhere('customer_name', 'ilike', "%{$search}%")
+                          ->orWhere('customer_email', 'ilike', "%{$search}%")));
                 });
             }
         };
@@ -2483,7 +2484,7 @@ class LeisureController extends BaseController
         // depasi timeout Cloudflare (100s). Cache 30 min pt request-uri repetate +
         // memory/time limit local. Cache key = event+range; invalidat automat cand
         // se schimba data.
-        $cacheKey = "leisure_raport_v3_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}";
+        $cacheKey = "leisure_raport_v4_{$eventModel->id}_{$from->format('Y-m-d')}_{$to->format('Y-m-d')}";
         $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
         if ($cached !== null) {
             return $this->success($cached);
@@ -2541,6 +2542,9 @@ class LeisureController extends BaseController
         $totalRevenue = 0.0;
         $totalTickets = 0;
         $totalPhysicalTickets = 0; // real emise (fara parintele pachet)
+        // Bilete fizice pe categorie (acces/parcare/activitati/...) — total si pe societate.
+        $physicalByCategory = [];
+        $physicalByIssuer = ['primary' => [], 'secondary' => []];
         $totalOrders = $orders->count();
         $totalCommission = 0.0; // Comisioane cumulate (POS + customer)
 
@@ -2800,6 +2804,10 @@ class LeisureController extends BaseController
                 // Parintele pachet nu apare aici (nu e un bilet fizic real emis).
                 if (!$isPackageParent) {
                     $totalPhysicalTickets++;
+                    $physCat = $svcCat ?: 'access';
+                    $physIssuer = ($ttModel?->issuing_company ?? 'primary') === 'secondary' ? 'secondary' : 'primary';
+                    $physicalByCategory[$physCat] = ($physicalByCategory[$physCat] ?? 0) + 1;
+                    $physicalByIssuer[$physIssuer][$physCat] = ($physicalByIssuer[$physIssuer][$physCat] ?? 0) + 1;
                     $compKey = is_array($t->meta ?? null) && !empty($t->meta['label_override'])
                         ? 'lbl_' . $ttName
                         : 'tt_' . $ttId;
@@ -2861,6 +2869,8 @@ class LeisureController extends BaseController
         // Calcul net + suma TVA per societate. Cand vat_payer=true: pretul include TVA,
         // net = revenue / (1 + rate/100), vat_amount = revenue - net.
         foreach (['primary', 'secondary'] as $k) {
+            $byIssuer[$k]['physical_tickets'] = array_sum($physicalByIssuer[$k]);
+            $byIssuer[$k]['physical_by_category'] = $physicalByIssuer[$k];
             $rev = $byIssuer[$k]['revenue'] ?? 0;
             if ($issuerVat[$k]['vat_payer'] && $issuerVat[$k]['vat_rate'] > 0 && $rev > 0) {
                 $net = round($rev / (1 + $issuerVat[$k]['vat_rate'] / 100), 2);
@@ -2899,6 +2909,7 @@ class LeisureController extends BaseController
             'by_ticket_type' => array_values($byTicketType),
             'by_component_type' => array_values($byComponentType),
             'total_physical_tickets' => $totalPhysicalTickets,
+            'physical_by_category' => $physicalByCategory,
             'by_cashier' => array_values($byCashier),
             'by_payment_method' => array_values($byPaymentMethod),
             'by_issuer' => [
