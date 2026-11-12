@@ -195,7 +195,60 @@ class OrganizerBalance extends Page
 
                     $notification->send();
                 }),
+            Actions\Action::make('toggle_payment_notifications')
+                ->label(fn () => $this->paymentNotificationsPaused() ? 'Notificări plăți: PE PAUZĂ' : 'Notificări plăți: pornite')
+                ->icon(fn () => $this->paymentNotificationsPaused() ? 'heroicon-o-bell-slash' : 'heroicon-o-bell')
+                ->color(fn () => $this->paymentNotificationsPaused() ? 'warning' : 'gray')
+                ->requiresConfirmation()
+                ->modalHeading(fn () => $this->paymentNotificationsPaused() ? 'Pornește notificările de plată' : 'Pune pe pauză notificările de plată')
+                ->modalDescription(fn () => $this->paymentNotificationsPaused()
+                    ? 'Organizatorii vor primi din nou email și notificare în cont când un decont e marcat plătit.'
+                    : 'Cât timp e pe pauză, organizatorii NU primesc email și nici notificare în cont când un decont e marcat plătit (la toți organizatorii marketplace-ului). Util când înregistrezi plăți făcute demult.')
+                ->modalSubmitActionLabel(fn () => $this->paymentNotificationsPaused() ? 'Pornește' : 'Pune pe pauză')
+                ->action(function () {
+                    $paused = ! $this->paymentNotificationsPaused();
+                    MarketplacePayout::setPaymentNotificationsPaused((int) $this->organizer->marketplace_client_id, $paused);
+                    Notification::make()->success()
+                        ->title($paused ? 'Notificările de plată sunt pe pauză' : 'Notificările de plată sunt pornite')
+                        ->send();
+                }),
         ];
+    }
+
+    public function paymentNotificationsPaused(): bool
+    {
+        return MarketplacePayout::paymentNotificationsPaused($this->organizer?->marketplace_client_id);
+    }
+
+    /** Referințele scrise în rândurile din Lista deconturi, pe id decont. */
+    public array $payRefs = [];
+
+    /**
+     * Finalizare rapidă din rândul decontului, fără modal: referința e
+     * opțională, rândul se actualizează pe loc și focusul trece la următorul.
+     */
+    public function quickComplete(int $payoutId): void
+    {
+        $payout = $this->findPayout($payoutId);
+        if (! $payout || ! $payout->canBeCompleted()) {
+            Notification::make()->danger()->title('Decontul nu poate fi finalizat')
+                ->body('Doar deconturile aprobate sau în procesare pot fi marcate finalizate.')->send();
+
+            return;
+        }
+
+        $reference = trim((string) ($this->payRefs[$payoutId] ?? '')) ?: null;
+        $payout->complete($reference);
+        unset($this->payRefs[$payoutId]);
+        $this->organizer->refresh();
+
+        Notification::make()->success()
+            ->title(($payout->decont_series ?: $payout->reference) . ' finalizat')
+            ->body($reference ? "Ref: {$reference}" : 'Fără referință de plată.')
+            ->duration(2500)
+            ->send();
+
+        $this->dispatch('ep-payout-completed', id: $payoutId);
     }
 
     /**
@@ -239,9 +292,8 @@ class OrganizerBalance extends Page
             ->form([
                 Forms\Components\TextInput::make('payment_reference')
                     ->label('Referință plată')
-                    ->required()
                     ->maxLength(255)
-                    ->helperText('Referința transferului bancar sau ID-ul tranzacției'),
+                    ->helperText('Opțional: referința transferului bancar sau ID-ul tranzacției'),
                 Forms\Components\Textarea::make('payment_notes')
                     ->label('Note (opțional)')
                     ->rows(2),
@@ -255,11 +307,11 @@ class OrganizerBalance extends Page
                     return;
                 }
 
-                $payout->complete($data['payment_reference'], $data['payment_notes'] ?? null);
+                $payout->complete($data['payment_reference'] ?? null, $data['payment_notes'] ?? null);
                 $this->organizer->refresh();
 
                 Notification::make()->success()->title('Decont finalizat')
-                    ->body("Decontul {$payout->reference} a fost marcat finalizat (ref: {$data['payment_reference']}).")->send();
+                    ->body("Decontul {$payout->reference} a fost marcat finalizat" . (! empty($data['payment_reference']) ? " (ref: {$data['payment_reference']})" : '') . '.')->send();
             });
     }
 

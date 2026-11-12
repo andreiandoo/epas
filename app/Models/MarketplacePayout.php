@@ -2628,8 +2628,11 @@ class MarketplacePayout extends Model
     /**
      * Complete the payout
      */
-    public function complete(string $paymentReference, ?string $paymentNotes = null): void
+    public function complete(?string $paymentReference = null, ?string $paymentNotes = null): void
     {
+        // Referința e opțională (plățile vechi se înregistrează și fără ea).
+        $paymentReference = trim((string) $paymentReference) ?: null;
+
         $this->update([
             'status' => 'completed',
             'payment_reference' => $paymentReference,
@@ -2863,12 +2866,44 @@ class MarketplacePayout extends Model
         };
     }
 
+    public const SETTING_PAYMENT_NOTIFICATIONS_PAUSED = 'payout_payment_notifications_paused';
+
+    /** Setarea marketplace-ului: notificările „plată în procesare / finalizată” sunt pe pauză. */
+    public static function paymentNotificationsPaused(?int $marketplaceClientId): bool
+    {
+        if (!$marketplaceClientId) {
+            return false;
+        }
+
+        return (bool) (MarketplaceClient::whereKey($marketplaceClientId)->value('settings')[self::SETTING_PAYMENT_NOTIFICATIONS_PAUSED] ?? false);
+    }
+
+    public static function setPaymentNotificationsPaused(int $marketplaceClientId, bool $paused): void
+    {
+        DB::transaction(function () use ($marketplaceClientId, $paused) {
+            $client = MarketplaceClient::whereKey($marketplaceClientId)->lockForUpdate()->first();
+            if (!$client) {
+                return;
+            }
+            $settings = $client->settings ?? [];
+            $settings[self::SETTING_PAYMENT_NOTIFICATIONS_PAUSED] = $paused;
+            $client->updateQuietly(['settings' => $settings]);
+        });
+    }
+
     /**
      * Send notification to organizer
      */
     public function notifyOrganizer(string $action): void
     {
         if (!$this->organizer) {
+            return;
+        }
+
+        // Pauză pe notificările de plată (ex. când se înregistrează în bloc
+        // plăți făcute demult): nici email, nici notificare în cont.
+        if (in_array($action, ['processing', 'completed'], true)
+            && static::paymentNotificationsPaused($this->marketplace_client_id)) {
             return;
         }
 

@@ -319,7 +319,7 @@
                                     $evMeta = implode(' - ', $metaParts);
                                 }
                             @endphp
-                            <tr>
+                            <tr wire:key="payout-row-{{ $payout->id }}">
                                 <td class="px-6 py-3 text-sm">
                                     @if($ev)
                                         <a href="{{ url('/marketplace/events/' . $ev->id . '/edit') }}" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
@@ -379,7 +379,26 @@
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right whitespace-nowrap">
                                     @if($payout->canBeCompleted())
-                                        {{ ($this->completePayoutAction)(['payout' => $payout->id]) }}
+                                        {{-- Finalizare rapidă: referința e opțională, Enter sau butonul
+                                             finalizează, rândul se actualizează pe loc. --}}
+                                        <div style="display:inline-flex;align-items:center;gap:.5rem" data-quick-row="{{ $payout->id }}">
+                                            <input type="text"
+                                                   wire:model="payRefs.{{ $payout->id }}"
+                                                   wire:keydown.enter.prevent="quickComplete({{ $payout->id }})"
+                                                   data-quick-ref="{{ $payout->id }}"
+                                                   placeholder="Referință plată (opțional)"
+                                                   maxlength="255"
+                                                   class="ep-quick-ref">
+                                            <button type="button"
+                                                    wire:click="quickComplete({{ $payout->id }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="quickComplete({{ $payout->id }})"
+                                                    title="Marchează plătit"
+                                                    class="ep-quick-btn">
+                                                <span wire:loading.remove wire:target="quickComplete({{ $payout->id }})">Finalizează</span>
+                                                <span wire:loading wire:target="quickComplete({{ $payout->id }})">…</span>
+                                            </button>
+                                        </div>
                                     @elseif($payout->isCompleted())
                                         {{ ($this->editPaymentReferenceAction)(['payout' => $payout->id]) }}
                                     @elseif($payout->isPending())
@@ -396,4 +415,38 @@
         </div>
 
     </div>
+
+    {{-- După finalizarea rapidă, focusul trece pe referința următorului decont
+         de finalizat, fără să se miște pagina. --}}
+    <style>
+        .ep-quick-ref { width: 12rem; padding: .25rem .5rem; font-size: .75rem; border-radius: .5rem; border: 1px solid rgba(107,114,128,.4); background: #fff; color: #111827; }
+        .ep-quick-ref:focus { outline: 2px solid rgba(37,99,235,.5); outline-offset: 0; border-color: rgb(37,99,235); }
+        .dark .ep-quick-ref { background: rgba(255,255,255,.05); color: #f9fafb; border-color: rgba(255,255,255,.2); }
+        .ep-quick-btn { display: inline-flex; align-items: center; padding: .25rem .65rem; font-size: .75rem; font-weight: 600; border-radius: .5rem; background: #16a34a; color: #fff; }
+        .ep-quick-btn:hover { background: #15803d; }
+        .ep-quick-btn:disabled { opacity: .5; }
+    </style>
+    <script>
+        (() => {
+            if (window.__epQuickPayoutFocus) return;
+            window.__epQuickPayoutFocus = true;
+            let order = [];
+            document.addEventListener('focusin', (e) => {
+                if (e.target?.matches?.('[data-quick-ref]')) {
+                    order = [...document.querySelectorAll('[data-quick-ref]')].map((el) => el.dataset.quickRef);
+                }
+            });
+            window.addEventListener('ep-payout-completed', (e) => {
+                const id = String(e.detail?.id ?? '');
+                const list = order.length ? order : [...document.querySelectorAll('[data-quick-ref]')].map((el) => el.dataset.quickRef);
+                const next = list.slice(list.indexOf(id) + 1);
+                requestAnimationFrame(() => {
+                    for (const nid of next) {
+                        const el = document.querySelector('[data-quick-ref="' + nid + '"]');
+                        if (el) { el.focus({ preventScroll: true }); break; }
+                    }
+                });
+            });
+        })();
+    </script>
 </x-filament-panels::page>
