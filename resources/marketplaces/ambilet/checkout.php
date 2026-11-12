@@ -388,7 +388,7 @@ require_once __DIR__ . '/includes/header.php';
                             <!-- Points to Earn -->
                             <div class="flex items-center justify-between p-3 mt-4 bg-surface rounded-xl">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-lg">🎁</span>
+                                    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
                                     <span class="text-sm font-medium text-secondary"><?= htmlspecialchars(ct('will_earn_short')) ?></span>
                                 </div>
                                 <span id="points-earned" class="font-bold text-accent">0 <?= htmlspecialchars(ct('points_short')) ?></span>
@@ -400,7 +400,7 @@ require_once __DIR__ . '/includes/header.php';
                             </button>
 
                             <p class="mt-3 text-xs text-center text-muted">
-                                <?= htmlspecialchars(ct('terms_confirm_short')) ?>
+                                <?= str_replace('{terms}', '<a href="/termeni" target="_blank" rel="noopener" class="underline hover:text-primary">' . htmlspecialchars(ct('terms_link_label')) . '</a>', htmlspecialchars(ct('terms_confirm_short'))) ?>
                             </p>
                         </div>
                     </div>
