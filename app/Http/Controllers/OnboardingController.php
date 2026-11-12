@@ -401,8 +401,9 @@ class OnboardingController extends Controller
             // Attach Microservices
             if (!empty($step5['microservices'])) {
                 foreach ($step5['microservices'] as $microserviceId) {
+                    // 'pending' nu e permis de check-ul din tabel; rămâne inactiv până îl activează adminul
                     $tenant->microservices()->attach($microserviceId, [
-                        'status' => 'pending',
+                        'status' => 'suspended',
                         'activated_at' => null,
                     ]);
                 }
