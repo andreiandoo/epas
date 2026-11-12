@@ -5,6 +5,7 @@ namespace App\Services\Marketplace;
 use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplacePayout;
+use App\Models\Order;
 use App\Services\EventAlertsService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
@@ -192,7 +193,8 @@ class LegacySettlementService
         // Netul după aprobare: ciorna e creată înainte de
         // LEGACY_SETTLEMENT_FREEZE, deci odată aprobată vânzările importate
         // intră în net (MarketplacePayout::balanceBreakdown).
-        $full = (float) ($this->breakdown->build($event, excludePos: true)['total_net'] ?? 0);
+        $now = $this->breakdown->build($event, excludePos: true);
+        $full = (float) ($now['total_net'] ?? 0);
         $paid = (float) $completed->sum('amount');
         $open = (float) $inFlight->sum('amount');
         $balanceBefore = round($this->currentNet($event, $full) - $paid - $open, 2);
@@ -217,6 +219,10 @@ class LegacySettlementService
             }
         }
 
+        $compare = $approve && abs($approve['adjustment']) >= 0.01
+            ? $this->compare($event, $candidates->first(), $now, $paid, $open, $approve['amount'])
+            : null;
+
         $date = $event->event_date ?? $event->range_start_date ?? $event->starts_at;
 
         return [
@@ -229,12 +235,93 @@ class LegacySettlementService
             'paid' => round($paid, 2),
             'in_flight' => round($open, 2),
             'approve' => $approve,
+            'compare' => $compare,
             'skipped' => $skipped,
             'balance_before' => $balanceBefore,
             'balance_after' => $approve && empty($issues) ? round($target - $approve['amount'], 2) : $balanceBefore,
             'warn' => $approve && abs($approve['adjustment']) > self::WARN_ADJUSTMENT,
             'issues' => array_values(array_unique($issues)),
         ];
+    }
+
+    /**
+     * De unde vine diferența dintre ciornă și suma de aprobat. Ciorna (martie)
+     * a luat totalul comenzilor plătite de atunci, cu POS, minus un procent fix
+     * al evenimentului; netul de acum se face pe bilete valide, fără POS, cu
+     * comisionul și reducerile din setările actuale.
+     */
+    private function compare(Event $event, MarketplacePayout $draft, array $now, float $paid, float $open, float $target): array
+    {
+        $pct = fn (?float $v) => $v === null ? '—' : rtrim(rtrim(number_format($v, 2, ',', ''), '0'), ',') . '%';
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+
+        $rows = is_array($draft->ticket_breakdown) ? $draft->ticket_breakdown : [];
+        $d = [
+            'qty' => (int) collect($rows)->sum(fn ($r) => (int) ($r['quantity'] ?? $r['qty'] ?? 0)),
+            'gross' => round((float) $draft->gross_amount, 2),
+            'commission' => round((float) $draft->commission_amount, 2),
+            'net' => round((float) $draft->amount, 2),
+            'created_at' => $draft->created_at?->format('d.m.Y'),
+        ];
+        $d['rate'] = $d['gross'] > 0 ? round($d['commission'] / $d['gross'] * 100, 2) : null;
+
+        $types = collect($now['per_type'] ?? []);
+        $n = [
+            'qty' => (int) $types->sum('qty'),
+            'gross' => round((float) ($now['total_revenue'] ?? 0), 2),
+            'commission' => round((float) ($now['total_commission'] ?? 0), 2),
+            'discount' => round((float) ($now['total_discount'] ?? 0), 2),
+            'net' => round((float) ($now['total_net'] ?? 0), 2),
+            'rates' => $types->map(fn ($r) => ($r['commission_mode'] ?? '') === 'added_on_top'
+                ? 'peste preț'
+                : (isset($r['commission_rate']) ? $pct((float) $r['commission_rate']) : 'sumă fixă'))
+                ->unique()->values()->all(),
+        ];
+        $n['rate'] = $n['gross'] > 0 ? round($n['commission'] / $n['gross'] * 100, 2) : null;
+
+        $withPos = $this->breakdown->build($event, excludePos: false);
+        $pos = [
+            'qty' => (int) collect($withPos['per_type'] ?? [])->sum('qty') - $n['qty'],
+            'net' => round((float) ($withPos['total_net'] ?? 0) - $n['net'], 2),
+        ];
+
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+        $lostStatuses = ['refunded', 'partially_refunded', 'cancelled'];
+        $q = fn (array $statuses) => Order::where('event_id', $event->id)
+            ->whereIn('status', $statuses)
+            ->tap(fn ($x) => \App\Support\TestPos::excludeOrders($x));
+        $orders = [
+            'count' => $q($paidStatuses)->count(),
+            'total' => round((float) $q($paidStatuses)->sum('total'), 2),
+            'pos_count' => $q($paidStatuses)->whereIn('source', SalesBreakdownService::POS_SOURCES)->count(),
+            'pos_total' => round((float) $q($paidStatuses)->whereIn('source', SalesBreakdownService::POS_SOURCES)->sum('total'), 2),
+            'lost_count' => $q($lostStatuses)->count(),
+            'lost_total' => round((float) $q($lostStatuses)->sum('total'), 2),
+        ];
+
+        $why = [];
+        if (abs($orders['total'] - $d['gross']) >= 1) {
+            $why[] = 'Comenzile plătite pe eveniment însumează acum ' . $fmt($orders['total']) . ' lei, iar ciorna a pornit de la ' . $fmt($d['gross'])
+                . ' lei (diferență ' . $fmt($orders['total'] - $d['gross']) . '): după crearea ciornei s-au adăugat, mutat, anulat sau rambursat comenzi.';
+        }
+        if ($pos['net'] >= 0.01) {
+            $why[] = 'Ciorna includea și vânzările POS (' . $pos['qty'] . ' bilete, ' . $fmt($pos['net']) . ' lei net). Acum POS nu se mai decontează, banii au rămas la organizator.';
+        }
+        if ($d['rate'] !== null && $n['rate'] !== null && abs($d['rate'] - $n['rate']) >= 0.5) {
+            $why[] = 'Comisionul ciornei a fost ' . $pct($d['rate']) . ' din total. Acum, din setările biletelor (' . implode(', ', $n['rates'])
+                . '), iese ' . $pct($n['rate']) . ', adică ' . $fmt($n['commission']) . ' lei.';
+        }
+        if ($n['discount'] >= 0.01) {
+            $why[] = 'Acum se scad și reducerile alocate biletelor: ' . $fmt($n['discount']) . ' lei.';
+        }
+        if ($paid + $open >= 0.01) {
+            $why[] = 'Din net se scade ce e deja plătit sau în procesare pe eveniment: ' . $fmt($paid + $open) . ' lei.';
+        }
+        if ($target < 0.004 && $n['net'] - $paid - $open < -0.004) {
+            $why[] = 'Netul de acum e mai mic decât ce s-a plătit deja, așa că ciorna se aprobă cu 0.';
+        }
+
+        return ['draft' => $d, 'now' => $n, 'pos' => $pos, 'orders' => $orders, 'paid' => round($paid + $open, 2), 'target' => $target, 'why' => $why];
     }
 
     /** Netul evenimentului așa cum îl vede soldul acum (regula legacy_import). */

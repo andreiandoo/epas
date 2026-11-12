@@ -110,6 +110,48 @@
                             </td>
                             <td class="num">{{ $fmt($e['balance_before']) }} → {{ $fmt($e['balance_after']) }}</td>
                         </tr>
+                        @if (! empty($e['compare']))
+                            @php($c = $e['compare'])
+                            <tr @class(['ep-ls__why-row', 'is-warn' => $e['warn']])>
+                                <td colspan="7">
+                                    <details class="ep-ls__why" @if ($e['warn']) open @endif>
+                                        <summary>De unde vine diferența de {{ $ap['adjustment'] > 0 ? '+' : '' }}{{ $fmt($ap['adjustment']) }} lei</summary>
+                                        <div class="ep-ls__why-grid">
+                                            <table class="ep-ls__mini">
+                                                <thead>
+                                                    <tr><th></th><th class="num">Ciorna ({{ $c['draft']['created_at'] }})</th><th class="num">Acum</th><th class="num">Diferență</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr><td>Bilete (fără POS)</td><td class="num">{{ $c['draft']['qty'] ?: '—' }}</td><td class="num">{{ $c['now']['qty'] }}</td><td class="num">{{ $c['draft']['qty'] ? $c['now']['qty'] - $c['draft']['qty'] : '—' }}</td></tr>
+                                                    <tr><td>Vânzări brute</td><td class="num">{{ $fmt($c['draft']['gross']) }}</td><td class="num">{{ $fmt($c['now']['gross']) }}</td><td class="num">{{ $fmt($c['now']['gross'] - $c['draft']['gross']) }}</td></tr>
+                                                    <tr><td>Comision Ambilet</td><td class="num">−{{ $fmt($c['draft']['commission']) }}<div class="ep-ls__muted ep-ls__small">{{ $c['draft']['rate'] !== null ? rtrim(rtrim(number_format($c['draft']['rate'], 2, ',', ''), '0'), ',') . '%' : '' }}</div></td><td class="num">−{{ $fmt($c['now']['commission']) }}<div class="ep-ls__muted ep-ls__small">{{ implode(', ', $c['now']['rates']) }}</div></td><td class="num">{{ $fmt($c['draft']['commission'] - $c['now']['commission']) }}</td></tr>
+                                                    <tr><td>Reduceri</td><td class="num">—</td><td class="num">−{{ $fmt($c['now']['discount']) }}</td><td class="num">{{ $fmt(-$c['now']['discount']) }}</td></tr>
+                                                    <tr class="is-total"><td>Net</td><td class="num">{{ $fmt($c['draft']['net']) }}</td><td class="num">{{ $fmt($c['now']['net']) }}</td><td class="num">{{ $fmt($c['now']['net'] - $c['draft']['net']) }}</td></tr>
+                                                    <tr><td>Deja plătit / în procesare</td><td class="num"></td><td class="num">−{{ $fmt($c['paid']) }}</td><td class="num"></td></tr>
+                                                    <tr class="is-total"><td>Se aprobă</td><td class="num">{{ $fmt($c['draft']['net']) }}</td><td class="num">{{ $fmt($c['target']) }}</td><td class="num">{{ $fmt($ap['adjustment']) }}</td></tr>
+                                                </tbody>
+                                            </table>
+                                            <div>
+                                                <div class="ep-ls__muted ep-ls__small">
+                                                    Comenzi plătite acum: {{ $c['orders']['count'] }} ({{ $fmt($c['orders']['total']) }} lei),
+                                                    din care POS {{ $c['orders']['pos_count'] }} ({{ $fmt($c['orders']['pos_total']) }} lei).
+                                                    Rambursate / anulate: {{ $c['orders']['lost_count'] }} ({{ $fmt($c['orders']['lost_total']) }} lei).
+                                                </div>
+                                                @if (! empty($c['why']))
+                                                    <ul class="ep-ls__why-list">
+                                                        @foreach ($c['why'] as $line)
+                                                            <li>{{ $line }}</li>
+                                                        @endforeach
+                                                    </ul>
+                                                @else
+                                                    <div class="ep-ls__muted ep-ls__small">Diferență de rotunjire între calculul pe comenzi (ciorna) și cel pe bilete (acum).</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </details>
+                                </td>
+                            </tr>
+                        @endif
                         @if (! empty($e['issues']))
                             <tr class="is-blocked">
                                 <td colspan="7" class="ep-ls__small" style="color: #dc2626">{{ implode(' ', $e['issues']) }}</td>
@@ -153,6 +195,16 @@
     .ep-ls__table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .ep-ls__table tr.is-blocked td { background: rgba(220, 38, 38, .05); }
     .ep-ls__table tr.is-warn td { background: rgba(217, 119, 6, .06); }
+    .ep-ls__why summary { cursor: pointer; font-size: .75rem; font-weight: 600; color: #2563eb; }
+    .ep-ls__why-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1rem; margin-top: .5rem; }
+    @media (max-width: 900px) { .ep-ls__why-grid { grid-template-columns: 1fr; } }
+    .ep-ls__mini { width: 100%; border-collapse: collapse; font-size: .75rem; }
+    .ep-ls__mini th { text-align: left; font-weight: 600; color: #6b7280; padding: .25rem .4rem; border-bottom: 1px solid rgba(107, 114, 128, .25); }
+    .ep-ls__mini td { padding: .25rem .4rem; border-bottom: 1px solid rgba(107, 114, 128, .1); background: transparent !important; }
+    .ep-ls__mini .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ep-ls__mini tr.is-total td { font-weight: 700; }
+    .ep-ls__why-list { margin: .5rem 0 0; padding-left: 1.1rem; list-style: disc; font-size: .75rem; }
+    .ep-ls__why-list li { margin: .2rem 0; }
     .ep-ls__link { color: rgb(37, 99, 235); }
     .ep-ls__link:hover { text-decoration: underline; }
 </style>
