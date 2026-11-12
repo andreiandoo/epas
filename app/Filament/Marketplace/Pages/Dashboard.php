@@ -426,9 +426,16 @@ class Dashboard extends Page
                 ->analyze($marketplaceId, request()->has('refresh_invite_abuse'))
             : null;
 
+        $expiredCapiTokens = Cache::remember(
+            "mp_dash_capi_tokens_{$marketplaceId}",
+            600,
+            fn () => $this->computeExpiredCapiTokens($marketplaceId)
+        );
+
         return [
             'marketplace' => $marketplace,
             'isSuperAdmin' => $isSuperAdmin,
+            'expiredCapiTokens' => $expiredCapiTokens,
             'isMarketplaceAdmin' => $isMarketplaceAdmin,
             'featuredEventStats' => $isMarketplaceAdmin ? $this->computeFeaturedEventStats($marketplaceId) : null,
             'stats' => $stats['cards'],
@@ -455,6 +462,100 @@ class Dashboard extends Page
             'chartMonthMeta' => $chartMonthMeta,
             'selectedMonth' => $month,
         ];
+    }
+
+    /**
+     * Organizatori cu conexiune Facebook CAPI activă al căror token e respins
+     * de Meta: ultimul eșec de token e mai nou decât ultimul eveniment trimis.
+     * Dispare singur la primul eveniment trimis cu succes după schimbarea tokenului.
+     */
+    private function computeExpiredCapiTokens(int $marketplaceId): array
+    {
+        $connections = DB::table('facebook_capi_connections as c')
+            ->join('marketplace_organizers as o', 'o.id', '=', 'c.marketplace_organizer_id')
+            ->where('o.marketplace_client_id', $marketplaceId)
+            ->where('c.status', 'active')
+            ->whereNull('c.deleted_at')
+            ->get(['c.id', 'c.pixel_id', 'o.id as organizer_id', 'o.name as organizer_name']);
+
+        if ($connections->isEmpty()) {
+            return [];
+        }
+
+        $ids = $connections->pluck('id')->all();
+
+        $lastSent = DB::table('facebook_capi_events')
+            ->whereIn('connection_id', $ids)
+            ->where('status', 'sent')
+            ->groupBy('connection_id')
+            ->selectRaw('connection_id, MAX(created_at) as at')
+            ->pluck('at', 'connection_id');
+
+        $tokenFailures = fn () => DB::table('facebook_capi_events')
+            ->whereIn('connection_id', $ids)
+            ->where('status', 'failed')
+            ->whereRaw('LOWER(error_message) LIKE ?', ['%access token%']);
+
+        $lastFail = $tokenFailures()
+            ->groupBy('connection_id')
+            ->selectRaw('connection_id, MAX(created_at) as at, COUNT(*) as cnt')
+            ->get()
+            ->keyBy('connection_id');
+
+        $rows = [];
+        foreach ($connections as $conn) {
+            $fail = $lastFail->get($conn->id);
+            $sentAt = $lastSent->get($conn->id);
+            if (! $fail || ($sentAt && $sentAt >= $fail->at)) {
+                continue;
+            }
+
+            // Eșecurile de după ultimul eveniment reușit
+            $sinceSent = $tokenFailures()
+                ->where('connection_id', $conn->id)
+                ->when($sentAt, fn ($q) => $q->where('created_at', '>', $sentAt));
+            $firstFail = (clone $sinceSent)->min('created_at');
+            $failedCount = (clone $sinceSent)->count();
+            $message = (string) DB::table('facebook_capi_events')
+                ->where('connection_id', $conn->id)
+                ->where('status', 'failed')
+                ->where('created_at', $fail->at)
+                ->value('error_message');
+
+            $rows[] = [
+                'organizer_id' => $conn->organizer_id,
+                'organizer_name' => $conn->organizer_name,
+                'pixel_id' => $conn->pixel_id,
+                'expired_at' => $this->parseMetaExpiry($message),
+                'first_failed_at' => $firstFail ? Carbon::parse($firstFail)->setTimezone('Europe/Bucharest') : null,
+                'last_failed_at' => Carbon::parse($fail->at)->setTimezone('Europe/Bucharest'),
+                'last_sent_at' => $sentAt ? Carbon::parse($sentAt)->setTimezone('Europe/Bucharest') : null,
+                'failed_count' => $failedCount,
+                'is_expired' => str_contains(strtolower($message), 'expired'),
+                'message' => \Illuminate\Support\Str::limit($message, 220),
+            ];
+        }
+
+        usort($rows, fn ($a, $b) => $b['last_failed_at'] <=> $a['last_failed_at']);
+
+        return $rows;
+    }
+
+    /**
+     * Meta scrie data expirării în mesaj, în ora Pacificului:
+     * "Session has expired on Wednesday, 04-Feb-26 06:39:26 PST."
+     */
+    private function parseMetaExpiry(string $message): ?Carbon
+    {
+        if (! preg_match('/expired on \w+, (\d{2}-\w{3}-\d{2} \d{2}:\d{2}:\d{2})/i', $message, $m)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('d-M-y H:i:s', $m[1], 'America/Los_Angeles')->setTimezone('Europe/Bucharest');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

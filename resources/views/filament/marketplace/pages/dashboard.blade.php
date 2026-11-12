@@ -309,6 +309,64 @@
         </div>
         @endif
 
+        <!-- Tokenuri Facebook CAPI expirate / invalide, pe organizator -->
+        @if(!empty($expiredCapiTokens))
+        <div x-data="{ open: true }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-red-300 dark:border-red-700">
+            <div class="flex items-center justify-between gap-3 px-4 py-3 border-b bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button" :aria-expanded="open">
+                    <x-heroicon-o-chevron-right class="w-4 h-4 text-red-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
+                    <x-heroicon-o-key class="w-5 h-5 text-red-500" />
+                    <h3 class="font-semibold text-red-800 dark:text-red-200">Tokenuri Facebook expirate</h3>
+                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full">{{ count($expiredCapiTokens) }}</span>
+                </div>
+                <span class="hidden text-xs text-red-600 sm:inline dark:text-red-400">Conversiile nu ajung în Meta până la schimbarea tokenului</span>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700" x-show="open" x-collapse>
+                @foreach($expiredCapiTokens as $capi)
+                @php
+                    $capiEditUrl = route('filament.marketplace.resources.organizers.edit', ['record' => $capi['organizer_id']]) . '?tab=bilete-termeni';
+                @endphp
+                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ $capiEditUrl }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-red-600 dark:hover:text-red-400">
+                                {{ $capi['organizer_name'] }}
+                            </a>
+                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                                {{ $capi['is_expired'] ? 'Expirat' : 'Invalid' }}
+                            </span>
+                            <span class="text-xs text-gray-400 tabular-nums">Pixel {{ $capi['pixel_id'] }}</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            @if($capi['expired_at'])
+                                <span>Expirat pe <strong class="font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $capi['expired_at']->format('d.m.Y H:i') }}</strong></span>
+                                <span>·</span>
+                            @endif
+                            @if($capi['first_failed_at'])
+                                <span class="tabular-nums">Respins din {{ $capi['first_failed_at']->format('d.m.Y H:i') }}</span>
+                                <span>·</span>
+                            @endif
+                            <span class="tabular-nums">{{ $capi['failed_count'] }} {{ $capi['failed_count'] === 1 ? 'eveniment pierdut' : 'evenimente pierdute' }}</span>
+                            <span>·</span>
+                            <span class="tabular-nums">Ultimul trimis cu succes: {{ $capi['last_sent_at'] ? $capi['last_sent_at']->format('d.m.Y H:i') : 'niciodată' }}</span>
+                        </div>
+                        @if($capi['message'])
+                            <p class="mt-1 text-[11px] text-gray-400 truncate" title="{{ $capi['message'] }}">{{ $capi['message'] }}</p>
+                        @endif
+                    </div>
+                    <a href="{{ $capiEditUrl }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/40 dark:hover:bg-red-900/60 rounded-lg transition-colors">
+                        <x-heroicon-o-pencil-square class="w-3.5 h-3.5" />
+                        Schimbă tokenul
+                    </a>
+                </div>
+                @endforeach
+                <p class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50 dark:bg-gray-900/30">
+                    Tokenul se schimbă în tab-ul „Bilete & Termeni”, secțiunea Facebook Conversions API. Rândul dispare după primul eveniment trimis cu succes (lista se actualizează la 10 minute).
+                </p>
+            </div>
+        </div>
+        @endif
+
         <!-- Pending Artist Accounts (status=pending → "În review") — visible to all admins -->
         @if(isset($pendingArtistAccounts) && $pendingArtistAccounts->count() > 0)
         <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-violet-300 dark:border-violet-700">
