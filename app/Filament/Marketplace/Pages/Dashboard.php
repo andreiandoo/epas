@@ -1705,7 +1705,7 @@ class Dashboard extends Page
 
         // The warm cron refreshes it (put, 20 min) so no user request pays the
         // six SalesBreakdownService builds; 5 min if the cron is not running.
-        $key = 'mp_event_stats_v7_' . self::FEATURED_EVENT_ID;
+        $key = 'mp_event_stats_v8_' . self::FEATURED_EVENT_ID;
         if ($refresh) {
             Cache::forget($key);
         }
@@ -1719,8 +1719,12 @@ class Dashboard extends Page
                 $todayStart = Carbon::now($tz)->startOfDay()->utc();
                 $todayEnd = Carbon::now($tz)->endOfDay()->utc();
 
-                // per_type rows key the ticket count as 'qty'.
-                $tk = fn (array $bd) => (int) collect($bd['per_type'] ?? [])->sum('qty');
+                // per_type rows key the ticket count as 'qty'. Biletul-parinte al
+                // unui pachet nu e bilet fizic (poarta doar pretul) — componentele
+                // lui sunt deja numarate separat, deci il sarim ca sa nu dublam.
+                $tk = fn (array $bd) => (int) collect($bd['per_type'] ?? [])
+                    ->reject(fn ($r) => ($r['tt']->service_category ?? null) === 'package')
+                    ->sum('qty');
                 $comm = fn (array $bd) => (float) ($bd['total_commission'] ?? 0) + (float) ($bd['total_commission_kept_from_refunds'] ?? 0);
 
                 $full = $svc->build($event);
@@ -1752,8 +1756,11 @@ class Dashboard extends Page
                 // POS source list (leisure POS + mobile POS app) — shared with
                 // SalesBreakdownService so the online/POS split matches the cards.
                 $posList = "'" . implode("','", \App\Services\Marketplace\SalesBreakdownService::POS_SOURCES) . "'";
+                // Biletele-parinte de pachet nu se numara (doar componentele lor); pretul ramane in vanzari.
+                $notPkg = "ptt.service_category IS DISTINCT FROM 'package'";
                 $dailyRaw = \Illuminate\Support\Facades\DB::table('tickets as t')
                     ->join('orders as o', 'o.id', '=', 't.order_id')
+                    ->leftJoin('ticket_types as ptt', 'ptt.id', '=', 't.ticket_type_id')
                     ->where(function ($q) use ($event) {
                         $q->where('t.event_id', $event->id)
                           ->orWhere('t.marketplace_event_id', $event->id);
@@ -1765,10 +1772,10 @@ class Dashboard extends Page
                     ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 't.ticket_type_id'))
                     ->whereBetween('t.created_at', [$since, $todayEnd])
                     ->selectRaw("DATE(t.created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as d,
-                        COUNT(*) as tickets,
+                        COUNT(*) FILTER (WHERE {$notPkg}) as tickets,
                         COALESCE(SUM(t.price), 0) as sales,
-                        COUNT(*) FILTER (WHERE o.source IN ({$posList})) as tickets_pos,
-                        COUNT(*) FILTER (WHERE o.source NOT IN ({$posList})) as tickets_online,
+                        COUNT(*) FILTER (WHERE o.source IN ({$posList}) AND {$notPkg}) as tickets_pos,
+                        COUNT(*) FILTER (WHERE o.source NOT IN ({$posList}) AND {$notPkg}) as tickets_online,
                         COALESCE(SUM(t.price) FILTER (WHERE o.source IN ({$posList})), 0) as sales_pos,
                         COALESCE(SUM(t.price) FILTER (WHERE o.source NOT IN ({$posList})), 0) as sales_online")
                     ->groupBy('d')
