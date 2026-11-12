@@ -40,7 +40,8 @@ class CheckoutController extends BaseController
 
         $validated = $request->validate([
             'customer' => 'required|array',
-            'customer.email' => 'required|email|max:255',
+            // Diacriticele înainte de @ trec de regula email, dar mailul nu poate fi livrat
+            'customer.email' => ['required', 'email', 'max:255', 'regex:/^[\x21-\x7E]+@/'],
             'customer.first_name' => 'required|string|max:255',
             'customer.last_name' => 'required|string|max:255',
             'customer.phone' => 'nullable|string|max:50',
@@ -71,6 +72,8 @@ class CheckoutController extends BaseController
             // Factură pe persoană juridică (CUI românesc; restul datelor vin de la ANAF)
             'invoice_company' => 'nullable|array',
             'invoice_company.cui' => 'nullable|string|max:20',
+        ], [
+            'customer.email.regex' => 'Adresa de email nu poate conține diacritice (ă, â, î, ș, ț) înainte de @. Verifică adresa, ca să primești biletele.',
         ]);
 
         // B6: Captura locale-ului efectiv pentru order-urile create in acest flow.
