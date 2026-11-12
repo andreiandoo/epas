@@ -7,9 +7,9 @@
         @php($legacyQueue = $this->legacyQueueCount())
         <div class="ep-legacy-bar" @if ($legacyQueue > 0) wire:poll.10s @endif>
             <div class="ep-legacy-bar__text">
-                <strong>Soldurile din trecut</strong> — deconturile rămase deschise pe evenimentele încheiate până pe
+                <strong>Ciornele vechi</strong> — deconturile rămase „În așteptare” pe evenimentele încheiate până pe
                 {{ \Carbon\Carbon::parse(\App\Services\Marketplace\LegacySettlementService::CUTOFF_DATE)->format('d.m.Y') }}.
-                Analizează, apoi rezolvă din coloana „Trecut”.
+                Analizează, apoi aprobă din coloana „Trecut”; plățile se finalizează din pagina de sold a fiecărui organizator.
                 @if ($legacyQueue > 0)
                     <span class="ep-legacy-bar__busy">În lucru în fundal: {{ $legacyQueue }} organizatori.</span>
                 @endif

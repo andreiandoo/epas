@@ -98,7 +98,7 @@ class Balances extends Page implements HasForms, HasTable
         LegacySettlementService::VERDICT_OK => ['OK', 'success'],
         LegacySettlementService::VERDICT_WARN => ['Atenție', 'warning'],
         LegacySettlementService::VERDICT_BLOCKED => ['Blocat', 'danger'],
-        LegacySettlementService::VERDICT_SETTLED => ['Rezolvat', 'info'],
+        LegacySettlementService::VERDICT_SETTLED => ['Aprobat', 'info'],
         LegacySettlementService::VERDICT_NONE => ['—', 'gray'],
         'queued' => ['În lucru…', 'gray'],
     ];
@@ -137,13 +137,13 @@ class Balances extends Page implements HasForms, HasTable
     public function legacyAnalyzeAllAction(): Actions\Action
     {
         return Actions\Action::make('legacyAnalyzeAll')
-                ->label('Analizează soldurile din trecut')
+                ->label('Analizează ciornele vechi')
                 ->icon('heroicon-o-magnifying-glass')
                 ->color('gray')
                 ->visible(fn () => $this->legacyEnabled())
                 ->requiresConfirmation()
-                ->modalHeading('Analizează soldurile din trecut')
-                ->modalDescription('Verifică, pentru fiecare organizator, deconturile rămase deschise pe evenimentele încheiate până pe '
+                ->modalHeading('Analizează ciornele vechi')
+                ->modalDescription('Verifică, pentru fiecare organizator, ciornele de decont rămase „În așteptare” pe evenimentele încheiate până pe '
                     . \Carbon\Carbon::parse(LegacySettlementService::CUTOFF_DATE)->format('d.m.Y')
                     . '. Rulează în fundal; rezultatul apare în coloana „Trecut”. Nu modifică nimic.')
                 ->modalSubmitActionLabel('Pornește analiza')
@@ -173,7 +173,7 @@ class Balances extends Page implements HasForms, HasTable
 
                     Notification::make()->success()
                         ->title('Analiza a pornit')
-                        ->body($ids->count() . ' organizatori cu deconturi vechi deschise se analizează în fundal. Coloana „Trecut” se completează pe măsură ce se termină.')
+                        ->body($ids->count() . ' organizatori cu ciorne vechi se analizează în fundal. Coloana „Trecut” se completează pe măsură ce se termină.')
                         ->send();
                 });
     }
@@ -188,7 +188,7 @@ class Balances extends Page implements HasForms, HasTable
             ->visible(fn () => $this->legacyEnabled())
             ->slideOver()
             ->modalWidth('5xl')
-            ->modalHeading(fn ($record) => 'Soldurile din trecut — ' . $record->name)
+            ->modalHeading(fn ($record) => 'Ciornele vechi — ' . $record->name)
             ->modalContent(fn ($record) => view('filament.marketplace.pages.legacy-settlement-analysis', [
                 'a' => app(LegacySettlementService::class)->analyze($record),
                 'cutoff' => \Carbon\Carbon::parse(LegacySettlementService::CUTOFF_DATE)->format('d.m.Y'),
@@ -201,36 +201,36 @@ class Balances extends Page implements HasForms, HasTable
     protected function legacySettleAction(): Actions\Action
     {
         return Actions\Action::make('legacy_settle')
-            ->label('Rezolvă')
+            ->label('Aprobă')
             ->icon('heroicon-m-check-badge')
             ->color('success')
             ->size('sm')
             ->visible(fn ($record) => $this->legacyEnabled()
                 && in_array(LegacySettlementService::cachedVerdict($record->id)['verdict'] ?? null, [LegacySettlementService::VERDICT_OK, LegacySettlementService::VERDICT_WARN], true))
             ->requiresConfirmation()
-            ->modalHeading(fn ($record) => 'Rezolvă soldurile din trecut — ' . $record->name)
+            ->modalHeading(fn ($record) => 'Aprobă ciornele vechi — ' . $record->name)
             ->modalDescription(function ($record) {
                 $v = LegacySettlementService::cachedVerdict($record->id) ?? [];
 
-                return 'Marchez plătite ' . ($v['payouts'] ?? 0) . ' deconturi, în total '
-                    . number_format((float) ($v['settle_amount'] ?? 0), 2, ',', '.') . ' lei, pentru ' . ($v['events'] ?? 0)
-                    . ' evenimente încheiate până pe ' . \Carbon\Carbon::parse(LegacySettlementService::CUTOFF_DATE)->format('d.m.Y')
-                    . '. Soldul acestor evenimente se închide la 0. Organizatorul nu primește email. Analiza se reface înainte de scriere.';
+                return 'Aprob ' . ($v['payouts'] ?? 0) . ' ciorne, în total '
+                    . number_format((float) ($v['settle_amount'] ?? 0), 2, ',', '.') . ' lei, pe evenimente încheiate până pe '
+                    . \Carbon\Carbon::parse(LegacySettlementService::CUTOFF_DATE)->format('d.m.Y')
+                    . '. Trec pe organizatorul evenimentului, cu suma adusă la netul evenimentului, și intră „în procesare”. Plata se finalizează apoi manual. Fără PDF, fără email. Analiza se reface înainte de scriere.';
             })
             ->form(fn ($record) => (LegacySettlementService::cachedVerdict($record->id)['verdict'] ?? null) === LegacySettlementService::VERDICT_WARN
                 ? [Forms\Components\Checkbox::make('confirm_warn')
                     ->label('Am verificat ajustările de peste ' . number_format(LegacySettlementService::WARN_ADJUSTMENT, 0, ',', '.') . ' lei din analiză')
                     ->accepted()]
                 : [])
-            ->modalSubmitActionLabel('Rezolvă')
+            ->modalSubmitActionLabel('Aprobă')
             ->action(function ($record, array $data) {
                 try {
                     $a = app(LegacySettlementService::class)->settle($record, $this->currentAdmin(), (bool) ($data['confirm_warn'] ?? false));
-                    Notification::make()->success()->title('Rezolvat')
-                        ->body($a['totals']['payouts'] . ' deconturi marcate plătite (' . number_format($a['totals']['settle_amount'], 2, ',', '.') . ' lei). Soldul a fost recalculat.')
+                    Notification::make()->success()->title('Aprobat')
+                        ->body($a['totals']['payouts'] . ' ciorne aprobate (' . number_format($a['totals']['settle_amount'], 2, ',', '.') . ' lei în procesare). Soldul a fost recalculat.')
                         ->send();
                 } catch (\Throwable $e) {
-                    Notification::make()->danger()->title('Nu s-a rezolvat')->body($e->getMessage())->persistent()->send();
+                    Notification::make()->danger()->title('Nu s-a aprobat')->body($e->getMessage())->persistent()->send();
                 }
             });
     }
@@ -238,7 +238,7 @@ class Balances extends Page implements HasForms, HasTable
     protected function legacyRevertAction(): Actions\Action
     {
         return Actions\Action::make('legacy_revert')
-            ->label('Anulează rezolvarea')
+            ->label('Anulează aprobarea')
             ->icon('heroicon-m-arrow-uturn-left')
             ->color('danger')
             ->size('sm')
@@ -246,13 +246,13 @@ class Balances extends Page implements HasForms, HasTable
             ->visible(fn ($record) => $this->legacyEnabled()
                 && (LegacySettlementService::cachedVerdict($record->id)['verdict'] ?? null) === LegacySettlementService::VERDICT_SETTLED)
             ->requiresConfirmation()
-            ->modalHeading(fn ($record) => 'Anulează rezolvarea — ' . $record->name)
-            ->modalDescription('Deconturile marcate plătite la rezolvare revin exact cum erau (status, sumă, note). Soldul se recalculează.')
-            ->modalSubmitActionLabel('Anulează rezolvarea')
+            ->modalHeading(fn ($record) => 'Anulează aprobarea — ' . $record->name)
+            ->modalDescription('Ciornele aprobate și încă neplătite revin exact cum erau: „În așteptare”, cu suma, organizatorul și notele inițiale. Cele deja finalizate ca plătite rămân. Soldul se recalculează.')
+            ->modalSubmitActionLabel('Anulează aprobarea')
             ->action(function ($record) {
                 try {
                     $n = app(LegacySettlementService::class)->revert($record, $this->currentAdmin());
-                    Notification::make()->success()->title('Rezolvare anulată')->body($n . ' deconturi readuse la starea anterioară.')->send();
+                    Notification::make()->success()->title('Aprobare anulată')->body($n . ' ciorne readuse la starea anterioară.')->send();
                 } catch (\Throwable $e) {
                     Notification::make()->danger()->title('Nu s-a anulat')->body($e->getMessage())->persistent()->send();
                 }
@@ -345,8 +345,8 @@ class Balances extends Page implements HasForms, HasTable
                         LegacySettlementService::VERDICT_OK => 'OK',
                         LegacySettlementService::VERDICT_WARN => 'Atenție',
                         LegacySettlementService::VERDICT_BLOCKED => 'Blocat',
-                        LegacySettlementService::VERDICT_SETTLED => 'Rezolvat',
-                        LegacySettlementService::VERDICT_NONE => 'Nimic de rezolvat',
+                        LegacySettlementService::VERDICT_SETTLED => 'Aprobat',
+                        LegacySettlementService::VERDICT_NONE => 'Nimic de aprobat',
                         'unknown' => 'Neanalizat',
                     ])
                     ->query(fn (Builder $query, array $data) => filled($data['value'] ?? null)
@@ -360,14 +360,14 @@ class Balances extends Page implements HasForms, HasTable
             ])
             ->toolbarActions([
                 Actions\BulkAction::make('legacy_settle_selected')
-                    ->label('Rezolvă selectate (doar OK)')
+                    ->label('Aprobă selectate (doar OK)')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn () => $this->legacyEnabled())
                     ->requiresConfirmation()
-                    ->modalHeading('Rezolvă soldurile din trecut')
-                    ->modalDescription('Se rezolvă doar organizatorii selectați cu verdictul OK; ceilalți sunt săriți. Rulează în fundal, iar fiecare organizator e reanalizat înainte de scriere. Organizatorii nu primesc email.')
-                    ->modalSubmitActionLabel('Rezolvă')
+                    ->modalHeading('Aprobă ciornele vechi')
+                    ->modalDescription('Se aprobă doar organizatorii selectați cu verdictul OK; ceilalți sunt săriți. Rulează în fundal, iar fiecare organizator e reanalizat înainte de scriere. Fără PDF, fără email.')
+                    ->modalSubmitActionLabel('Aprobă')
                     ->action(function (Collection $records) {
                         $ok = $records->filter(fn ($r) => (LegacySettlementService::cachedVerdict($r->id)['verdict'] ?? null) === LegacySettlementService::VERDICT_OK);
                         $adminId = $this->currentAdmin()?->getKey();
@@ -379,8 +379,8 @@ class Balances extends Page implements HasForms, HasTable
 
                         $skipped = $records->count() - $ok->count();
                         Notification::make()->success()
-                            ->title('Rezolvarea a pornit')
-                            ->body($ok->count() . ' organizatori se rezolvă în fundal' . ($skipped > 0 ? '; ' . $skipped . ' săriți (nu sunt OK)' : '') . '.')
+                            ->title('Aprobarea a pornit')
+                            ->body($ok->count() . ' organizatori se aprobă în fundal' . ($skipped > 0 ? '; ' . $skipped . ' săriți (nu sunt OK)' : '') . '.')
                             ->send();
                     })
                     ->deselectRecordsAfterCompletion(),
