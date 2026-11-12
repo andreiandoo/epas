@@ -241,15 +241,6 @@ const CheckoutPage = {
         if (culturalOption) {
             culturalOption.classList.remove('hidden');
         }
-        // Update surcharge display text
-        const surchargeText = document.getElementById('cultural-card-surcharge-text');
-        if (surchargeText) {
-            surchargeText.innerHTML = `Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>${this.culturalCardSurchargeRate}%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.`;
-        }
-        const surchargeLabel = document.getElementById('cultural-card-surcharge-label');
-        if (surchargeLabel) {
-            surchargeLabel.textContent = `Comision card cultural (${this.culturalCardSurchargeRate}%)`;
-        }
     },
 
     setupInsuranceUI() {
@@ -443,9 +434,7 @@ const CheckoutPage = {
 
                 const value = this.querySelector('input').value;
                 const cardForm = document.getElementById('cardForm');
-                const culturalCardForm = document.getElementById('culturalCardForm');
                 cardForm.style.display = value === 'card' ? 'block' : 'none';
-                culturalCardForm.style.display = value === 'card_cultural' ? 'block' : 'none';
 
                 // Re-render summary to update cultural card surcharge
                 CheckoutPage.renderSummary();

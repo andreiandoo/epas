@@ -304,18 +304,6 @@ require_once __DIR__ . '/includes/header.php';
                                 <?= htmlspecialchars(ct('secure_processed')) ?>
                             </div>
                         </div>
-
-                        <!-- Cultural Card Info (shown for Card Cultural) -->
-                        <div id="culturalCardForm" class="hidden p-4 mt-4 rounded-xl bg-purple-50">
-                            <div class="flex items-start gap-3">
-                                <svg class="w-5 h-5 mt-0.5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <div>
-                                    <p class="mb-1 text-sm font-medium text-purple-800"><?= htmlspecialchars(ct('cultural_card_surcharge')) ?></p>
-                                    <p id="cultural-card-surcharge-text" class="text-sm text-purple-700"><?= ct('cultural_card_surcharge_text') ?></p>
-                                    <p class="mt-2 text-xs text-muted"><?= htmlspecialchars(ct('cultural_card_redirect')) ?></p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
