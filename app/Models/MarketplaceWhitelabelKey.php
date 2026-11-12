@@ -178,13 +178,8 @@ class MarketplaceWhitelabelKey extends Model
             $order = Order::where('marketplace_client_id', $this->marketplace_client_id)
                 ->where('order_number', (string) $request->query('order', ''))
                 ->first(['id', 'marketplace_organizer_id', 'event_id']);
-            if (!$order) {
-                return 'order_not_owned';
-            }
-            $organizerId = $order->marketplace_organizer_id
-                ?? Event::where('id', $order->event_id)->value('marketplace_organizer_id');
 
-            return (int) $organizerId === (int) $this->marketplace_organizer_id ? null : 'order_not_owned';
+            return $this->ownsOrder($order) ? null : 'order_not_owned';
         }
 
         // Order lookup on the thank-you page (purchase tracking)
@@ -193,13 +188,8 @@ class MarketplaceWhitelabelKey extends Model
             $order = Order::where('marketplace_client_id', $this->marketplace_client_id)
                 ->where(is_numeric($identifier) ? 'id' : 'order_number', $identifier)
                 ->first(['id', 'marketplace_organizer_id', 'event_id']);
-            if (!$order) {
-                return 'order_not_owned';
-            }
-            $organizerId = $order->marketplace_organizer_id
-                ?? Event::where('id', $order->event_id)->value('marketplace_organizer_id');
 
-            return (int) $organizerId === (int) $this->marketplace_organizer_id ? null : 'order_not_owned';
+            return $this->ownsOrder($order) ? null : 'order_not_owned';
         }
 
         return 'endpoint_not_allowed';
@@ -228,6 +218,31 @@ class MarketplaceWhitelabelKey extends Model
     }
 
     /** True when every id is an event of this key's organizer (and there is at least one). */
+    /**
+     * Comenzile cu mai multe evenimente nu au organizator/eveniment pe comandă,
+     * așa că le verificăm după bilete: toate trebuie să fie ale organizatorului.
+     */
+    protected function ownsOrder(?Order $order): bool
+    {
+        if (!$order) {
+            return false;
+        }
+
+        $organizerId = $order->marketplace_organizer_id
+            ?? ($order->event_id ? Event::where('id', $order->event_id)->value('marketplace_organizer_id') : null);
+        if ($organizerId !== null) {
+            return (int) $organizerId === (int) $this->marketplace_organizer_id;
+        }
+
+        $eventIds = Ticket::where('order_id', $order->id)
+            ->whereNotNull('event_id')
+            ->distinct()
+            ->pluck('event_id')
+            ->all();
+
+        return $this->ownsEvents($eventIds);
+    }
+
     protected function ownsEvents(array $eventIds): bool
     {
         $eventIds = array_values(array_unique(array_filter(array_map('intval', $eventIds))));
