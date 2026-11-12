@@ -383,26 +383,109 @@ class LegacySettlementService
     // Verdict păstrat pentru coloana „Trecut” din Balanțe
     // ---------------------------------------------------------------
 
-    public static function verdictKey(int $organizerId): string
+    public const VERDICTS_TABLE = 'marketplace_legacy_settlement_verdicts';
+
+    /** @var array<int, array>|null verdictele citite o dată pe request */
+    private static ?array $verdictMemo = null;
+
+    public static function tableReady(): bool
     {
-        return 'legacy_settle:verdict:' . $organizerId;
+        static $ready = null;
+
+        return $ready ??= \Illuminate\Support\Facades\Schema::hasTable(self::VERDICTS_TABLE);
+    }
+
+    /** Scrie verdictul (și scoate organizatorul din coadă). */
+    public static function putVerdict(int $organizerId, string $verdict, int $events = 0, int $payouts = 0, float $settleAmount = 0, int $issues = 0): void
+    {
+        if (! self::tableReady()) {
+            return;
+        }
+
+        DB::table(self::VERDICTS_TABLE)->updateOrInsert(
+            ['marketplace_organizer_id' => $organizerId],
+            [
+                'verdict' => $verdict,
+                'events' => $events,
+                'payouts' => $payouts,
+                'settle_amount' => round($settleAmount, 2),
+                'issues' => $issues,
+                'analyzed_at' => now(),
+                'queued_at' => null,
+                'queued_action' => null,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+        self::$verdictMemo = null;
     }
 
     private function storeVerdict(int $organizerId, array $result): void
     {
-        Cache::put(self::verdictKey($organizerId), [
-            'verdict' => $result['verdict'],
-            'events' => $result['totals']['events'],
-            'payouts' => $result['totals']['payouts'],
-            'settle_amount' => $result['totals']['settle_amount'],
-            'issues' => count($result['issues']),
-            'at' => now()->toIso8601String(),
-        ], now()->addDays(30));
+        self::putVerdict($organizerId, $result['verdict'], $result['totals']['events'], $result['totals']['payouts'],
+            $result['totals']['settle_amount'], count($result['issues']));
+    }
+
+    /** Pune organizatorii în coadă (contorul din Balanțe se calculează de aici). */
+    public static function markQueued(array $organizerIds, string $action): void
+    {
+        if (! self::tableReady()) {
+            return;
+        }
+
+        foreach ($organizerIds as $id) {
+            DB::table(self::VERDICTS_TABLE)->updateOrInsert(
+                ['marketplace_organizer_id' => (int) $id],
+                ['queued_at' => now(), 'queued_action' => $action, 'updated_at' => now()]
+            );
+        }
+        self::$verdictMemo = null;
+    }
+
+    /** Jobul s-a terminat fără verdict nou (ex. eroare): iese din coadă. */
+    public static function clearQueued(int $organizerId): void
+    {
+        if (self::tableReady()) {
+            DB::table(self::VERDICTS_TABLE)->where('marketplace_organizer_id', $organizerId)
+                ->update(['queued_at' => null, 'queued_action' => null]);
+            self::$verdictMemo = null;
+        }
+    }
+
+    public static function queuedCount(array $organizerIds): int
+    {
+        return self::tableReady()
+            ? DB::table(self::VERDICTS_TABLE)->whereIn('marketplace_organizer_id', $organizerIds)->whereNotNull('queued_at')->count()
+            : 0;
+    }
+
+    /** @return array<int, array{verdict: ?string, events: int, payouts: int, settle_amount: float, issues: int, at: ?string, queued: bool}> */
+    public static function allVerdicts(): array
+    {
+        if (self::$verdictMemo !== null) {
+            return self::$verdictMemo;
+        }
+        if (! self::tableReady()) {
+            return self::$verdictMemo = [];
+        }
+
+        return self::$verdictMemo = DB::table(self::VERDICTS_TABLE)->get()
+            ->mapWithKeys(fn ($r) => [(int) $r->marketplace_organizer_id => [
+                'verdict' => $r->verdict,
+                'events' => (int) $r->events,
+                'payouts' => (int) $r->payouts,
+                'settle_amount' => (float) $r->settle_amount,
+                'issues' => (int) $r->issues,
+                'at' => $r->analyzed_at,
+                'queued' => $r->queued_at !== null,
+            ]])->all();
     }
 
     public static function cachedVerdict(int $organizerId): ?array
     {
-        return Cache::get(self::verdictKey($organizerId));
+        $v = self::allVerdicts()[$organizerId] ?? null;
+
+        return $v && $v['verdict'] !== null ? $v : null;
     }
 
     /** Organizatorii marketplace-ului care au cel puțin un decont deschis pe un eveniment vechi. */

@@ -19,7 +19,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
 
@@ -101,11 +100,14 @@ class Balances extends Page implements HasForms, HasTable
         LegacySettlementService::VERDICT_BLOCKED => ['Blocat', 'danger'],
         LegacySettlementService::VERDICT_SETTLED => ['Rezolvat', 'info'],
         LegacySettlementService::VERDICT_NONE => ['—', 'gray'],
+        'queued' => ['În lucru…', 'gray'],
     ];
 
     public function legacyEnabled(): bool
     {
-        return LegacySettlementService::appliesTo(static::getMarketplaceClient()?->id);
+        // Până rulează migrarea tabelului de verdicte, funcția rămâne ascunsă.
+        return LegacySettlementService::appliesTo(static::getMarketplaceClient()?->id)
+            && LegacySettlementService::tableReady();
     }
 
     protected function currentAdmin(): ?\Illuminate\Database\Eloquent\Model
@@ -113,25 +115,19 @@ class Balances extends Page implements HasForms, HasTable
         return Auth::guard('marketplace_admin')->user();
     }
 
-    protected function legacyQueueKey(): string
-    {
-        return 'legacy_settle:queue:' . static::getMarketplaceClient()?->id;
-    }
-
     /** Câți organizatori mai sunt în coada de analiză / rezolvare. */
     public function legacyQueueCount(): int
     {
-        return $this->legacyEnabled() ? max(0, (int) Cache::get($this->legacyQueueKey(), 0)) : 0;
+        return $this->legacyEnabled() ? LegacySettlementService::queuedCount($this->baseQuery()->pluck('id')->all()) : 0;
     }
 
-    /** @return array<int> organizatorii cu verdictul dat (din cache) */
+    /** @return array<int> organizatorii cu verdictul dat */
     protected function organizerIdsWithVerdict(string $verdict): array
     {
-        $ids = $this->baseQuery()->pluck('id')->all();
-        $cached = Cache::many(array_map(fn ($id) => LegacySettlementService::verdictKey($id), $ids));
+        $all = LegacySettlementService::allVerdicts();
 
-        return collect($ids)->filter(function ($id) use ($cached, $verdict) {
-            $v = $cached[LegacySettlementService::verdictKey($id)]['verdict'] ?? null;
+        return $this->baseQuery()->pluck('id')->filter(function ($id) use ($all, $verdict) {
+            $v = $all[$id]['verdict'] ?? null;
 
             return $verdict === 'unknown' ? $v === null : $v === $verdict;
         })->values()->all();
@@ -166,15 +162,11 @@ class Balances extends Page implements HasForms, HasTable
                     // Fără deconturi vechi deschise: verdict direct, fără job.
                     foreach ($this->baseQuery()->whereNotIn('id', $candidates)->pluck('id') as $id) {
                         $settled = ($lastRuns[$id]->description ?? null) === 'settled';
-                        Cache::put(LegacySettlementService::verdictKey($id), [
-                            'verdict' => $settled ? LegacySettlementService::VERDICT_SETTLED : LegacySettlementService::VERDICT_NONE,
-                            'events' => 0, 'payouts' => 0, 'settle_amount' => 0, 'issues' => 0,
-                            'at' => now()->toIso8601String(),
-                        ], now()->addDays(30));
+                        LegacySettlementService::putVerdict((int) $id, $settled ? LegacySettlementService::VERDICT_SETTLED : LegacySettlementService::VERDICT_NONE);
                     }
 
                     $ids = $this->baseQuery()->whereIn('id', $candidates)->pluck('id');
-                    Cache::put($this->legacyQueueKey(), $ids->count(), now()->addDay());
+                    LegacySettlementService::markQueued($ids->all(), 'analyze');
                     foreach ($ids as $id) {
                         LegacySettlementJob::dispatch((int) $id, 'analyze');
                     }
@@ -309,7 +301,11 @@ class Balances extends Page implements HasForms, HasTable
                     ->label('Trecut')
                     ->visible(fn () => $this->legacyEnabled())
                     ->badge()
-                    ->state(fn ($record) => LegacySettlementService::cachedVerdict($record->id)['verdict'] ?? 'unknown')
+                    ->state(function ($record) {
+                        $v = LegacySettlementService::allVerdicts()[$record->id] ?? null;
+
+                        return ($v['queued'] ?? false) ? 'queued' : ($v['verdict'] ?? 'unknown');
+                    })
                     ->formatStateUsing(fn (string $state) => static::LEGACY_VERDICTS[$state][0] ?? 'Neanalizat')
                     ->color(fn (string $state) => static::LEGACY_VERDICTS[$state][1] ?? 'gray')
                     ->tooltip(function ($record) {
@@ -317,7 +313,7 @@ class Balances extends Page implements HasForms, HasTable
                         if (! $v) {
                             return 'Neanalizat încă';
                         }
-                        $at = \Carbon\Carbon::parse($v['at'])->format('d.m.Y H:i');
+                        $at = $v['at'] ? \Carbon\Carbon::parse($v['at'])->format('d.m.Y H:i') : '—';
 
                         return $v['events'] > 0
                             ? "{$v['events']} evenimente, {$v['payouts']} deconturi, " . number_format((float) $v['settle_amount'], 2, ',', '.') . ' lei'
@@ -376,7 +372,7 @@ class Balances extends Page implements HasForms, HasTable
                         $ok = $records->filter(fn ($r) => (LegacySettlementService::cachedVerdict($r->id)['verdict'] ?? null) === LegacySettlementService::VERDICT_OK);
                         $adminId = $this->currentAdmin()?->getKey();
 
-                        Cache::put($this->legacyQueueKey(), $this->legacyQueueCount() + $ok->count(), now()->addDay());
+                        LegacySettlementService::markQueued($ok->pluck('id')->all(), 'settle');
                         foreach ($ok as $r) {
                             LegacySettlementJob::dispatch((int) $r->id, 'settle', $adminId);
                         }

@@ -10,7 +10,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -52,7 +51,9 @@ class LegacySettlementJob implements ShouldQueue
             // din settle() a actualizat deja verdictul.
             Log::info('LegacySettlementJob: ' . $this->action . ' organizer ' . $this->organizerId . ': ' . $e->getMessage());
         } finally {
-            Cache::decrement('legacy_settle:queue:' . $organizer->marketplace_client_id);
+            // analyze() scoate deja organizatorul din coadă; aici doar pentru
+            // cazurile în care s-a oprit înainte de verdict.
+            LegacySettlementService::clearQueued($organizer->id);
         }
     }
 }
