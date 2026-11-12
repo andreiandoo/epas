@@ -43,7 +43,7 @@ class SettleLegacyPayouts extends Command
         $csv = fopen($csvPath, 'w');
         fwrite($csv, "\xEF\xBB\xBF");
         fputcsv($csv, ['organizer_id', 'organizator', 'verdict', 'event_id', 'eveniment', 'final', 'ciorna', 'mutata_de_pe_org', 'net', 'platit',
-            'in_procesare', 'suma_ciorna', 'se_aproba', 'ajustare', 'disponibil_acum', 'disponibil_dupa', 'sarite', 'probleme']);
+            'in_procesare', 'suma_ciorna', 'se_aproba', 'ajustare', 'disponibil_acum', 'disponibil_dupa', 'sarite', 'probleme'], ',', '"', '\\');
 
         $results = [];
         $bar = $this->output->createProgressBar(count($ids));
@@ -61,7 +61,7 @@ class SettleLegacyPayouts extends Command
                 fputcsv($csv, [$org->id, $org->name, $a['verdict'], $e['event_id'], $e['title'], $e['date'],
                     $ap['label'] ?? '', $ap && $ap['from_organizer_id'] !== $org->id ? $ap['from_organizer_id'] : '',
                     $e['net'], $e['paid'], $e['in_flight'], $ap['draft_amount'] ?? '', $ap['amount'] ?? '', $ap['adjustment'] ?? '',
-                    $e['balance_before'], $e['balance_after'], implode(' | ', $e['skipped']), implode(' ', $e['issues'])]);
+                    $e['balance_before'], $e['balance_after'], implode(' | ', $e['skipped']), implode(' ', $e['issues'])], ',', '"', '\\');
             }
             $bar->advance();
         }
