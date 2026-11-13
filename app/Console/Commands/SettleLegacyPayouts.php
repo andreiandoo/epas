@@ -21,7 +21,9 @@ class SettleLegacyPayouts extends Command
         {--revert-organizer= : Anulează ultima aprobare a acestui organizator}
         {--realign : Ciornele vechi aprobate, aduse la netul corectat al evenimentului (cu --apply scrie)}
         {--realign-all : Cu --realign, pe toate evenimentele, nu doar pe cele cu prețuri de bilet corectate}
-        {--revert-realign= : Anulează un lot de realiniere}';
+        {--revert-realign= : Anulează un lot de realiniere}
+        {--finalize : Ciornele vechi aprobate → Finalizat, „plătit în sistemul anterior” (cu --apply scrie)}
+        {--revert-finalize= : Anulează un lot de finalizare}';
 
     protected $description = 'Ciornele vechi AmBilet: analizează / aprobă ciornele „În așteptare” pe evenimentele încheiate până la ' . LegacySettlementService::CUTOFF_DATE . '.';
 
@@ -48,6 +50,19 @@ class SettleLegacyPayouts extends Command
 
         if ($this->option('realign')) {
             return $this->realign($service);
+        }
+
+        if ($batch = $this->option('revert-finalize')) {
+            if (! $this->confirm("Anulez lotul de finalizare {$batch} (deconturile revin în „Aprobat”)?", false)) {
+                return self::FAILURE;
+            }
+            $this->info('Deconturi readuse în „Aprobat”: ' . $service->revertFinalize((string) $batch) . '.');
+
+            return self::SUCCESS;
+        }
+
+        if ($this->option('finalize')) {
+            return $this->finalize($service);
         }
 
         $ids = $this->option('organizer')
@@ -114,6 +129,54 @@ class SettleLegacyPayouts extends Command
             }
         }
         $this->info("Aprobați: {$done}.");
+
+        return self::SUCCESS;
+    }
+
+    private function finalize(LegacySettlementService $service): int
+    {
+        $rows = collect($service->finalize(false)['rows']);
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $cutoff = \Carbon\Carbon::parse(LegacySettlementService::CUTOFF_DATE)->endOfDay();
+        $late = $rows->filter(fn ($r) => \Carbon\Carbon::createFromFormat('d.m.Y', $r['paid_at'])->gt($cutoff))->count();
+
+        $this->table(['', ''], [
+            ['Ciorne vechi aprobate de finalizat', $rows->count()],
+            ['Suma', $fmt($rows->sum('amount'))],
+            ['Organizatori', $rows->pluck('organizer_id')->unique()->count()],
+            ['Data plății, cea mai veche', $rows->min(fn ($r) => \Carbon\Carbon::createFromFormat('d.m.Y', $r['paid_at']))?->format('d.m.Y') ?? '—'],
+            ['Data plății, cea mai nouă', $rows->max(fn ($r) => \Carbon\Carbon::createFromFormat('d.m.Y', $r['paid_at']))?->format('d.m.Y') ?? '—'],
+            ['Cu data plății după ' . $cutoff->format('d.m.Y') . ' (de verificat)', $late],
+        ]);
+        $this->table(['An plată', 'Deconturi', 'Sumă'], $rows->groupBy(fn ($r) => substr($r['paid_at'], -4))->sortKeys()
+            ->map(fn ($g, $y) => [$y, $g->count(), $fmt($g->sum('amount'))])->values()->all());
+
+        $path = (getenv('HOME') ?: storage_path('app')) . '/settle-legacy/finalizare-' . now()->format('Ymd-His') . '.csv';
+        @mkdir(dirname($path), 0775, true);
+        $fh = fopen($path, 'w');
+        fwrite($fh, "\xEF\xBB\xBF");
+        fputcsv($fh, ['decont_id', 'decont', 'organizer_id', 'organizator', 'event_id', 'eveniment', 'suma', 'data_platii', 'rezultat'], ',', '"', '\\');
+        foreach ($rows as $r) {
+            fputcsv($fh, array_values($r), ',', '"', '\\');
+        }
+        fclose($fh);
+        $this->info("Raport: {$path}");
+
+        if (! $this->option('apply')) {
+            $this->comment('Simulare — nu s-a scris nimic. Pentru scriere: --finalize --apply.');
+
+            return self::SUCCESS;
+        }
+        if ($rows->isEmpty() || ! $this->confirm('Finalizez ' . $rows->count() . ' deconturi ca „plătit în sistemul anterior” (fără PDF, fără email)?', false)) {
+            return self::SUCCESS;
+        }
+
+        $done = $service->finalize(true);
+        $written = collect($done['rows'])->where('result', 'finalizat');
+        $this->info('Finalizate: ' . $written->count() . ' (' . $fmt($written->sum('amount')) . " lei). Lot: {$done['batch']} (anulare: --revert-finalize={$done['batch']}).");
+        foreach (collect($done['rows'])->filter(fn ($r) => str_starts_with($r['result'], 'sărit')) as $r) {
+            $this->warn("Decont #{$r['payout_id']}: {$r['result']}");
+        }
 
         return self::SUCCESS;
     }

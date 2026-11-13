@@ -603,6 +603,139 @@ class LegacySettlementService
         return $restored;
     }
 
+    // ---------------------------------------------------------------
+    // Finalizare: ciornele vechi aprobate, marcate plătite în sistemul anterior
+    // ---------------------------------------------------------------
+
+    public const FINALIZE_LOG = 'legacy-finalize';
+
+    public const PAID_NOTE = 'Plătit în sistemul anterior AmBilet; fără dovadă a plății înregistrată în Tixello.';
+
+    /**
+     * Ciornele vechi aprobate de aici (nota NOTE) trec în „Finalizat”, cu data
+     * plății = finalul evenimentului (12:00), ca să nu apară ca plăți din luna
+     * curentă. Ca la complete(): crește total_paid_out; fără PDF, fără email,
+     * fără rând de tranzacție. Fără $apply doar listează.
+     *
+     * @return array{rows: array<int, array>, batch: ?string}
+     */
+    public function finalize(bool $apply, ?Model $admin = null): array
+    {
+        $payouts = MarketplacePayout::where('marketplace_client_id', self::MARKETPLACE_ID)
+            ->where('status', 'approved')
+            ->where('admin_notes', 'like', '%' . self::NOTE . '%')
+            ->with(['event', 'organizer:id,name'])
+            ->orderBy('id')
+            ->get();
+
+        $batch = $apply ? (string) \Illuminate\Support\Str::uuid() : null;
+        $rows = [];
+        $byOrg = [];
+
+        foreach ($payouts->groupBy('marketplace_organizer_id') as $orgId => $group) {
+            $changes = [];
+            $paidOut = 0.0;
+
+            $write = function () use ($group, $apply, &$rows, &$changes, &$paidOut) {
+                foreach ($group as $p) {
+                    $end = $p->event?->getEffectiveEndDatetime() ?? $p->created_at;
+                    $paidAt = $end->copy()->timezone(config('app.timezone'))->setTime(12, 0);
+                    $row = [
+                        'payout_id' => $p->id,
+                        'payout' => $this->label($p),
+                        'organizer_id' => (int) $p->marketplace_organizer_id,
+                        'organizer' => $p->organizer?->name,
+                        'event_id' => $p->event_id,
+                        'event' => $p->event ? $this->title($p->event) : '',
+                        'amount' => round((float) $p->amount, 2),
+                        'paid_at' => $paidAt->format('d.m.Y'),
+                        'result' => $apply ? 'finalizat' : 'de finalizat',
+                    ];
+
+                    if ($apply) {
+                        $fresh = MarketplacePayout::whereKey($p->id)->lockForUpdate()->first();
+                        if (! $fresh || $fresh->status !== 'approved') {
+                            $row['result'] = 'sărit: s-a schimbat între timp';
+                            $rows[] = $row;
+
+                            continue;
+                        }
+                        $old = array_intersect_key($fresh->getRawOriginal(), array_flip(['status', 'completed_at', 'payment_notes', 'admin_notes']));
+                        MarketplacePayout::whereKey($p->id)->update([
+                            'status' => 'completed',
+                            'completed_at' => $paidAt,
+                            'payment_notes' => self::PAID_NOTE,
+                            'admin_notes' => trim(($old['admin_notes'] ? $old['admin_notes'] . "\n" : '') . 'Finalizat ' . now()->format('d.m.Y') . ': ' . self::PAID_NOTE),
+                        ]);
+                        $changes[] = ['payout_id' => $p->id, 'event_id' => $p->event_id, 'amount' => $row['amount'], 'old' => $old];
+                        $paidOut += $row['amount'];
+                    }
+                    $rows[] = $row;
+                }
+            };
+
+            if (! $apply) {
+                $write();
+
+                continue;
+            }
+
+            $org = MarketplaceOrganizer::find($orgId);
+            DB::transaction(function () use ($write, $org, &$paidOut) {
+                $write();
+                if ($org && $paidOut > 0) {
+                    $org->increment('total_paid_out', round($paidOut, 2));
+                }
+            });
+            if ($changes) {
+                activity(self::FINALIZE_LOG)->performedOn($org)->causedBy($admin)
+                    ->withProperties(['batch' => $batch, 'paid_out' => round($paidOut, 2), 'payouts' => $changes])
+                    ->log('finalized');
+                $byOrg[(int) $orgId] = collect($changes)->pluck('event_id')->filter()->all();
+            }
+        }
+
+        if ($byOrg) {
+            $this->afterChange(array_keys($byOrg), collect($byOrg)->flatten()->unique()->all());
+        }
+
+        return ['rows' => $rows, 'batch' => $batch];
+    }
+
+    /** Pune înapoi în „Aprobat” ciornele unui lot de finalizare (doar cele neatinse între timp). */
+    public function revertFinalize(string $batch, ?Model $admin = null): int
+    {
+        $activities = Activity::where('log_name', self::FINALIZE_LOG)->where('description', 'finalized')
+            ->where('properties->batch', $batch)->get();
+
+        $restored = 0;
+        $orgs = [];
+        $events = [];
+        foreach ($activities as $a) {
+            DB::transaction(function () use ($a, &$restored, &$orgs, &$events) {
+                $back = 0.0;
+                foreach ($a->properties['payouts'] ?? [] as $c) {
+                    $n = MarketplacePayout::whereKey($c['payout_id'])->where('status', 'completed')
+                        ->where('payment_notes', self::PAID_NOTE)->update($c['old']);
+                    if ($n) {
+                        $restored++;
+                        $back += (float) $c['amount'];
+                    }
+                    $events[] = $c['event_id'];
+                }
+                if ($back > 0 && ($org = MarketplaceOrganizer::find($a->subject_id))) {
+                    $org->decrement('total_paid_out', round($back, 2));
+                }
+                $orgs[] = (int) $a->subject_id;
+            });
+            activity(self::FINALIZE_LOG)->performedOn($a->subject)->causedBy($admin)
+                ->withProperties(['batch' => $batch, 'reverted_activity_id' => $a->id])->log('finalize-reverted');
+        }
+        $this->afterChange(array_unique($orgs), array_values(array_filter(array_unique($events))));
+
+        return $restored;
+    }
+
     private function afterChange(array $organizerIds, array $eventIds): void
     {
         foreach ($eventIds as $id) {
