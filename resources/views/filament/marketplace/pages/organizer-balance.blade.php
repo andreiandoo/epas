@@ -267,7 +267,12 @@
         </div>
 
         {{-- Payout History --}}
-        <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {{-- Starea deschis/închis ține minte peste re-randări (ex. după Finalizează). --}}
+        <div wire:key="payouts-list-panel"
+             x-data="{ open: !!(window.__epPayoutsOpen || {})[{{ (int) $this->organizer?->id }}] }"
+             x-init="$watch('open', v => { (window.__epPayoutsOpen ??= {})[{{ (int) $this->organizer?->id }}] = v })"
+             data-payouts-panel
+             class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="w-full px-6 py-4 flex items-center justify-between gap-4 text-left" x-bind:class="open ? 'border-b border-gray-200 dark:border-gray-700' : ''">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <x-heroicon-o-banknotes class="w-5 h-5 text-gray-400" />
@@ -447,6 +452,24 @@
                     }
                 });
             });
+
+            // La finalizare (rapidă sau din modal) pagina rămâne la rândul la care era.
+            const hookScroll = () => {
+                if (!window.Livewire?.hook) return false;
+                window.Livewire.hook('commit', ({ commit, succeed }) => {
+                    const calls = (commit?.calls || []).map((c) => c.method);
+                    if (!calls.some((m) => m === 'quickComplete' || m === 'callMountedAction')) return;
+                    if (!document.querySelector('[data-payouts-panel]')) return;
+                    const y = window.scrollY;
+                    succeed(() => {
+                        requestAnimationFrame(() => requestAnimationFrame(() => {
+                            if (Math.abs(window.scrollY - y) > 1) window.scrollTo({ top: y, behavior: 'instant' });
+                        }));
+                    });
+                });
+                return true;
+            };
+            if (!hookScroll()) document.addEventListener('livewire:init', hookScroll, { once: true });
         })();
     </script>
 </x-filament-panels::page>
