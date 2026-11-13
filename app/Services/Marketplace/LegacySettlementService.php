@@ -460,6 +460,149 @@ class LegacySettlementService
         });
     }
 
+    // ---------------------------------------------------------------
+    // Realiniere după corectarea prețurilor (tickets:fix-legacy-prices)
+    // ---------------------------------------------------------------
+
+    /** Jurnal separat, ca lastRun()/revert() să vadă în continuare doar aprobările. */
+    public const REALIGN_LOG = 'legacy-realign';
+
+    /**
+     * Ciornele vechi aprobate de aici (nota NOTE), încă neplătite, aduse la
+     * netul actual al evenimentului: net − plătit − alte deconturi în procesare,
+     * ca soldul evenimentului să fie din nou 0. Implicit doar pe evenimentele
+     * cu prețuri de bilet corectate. Fără $apply nu scrie nimic.
+     *
+     * @return array{rows: array<int, array>, batch: ?string}
+     */
+    public function realign(bool $apply, bool $allEvents = false, ?Model $admin = null): array
+    {
+        $q = MarketplacePayout::where('marketplace_client_id', self::MARKETPLACE_ID)
+            ->where('status', 'approved')
+            ->whereNotNull('event_id')
+            ->where('admin_notes', 'like', '%' . self::NOTE . '%')
+            ->with('event');
+        if (! $allEvents) {
+            $q->whereIn('event_id', DB::table('legacy_ticket_price_fixes')->whereNull('reverted_at')->distinct()->select('event_id'));
+        }
+
+        $batch = $apply ? (string) \Illuminate\Support\Str::uuid() : null;
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $rows = [];
+        $byOrg = [];
+
+        foreach ($q->orderBy('id')->get()->groupBy('event_id') as $group) {
+            $p = $group->first();
+            $event = $p->event;
+            if (! $event) {
+                continue;
+            }
+
+            $net = (float) (MarketplacePayout::balanceBreakdown($event, $this->breakdown)['total_net'] ?? 0);
+            $paid = (float) MarketplacePayout::where('event_id', $event->id)->where('status', 'completed')->sum('amount');
+            $others = (float) MarketplacePayout::where('event_id', $event->id)->whereIn('status', ['approved', 'processing'])
+                ->whereKeyNot($p->id)->sum('amount');
+            $target = round($net - $paid - $others, 2);
+            $old = round((float) $p->amount, 2);
+            $new = max(0.0, $target);
+
+            $notes = [];
+            if ($group->count() > 1) {
+                $notes[] = 'mai multe ciorne vechi aprobate pe eveniment; se realiniază doar prima';
+            }
+            if ($target < -0.004) {
+                $notes[] = 'netul e sub ce e deja plătit / în procesare; ciorna rămâne la 0';
+            }
+
+            $row = [
+                'event_id' => $event->id,
+                'event' => $this->title($event),
+                'organizer_id' => (int) $p->marketplace_organizer_id,
+                'payout_id' => $p->id,
+                'payout' => $this->label($p),
+                'net' => round($net, 2),
+                'paid' => round($paid, 2),
+                'others' => round($others, 2),
+                'old' => $old,
+                'new' => $new,
+                'diff' => round($new - $old, 2),
+                'notes' => implode('; ', $notes),
+                'result' => abs($new - $old) < 0.01 ? 'neschimbat' : ($apply ? 'realiniat' : 'de realiniat'),
+            ];
+
+            if ($apply && $row['result'] === 'realiniat') {
+                $done = DB::transaction(function () use ($p, $old, $new, $fmt, &$byOrg, $event) {
+                    $fresh = MarketplacePayout::whereKey($p->id)->lockForUpdate()->first();
+                    if (! $fresh || $fresh->status !== 'approved' || abs((float) $fresh->amount - $old) >= 0.01) {
+                        return false;
+                    }
+                    $oldNotes = $fresh->getRawOriginal('admin_notes');
+                    $note = 'Realiniat ' . now()->format('d.m.Y') . ': prețurile biletelor importate au fost aduse la ce a plătit clientul; suma '
+                        . $fmt($old) . ' → ' . $fmt($new) . ' lei.';
+                    MarketplacePayout::whereKey($p->id)->update([
+                        'amount' => $new,
+                        'admin_notes' => trim(($oldNotes ? $oldNotes . "\n" : '') . $note),
+                    ]);
+                    $byOrg[(int) $p->marketplace_organizer_id][] = [
+                        'payout_id' => $p->id,
+                        'event_id' => $event->id,
+                        'old' => ['amount' => $old, 'admin_notes' => $oldNotes],
+                        'new' => ['amount' => $new],
+                    ];
+
+                    return true;
+                });
+                if (! $done) {
+                    $row['result'] = 'sărit: ciorna s-a schimbat între timp';
+                }
+            }
+
+            $rows[] = $row;
+        }
+
+        foreach ($byOrg as $orgId => $changes) {
+            activity(self::REALIGN_LOG)
+                ->performedOn(MarketplaceOrganizer::find($orgId))
+                ->causedBy($admin)
+                ->withProperties(['batch' => $batch, 'payouts' => $changes])
+                ->log('realigned');
+        }
+        if ($byOrg) {
+            $this->afterChange(array_keys($byOrg), collect($byOrg)->flatten(1)->pluck('event_id')->unique()->all());
+        }
+
+        return ['rows' => $rows, 'batch' => $batch];
+    }
+
+    /** Pune înapoi suma și notele ciornelor dintr-un lot de realiniere (doar cele neatinse între timp). */
+    public function revertRealign(string $batch, ?Model $admin = null): int
+    {
+        $activities = Activity::where('log_name', self::REALIGN_LOG)->where('description', 'realigned')
+            ->where('properties->batch', $batch)->get();
+
+        $restored = 0;
+        $orgs = [];
+        $events = [];
+        DB::transaction(function () use ($activities, &$restored, &$orgs, &$events) {
+            foreach ($activities as $a) {
+                foreach ($a->properties['payouts'] ?? [] as $c) {
+                    $restored += MarketplacePayout::whereKey($c['payout_id'])->where('status', 'approved')
+                        ->where('amount', $c['new']['amount'])->update($c['old']);
+                    $events[] = $c['event_id'];
+                }
+                $orgs[] = (int) $a->subject_id;
+            }
+        });
+
+        foreach ($activities as $a) {
+            activity(self::REALIGN_LOG)->performedOn($a->subject)->causedBy($admin)
+                ->withProperties(['batch' => $batch, 'reverted_activity_id' => $a->id])->log('realign-reverted');
+        }
+        $this->afterChange(array_unique($orgs), array_unique($events));
+
+        return $restored;
+    }
+
     private function afterChange(array $organizerIds, array $eventIds): void
     {
         foreach ($eventIds as $id) {
