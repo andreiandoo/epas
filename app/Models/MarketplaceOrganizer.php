@@ -625,6 +625,7 @@ class MarketplaceOrganizer extends Authenticatable
     {
         $this->decrement('available_balance', $amount);
         $this->increment('pending_balance', $amount);
+        \App\Jobs\RecomputeOrganizerBalanceJob::schedule($this->id);
     }
 
     /**
@@ -634,6 +635,7 @@ class MarketplaceOrganizer extends Authenticatable
     {
         $this->decrement('pending_balance', $amount);
         $this->increment('available_balance', $amount);
+        \App\Jobs\RecomputeOrganizerBalanceJob::schedule($this->id);
     }
 
     /**
@@ -643,6 +645,9 @@ class MarketplaceOrganizer extends Authenticatable
     {
         $this->decrement('pending_balance', $amount);
         $this->increment('total_paid_out', $amount);
+        // Totalurile incrementale deviază ușor (606: în procesare −4.560 după
+        // finalizare); recalcularea le aduce la cifrele din pagina de sold.
+        \App\Jobs\RecomputeOrganizerBalanceJob::schedule($this->id);
     }
 
     /**
