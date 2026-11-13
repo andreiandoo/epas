@@ -47,6 +47,11 @@ class LegacySettlementService
 
     public const LOG_NAME = 'legacy-settlement';
 
+    /** Ciornele din tranziție: evenimente încheiate după CUTOFF_DATE, cu vânzări și din sistemul anterior. */
+    public const TRANSITION_LOG = 'legacy-transition';
+
+    public const TRANSITION_NOTE = 'ciornă din perioada de tranziție (vânzări parțial în sistemul anterior AmBilet, parțial în Tixello), suma adusă la netul evenimentului; plata de verificat cu extrasul';
+
     public const VERDICT_NONE = 'none';
     public const VERDICT_OK = 'ok';
     public const VERDICT_WARN = 'warn';
@@ -76,9 +81,10 @@ class LegacySettlementService
      * organizator a rămas ciorna), pentru evenimentele încheiate până la
      * CUTOFF_DATE.
      */
-    public function analyze(MarketplaceOrganizer $organizer): array
+    public function analyze(MarketplaceOrganizer $organizer, bool $transition = false): array
     {
         $cutoff = self::cutoff();
+        $freeze = Carbon::parse(MarketplacePayout::LEGACY_SETTLEMENT_FREEZE);
         $orgId = (int) $organizer->id;
 
         $drafts = MarketplacePayout::where('marketplace_client_id', $organizer->marketplace_client_id)
@@ -96,7 +102,15 @@ class LegacySettlementService
             /** @var Event $event */
             $event = $rows->first()->event;
             $end = $event->getEffectiveEndDatetime();
-            if ($end && $end->gt($cutoff)) {
+            if ($transition) {
+                // După cutoff, deja încheiat, cu vânzări importate; doar ciornele
+                // create înainte de LEGACY_SETTLEMENT_FREEZE (cele de după sunt
+                // deconturi Tixello obișnuite).
+                $rows = $rows->filter(fn ($p) => $p->created_at && $p->created_at->lt($freeze))->values();
+                if (! $end || $end->lte($cutoff) || $end->isFuture() || $rows->isEmpty() || ! self::eventHasLegacySales($event->id)) {
+                    continue;
+                }
+            } elseif ($end && $end->gt($cutoff)) {
                 continue;
             }
 
@@ -110,7 +124,7 @@ class LegacySettlementService
         usort($events, fn ($a, $b) => strcmp($a['sort_date'], $b['sort_date']));
 
         $toApprove = collect($events)->filter(fn ($e) => empty($e['issues']) && $e['approve']);
-        $last = $this->lastRun($organizer);
+        $last = $this->lastRun($organizer, $transition);
         $verdict = match (true) {
             $toApprove->isEmpty() && empty($issues) => $last && $last->description === 'settled' ? self::VERDICT_SETTLED : self::VERDICT_NONE,
             ! empty($issues) => self::VERDICT_BLOCKED,
@@ -147,7 +161,10 @@ class LegacySettlementService
             'analyzed_at' => now()->format('d.m.Y H:i'),
         ];
 
-        $this->storeVerdict($orgId, $result);
+        // Coloana „Trecut” din Balanțe ține doar verdictul ciornelor vechi.
+        if (! $transition) {
+            $this->storeVerdict($orgId, $result);
+        }
 
         return $result;
     }
@@ -342,10 +359,10 @@ class LegacySettlementService
      * Reface analiza și aprobă ciornele dacă verdictul e ok (sau atenție, cu
      * confirmare). Întoarce analiza folosită; aruncă excepție dacă nu se poate.
      */
-    public function settle(MarketplaceOrganizer $organizer, ?Model $admin, bool $confirmWarn = false): array
+    public function settle(MarketplaceOrganizer $organizer, ?Model $admin, bool $confirmWarn = false, bool $transition = false): array
     {
-        return Cache::lock('legacy_settle:org:' . $organizer->id, 900)->block(5, function () use ($organizer, $admin, $confirmWarn) {
-            $analysis = $this->analyze($organizer);
+        return Cache::lock('legacy_settle:org:' . $organizer->id, 900)->block(5, function () use ($organizer, $admin, $confirmWarn, $transition) {
+            $analysis = $this->analyze($organizer, $transition);
 
             if ($analysis['verdict'] === self::VERDICT_BLOCKED) {
                 throw new \RuntimeException('Organizatorul are probleme de lămurit: ' . collect($analysis['issues'])->pluck('text')->first());
@@ -360,7 +377,7 @@ class LegacySettlementService
             $changes = [];
             $touchedOrganizers = [(int) $organizer->id];
 
-            DB::transaction(function () use ($analysis, $organizer, $admin, &$changes, &$touchedOrganizers) {
+            DB::transaction(function () use ($analysis, $organizer, $admin, $transition, &$changes, &$touchedOrganizers) {
                 $today = now()->format('d.m.Y');
 
                 foreach ($analysis['events'] as $ev) {
@@ -378,7 +395,7 @@ class LegacySettlementService
                         'marketplace_organizer_id', 'amount', 'status', 'approved_at', 'approved_by', 'admin_notes',
                     ]));
 
-                    $note = "Aprobat {$today}: " . self::NOTE . '.';
+                    $note = "Aprobat {$today}: " . ($transition ? self::TRANSITION_NOTE : self::NOTE) . '.';
                     if (abs($info['adjustment']) >= 0.01) {
                         $note .= ' Suma ciornei ' . number_format($info['draft_amount'], 2, ',', '.') . ' lei a fost adusă la netul evenimentului, '
                             . number_format($info['amount'], 2, ',', '.') . ' lei.';
@@ -406,11 +423,11 @@ class LegacySettlementService
                 }
             });
 
-            activity(self::LOG_NAME)
+            activity($transition ? self::TRANSITION_LOG : self::LOG_NAME)
                 ->performedOn($organizer)
                 ->causedBy($admin)
                 ->withProperties([
-                    'mode' => 'approve',
+                    'mode' => $transition ? 'transition' : 'approve',
                     'cutoff' => self::CUTOFF_DATE,
                     'payouts' => $changes,
                     'organizers' => array_values(array_unique($touchedOrganizers)),
@@ -425,10 +442,10 @@ class LegacySettlementService
     }
 
     /** Pune ciornele ultimei aprobări înapoi exact cum erau (doar cele încă neplătite). */
-    public function revert(MarketplaceOrganizer $organizer, ?Model $admin): int
+    public function revert(MarketplaceOrganizer $organizer, ?Model $admin, bool $transition = false): int
     {
-        return Cache::lock('legacy_settle:org:' . $organizer->id, 900)->block(5, function () use ($organizer, $admin) {
-            $last = $this->lastRun($organizer);
+        return Cache::lock('legacy_settle:org:' . $organizer->id, 900)->block(5, function () use ($organizer, $admin, $transition) {
+            $last = $this->lastRun($organizer, $transition);
             if (! $last || $last->description !== 'settled') {
                 throw new \RuntimeException('Nu există o aprobare de anulat.');
             }
@@ -447,7 +464,7 @@ class LegacySettlementService
                 }
             });
 
-            activity(self::LOG_NAME)
+            activity($transition ? self::TRANSITION_LOG : self::LOG_NAME)
                 ->performedOn($organizer)
                 ->causedBy($admin)
                 ->withProperties(['reverted_activity_id' => $last->id, 'restored' => $restored, 'not_restored' => $stillPaid])
@@ -750,9 +767,9 @@ class LegacySettlementService
         }
     }
 
-    public function lastRun(MarketplaceOrganizer $organizer): ?Activity
+    public function lastRun(MarketplaceOrganizer $organizer, bool $transition = false): ?Activity
     {
-        return Activity::where('log_name', self::LOG_NAME)
+        return Activity::where('log_name', $transition ? self::TRANSITION_LOG : self::LOG_NAME)
             ->where('subject_type', $organizer->getMorphClass())
             ->where('subject_id', $organizer->id)
             ->with('causer')
@@ -885,6 +902,37 @@ class LegacySettlementService
             ->unique()
             ->values()
             ->all();
+    }
+
+    /** Organizatorii evenimentelor din tranziție cu ciorne „În așteptare”. */
+    public static function transitionCandidateIds(int $marketplaceId): array
+    {
+        $cutoff = self::cutoff();
+        $freeze = Carbon::parse(MarketplacePayout::LEGACY_SETTLEMENT_FREEZE);
+
+        return MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'pending')
+            ->whereNotNull('event_id')
+            ->where('created_at', '<', $freeze)
+            ->with('event')
+            ->get()
+            ->filter(fn ($p) => $p->event && $p->event->marketplace_organizer_id
+                && ($end = $p->event->getEffectiveEndDatetime()) && $end->gt($cutoff) && ! $end->isFuture()
+                && self::eventHasLegacySales($p->event_id))
+            ->map(fn ($p) => (int) $p->event->marketplace_organizer_id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** Evenimentul are bilete vândute în sistemul anterior (comenzi legacy_import). */
+    public static function eventHasLegacySales(int $eventId): bool
+    {
+        return DB::table('tickets as t')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->where('t.event_id', $eventId)
+            ->where('o.source', 'legacy_import')
+            ->exists();
     }
 
     // ---------------------------------------------------------------

@@ -23,7 +23,8 @@ class SettleLegacyPayouts extends Command
         {--realign-all : Cu --realign, pe toate evenimentele, nu doar pe cele cu prețuri de bilet corectate}
         {--revert-realign= : Anulează un lot de realiniere}
         {--finalize : Ciornele vechi aprobate → Finalizat, „plătit în sistemul anterior” (cu --apply scrie)}
-        {--revert-finalize= : Anulează un lot de finalizare}';
+        {--revert-finalize= : Anulează un lot de finalizare}
+        {--transition : Ciornele din tranziție (evenimente încheiate după data limită, cu vânzări și din sistemul anterior) în loc de cele vechi}';
 
     protected $description = 'Ciornele vechi AmBilet: analizează / aprobă ciornele „În așteptare” pe evenimentele încheiate până la ' . LegacySettlementService::CUTOFF_DATE . '.';
 
@@ -34,7 +35,7 @@ class SettleLegacyPayouts extends Command
             if (! $this->confirm("Anulez ultima aprobare pentru {$org->name}?", false)) {
                 return self::FAILURE;
             }
-            $this->info('Readuse: ' . $service->revert($org, null) . ' ciorne.');
+            $this->info('Readuse: ' . $service->revert($org, null, (bool) $this->option('transition')) . ' ciorne.');
 
             return self::SUCCESS;
         }
@@ -65,11 +66,14 @@ class SettleLegacyPayouts extends Command
             return $this->finalize($service);
         }
 
+        $transition = (bool) $this->option('transition');
         $ids = $this->option('organizer')
             ? [(int) $this->option('organizer')]
-            : LegacySettlementService::candidateOrganizerIds(LegacySettlementService::MARKETPLACE_ID);
+            : ($transition
+                ? LegacySettlementService::transitionCandidateIds(LegacySettlementService::MARKETPLACE_ID)
+                : LegacySettlementService::candidateOrganizerIds(LegacySettlementService::MARKETPLACE_ID));
 
-        $csvPath = $this->option('csv') ?: ((getenv('HOME') ?: storage_path('app')) . '/settle-legacy/analiza-' . now()->format('Ymd-His') . '.csv');
+        $csvPath = $this->option('csv') ?: ((getenv('HOME') ?: storage_path('app')) . '/settle-legacy/' . ($transition ? 'tranzitie-' : 'analiza-') . now()->format('Ymd-His') . '.csv');
         @mkdir(dirname($csvPath), 0775, true);
         $csv = fopen($csvPath, 'w');
         fwrite($csv, "\xEF\xBB\xBF");
@@ -85,7 +89,7 @@ class SettleLegacyPayouts extends Command
 
                 continue;
             }
-            $a = $service->analyze($org);
+            $a = $service->analyze($org, $transition);
             $results[] = $a;
             foreach ($a['events'] as $e) {
                 $ap = $e['approve'];
@@ -122,7 +126,7 @@ class SettleLegacyPayouts extends Command
         $done = 0;
         foreach ($toSettle as $a) {
             try {
-                $service->settle(MarketplaceOrganizer::find($a['organizer_id']), null, true);
+                $service->settle(MarketplaceOrganizer::find($a['organizer_id']), null, true, $transition);
                 $done++;
             } catch (\Throwable $e) {
                 $this->warn("#{$a['organizer_id']} {$a['organizer']}: {$e->getMessage()}");
