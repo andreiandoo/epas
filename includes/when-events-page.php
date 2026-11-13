@@ -233,12 +233,12 @@ require_once __DIR__ . '/header.php';
     foreach ($orderedSlugs as $slug) {
         if (empty($eventsByCategory[$slug])) continue;
         $catData = $slug === '__other__'
-            ? ['name' => 'Altele', 'icon_emoji' => '🎟️', 'slug' => '__other__']
-            : ($categoryBySlug[$slug] ?? ['name' => ucfirst($slug), 'icon_emoji' => '🎫', 'slug' => $slug]);
+            ? ['name' => 'Altele', 'icon_emoji' => 'ticket', 'slug' => '__other__']
+            : ($categoryBySlug[$slug] ?? ['name' => ucfirst($slug), 'icon_emoji' => 'ticket', 'slug' => $slug]);
         $tocItems[] = [
             'slug'  => $slug,
             'name'  => $catData['name'] ?? ucfirst($slug),
-            'icon'  => $catData['icon_emoji'] ?? '🎫',
+            'icon'  => $catData['icon_emoji'] ?? 'ticket',
             'count' => count($eventsByCategory[$slug]),
         ];
     }
@@ -248,7 +248,7 @@ require_once __DIR__ . '/header.php';
         <nav class="flex flex-wrap gap-2 mb-6" aria-label="Categorii">
             <?php foreach ($tocItems as $item): ?>
                 <a href="#cat-<?= htmlspecialchars($item['slug']) ?>" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all bg-white border rounded-full border-border text-secondary hover:border-primary hover:text-primary">
-                    <span aria-hidden="true"><?= htmlspecialchars($item['icon']) ?></span>
+                    <?= amb_category_icon($item['icon'], 'w-4 h-4') ?>
                     <?= htmlspecialchars($item['name']) ?>
                     <span class="px-1.5 py-0.5 text-xs font-bold rounded-full bg-primary/10 text-primary"><?= (int) $item['count'] ?></span>
                 </a>
@@ -260,17 +260,17 @@ require_once __DIR__ . '/header.php';
         if (empty($eventsByCategory[$slug])) continue;
         $events = $eventsByCategory[$slug];
         $catData = $slug === '__other__'
-            ? ['name' => 'Altele', 'icon_emoji' => '🎟️', 'slug' => '__other__']
-            : ($categoryBySlug[$slug] ?? ['name' => ucfirst($slug), 'icon_emoji' => '🎫', 'slug' => $slug]);
+            ? ['name' => 'Altele', 'icon_emoji' => 'ticket', 'slug' => '__other__']
+            : ($categoryBySlug[$slug] ?? ['name' => ucfirst($slug), 'icon_emoji' => 'ticket', 'slug' => $slug]);
         $catName = $catData['name'] ?? ucfirst($slug);
-        $catIcon = $catData['icon_emoji'] ?? '🎫';
+        $catIcon = $catData['icon_emoji'] ?? 'ticket';
         $catLink = $slug !== '__other__' ? '/' . rawurlencode($slug) : null;
         $payload = json_encode($events, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP);
     ?>
         <section id="cat-<?= htmlspecialchars($slug) ?>" class="mb-10 scroll-mt-24">
             <div class="flex items-end justify-between gap-4 mb-4">
                 <div class="flex items-center gap-3">
-                    <span class="text-2xl" aria-hidden="true"><?= htmlspecialchars($catIcon) ?></span>
+                    <span class="text-primary"><?= amb_category_icon($catIcon, 'w-7 h-7') ?></span>
                     <div>
                         <h2 class="text-xl font-bold text-secondary"><?= htmlspecialchars($catName) ?></h2>
                         <p class="text-xs text-muted"><?= count($events) ?> <?= count($events) === 1 ? 'eveniment' : 'evenimente' ?></p>

@@ -288,14 +288,14 @@ const RegionPage = {
 
     renderHighlights() {
         const highlights = [
-            { icon: '🏰', label: 'Cetati medievale' },
-            { icon: '🎵', label: 'Festivaluri majore' },
-            { icon: '🎭', label: 'Teatru de traditie' },
-            { icon: '🏔️', label: 'Peisaje montane' }
+            { icon: 'castle', label: 'Cetati medievale' },
+            { icon: 'music', label: 'Festivaluri majore' },
+            { icon: 'drama', label: 'Teatru de traditie' },
+            { icon: 'mountain-snow', label: 'Peisaje montane' }
         ];
 
         document.getElementById('regionHighlights').innerHTML = highlights
-            .map(h => `<span class="px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 text-slate-600">${h.icon} ${h.label}</span>`)
+            .map(h => `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 text-slate-600">${ambIcon(h.icon, 'w-4 h-4')} ${h.label}</span>`)
             .join('');
     },
 
@@ -481,19 +481,19 @@ const RegionPage = {
         }
 
         const icons = {
-            'muntenia': '🏛️',
-            'moldova': '⛪',
-            'banat': '🎻',
-            'dobrogea': '🏖️',
-            'oltenia': '🏔️',
-            'crisana': '🏰',
-            'maramures': '⛰️',
-            'transilvania': '🗻'
+            'muntenia': 'landmark',
+            'moldova': 'church',
+            'banat': 'music-4',
+            'dobrogea': 'umbrella',
+            'oltenia': 'mountain-snow',
+            'crisana': 'castle',
+            'maramures': 'mountain',
+            'transilvania': 'mountain'
         };
 
         container.innerHTML = this.otherRegions.slice(0, 5).map(region => `
             <a href="/regiune/${region.slug}" class="block p-5 text-center transition-all bg-white border rounded-xl border-border hover:border-primary hover:-translate-y-0.5 hover:shadow-lg">
-                <div class="mb-2 text-2xl">${region.icon || icons[region.slug] || '📍'}</div>
+                <div class="mb-2 text-primary">${ambIcon(String(region.icon || icons[region.slug] || 'map-pin').replace(/\uFE0F/g, ''), 'w-7 h-7 mx-auto')}</div>
                 <div class="mb-0.5 font-semibold text-secondary">${region.name}</div>
                 <div class="text-xs text-muted">${region.events_count} evenimente</div>
             </a>

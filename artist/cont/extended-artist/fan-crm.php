@@ -172,7 +172,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </div>
                     </div>
                     <div class="p-5 bg-white border border-border rounded-2xl">
-                        <h3 class="mb-3 font-bold text-secondary">🌙 Orașe „dormite"</h3>
+                        <h3 class="mb-3 font-bold text-secondary"><?= amb_icon('moon', 'w-4 h-4') ?> Orașe „dormite"</h3>
                         <p class="mb-3 text-xs text-muted">Fani locali, dar nu ai mai cântat de mult</p>
                         <div class="space-y-2">
                             <template x-for="(c, idx) in overview.dormant_cities || []" :key="idx">
@@ -271,7 +271,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <option :value="seg.id" x-text="seg.name"></option>
                             </template>
                         </select>
-                        <a :href="exportUrl()" target="_blank" class="fc-btn fc-btn-secondary fc-btn-sm">📥 Export CSV</a>
+                        <a :href="exportUrl()" target="_blank" class="fc-btn fc-btn-secondary fc-btn-sm"><?= amb_icon('download', 'w-3.5 h-3.5') ?> Export CSV</a>
                     </div>
 
                     <div class="overflow-x-auto">
@@ -436,7 +436,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
             <!-- ============ TAB: VIP ============ -->
             <div x-show="tab === 'vip'" class="space-y-4">
                 <div class="p-5 bg-white border border-border rounded-2xl">
-                    <h3 class="mb-4 font-bold text-secondary">🏆 Top 10 fani VIP</h3>
+                    <h3 class="mb-4 font-bold text-secondary"><?= amb_icon('trophy', 'w-4 h-4 text-amber-500') ?> Top 10 fani VIP</h3>
                     <div class="space-y-3">
                         <template x-for="(vip, idx) in vipData || []" :key="vip.id">
                             <div class="flex items-center gap-4 p-3 bg-surface rounded-xl">

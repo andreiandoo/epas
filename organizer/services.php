@@ -2461,7 +2461,7 @@ const placementPreviews = {
                 <div class="px-4 pt-5 pb-4 bg-white ring-4 ring-primary ring-inset">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
-                            <span class="text-base text-primary">⭐</span>
+                            <span class="text-base text-primary">${ambIcon('star', 'w-4 h-4')}</span>
                             <span class="font-bold text-gray-900">Recomandate pentru tine</span>
                             <span class="bg-yellow-100 text-yellow-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide">Evenimentul tau</span>
                         </div>
@@ -2621,7 +2621,7 @@ const placementPreviews = {
                 <div class="px-4 pt-4 pb-4 bg-white ring-4 ring-blue-500 ring-inset">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
-                            <span class="text-base">🔥</span>
+                            <span class="text-base">${ambIcon('flame', 'w-4 h-4 text-orange-500')}</span>
                             <span class="font-bold text-gray-900">Populare in București</span>
                             <span class="bg-yellow-100 text-yellow-800 text-[10px] font-black px-1.5 py-0.5 rounded-full">Evenimentul tau</span>
                         </div>

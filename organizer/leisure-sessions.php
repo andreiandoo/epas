@@ -12,7 +12,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">👤 Sesiuni casă POS</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('user', 'w-7 h-7') ?> Sesiuni casă POS</h1>
                 <p class="mt-1 text-sm text-muted">Detalii ture: operator, ore deschidere/închidere, încasări cash + card, comenzi + bilete.</p>
             </div>
             <a href="/organizator/leisure-sales" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border rounded-lg text-secondary bg-white border-border hover:bg-slate-50">← Înapoi la Vânzări</a>
@@ -48,8 +48,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <strong id="ls-summary-count" class="text-2xl text-secondary tabular-nums">0</strong>
                 <span class="text-lg">sesiuni</span>
                 · Total încasat POS: <strong id="ls-summary-total" class="tabular-nums text-emerald-700">0.00 RON</strong>
-                (💵 <span id="ls-summary-cash" class="tabular-nums font-semibold">0.00</span>
-                · 💳 <span id="ls-summary-card" class="tabular-nums font-semibold">0.00</span>)
+                (<?= amb_icon('banknote', 'w-4 h-4') ?> <span id="ls-summary-cash" class="tabular-nums font-semibold">0.00</span>
+                · <?= amb_icon('credit-card', 'w-4 h-4') ?> <span id="ls-summary-card" class="tabular-nums font-semibold">0.00</span>)
             </p>
         </div>
 
@@ -108,15 +108,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function sessionHtml(s) {
         const status = s.is_open
-            ? '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
-            : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
+            ? '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">' + ambIcon('lock-open', 'w-3 h-3') + ' DESCHISĂ</span>'
+            : '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">' + ambIcon('lock', 'w-3 h-3') + ' ÎNCHISĂ</span>';
         const total = Number(s.cash || 0) + Number(s.card || 0);
         return `
         <div class="bg-white border border-border rounded-2xl p-4">
             <div class="flex flex-wrap items-center gap-2 justify-between mb-3">
                 <div>
-                    <p class="text-base font-bold text-secondary">👤 ${esc(s.operator || 'Operator')}</p>
-                    <p class="text-xs text-muted">${fmtDT(s.opened_at)} → ${s.closed_at ? fmtDT(s.closed_at) : '⏳ în desfășurare'}</p>
+                    <p class="text-base font-bold text-secondary">${ambIcon('user', 'w-4 h-4')} ${esc(s.operator || 'Operator')}</p>
+                    <p class="text-xs text-muted">${fmtDT(s.opened_at)} → ${s.closed_at ? fmtDT(s.closed_at) : ambIcon('hourglass', 'w-3 h-3') + ' în desfășurare'}</p>
                 </div>
                 <div class="flex items-center gap-3">
                     ${status}
@@ -128,19 +128,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
                 <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p class="text-[10px] text-amber-700 uppercase font-bold">💵 Cash</p>
+                    <p class="text-[10px] text-amber-700 uppercase font-bold">${ambIcon('banknote', 'w-3 h-3')} Cash</p>
                     <p class="text-lg font-extrabold text-amber-900 tabular-nums">${fmtMoney(s.cash)} <span class="text-xs">RON</span></p>
                 </div>
                 <div class="p-3 bg-sky-50 border border-sky-200 rounded-lg">
-                    <p class="text-[10px] text-sky-700 uppercase font-bold">💳 Card</p>
+                    <p class="text-[10px] text-sky-700 uppercase font-bold">${ambIcon('credit-card', 'w-3 h-3')} Card</p>
                     <p class="text-lg font-extrabold text-sky-900 tabular-nums">${fmtMoney(s.card)} <span class="text-xs">RON</span></p>
                 </div>
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    <p class="text-[10px] text-slate-600 uppercase font-bold">🧾 Comenzi</p>
+                    <p class="text-[10px] text-slate-600 uppercase font-bold">${ambIcon('receipt', 'w-3 h-3')} Comenzi</p>
                     <p class="text-lg font-extrabold text-slate-900 tabular-nums">${s.orders || 0}</p>
                 </div>
                 <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                    <p class="text-[10px] text-slate-600 uppercase font-bold">🎟️ Bilete</p>
+                    <p class="text-[10px] text-slate-600 uppercase font-bold">${ambIcon('ticket', 'w-3 h-3')} Bilete</p>
                     <p class="text-lg font-extrabold text-slate-900 tabular-nums">${s.tickets_sold || 0}${s.tickets_visitors && s.tickets_visitors !== s.tickets_sold ? ' <span class="text-[10px] text-muted">/ '+s.tickets_visitors+' vizitatori</span>' : ''}</p>
                 </div>
             </div>

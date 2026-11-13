@@ -20,7 +20,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="absolute top-0 right-0 w-64 h-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5"></div>
                 <div class="absolute bottom-0 w-32 h-32 translate-y-1/2 rounded-full right-20 bg-white/5"></div>
                 <div class="relative">
-                    <h1 class="mb-2 text-2xl font-bold md:text-3xl">Bun venit inapoi! 👋</h1>
+                    <h1 class="mb-2 text-2xl font-bold md:text-3xl">Bun venit inapoi! <?= amb_icon('hand', 'w-7 h-7') ?></h1>
                     <p id="welcome-stat" class="text-white/80">Ai vandut 0 bilete in ultima saptamana. Continua tot asa!</p>
                 </div>
             </div>

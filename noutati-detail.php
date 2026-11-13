@@ -215,10 +215,10 @@ require_once __DIR__ . '/includes/header.php';
              data-slug="<?= htmlspecialchars($update['slug']) ?>">
             <?php
             $reactionButtons = [
-                'thumbs_up' => ['emoji' => '👍', 'label' => 'Util'],
-                'heart'     => ['emoji' => '❤️', 'label' => 'Îmi place'],
-                'rocket'    => ['emoji' => '🚀', 'label' => 'Wow'],
-                'party'     => ['emoji' => '🎉', 'label' => 'În sfârșit!'],
+                'thumbs_up' => ['icon' => 'thumbs-up', 'color' => 'text-blue-600', 'label' => 'Util'],
+                'heart'     => ['icon' => 'heart', 'color' => 'text-red-500', 'label' => 'Îmi place'],
+                'rocket'    => ['icon' => 'rocket', 'color' => 'text-purple-600', 'label' => 'Wow'],
+                'party'     => ['icon' => 'party-popper', 'color' => 'text-orange-500', 'label' => 'În sfârșit!'],
             ];
             foreach ($reactionButtons as $type => $meta):
                 $count = $reactionCounts[$type] ?? 0;
@@ -227,7 +227,7 @@ require_once __DIR__ . '/includes/header.php';
                     class="noutati-reaction group inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white border-2 border-slate-200 hover:border-primary hover:shadow-lg hover:-translate-y-0.5 transition-all"
                     data-type="<?= $type ?>"
                     data-count="<?= $count ?>">
-                <span class="text-2xl transform group-hover:scale-125 transition-transform"><?= $meta['emoji'] ?></span>
+                <span class="inline-flex transform group-hover:scale-125 transition-transform <?= $meta['color'] ?>"><?= amb_icon($meta['icon'], 'w-7 h-7') ?></span>
                 <div class="text-left leading-tight">
                     <div class="text-xs font-semibold text-slate-600 group-hover:text-primary transition-colors"><?= $meta['label'] ?></div>
                     <div class="reaction-count text-sm font-black text-slate-800"><?= $count ?></div>

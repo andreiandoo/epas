@@ -117,8 +117,8 @@ require_once __DIR__ . '/../includes/header.php';
             <!-- Reply panel (hidden when accepted/rejected/expired) -->
             <section id="convReplyPanel" class="hidden p-6 bg-white border rounded-2xl border-border">
                 <div class="flex flex-wrap gap-2 mb-3">
-                    <button data-mode="message" class="conv-mode-btn bk-btn bk-btn-primary">💬 Mesaj</button>
-                    <button data-mode="counter" class="conv-mode-btn bk-btn bk-btn-secondary">🔄 Contraofertă</button>
+                    <button data-mode="message" class="conv-mode-btn bk-btn bk-btn-primary"><?= amb_icon('message-circle', 'w-4 h-4') ?> Mesaj</button>
+                    <button data-mode="counter" class="conv-mode-btn bk-btn bk-btn-secondary"><?= amb_icon('refresh-cw', 'w-4 h-4') ?> Contraofertă</button>
                     <button data-mode="accept" class="conv-mode-btn bk-btn bk-btn-secondary">✓ Acceptă</button>
                     <button data-mode="reject" class="conv-mode-btn bk-btn bk-btn-secondary">✕ Refuză</button>
                 </div>

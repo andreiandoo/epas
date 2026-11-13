@@ -167,7 +167,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="permanent-staff-section" class="hidden mt-8 pt-6 border-t-2 border-border" data-permanent-staff-section>
             <div class="flex flex-col gap-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 class="text-xl font-bold text-secondary">👥 Angajați permanenți</h2>
+                    <h2 class="text-xl font-bold text-secondary"><?= amb_icon('users', 'w-5 h-5') ?> Angajați permanenți</h2>
                     <p class="mt-1 text-sm text-muted">
                         Coduri QR fixe pentru personalul care vine pe ture la locațiile de agrement.
                         Fiecare angajat primește un cod individual care nu expiră — îl folosește la
@@ -176,7 +176,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 <div class="flex flex-wrap gap-2 flex-shrink-0">
                     <a href="/organizator/staff-raport" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-secondary text-secondary rounded-lg hover:bg-secondary hover:text-white transition-colors">
-                        📊 Raport activitate
+                        <?= amb_icon('chart-column', 'w-4 h-4') ?> Raport activitate
                     </a>
                     <button id="staff-add-btn" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-secondary hover:bg-secondary/90">
                         + Adaugă angajat
@@ -248,8 +248,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p id="staff-qr-code" class="mt-3 font-mono text-sm text-secondary tracking-wider"></p>
                 <p class="mt-2 text-[10px] text-muted">Acest cod e fix pentru acest angajat. Tipărește-l și înmânează-l personalului. Scanare prin app-ul ScanIn de la fiecare poartă.</p>
                 <div class="mt-4 flex items-center justify-center gap-2">
-                    <button id="staff-qr-print" type="button" class="px-3 py-2 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90">🖨️ Tipărește</button>
-                    <a id="staff-qr-download" download="" class="px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50">⬇️ Descarcă PNG</a>
+                    <button id="staff-qr-print" type="button" class="px-3 py-2 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90"><?= amb_icon('printer', 'w-3.5 h-3.5') ?> Tipărește</button>
+                    <a id="staff-qr-download" download="" class="px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50"><?= amb_icon('download', 'w-3.5 h-3.5') ?> Descarcă PNG</a>
                 </div>
             </div>
         </div>
@@ -280,7 +280,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div>
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="text-sm font-medium text-secondary">Parolă <span class="text-xs font-normal text-muted">(min. 8 caractere)</span></label>
-                        <button type="button" onclick="TeamManager.generatePassword()" class="text-[11px] text-primary hover:underline">🎲 Generează</button>
+                        <button type="button" onclick="TeamManager.generatePassword()" class="text-[11px] text-primary hover:underline"><?= amb_icon('dices', 'w-3 h-3') ?> Generează</button>
                     </div>
                     <div class="relative">
                         <input type="text" name="password" id="invite-password" required minlength="8" maxlength="100" class="w-full px-4 py-2.5 pr-9 text-sm border rounded-lg border-border font-mono focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" placeholder="Setează parola">
@@ -299,7 +299,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </select>
                 </div>
                 <div id="leisure-role-section" class="hidden">
-                    <label class="block mb-1.5 text-sm font-medium text-secondary">🌊 Rol operator (leisure)</label>
+                    <label class="block mb-1.5 text-sm font-medium text-secondary"><?= amb_icon('waves', 'w-4 h-4') ?> Rol operator (leisure)</label>
                     <select name="leisure_role" class="w-full px-4 py-2.5 text-sm border rounded-lg border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                         <option value="">— Fără rol leisure —</option>
                         <option value="check_in">Operator check-in</option>
@@ -383,7 +383,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </select>
                 </div>
                 <div id="edit-leisure-role-section" class="hidden">
-                    <label class="block mb-1.5 text-sm font-medium text-secondary">🌊 Rol operator (leisure)</label>
+                    <label class="block mb-1.5 text-sm font-medium text-secondary"><?= amb_icon('waves', 'w-4 h-4') ?> Rol operator (leisure)</label>
                     <select name="leisure_role" id="edit-leisure-role" class="w-full px-4 py-2.5 text-sm border rounded-lg border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                         <option value="">— Fără rol leisure —</option>
                         <option value="check_in">Operator check-in</option>
@@ -1114,8 +1114,8 @@ document.addEventListener('DOMContentLoaded', () => TeamManager.init());
                         <td class="px-3 py-2 text-center font-semibold">${s.checkins_count || 0}</td>
                         <td class="px-3 py-2 text-xs text-muted">${fmtDateTime(s.last_checkin_at)}</td>
                         <td class="px-3 py-2 text-right whitespace-nowrap">
-                            <button data-staff-qr="${s.id}" class="px-2 py-1 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90">📱 QR</button>
-                            <button data-staff-edit="${s.id}" class="px-2 py-1 text-xs font-semibold border border-border rounded hover:bg-slate-100">✏️ Edit</button>
+                            <button data-staff-qr="${s.id}" class="px-2 py-1 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90">${ambIcon('smartphone', 'w-3.5 h-3.5')} QR</button>
+                            <button data-staff-edit="${s.id}" class="px-2 py-1 text-xs font-semibold border border-border rounded hover:bg-slate-100">${ambIcon('pencil', 'w-3.5 h-3.5')} Edit</button>
                         </td>
                     </tr>
                 `).join('')}</tbody>

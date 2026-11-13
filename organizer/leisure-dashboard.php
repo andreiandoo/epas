@@ -53,7 +53,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <section id="ld-weather" class="hidden overflow-hidden bg-white border shadow-sm rounded-2xl border-border">
                 <div class="flex items-center justify-between px-5 py-3 border-b border-border bg-slate-50">
                     <div>
-                        <h2 class="font-bold text-secondary">🌤️ Prognoză meteo · 7 zile</h2>
+                        <h2 class="font-bold text-secondary"><?= amb_icon('cloud-sun', 'w-5 h-5') ?> Prognoză meteo · 7 zile</h2>
                         <p class="text-xs text-muted" id="ld-weather-venue">—</p>
                     </div>
                     <span class="text-[10px] text-muted">Sursa: Open-Meteo · cache 1h</span>
@@ -64,7 +64,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- ===== LIVE KPI ===== -->
             <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-emerald-500/10">🎟️</div>
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-emerald-500/10"><?= amb_icon('ticket', 'w-5 h-5 text-emerald-600') ?></div>
                     <div class="min-w-0">
                         <p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-sold">—</p>
                         <p class="mt-1 text-xs truncate text-muted">Bilete vândute azi</p>
@@ -72,19 +72,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-cyan-500/10">✅</div>
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-cyan-500/10"><?= amb_icon('circle-check', 'w-5 h-5 text-cyan-600') ?></div>
                     <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-scanned">—</p><p class="mt-1 text-xs truncate text-muted">Check-in azi</p></div>
                 </div>
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-amber-500/10">💰</div>
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-amber-500/10"><?= amb_icon('wallet', 'w-5 h-5 text-amber-600') ?></div>
                     <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-revenue">—</p><p class="mt-1 text-xs truncate text-muted">Venituri azi</p></div>
                 </div>
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-indigo-500/10">🧾</div>
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-indigo-500/10"><?= amb_icon('receipt', 'w-5 h-5 text-indigo-600') ?></div>
                     <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-orders">—</p><p class="mt-1 text-xs truncate text-muted">Comenzi azi</p></div>
                 </div>
                 <div class="flex items-center gap-3 p-3.5 bg-white border shadow-sm rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-teal-500/10">👥</div>
+                    <div class="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 bg-teal-500/10"><?= amb_icon('users', 'w-5 h-5 text-teal-600') ?></div>
                     <div class="min-w-0"><p class="text-lg font-extrabold leading-none text-secondary tabular-nums" id="ld-occupancy">—</p><p class="mt-1 text-xs truncate text-muted">Prezenți acum</p></div>
                 </div>
             </section>
@@ -93,7 +93,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <section id="ld-compare" class="overflow-hidden bg-white border shadow-sm rounded-2xl border-border">
                 <div class="flex items-center justify-between px-5 py-3 border-b border-border bg-slate-50">
                     <div>
-                        <h2 class="font-bold text-secondary">📊 Comparativ · azi vs perioade anterioare</h2>
+                        <h2 class="font-bold text-secondary"><?= amb_icon('chart-column', 'w-5 h-5') ?> Comparativ · azi vs perioade anterioare</h2>
                         <p class="text-xs text-muted" id="ld-compare-subtitle">Comparare fair — până la aceeași oră ca azi. Delta % față de azi.</p>
                     </div>
                     <span class="text-[10px] text-muted" id="ld-compare-note"></span>
@@ -221,10 +221,10 @@ const LeisureDash = {
     renderStream(stream) {
         const el = document.getElementById('ld-stream');
         if (!stream.length) { el.innerHTML = '<p class="py-6 text-sm text-center text-muted">Nicio activitate recentă.</p>'; return; }
-        const ICON = { sale: '🛒', scan: '✅', staff_scan: '👷' };
+        const ICON = { sale: 'shopping-cart', scan: 'circle-check', staff_scan: 'hard-hat' };
         el.innerHTML = stream.slice(0, 20).map(a => `
             <div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-                <span class="text-lg">${ICON[a.type] || '•'}</span>
+                <span class="text-lg">${ICON[a.type] ? ambIcon(ICON[a.type], 'w-5 h-5') : '•'}</span>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold truncate text-secondary">${this.esc(a.label)}</p>
                     <p class="text-xs truncate text-muted">${this.esc(a.detail || '')}</p>
@@ -246,7 +246,7 @@ const LeisureDash = {
         if (!session) {
             el.className = 'overflow-hidden border-2 shadow-sm rounded-2xl border-slate-300 bg-slate-50';
             el.innerHTML = `<div class="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div><p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Casă</p><p class="text-lg font-extrabold text-slate-700">🔒 Închisă</p><p class="text-xs text-muted">Nicio sesiune de casă deschisă acum.</p></div>
+                <div><p class="text-[11px] uppercase tracking-wider font-bold text-slate-500">Casă</p><p class="text-lg font-extrabold text-slate-700">${ambIcon('lock', 'w-5 h-5')} Închisă</p><p class="text-xs text-muted">Nicio sesiune de casă deschisă acum.</p></div>
                 <a href="/organizator/leisure-pos" class="inline-flex px-4 py-2 text-sm font-bold text-white rounded-xl bg-emerald-600 hover:bg-emerald-700">Deschide casa</a>
             </div>`;
             return;
@@ -256,18 +256,18 @@ const LeisureDash = {
         el.innerHTML = `
             <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-emerald-200 bg-emerald-100/60">
                 <div><p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Casă · ${this.esc(session.opened_label || 'InfoPoint')}</p>
-                    <p class="text-lg font-extrabold text-emerald-900">🟢 Deschisă de ${this.since(session.opened_at)}</p>
+                    <p class="text-lg font-extrabold text-emerald-900">${ambIcon('circle-dot', 'w-4 h-4 text-emerald-500')} Deschisă de ${this.since(session.opened_at)}</p>
                     <p class="text-xs text-emerald-700/80">Deschisă la ${this.fmtDateTime(session.opened_at)} · doar vânzările POS din locație (online-ul nu intră în casă)</p>
                 </div>
                 <a href="/organizator/leisure-pos" class="inline-flex px-4 py-2 text-sm font-bold rounded-xl bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50">Gestionează casa</a>
             </div>
             <div class="grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">
                 <div class="p-3 bg-white border-2 rounded-xl border-amber-300">
-                    <p class="text-[10px] uppercase tracking-wider font-bold text-amber-700">💵 Cash de predat</p>
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-amber-700">${ambIcon('banknote', 'w-3 h-3')} Cash de predat</p>
                     <p class="text-2xl font-extrabold text-amber-800 tabular-nums">${this.money(live.cash)} <span class="text-xs">RON</span></p>
                 </div>
                 <div class="p-3 bg-white border-2 rounded-xl border-sky-200">
-                    <p class="text-[10px] uppercase tracking-wider font-bold text-sky-700">💳 Card încasat</p>
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-sky-700">${ambIcon('credit-card', 'w-3 h-3')} Card încasat</p>
                     <p class="text-2xl font-extrabold text-sky-800 tabular-nums">${this.money(live.card)} <span class="text-xs">RON</span></p>
                 </div>
                 <div class="p-3 bg-white rounded-xl">
@@ -313,14 +313,14 @@ const LeisureDash = {
                 const dt = new Date(d.date + 'T00:00:00');
                 const label = i === 0 ? 'Azi' : (i === 1 ? 'Mâine' : dayNames[dt.getDay()]);
                 const dateShort = dt.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' });
-                const precip = d.precip_mm > 0 ? `<p class="text-[10px] text-sky-700">💧 ${d.precip_mm} mm</p>` : '<p class="text-[10px] text-slate-400">—</p>';
+                const precip = d.precip_mm > 0 ? `<p class="text-[10px] text-sky-700">${ambIcon('droplet', 'w-3 h-3')} ${d.precip_mm} mm</p>` : '<p class="text-[10px] text-slate-400">—</p>';
                 const uvClass = d.uv_max >= 8 ? 'text-rose-700' : (d.uv_max >= 6 ? 'text-amber-700' : 'text-slate-500');
                 const uv = d.uv_max != null ? `<p class="text-[10px] ${uvClass}">UV ${d.uv_max}</p>` : '';
                 return `
                 <div class="p-2 text-center border rounded-lg border-slate-200 bg-slate-50/50">
                     <p class="text-[10px] uppercase font-bold text-slate-600">${label}</p>
                     <p class="text-[10px] text-muted mb-1">${dateShort}</p>
-                    <p class="text-2xl leading-none" title="${d.label}">${d.icon}</p>
+                    <p class="text-2xl leading-none text-sky-600" title="${d.label}">${ambIcon(d.icon || 'cloud', 'w-7 h-7')}</p>
                     <p class="mt-1 text-xs font-semibold text-secondary tabular-nums">
                         <span class="text-rose-700">${d.temp_max ?? '—'}°</span>
                         <span class="text-slate-400">/</span>
@@ -341,17 +341,17 @@ const LeisureDash = {
             const tbody = document.getElementById('ld-compare-body');
             const t = snaps.today || {};
             const metrics = [
-                { key: 'revenue', label: '💰 Venituri (RON)', fmt: v => this.money(v) },
-                { key: 'orders', label: '🧾 Comenzi', fmt: v => this.num(v) },
-                { key: 'tickets_sold', label: '🎟️ Bilete vândute', fmt: v => this.num(v) },
-                { key: 'checkins', label: '✅ Check-in-uri', fmt: v => this.num(v) },
+                { key: 'revenue', label: ambIcon('wallet', 'w-4 h-4') + ' Venituri (RON)', fmt: v => this.money(v) },
+                { key: 'orders', label: ambIcon('receipt', 'w-4 h-4') + ' Comenzi', fmt: v => this.num(v) },
+                { key: 'tickets_sold', label: ambIcon('ticket', 'w-4 h-4') + ' Bilete vândute', fmt: v => this.num(v) },
+                { key: 'checkins', label: ambIcon('circle-check', 'w-4 h-4') + ' Check-in-uri', fmt: v => this.num(v) },
             ];
             const compareKeys = ['yesterday', 'last_week', 'last_month', 'last_year'];
             const deltaCell = (deltaPct, oldVal) => {
                 if (deltaPct === null || deltaPct === undefined) {
                     return `<div class="text-slate-400">—</div>`;
                 }
-                const arrow = deltaPct > 0 ? '⬆️' : (deltaPct < 0 ? '⬇️' : '➡️');
+                const arrow = deltaPct > 0 ? '↑' : (deltaPct < 0 ? '↓' : '→');
                 const color = deltaPct > 0 ? 'text-emerald-700' : (deltaPct < 0 ? 'text-rose-700' : 'text-slate-500');
                 const sign = deltaPct > 0 ? '+' : '';
                 return `<div class="${color} font-semibold">${arrow} ${sign}${deltaPct}%</div>`;

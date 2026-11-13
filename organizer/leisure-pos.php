@@ -21,28 +21,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
     <main class="flex-1 p-4 lg:p-8 print:p-0">
         <div class="mb-4 print:hidden flex flex-wrap items-center justify-between gap-3">
-            <h1 class="text-lg font-bold text-secondary lg:text-xl flex items-center gap-2">🎫 InfoPoint — Emite bilete</h1>
+            <h1 class="text-lg font-bold text-secondary lg:text-xl flex items-center gap-2"><?= amb_icon('ticket', 'w-5 h-5 text-primary') ?> InfoPoint — Emite bilete</h1>
             <div class="flex flex-wrap items-center gap-3 ml-auto">
                 <!-- Selector data vizită (mutat din header-ul grid-ului) -->
                 <label class="flex items-center gap-2 text-xs bg-white border border-border rounded-xl px-3 py-2">
-                    <span class="text-muted whitespace-nowrap">📅 Data vizită:</span>
+                    <span class="text-muted whitespace-nowrap"><?= amb_icon('calendar', 'w-3.5 h-3.5') ?> Data vizită:</span>
                     <input id="lv-visit-date" type="date" value="<?= date('Y-m-d') ?>" class="text-sm border-0 p-0 focus:outline-none focus:ring-0 bg-transparent">
                 </label>
 
                 <button id="lv-cash-open" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700">
-                    🔓 Deschidere casă
+                    <?= amb_icon('lock-open', 'w-3.5 h-3.5') ?> Deschidere casă
                 </button>
                 <button id="lv-cash-close" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-amber-600 text-white rounded-xl hover:bg-amber-700">
-                    🔒 Închidere casă
+                    <?= amb_icon('lock', 'w-3.5 h-3.5') ?> Închidere casă
                     <span id="lv-cash-open-since" class="ml-1 opacity-80 text-[10px]"></span>
                 </button>
                 <button id="lv-cash-xreport" type="button" hidden class="px-3 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700" aria-expanded="false" aria-controls="lv-cash-xreport-panel">
-                    📊 Raport X
+                    <?= amb_icon('chart-column', 'w-3.5 h-3.5') ?> Raport X
                 </button>
             <!-- Panou imprimantă termică (WebUSB) — collapsible -->
             <details id="lv-printer-panel" class="bg-white border border-border rounded-xl text-sm min-w-[320px]">
                 <summary class="px-4 py-2.5 cursor-pointer font-semibold text-secondary flex items-center gap-2">
-                    <span>🖨️ Imprimantă termică</span>
+                    <span><?= amb_icon('printer', 'w-4 h-4') ?> Imprimantă termică</span>
                     <span id="lv-printer-status" class="ml-auto inline-flex items-center gap-1.5 text-xs">
                         <span id="lv-printer-status-dot" class="w-2 h-2 rounded-full bg-slate-300"></span>
                         <span id="lv-printer-status-text" class="text-muted">Verificare...</span>
@@ -55,12 +55,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p id="lv-printer-error" class="hidden text-xs text-rose-700 leading-snug bg-rose-50 border border-rose-200 rounded p-2"></p>
                     <div class="flex flex-wrap gap-2">
                         <button id="lv-printer-connect" type="button" class="w-full px-3 py-2 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50">
-                            🔌 Conectează
+                            <?= amb_icon('plug', 'w-3.5 h-3.5') ?> Conectează
                         </button>
                     </div>
                     <!-- Re-print ultima comandă (vizibil doar dacă există state) -->
                     <button id="lv-printer-reprint" type="button" hidden class="w-full px-3 py-2 text-xs font-semibold bg-amber-100 border border-amber-300 text-amber-900 rounded hover:bg-amber-200 disabled:opacity-50">
-                        🖨️ Reprintează ultima comandă
+                        <?= amb_icon('printer', 'w-3.5 h-3.5') ?> Reprintează ultima comandă
                         <span id="lv-printer-reprint-meta" class="text-[10px] font-normal text-amber-700 ml-1"></span>
                     </button>
                     <label class="flex items-center gap-2 text-xs">
@@ -84,21 +84,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b border-emerald-200 bg-emerald-100/60">
                 <div>
                     <p class="text-[11px] uppercase tracking-wider font-bold text-emerald-700">Casă · <span id="lv-cash-xreport-operator">InfoPoint</span></p>
-                    <p id="lv-cash-xreport-title" class="text-lg font-extrabold text-emerald-900">🟢 Deschisă de <span id="lv-cash-xreport-since-rel">—</span></p>
+                    <p id="lv-cash-xreport-title" class="text-lg font-extrabold text-emerald-900"><?= amb_icon('circle-dot', 'w-5 h-5 text-emerald-600') ?> Deschisă de <span id="lv-cash-xreport-since-rel">—</span></p>
                     <p class="text-xs text-emerald-700/80">Deschisă la <span id="lv-cash-xreport-opened-at">—</span> · doar vânzările din locație (online-ul nu intră în casă)</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span id="lv-cash-xreport-updated" class="text-[10px] text-emerald-700"></span>
-                    <button id="lv-cash-xreport-refresh" type="button" class="px-3 py-2 text-sm font-bold rounded-xl bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50">🔄 Refresh</button>
+                    <button id="lv-cash-xreport-refresh" type="button" class="px-3 py-2 text-sm font-bold rounded-xl bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50"><?= amb_icon('refresh-cw', 'w-4 h-4') ?> Refresh</button>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">
                 <div class="p-3 bg-white border-2 rounded-xl border-amber-300">
-                    <p class="text-[10px] uppercase tracking-wider font-bold text-amber-700">💵 Cash de predat</p>
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-amber-700"><?= amb_icon('banknote', 'w-3 h-3') ?> Cash de predat</p>
                     <p id="lv-cash-xreport-cash" class="text-2xl font-extrabold text-amber-800 tabular-nums">— <span class="text-xs">RON</span></p>
                 </div>
                 <div class="p-3 bg-white border-2 rounded-xl border-sky-200">
-                    <p class="text-[10px] uppercase tracking-wider font-bold text-sky-700">💳 Card încasat</p>
+                    <p class="text-[10px] uppercase tracking-wider font-bold text-sky-700"><?= amb_icon('credit-card', 'w-3 h-3') ?> Card încasat</p>
                     <p id="lv-cash-xreport-card" class="text-2xl font-extrabold text-sky-800 tabular-nums">— <span class="text-xs">RON</span></p>
                 </div>
                 <div class="p-3 bg-white rounded-xl">
@@ -115,10 +115,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Banner: Casa este INCHISA (blocheaza vizibil orice vanzare) -->
         <div id="lv-cash-locked-banner" class="hidden mb-4 p-4 bg-rose-50 border-2 border-rose-300 rounded-xl text-sm text-rose-900 print:hidden">
             <div class="flex items-start gap-3">
-                <div class="w-8 h-8 bg-rose-200 rounded-full flex items-center justify-center flex-shrink-0 text-lg">🔒</div>
+                <div class="w-8 h-8 bg-rose-200 rounded-full flex items-center justify-center flex-shrink-0 text-lg"><?= amb_icon('lock', 'w-4 h-4 text-rose-700') ?></div>
                 <div class="flex-1">
                     <p class="font-bold text-base">Casa este închisă</p>
-                    <p class="text-sm mt-0.5">Nu se pot procesa vânzări până când nu apeși <strong>🔓 Deschidere casă</strong> din partea de sus. Ora deschiderii și cea a închiderii se salvează pentru raport.</p>
+                    <p class="text-sm mt-0.5">Nu se pot procesa vânzări până când nu apeși <strong><?= amb_icon('lock-open', 'w-4 h-4') ?> Deschidere casă</strong> din partea de sus. Ora deschiderii și cea a închiderii se salvează pentru raport.</p>
                 </div>
             </div>
         </div>
@@ -130,7 +130,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- Overlay cand casa e inchisa: capteaza click-urile -->
                 <div id="lv-cash-locked-overlay" class="hidden absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex items-center justify-center pointer-events-auto">
                     <div class="text-center p-6">
-                        <div class="text-5xl mb-2">🔒</div>
+                        <div class="text-5xl mb-2"><?= amb_icon('lock', 'w-12 h-12 text-rose-700') ?></div>
                         <p class="font-bold text-lg text-rose-900">Casa este închisă</p>
                         <p class="text-sm text-muted mt-1">Deschide casa pentru a începe vânzările</p>
                     </div>
@@ -139,10 +139,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             <div id="lv-cash-timeline-panel" class="hidden bg-white border rounded-2xl border-border flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-hidden">
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2 flex-wrap">
-                    <h2 class="font-bold text-secondary">📋 Desfășurător casă</h2>
+                    <h2 class="font-bold text-secondary"><?= amb_icon('clipboard-list', 'w-4 h-4') ?> Desfășurător casă</h2>
                     <div class="flex items-center gap-2">
-                        <button id="lv-cash-export-csv" type="button" class="text-xs px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium" title="Exportă toate vânzările zilei">📥 Export CSV</button>
-                        <button id="lv-cash-timeline-refresh" type="button" class="text-xs text-muted hover:text-secondary" title="Reîmprospătează">🔄</button>
+                        <button id="lv-cash-export-csv" type="button" class="text-xs px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium" title="Exportă toate vânzările zilei"><?= amb_icon('download', 'w-3.5 h-3.5') ?> Export CSV</button>
+                        <button id="lv-cash-timeline-refresh" type="button" class="text-xs text-muted hover:text-secondary" title="Reîmprospătează"><?= amb_icon('refresh-cw', 'w-3.5 h-3.5') ?></button>
                     </div>
                 </div>
                 <div id="lv-cash-timeline-body" class="flex-1 overflow-y-auto p-4 space-y-3">
@@ -154,7 +154,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
                     <h2 class="font-bold text-secondary">Coș</h2>
                     <button id="lv-cart-clear" type="button" hidden class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-700 hover:text-white hover:bg-rose-600 border border-rose-300 hover:border-rose-600 rounded-lg transition-colors" title="Șterge toate produsele din coș">
-                        🗑️ Golește coș
+                        <?= amb_icon('trash-2', 'w-3.5 h-3.5') ?> Golește coș
                     </button>
                 </div>
                 <!-- Zona centrala scrollabila: cos + toate secțiunile collapsibile -->
@@ -180,14 +180,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                 <details id="lv-company-section" class="px-5 py-3 border-t border-border text-sm">
                     <summary class="cursor-pointer font-medium text-secondary flex items-center gap-2">
-                        <span>🏢 Date firmă (opțional)</span>
+                        <span><?= amb_icon('building-2', 'w-4 h-4') ?> Date firmă (opțional)</span>
                         <span class="text-[10px] text-muted font-normal">Pentru factură pe persoană juridică</span>
                     </summary>
                     <div class="mt-3 space-y-2">
                         <input id="lv-co-name" type="text" placeholder="Denumire firmă" class="w-full px-2 py-1.5 text-sm border border-border rounded">
                         <div class="grid grid-cols-12 gap-2 items-center">
                             <input id="lv-co-cui" type="text" placeholder="CUI / CIF (ex: RO12345678)" class="col-span-5 px-2 py-1.5 text-sm border border-border rounded">
-                            <button id="lv-co-anaf-btn" type="button" class="col-span-3 px-2 py-1.5 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50">🔎 ANAF</button>
+                            <button id="lv-co-anaf-btn" type="button" class="col-span-3 px-2 py-1.5 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50"><?= amb_icon('search', 'w-3.5 h-3.5') ?> ANAF</button>
                             <input id="lv-co-reg" type="text" placeholder="Nr. Reg. Com." class="col-span-4 px-2 py-1.5 text-sm border border-border rounded">
                         </div>
                         <p id="lv-co-anaf-msg" class="text-[10px] hidden"></p>
@@ -198,12 +198,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                         <label class="flex items-center gap-2 mt-2 text-xs">
                             <input id="lv-co-invoice" type="checkbox" class="w-4 h-4 accent-primary">
-                            <span class="text-secondary font-medium">📄 Generează factură fiscală după finalizare</span>
+                            <span class="text-secondary font-medium"><?= amb_icon('file-text', 'w-3.5 h-3.5') ?> Generează factură fiscală după finalizare</span>
                         </label>
-                        <p class="text-[10px] text-muted leading-snug">💡 Datele firmei sunt salvate pe comandă. Facturarea se generează la pasul 2 după emiterea biletelor.</p>
+                        <p class="text-[10px] text-muted leading-snug"><?= amb_icon('lightbulb', 'w-3 h-3 text-amber-500') ?> Datele firmei sunt salvate pe comandă. Facturarea se generează la pasul 2 după emiterea biletelor.</p>
                         <!-- Preview factura (nu necesita imprimanta) -->
                         <button id="lv-invoice-preview-btn" type="button" class="mt-2 w-full px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-secondary">
-                            🔍 Preview factură (fără imprimantă)
+                            <?= amb_icon('search', 'w-3.5 h-3.5') ?> Preview factură (fără imprimantă)
                         </button>
                         <p class="text-[10px] text-muted leading-snug mt-1">Deschide într-o fereastră nouă cu exact ce s-ar tipări (2 exemplare, TVA, semnături).</p>
                     </div>
@@ -211,7 +211,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                 <!-- Limba bilet/email (RO default, HU/EN pentru turisti) -->
                 <div class="px-5 py-3 border-t border-border text-sm">
-                    <p class="text-xs text-muted mb-1.5">🌐 Limba bilet & email</p>
+                    <p class="text-xs text-muted mb-1.5"><?= amb_icon('globe', 'w-3.5 h-3.5') ?> Limba bilet & email</p>
                     <div class="grid grid-cols-3 gap-2">
                         <button data-lang="ro" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-primary bg-primary/10 rounded flex items-center justify-center gap-1.5">
                             <svg viewBox="0 0 3 2" class="w-4 h-3 rounded-sm shadow-sm"><rect width="1" height="2" fill="#002B7F"/><rect x="1" width="1" height="2" fill="#FCD116"/><rect x="2" width="1" height="2" fill="#CE1126"/></svg>
@@ -244,12 +244,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="px-5 py-4 border-t border-border space-y-2">
                     <p class="text-xs uppercase tracking-wider text-muted font-semibold">Metodă plată</p>
                     <div class="grid grid-cols-3 gap-2">
-                        <button data-pay="cash" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💵 Cash</button>
-                        <button data-pay="card" title="Înregistrează plata cu cardul (procesată la POS-ul bancar fizic) — fără integrare automată cu terminalul" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💳 Card</button>
-                        <button data-pay="invoice" title="Clientul primește totul pe email: link de plată dacă are de achitat, direct biletele dacă valoarea e 0" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Via email</button>
+                        <button data-pay="cash" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50"><?= amb_icon('banknote', 'w-4 h-4') ?> Cash</button>
+                        <button data-pay="card" title="Înregistrează plata cu cardul (procesată la POS-ul bancar fizic) — fără integrare automată cu terminalul" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50"><?= amb_icon('credit-card', 'w-4 h-4') ?> Card</button>
+                        <button data-pay="invoice" title="Clientul primește totul pe email: link de plată dacă are de achitat, direct biletele dacă valoarea e 0" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50"><?= amb_icon('mail', 'w-4 h-4') ?> Via email</button>
                     </div>
                     <p class="text-[10px] text-muted leading-snug mt-1">
-                        💡 <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Via email</strong>: clientul primește pe email, în limba aleasă, un link de plată online — biletele devin valide și îi sunt trimise după plată. Dacă valoarea coșului e 0, primește direct biletele. Nu se tipărește nimic la casă.
+                        <?= amb_icon('lightbulb', 'w-3 h-3 text-amber-500') ?> <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Via email</strong>: clientul primește pe email, în limba aleasă, un link de plată online — biletele devin valide și îi sunt trimise după plată. Dacă valoarea coșului e 0, primește direct biletele. Nu se tipărește nimic la casă.
                     </p>
                     <button id="lv-checkout" disabled class="w-full mt-2 px-4 py-3 bg-primary text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors">Finalizează</button>
                 </div>
@@ -263,7 +263,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="lv-cash-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-start justify-center p-6 md:p-10 overflow-y-auto">
             <div class="bg-white rounded-2xl border border-border max-w-2xl w-full my-6 shadow-xl">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-border">
-                    <h3 class="font-bold text-lg text-secondary">🔒 Închidere casă</h3>
+                    <h3 class="font-bold text-lg text-secondary"><?= amb_icon('lock', 'w-5 h-5') ?> Închidere casă</h3>
                     <button type="button" id="lv-cash-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
                 </div>
                 <div class="px-6 py-4 space-y-4">
@@ -271,7 +271,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="text-muted">Confirmă închiderea casei — se va salva un snapshot al încasărilor pentru intervalul acestei sesiuni.</p>
                     </div>
                     <details id="lv-cash-details" class="hidden text-sm">
-                        <summary class="cursor-pointer font-semibold text-secondary">📊 Detalii încasări (după închidere)</summary>
+                        <summary class="cursor-pointer font-semibold text-secondary"><?= amb_icon('chart-column', 'w-4 h-4') ?> Detalii încasări (după închidere)</summary>
                         <div id="lv-cash-details-body" class="mt-3 space-y-4"></div>
                     </details>
                 </div>
@@ -352,6 +352,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     const CAT_LABEL = { 'access': 'Acces', 'parking': 'Parcare', 'rental': 'Închiriere', 'activity': 'Activitate', 'extra': 'Extra', 'package': '🎁 Pachet' };
+    // eticheta pentru grila (bonul tiparit foloseste CAT_LABEL neschimbat)
+    const CAT_LABEL_HTML = Object.assign({}, CAT_LABEL, { package: ambIcon('gift', 'w-3 h-3') + ' Pachet' });
     const CAT_COLOR = { 'access': 'blue', 'parking': 'violet', 'rental': 'amber', 'activity': 'emerald', 'extra': 'slate', 'package': 'rose' };
 
     function renderProductCard(t) {
@@ -380,7 +382,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 }).join('');
                 return `<div class="p-4 border-2 border-border rounded-xl">
                     <div class="flex items-center justify-between mb-2">
-                        <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
+                        <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL_HTML[cat] || cat}</span>
                     </div>
                     <div class="font-bold text-secondary text-sm leading-tight mb-2">${t.name || ''}</div>
                     <div class="grid grid-cols-2 gap-1.5">${varBtns}</div>
@@ -392,7 +394,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return `<button data-tt="${t.id}" data-price="${basePrice}" data-name="${(t.name || '').replace(/"/g,'&quot;')}" data-cat="${cat}"
                 class="lv-tt-btn relative p-4 border-2 border-border hover:border-${color}-400 rounded-xl text-left transition-colors group">
                 <div class="flex items-center justify-between mb-1">
-                    <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
+                    <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL_HTML[cat] || cat}</span>
                     ${inCart > 0 ? `<span class="text-xs font-bold bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">${inCart}</span>` : ''}
                 </div>
                 <div class="font-bold text-secondary text-sm leading-tight">${t.name || ''}</div>
@@ -642,7 +644,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </li>`;
                 }).join('');
                 packageRow = `<div class="mt-1 pt-1 border-t border-slate-200">
-                    <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-0.5">🎁 Se emit bilete</p>
+                    <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-0.5">${ambIcon('gift', 'w-3 h-3')} Se emit bilete</p>
                     <ul class="space-y-0.5 text-xs pl-1">${rowsHtml}</ul>
                 </div>`;
             }
@@ -659,7 +661,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     const guideLabel = (tt.meta.group_guide_label || '').toString().trim() || 'Ghid grup';
                     const guideLabelHtml = guideLabel.replace(/[<>&]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]));
                     guideRow = `<div class="mt-1 pt-1 border-t border-slate-200 flex items-center gap-2 text-xs">
-                        <span class="text-amber-600">🎁</span>
+                        <span class="text-amber-600">${ambIcon('gift', 'w-3.5 h-3.5')}</span>
                         <span class="flex-1 text-amber-900">
                             <span class="font-semibold">+1 × ${guideLabelHtml}</span>
                             <span class="text-muted"> · gratuit (bonus grup)</span>
@@ -1041,11 +1043,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // ultima inchidere afisata ca referinta cand nu sunt sesiuni azi).
     function renderCashSessionCard(s) {
         const escapeHtml = (v) => String(v || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-        const PM_LABELS = { cash: '💵 Cash', card: '💳 Card' }; // fara online: online nu intra in casa
-        const CAT_LABELS = { access: '🎫 Acces', parking: '🅿️ Parcare', activity: '🎯 Activitate', rental: '🛶 Închiriere', extra: '➕ Extra', package: '📦 Pachet' };
+        const PM_LABELS = { cash: ambIcon('banknote', 'w-3.5 h-3.5') + ' Cash', card: ambIcon('credit-card', 'w-3.5 h-3.5') + ' Card' }; // fara online: online nu intra in casa
+        const CAT_LABELS = { access: ambIcon('ticket', 'w-3 h-3') + ' Acces', parking: ambIcon('circle-parking', 'w-3 h-3') + ' Parcare', activity: ambIcon('target', 'w-3 h-3') + ' Activitate', rental: ambIcon('sailboat', 'w-3 h-3') + ' Închiriere', extra: ambIcon('plus', 'w-3 h-3') + ' Extra', package: ambIcon('package', 'w-3 h-3') + ' Pachet' };
         const isOpen = s.is_open;
         const openTime = fmtTime(s.opened_at);
-        const closeTime = s.closed_at ? fmtTime(s.closed_at) : '⏳ în desfășurare';
+        const closeTime = s.closed_at ? fmtTime(s.closed_at) : ambIcon('hourglass', 'w-3 h-3') + ' în desfășurare';
         const openDate = s.opened_at ? new Date(s.opened_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '';
         const closeDate = s.closed_at ? new Date(s.closed_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }) : '';
         const showDates = openDate && closeDate && openDate !== closeDate;
@@ -1094,8 +1096,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             ? (renderIssuerBlock(byIssuer.primary, 'text-primary') + renderIssuerBlock(byIssuer.secondary, 'text-accent'))
             : '';
         const badge = isOpen
-            ? '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">🔓 DESCHISĂ</span>'
-            : '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">🔒 ÎNCHISĂ</span>';
+            ? '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">' + ambIcon('lock-open', 'w-3 h-3') + ' DESCHISĂ</span>'
+            : '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700">' + ambIcon('lock', 'w-3 h-3') + ' ÎNCHISĂ</span>';
         const timeLine = showDates
             ? `${openDate} ${openTime} → ${closeDate} ${closeTime}${dur ? ' · ' + dur : ''}`
             : `${openTime} → ${closeTime}${dur ? ' · ' + dur : ''}`;
@@ -1134,13 +1136,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const refDate = lastClosedRef.closed_at ? new Date(lastClosedRef.closed_at).toLocaleDateString('ro-RO', { day:'2-digit', month:'long', year:'numeric' }) : '—';
                 content += `<div class="pt-2">
                     <div class="mb-2 flex items-center gap-2">
-                        <span class="text-[10px] uppercase tracking-wider text-amber-700 font-bold bg-amber-50 border border-amber-200 rounded px-2 py-0.5">📸 Ultima închidere</span>
+                        <span class="text-[10px] uppercase tracking-wider text-amber-700 font-bold bg-amber-50 border border-amber-200 rounded px-2 py-0.5">${ambIcon('camera', 'w-3 h-3')} Ultima închidere</span>
                         <span class="text-[11px] text-muted">${refDate}</span>
                     </div>
                     ${renderCashSessionCard(lastClosedRef)}
                 </div>`;
             } else {
-                content += '<p class="text-xs text-muted text-center">Apasă „🔓 Deschidere casă" din partea de sus pentru a începe.</p>';
+                content += '<p class="text-xs text-muted text-center">Apasă „' + ambIcon('lock-open', 'w-3.5 h-3.5') + ' Deschidere casă" din partea de sus pentru a începe.</p>';
             }
             wrap.innerHTML = content;
             return;
@@ -1182,7 +1184,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             ? ` · ${totalVisitors} vizitatori`
             : '';
         const midnightNote = spansMidnight
-            ? `<p class="text-[10px] text-emerald-700 mt-1 italic">⚠️ O sesiune acoperă miezul nopții — totalul include și comenzi din ziua anterioară.</p>`
+            ? `<p class="text-[10px] text-emerald-700 mt-1 italic">${ambIcon('triangle-alert', 'w-3 h-3')} O sesiune acoperă miezul nopții — totalul include și comenzi din ziua anterioară.</p>`
             : '';
 
         const summary = `<div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -1209,7 +1211,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         } catch (e) {
             alert('Eroare la deschidere casă: ' + (e?.message || ''));
         } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '🔓 Deschidere casă'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = ambIcon('lock-open', 'w-3.5 h-3.5') + ' Deschidere casă'; }
         }
     }
     function showCloseCashierModal() {
@@ -1256,7 +1258,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const byTt = Array.isArray(snap.by_ticket_type) ? snap.by_ticket_type : [];
         // Breakdown pe categorie (POS only) - vine din backend pentru sesiuni noi
         const byCatPos = Array.isArray(snap.by_category_pos) ? snap.by_category_pos : [];
-        const PM = { cash: '💵 Cash', card: '💳 Card' };
+        const PM = { cash: ambIcon('banknote', 'w-3.5 h-3.5') + ' Cash', card: ambIcon('credit-card', 'w-3.5 h-3.5') + ' Card' };
         // Cash physically in the drawer to hand over + total taken by card.
         const cashRev = (byPay.find(p => p.method === 'cash') || {}).revenue || 0;
         const cardRev = (byPay.find(p => p.method === 'card') || {}).revenue || 0;
@@ -1264,11 +1266,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         $('lv-cash-summary').innerHTML = `<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div class="p-3 border-2 border-amber-300 bg-amber-50 rounded-lg">
-                <p class="text-[10px] uppercase tracking-wider text-amber-700 font-bold">💵 Cash de predat</p>
+                <p class="text-[10px] uppercase tracking-wider text-amber-700 font-bold">${ambIcon('banknote', 'w-3 h-3')} Cash de predat</p>
                 <p class="text-lg font-extrabold text-amber-800">${fmtMoney(cashRev)} <span class="text-xs">RON</span></p>
             </div>
             <div class="p-3 border-2 border-sky-200 bg-sky-50 rounded-lg">
-                <p class="text-[10px] uppercase tracking-wider text-sky-700 font-bold">💳 Total card</p>
+                <p class="text-[10px] uppercase tracking-wider text-sky-700 font-bold">${ambIcon('credit-card', 'w-3 h-3')} Total card</p>
                 <p class="text-lg font-extrabold text-sky-800">${fmtMoney(cardRev)} <span class="text-xs">RON</span></p>
             </div>
             <div class="p-3 bg-slate-50 rounded-lg">
@@ -1295,7 +1297,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>`).join('') : '<p class="text-muted text-xs">Niciun bilet</p>';
 
         // Breakdown pe categorie serviciu: acces / parcare / activitate / inchiriere / alta
-        const CAT_LABELS = { access: '🎫 Acces', parking: '🅿️ Parcare', activity: '🎯 Activitate', rental: '🛶 Închiriere', extra: '➕ Extra', package: '📦 Pachet' };
+        const CAT_LABELS = { access: ambIcon('ticket', 'w-3 h-3') + ' Acces', parking: ambIcon('circle-parking', 'w-3 h-3') + ' Parcare', activity: ambIcon('target', 'w-3 h-3') + ' Activitate', rental: ambIcon('sailboat', 'w-3 h-3') + ' Închiriere', extra: ambIcon('plus', 'w-3 h-3') + ' Extra', package: ambIcon('package', 'w-3 h-3') + ' Pachet' };
         const CAT_COLORS = { access: 'text-blue-700 bg-blue-50 border-blue-200', parking: 'text-purple-700 bg-purple-50 border-purple-200', activity: 'text-emerald-700 bg-emerald-50 border-emerald-200', rental: 'text-amber-700 bg-amber-50 border-amber-200', extra: 'text-slate-700 bg-slate-50 border-slate-200', package: 'text-indigo-700 bg-indigo-50 border-indigo-200' };
         const catHtml = byCatPos.length ? `<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
             ${byCatPos.map(c => {
@@ -1525,14 +1527,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const email = esc(d.email || '');
         let html;
         if (!d.sent) {
-            html = `⚠️ <strong>Comanda ${ord} a fost înregistrată, dar emailul către ${email} NU a putut fi trimis.</strong> Verifică adresa și refă comanda sau contactează suportul.`;
+            html = `${ambIcon('triangle-alert', 'w-4 h-4 text-amber-600')} <strong>Comanda ${ord} a fost înregistrată, dar emailul către ${email} NU a putut fi trimis.</strong> Verifică adresa și refă comanda sau contactează suportul.`;
         } else if (d.mode === 'payment_link') {
             const until = d.expires_at
                 ? new Date(d.expires_at).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : '';
-            html = `📧 <strong>Link de plată trimis la ${email}</strong> · comanda ${ord}. Biletele devin valide și îi sunt trimise clientului după plată${until ? ` (link valabil până la ${until})` : ''}.`;
+            html = `${ambIcon('mail', 'w-4 h-4')} <strong>Link de plată trimis la ${email}</strong> · comanda ${ord}. Biletele devin valide și îi sunt trimise clientului după plată${until ? ` (link valabil până la ${until})` : ''}.`;
         } else {
-            html = `📧 <strong>Bilete trimise la ${email}</strong> · comanda ${ord}. Sunt deja valide — nu e nimic de achitat.`;
+            html = `${ambIcon('mail', 'w-4 h-4')} <strong>Bilete trimise la ${email}</strong> · comanda ${ord}. Sunt deja valide — nu e nimic de achitat.`;
         }
         box.innerHTML = html;
         box.className = 'mb-4 p-4 border rounded-xl text-sm print:hidden ' + (d.sent
@@ -1708,7 +1710,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const coName = (company && company.name) ? company.name : 'firmă';
         const coCui = (company && company.cui) ? company.cui : '';
         banner.innerHTML = `
-            <div class="text-2xl">📄</div>
+            <div class="text-2xl">${ambIcon('file-text', 'w-6 h-6 text-emerald-700')}</div>
             <div class="flex-1 text-sm">
                 <p class="font-semibold text-emerald-900">Comandă emisă cu date firmă</p>
                 <p class="text-xs text-emerald-800 mt-0.5">${coName}${coCui ? ' · CUI ' + coCui : ''}</p>
@@ -1877,7 +1879,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-cash-export-csv')?.addEventListener('click', async () => {
             if (!currentEventId) return;
             const btn = $('lv-cash-export-csv');
-            const orig = btn.textContent;
+            const orig = btn.innerHTML;
             btn.disabled = true; btn.textContent = '⏳ ...';
             try {
                 const today = new Date();
@@ -1901,11 +1903,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(dlUrl), 4000);
                 btn.textContent = '✓ Descărcat';
-                setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+                setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1500);
             } catch (e) {
                 console.error('[cash-export] failed', e);
                 alert('Eroare la export CSV: ' + (e?.message || 'necunoscut'));
-                btn.textContent = orig; btn.disabled = false;
+                btn.innerHTML = orig; btn.disabled = false;
             }
         });
 
@@ -1942,7 +1944,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 msg.className = 'text-[10px] text-rose-600 mt-1';
                 msg.classList.remove('hidden');
             } finally {
-                btn.disabled = false; btn.textContent = '🔎 ANAF';
+                btn.disabled = false; btn.innerHTML = ambIcon('search', 'w-3.5 h-3.5') + ' ANAF';
             }
         });
     });
@@ -1982,7 +1984,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (testBtn) testBtn.disabled = false;
                 if (test3Btn) test3Btn.disabled = false;
                 if (testInvoiceBtn) testInvoiceBtn.disabled = false;
-                if (connectBtn) connectBtn.textContent = '🔁 Schimbă imprimanta';
+                if (connectBtn) connectBtn.innerHTML = ambIcon('repeat', 'w-3.5 h-3.5') + ' Schimbă imprimanta';
             } else {
                 dot.className = 'w-2 h-2 rounded-full bg-amber-500';
                 txt.textContent = 'Neconectată';
@@ -1991,7 +1993,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (testBtn) testBtn.disabled = true;
                 if (test3Btn) test3Btn.disabled = true;
                 if (testInvoiceBtn) testInvoiceBtn.disabled = true;
-                if (connectBtn) connectBtn.textContent = '🔌 Conectează';
+                if (connectBtn) connectBtn.innerHTML = ambIcon('plug', 'w-3.5 h-3.5') + ' Conectează';
             }
             if (autoCheck) {
                 autoCheck.checked = PosPrinter.getAutoPrintEnabled();

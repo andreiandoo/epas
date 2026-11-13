@@ -51,10 +51,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="border-t border-border p-6">
                     <h3 class="text-sm font-bold text-secondary uppercase tracking-wider mb-3">Acțiuni rapide</h3>
                     <div class="flex flex-wrap gap-3">
-                        <a href="/organizator/leisure-dashboard" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors">📊 Dashboard live</a>
-                        <a href="/organizator/leisure-pos" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">🎫 Emite bilete (POS)</a>
-                        <a href="/organizator/leisure" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">✏️ Editează conținut pagină</a>
-                        <a id="lv-admin-link" href="#" target="_blank" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">⚙️ Configurare avansată (Tixello admin)</a>
+                        <a href="/organizator/leisure-dashboard" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors"><?= amb_icon('chart-column', 'w-4 h-4') ?> Dashboard live</a>
+                        <a href="/organizator/leisure-pos" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"><?= amb_icon('ticket', 'w-4 h-4') ?> Emite bilete (POS)</a>
+                        <a href="/organizator/leisure" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"><?= amb_icon('pencil', 'w-4 h-4') ?> Editează conținut pagină</a>
+                        <a id="lv-admin-link" href="#" target="_blank" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors"><?= amb_icon('settings', 'w-4 h-4') ?> Configurare avansată (Tixello admin)</a>
                     </div>
                 </div>
             </div>

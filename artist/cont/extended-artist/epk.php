@@ -200,7 +200,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="text-[11px] text-muted mt-1">Apare în URL pentru variantele non-active: <span class="font-mono" x-text="`/epk/${state.artist.slug}/${active.slug}`"></span></p>
                                         </div>
                                         <div x-show="active.id === state.active_variant_id" class="text-[11px] text-muted bg-blue-50 border border-blue-200 rounded-lg p-2">
-                                            ℹ️ Aceasta e <strong>varianta activă</strong>. URL-ul public este <span class="font-mono" x-text="`/epk/${state.artist.slug}`"></span> (slug-ul nu apare în URL pentru varianta activă).
+                                            <?= amb_icon('info', 'w-3.5 h-3.5 text-blue-600') ?> Aceasta e <strong>varianta activă</strong>. URL-ul public este <span class="font-mono" x-text="`/epk/${state.artist.slug}`"></span> (slug-ul nu apare în URL pentru varianta activă).
                                         </div>
                                     </div>
                                 </div>
@@ -565,7 +565,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     <div class="p-5 mb-6 bg-white border border-border rounded-2xl">
                         <div class="flex items-center justify-between mb-4">
                             <div>
-                                <h3 class="flex items-center gap-2 font-bold text-secondary">🔥 Hot Leads</h3>
+                                <h3 class="flex items-center gap-2 font-bold text-secondary"><?= amb_icon('flame', 'w-4 h-4 text-orange-500') ?> Hot Leads</h3>
                                 <p class="text-sm text-muted">Vizitatori care au revenit de mai multe ori — semnal puternic de interes</p>
                             </div>
                             <span class="epk-badge bg-error/10 text-error">3 active</span>
@@ -613,7 +613,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <template x-for="a in topActions" :key="a.label">
                                     <div class="flex items-center justify-between p-3 bg-surface rounded-xl">
                                         <div class="flex items-center gap-3">
-                                            <span class="text-2xl" x-text="a.icon"></span>
+                                            <span class="flex text-primary" x-html="ambIcon(a.icon, 'w-6 h-6')"></span>
                                             <span class="text-sm font-medium text-secondary" x-text="a.label"></span>
                                         </div>
                                         <span class="font-bold text-secondary" x-text="a.count.toLocaleString('ro-RO')"></span>
@@ -834,12 +834,12 @@ function smartEpk() {
             { name: 'Press quotes', pct: 47 }, { name: 'Booking CTA', pct: 32 },
         ],
         topActions: [
-            { icon: '🎯', label: 'Click „Cere booking"',    count: 47 },
-            { icon: '📥', label: 'Download Press Kit',      count: 89 },
-            { icon: '📥', label: 'Download Rider tehnic',   count: 32 },
-            { icon: '🎵', label: 'Click Spotify',           count: 312 },
-            { icon: '📞', label: 'Click telefon',           count: 18 },
-            { icon: '📧', label: 'Click email',             count: 28 },
+            { icon: 'target', label: 'Click „Cere booking"',    count: 47 },
+            { icon: 'download', label: 'Download Press Kit',      count: 89 },
+            { icon: 'download', label: 'Download Rider tehnic',   count: 32 },
+            { icon: 'music', label: 'Click Spotify',           count: 312 },
+            { icon: 'phone', label: 'Click telefon',           count: 18 },
+            { icon: 'mail', label: 'Click email',             count: 28 },
         ],
 
         // ========== Computed ==========

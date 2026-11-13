@@ -13,11 +13,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">📑 Raport</h1>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl"><?= amb_icon('files', 'w-7 h-7') ?> Raport</h1>
                 <p class="mt-1 text-sm text-muted">Vânzări, bilete și venit per perioadă, tip bilet, operator POS și sursă (fizic vs online).</p>
             </div>
             <a href="/organizator/staff-raport" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-secondary text-secondary rounded-lg hover:bg-secondary hover:text-white transition-colors">
-                👥 Raport activitate angajați →
+                <?= amb_icon('users', 'w-4 h-4') ?> Raport activitate angajați →
             </a>
         </div>
 
@@ -44,7 +44,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </label>
             <button id="r-apply" class="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark">Aplică</button>
             <div class="ml-auto">
-                <button id="r-export" class="px-3 py-1.5 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50">📥 Export CSV</button>
+                <button id="r-export" class="px-3 py-1.5 text-xs font-medium bg-white border border-border rounded-lg hover:bg-slate-50"><?= amb_icon('download', 'w-3.5 h-3.5') ?> Export CSV</button>
             </div>
         </div>
 
@@ -71,7 +71,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-lg xl:text-xl font-bold text-secondary leading-tight"><span id="r-avg">0.00</span> <span class="text-xs text-muted">RON</span></p>
             </div>
             <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                <p class="text-[10px] uppercase tracking-wider text-blue-800 font-semibold mb-1">💰 Comision AmBilet</p>
+                <p class="text-[10px] uppercase tracking-wider text-blue-800 font-semibold mb-1"><?= amb_icon('wallet', 'w-3 h-3') ?> Comision AmBilet</p>
                 <p class="text-lg xl:text-xl font-bold text-blue-900 leading-tight"><span id="r-total-commission">0.00</span> <span class="text-xs text-blue-700">RON</span></p>
             </div>
             <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -97,7 +97,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="text-[11px] text-muted mt-1"><span id="r-issuer-primary-tickets">0</span> bilete<span id="r-issuer-primary-breakdown"></span> · Comision AmBilet: <span id="r-issuer-primary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-primary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-primary-vat-rate">19</span>%): <span id="r-issuer-primary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
                         <div id="r-issuer-primary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
-                    <div class="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
+                    <div class="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl"><?= amb_icon('building-2', 'w-6 h-6 text-primary') ?></div>
                 </div>
             </div>
             <div id="r-issuer-secondary-card" class="p-4 bg-white border-2 border-accent/40 rounded-2xl hidden">
@@ -115,7 +115,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="text-[11px] text-muted mt-1"><span id="r-issuer-secondary-tickets">0</span> bilete<span id="r-issuer-secondary-breakdown"></span> · Comision AmBilet: <span id="r-issuer-secondary-commission" class="text-blue-700 font-semibold">0.00</span> RON<span id="r-issuer-secondary-vat-wrap" class="hidden"> · TVA (<span id="r-issuer-secondary-vat-rate">19</span>%): <span id="r-issuer-secondary-vat" class="text-amber-700 font-semibold">0.00</span> RON</span></p>
                         <div id="r-issuer-secondary-payment" class="mt-3 pt-3 border-t border-slate-100 space-y-1 text-[11px]"></div>
                     </div>
-                    <div class="w-11 h-11 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
+                    <div class="w-11 h-11 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl"><?= amb_icon('building-2', 'w-6 h-6 text-accent') ?></div>
                 </div>
             </div>
         </div>
@@ -123,7 +123,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Panou: Pe metoda plata -->
         <div class="bg-white border rounded-2xl border-border mb-6">
             <div class="px-5 py-3 border-b border-border flex items-center justify-between">
-                <h2 class="font-bold text-secondary">💰 Pe metodă plată</h2>
+                <h2 class="font-bold text-secondary"><?= amb_icon('wallet', 'w-5 h-5') ?> Pe metodă plată</h2>
                 <span class="text-xs text-muted">Cash / Card / Online</span>
             </div>
             <div class="p-5" id="r-payment-rows">
@@ -180,7 +180,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Bilete FIZICE emise (componente pachet + individuale). Fara pachetele parinte. -->
         <div class="bg-white border rounded-2xl border-border">
             <div class="px-5 py-3 border-b border-border flex items-center justify-between">
-                <h2 class="font-bold text-secondary">🎟️ Pe tip bilet emis</h2>
+                <h2 class="font-bold text-secondary"><?= amb_icon('ticket', 'w-5 h-5') ?> Pe tip bilet emis</h2>
                 <span class="text-xs text-muted">Bilete fizice (componente pachet + individuale)</span>
             </div>
             <div class="px-5 py-3 bg-slate-50 border-b border-border text-xs text-muted">
@@ -205,7 +205,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Sectiune Scanari — chart stacked pe zi + modal detalii -->
         <div class="bg-white border rounded-2xl border-border mt-6">
             <div class="px-5 py-3 border-b border-border flex items-center justify-between flex-wrap gap-2">
-                <h2 class="font-bold text-secondary">📡 Scanări</h2>
+                <h2 class="font-bold text-secondary"><?= amb_icon('radio', 'w-5 h-5') ?> Scanări</h2>
                 <div class="flex items-center gap-3 text-xs">
                     <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-slate-300"></span> Așteptate</span>
                     <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-emerald-500"></span> Valide</span>
@@ -235,7 +235,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div class="bg-white rounded-2xl border border-border max-w-4xl w-full my-6 shadow-xl">
             <div class="flex items-center justify-between px-6 py-4 border-b border-border">
                 <div>
-                    <h3 class="font-bold text-lg text-secondary">📡 Detalii scanări</h3>
+                    <h3 class="font-bold text-lg text-secondary"><?= amb_icon('radio', 'w-5 h-5') ?> Detalii scanări</h3>
                     <p id="r-scans-modal-date" class="text-xs text-muted mt-0.5">—</p>
                 </div>
                 <button type="button" id="r-scans-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
@@ -367,7 +367,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const pct = totalRev > 0 ? Math.round((r.revenue / totalRev) * 100) : 0;
             const isPos = r.source === 'pos';
             const color = isPos ? 'emerald' : 'blue';
-            const label = isPos ? '🏪 Fizic (POS)' : '🌐 Online';
+            const label = isPos ? ambIcon('store', 'w-4 h-4') + ' Fizic (POS)' : ambIcon('globe', 'w-4 h-4') + ' Online';
             return `<div class="mb-3">
                 <div class="flex justify-between text-sm mb-1">
                     <span class="font-semibold text-${color}-800">${label}</span>
@@ -389,9 +389,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
         const rows = [
-            { key: 'cash',   label: '💵 Cash',   color: '#F59E0B' },
-            { key: 'card',   label: '💳 Card',   color: '#6366F1' },
-            { key: 'online', label: '🌐 Online', color: '#10B981' },
+            { key: 'cash',   label: ambIcon('banknote', 'w-3 h-3') + ' Cash',   color: '#F59E0B' },
+            { key: 'card',   label: ambIcon('credit-card', 'w-3 h-3') + ' Card',   color: '#6366F1' },
+            { key: 'online', label: ambIcon('globe', 'w-3 h-3') + ' Online', color: '#10B981' },
         ];
         el.innerHTML = rows.map(r => {
             const v = Number(pm[r.key] || 0);
@@ -478,9 +478,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     // Breakdown per metoda plata: Cash / Card / Online
     const PM_META = {
-        cash:   { label: '💵 Cash',   color: 'amber',    hex: '#F59E0B' },
-        card:   { label: '💳 Card',   color: 'indigo',   hex: '#6366F1' },
-        online: { label: '🌐 Online', color: 'emerald',  hex: '#10B981' },
+        cash:   { label: ambIcon('banknote', 'w-4 h-4') + ' Cash',   color: 'amber',    hex: '#F59E0B' },
+        card:   { label: ambIcon('credit-card', 'w-4 h-4') + ' Card',   color: 'indigo',   hex: '#6366F1' },
+        online: { label: ambIcon('globe', 'w-4 h-4') + ' Online', color: 'emerald',  hex: '#10B981' },
     };
     function renderPaymentMethods(rows, totalRev) {
         const wrap = $('r-payment-rows');
@@ -643,9 +643,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const escapeHtml = (s) => String(s || '').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
                 let statusPill = '';
                 if (it.type === 'ticket_valid') statusPill = '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-800">✓ VALID</span>';
-                else if (it.type === 'staff') statusPill = '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">👷 ANGAJAT</span>';
+                else if (it.type === 'staff') statusPill = '<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">' + ambIcon('hard-hat', 'w-3 h-3') + ' ANGAJAT</span>';
                 else if (it.type === 'invalid') {
-                    const label = it.status === 'duplicate' ? '⚠ DUPLICAT' : '✕ INVALID';
+                    const label = it.status === 'duplicate' ? ambIcon('triangle-alert', 'w-3 h-3') + ' DUPLICAT' : '✕ INVALID';
                     statusPill = `<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-rose-100 text-rose-800">${label}</span>`;
                 }
                 return `<tr class="hover:bg-slate-50">

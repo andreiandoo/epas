@@ -58,7 +58,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center gap-3">
                                     <div class="flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl">
-                                        <span class="text-2xl">🎸</span>
+                                        <span class="flex text-white"><?= amb_icon('guitar', 'w-7 h-7') ?></span>
                                     </div>
                                     <div>
                                         <p class="text-lg font-bold" id="level-info">Nivel 0 - Loading...</p>
@@ -83,7 +83,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <div class="p-6 mb-6 text-center bg-white border rounded-xl lg:rounded-2xl border-border">
-                <div class="mb-3 text-4xl">✨</div>
+                <div class="mb-3 text-4xl leading-none text-primary"><?= amb_icon('sparkles', 'w-10 h-10') ?></div>
                 <h2 class="mb-2 text-xl font-bold text-secondary">Adună puncte, în scurt timp anunțăm beneficiile!</h2>
             </div>
 
@@ -158,22 +158,22 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <h3 class="mb-4 font-bold text-secondary">Cum castigi XP?</h3>
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div class="p-4 text-center bg-surface rounded-xl">
-                            <div class="mb-2 text-2xl">🎫</div>
+                            <div class="mb-2 text-2xl leading-none text-primary"><?= amb_icon('ticket', 'w-7 h-7') ?></div>
                             <p class="font-semibold text-secondary">Cumpără bilete</p>
                             <p class="text-sm font-medium text-success">+2 XP / leu</p>
                         </div>
                         <div class="p-4 text-center bg-surface rounded-xl">
-                            <div class="mb-2 text-2xl">✅</div>
+                            <div class="mb-2 text-2xl leading-none text-emerald-600"><?= amb_icon('circle-check', 'w-7 h-7') ?></div>
                             <p class="font-semibold text-secondary">Check-in</p>
                             <p class="text-sm font-medium text-success">+50 XP</p>
                         </div>
                         <div class="p-4 text-center bg-surface rounded-xl">
-                            <div class="mb-2 text-2xl">⭐</div>
+                            <div class="mb-2 text-2xl leading-none text-amber-500"><?= amb_icon('star', 'w-7 h-7') ?></div>
                             <p class="font-semibold text-secondary">Lasă o recenzie</p>
                             <p class="text-sm font-medium text-success">+30 XP</p>
                         </div>
                         <div class="p-4 text-center bg-surface rounded-xl">
-                            <div class="mb-2 text-2xl">👥</div>
+                            <div class="mb-2 text-2xl leading-none text-primary"><?= amb_icon('users', 'w-7 h-7') ?></div>
                             <p class="font-semibold text-secondary">Invită prieteni</p>
                             <p class="text-sm font-medium text-success">+100 XP</p>
                         </div>
@@ -400,7 +400,7 @@ const RewardsPage = {
             const pointsColor = (isLocked || isInsufficient || isExclusive) ? 'text-muted' : 'text-secondary';
             const pointsCost = reward.points_cost || reward.points || 0;
             const gradient = reward.gradient || 'from-primary/20 to-accent/20';
-            const emoji = reward.emoji || reward.icon || '🎁';
+            const emoji = reward.emoji || reward.icon || ambIcon('gift', 'w-8 h-8 text-primary');
 
             return '<div class="p-5 reward-card rounded-xl lg:rounded-2xl ' + cardClass + '">' +
                 '<div class="flex items-center justify-between mb-4">' +
@@ -445,7 +445,7 @@ const RewardsPage = {
         // Combine earned and available badges for display
         const earnedHtml = (badges.earned || []).map(badge => {
             const gradient = badge.gradient || badge.color || 'from-yellow-400 to-orange-500';
-            const emoji = badge.emoji || badge.icon || '🏆';
+            const emoji = badge.emoji || badge.icon || ambIcon('trophy', 'w-8 h-8 text-white');
             const xpReward = badge.xp_reward || badge.xp || 0;
             return '<div class="p-4 text-center bg-white border badge-card rounded-xl border-border">' +
                 '<div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br ' + gradient + ' rounded-2xl flex items-center justify-center text-3xl">' +
@@ -458,7 +458,7 @@ const RewardsPage = {
         }).join('');
 
         const availableHtml = (badges.available || []).map(badge => {
-            const emoji = badge.emoji || badge.icon || '🔒';
+            const emoji = badge.emoji || badge.icon || ambIcon('lock', 'w-8 h-8 text-white');
             const progress = badge.progress || badge.missing || 'Blocat';
             return '<div class="p-4 text-center bg-white border badge-card badge-locked rounded-xl border-border">' +
                 '<div class="flex items-center justify-center w-16 h-16 mx-auto mb-3 text-3xl bg-gradient-to-br from-gray-300 to-gray-400 rounded-2xl">' +
@@ -534,10 +534,10 @@ const RewardsPage = {
         if (!this.levels || this.levels.length === 0) {
             // Use default levels if none from API
             this.levels = [
-                { range: '1-5', name: 'Newbie', emoji: '🎵', gradient: 'from-gray-400 to-gray-500', xp: '0 - 500', status: this.level <= 5 ? 'current' : 'completed' },
-                { range: '6-10', name: 'Fan', emoji: '🎸', gradient: 'from-blue-400 to-blue-500', xp: '500 - 2,000', status: this.level > 5 && this.level <= 10 ? 'current' : (this.level > 10 ? 'completed' : 'locked') },
-                { range: '11-15', name: 'Enthusiast', emoji: '🎤', gradient: 'from-purple-400 to-purple-500', xp: '2,000 - 5,000', status: this.level > 10 && this.level <= 15 ? 'current' : (this.level > 15 ? 'completed' : 'locked') },
-                { range: '16+', name: 'Legend', emoji: '👑', gradient: 'from-yellow-400 to-orange-500', xp: '5,000+', status: this.level > 15 ? 'current' : 'locked' }
+                { range: '1-5', name: 'Newbie', emoji: 'music', gradient: 'from-gray-400 to-gray-500', xp: '0 - 500', status: this.level <= 5 ? 'current' : 'completed' },
+                { range: '6-10', name: 'Fan', emoji: 'guitar', gradient: 'from-blue-400 to-blue-500', xp: '500 - 2,000', status: this.level > 5 && this.level <= 10 ? 'current' : (this.level > 10 ? 'completed' : 'locked') },
+                { range: '11-15', name: 'Enthusiast', emoji: 'mic', gradient: 'from-purple-400 to-purple-500', xp: '2,000 - 5,000', status: this.level > 10 && this.level <= 15 ? 'current' : (this.level > 15 ? 'completed' : 'locked') },
+                { range: '16+', name: 'Legend', emoji: 'crown', gradient: 'from-yellow-400 to-orange-500', xp: '5,000+', status: this.level > 15 ? 'current' : 'locked' }
             ];
         }
 
@@ -563,7 +563,8 @@ const RewardsPage = {
             }
 
             const gradient = level.gradient || 'from-gray-400 to-gray-500';
-            const emoji = level.emoji || '⭐';
+            // nume de iconiță (nivelurile implicite) sau emoticon venit din API
+            const emoji = level.emoji ? (/^[a-z0-9-]+$/.test(level.emoji) ? ambIcon(level.emoji, 'w-7 h-7 text-white') : level.emoji) : ambIcon('star', 'w-7 h-7 text-white');
             const xpRange = level.xp || '';
             const rewards = level.rewards || '';
             const levelRange = level.range || '';

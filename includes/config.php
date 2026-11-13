@@ -10,6 +10,9 @@ if (!defined('AMBILET_ROOT')) {
     define('AMBILET_ROOT', dirname(__DIR__));
 }
 
+// Iconite SVG comune: amb_icon('ticket', 'w-4 h-4')
+require_once __DIR__ . '/icons.php';
+
 // API Configuration
 // Switch between core (production) and stage (testing) by changing USE_STAGE_API
 // Set via query param: ?use_stage=1 to enable, ?use_stage=0 to disable
@@ -103,15 +106,15 @@ $THEME = [
 
 // Categories with icons
 $CATEGORY_ICONS = [
-    'concert' => '🎵',
-    'festival' => '🎪',
-    'theater' => '🎭',
-    'sport' => '⚽',
-    'comedy' => '😂',
-    'conference' => '🎤',
-    'exhibition' => '🖼️',
-    'workshop' => '🛠️',
-    'default' => '📅'
+    'concert' => 'music',
+    'festival' => 'tent',
+    'theater' => 'drama',
+    'sport' => 'volleyball',
+    'comedy' => 'laugh',
+    'conference' => 'mic',
+    'exhibition' => 'image',
+    'workshop' => 'wrench',
+    'default' => 'calendar'
 ];
 
 /**

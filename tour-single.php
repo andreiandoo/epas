@@ -804,7 +804,7 @@ $scriptsExtra = <<<'JS'
 
         const stopLabel = isFirst
             ? 'Stop 1 · Deschiderea turneului'
-            : (isFinal ? 'Stop ' + stopNumber + ' · Finalul turneului 🎉' : 'Stop ' + stopNumber);
+            : (isFinal ? 'Stop ' + stopNumber + ' · Finalul turneului' : 'Stop ' + stopNumber);
         const numberCircle = isPast
             ? '<div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-slate-400">' + stopNumber + '</div>'
             : (isFirst
@@ -855,7 +855,7 @@ $scriptsExtra = <<<'JS'
                 </div>
                 <div class="min-w-0 ${infoColSpan}">
                     <div class="flex flex-wrap items-center gap-2 mb-1">
-                        <span class="text-xs font-semibold tracking-wider uppercase text-primary">${esc(stopLabel)}</span>
+                        <span class="text-xs font-semibold tracking-wider uppercase text-primary">${esc(stopLabel)}${(!isFirst && isFinal) ? ' ' + ambIcon('party-popper', 'inline-block w-3.5 h-3.5 align-middle') : ''}</span>
                         ${badge}
                     </div>
                     <h3 class="mb-1 font-bold text-slate-900">${venueLine}</h3>

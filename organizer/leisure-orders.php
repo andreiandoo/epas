@@ -16,7 +16,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="mt-1 text-sm text-muted">Toate comenzile evenimentului. Click pe rând pentru a vedea biletele. Ștergerile se înregistrează în Istoric.</p>
             </div>
             <a href="/organizator/leisure-orders-history" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border rounded-lg text-secondary bg-white border-border hover:bg-slate-50">
-                📜 Istoric ștergeri
+                <?= amb_icon('scroll-text', 'w-4 h-4') ?> Istoric ștergeri
             </a>
         </div>
 
@@ -88,11 +88,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="lo-del-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full">
                 <div class="px-6 py-4 border-b border-border">
-                    <h3 class="font-bold text-lg text-rose-700">🗑️ Șterge comanda <span id="lo-del-order-number"></span></h3>
+                    <h3 class="font-bold text-lg text-rose-700"><?= amb_icon('trash-2', 'w-5 h-5') ?> Șterge comanda <span id="lo-del-order-number"></span></h3>
                 </div>
                 <div class="p-6 space-y-4">
                     <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
-                        ⚠️ Ștergerea este <strong>ireversibilă</strong>. Comanda + toate biletele + check-in-urile vor fi eliminate din DB.
+                        <?= amb_icon('triangle-alert', 'w-3.5 h-3.5 text-amber-600') ?> Ștergerea este <strong>ireversibilă</strong>. Comanda + toate biletele + check-in-urile vor fi eliminate din DB.
                         Dacă comanda e într-o sesiune de casă închisă, snapshot-ul se recomputează automat.
                         Totul se salvează în <strong>Istoric ștergeri</strong>.
                     </div>
@@ -105,7 +105,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 <div class="px-6 py-4 border-t border-border flex justify-end gap-2">
                     <button id="lo-del-cancel" type="button" class="px-4 py-2 text-sm border rounded-lg text-secondary bg-white border-border hover:bg-slate-50">Anulează</button>
-                    <button id="lo-del-confirm" type="button" class="px-4 py-2 text-sm font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50">🗑️ Șterge definitiv</button>
+                    <button id="lo-del-confirm" type="button" class="px-4 py-2 text-sm font-bold text-white bg-rose-600 rounded-lg hover:bg-rose-700 disabled:opacity-50"><?= amb_icon('trash-2', 'w-4 h-4') ?> Șterge definitiv</button>
                 </div>
             </div>
         </div>
@@ -131,12 +131,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function esc(v) { return String(v == null ? '' : v).replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
 
     function sourceBadge(s) {
-        if (s === 'pos') return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">🏪 POS</span>';
-        return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">🌐 Online</span>';
+        if (s === 'pos') return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">' + ambIcon('store', 'w-3 h-3') + ' POS</span>';
+        return '<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-sky-100 text-sky-800">' + ambIcon('globe', 'w-3 h-3') + ' Online</span>';
     }
     function paymentBadge(pm) {
         if (!pm) return '<span class="text-muted">—</span>';
-        const map = { cash: '💵 Cash', card: '💳 Card', invoice: '📧 Via email', online: '🌐 Online' };
+        const map = { cash: ambIcon('banknote', 'w-3.5 h-3.5') + ' Cash', card: ambIcon('credit-card', 'w-3.5 h-3.5') + ' Card', invoice: ambIcon('mail', 'w-3.5 h-3.5') + ' Via email', online: ambIcon('globe', 'w-3.5 h-3.5') + ' Online' };
         return '<span class="text-xs">' + (map[pm] || pm) + '</span>';
     }
     function statusBadge(s) {
@@ -168,7 +168,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <td class="px-3 py-3 text-right font-semibold tabular-nums">${fmtMoney(o.total)} <span class="text-[10px] text-muted">${o.currency||'RON'}</span></td>
                 <td class="px-3 py-3 text-right">${statusBadge(o.status)}</td>
                 <td class="px-3 py-3 text-center">
-                    <button class="lo-del-btn px-2 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded hover:bg-rose-100" data-order-id="${o.id}" data-order-number="${esc(o.order_number)}" data-order-total="${o.total}" data-order-tickets="${o.tickets_count}" data-order-source="${o.source||''}" data-order-customer="${esc(o.customer_name||'')}">🗑️ Șterge</button>
+                    <button class="lo-del-btn px-2 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded hover:bg-rose-100" data-order-id="${o.id}" data-order-number="${esc(o.order_number)}" data-order-total="${o.total}" data-order-tickets="${o.tickets_count}" data-order-source="${o.source||''}" data-order-customer="${esc(o.customer_name||'')}">${ambIcon('trash-2', 'w-3 h-3')} Șterge</button>
                 </td>
             </tr>
             <tr class="lo-detail-row hidden bg-slate-50" data-detail-for="${o.id}">
@@ -344,7 +344,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         } catch (e) {
             alert('Eroare: ' + (e?.message || 'necunoscut'));
         } finally {
-            btn.disabled = false; btn.textContent = '🗑️ Șterge definitiv';
+            btn.disabled = false; btn.innerHTML = ambIcon('trash-2', 'w-4 h-4') + ' Șterge definitiv';
         }
     }
 

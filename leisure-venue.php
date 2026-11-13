@@ -218,6 +218,21 @@ if (!empty($organizer['has_secondary_issuer'])) {
     ];
 }
 
+// Iconita din datele organizatorului: emoticonul cunoscut devine SVG, restul ramane text.
+if (!function_exists('lv_icon')) {
+    function lv_icon($value, string $fallback, string $class): string {
+        if ($value === null) {
+            return amb_icon($fallback, $class);
+        }
+        $key = trim(str_replace("\u{FE0F}", '', (string) $value));
+        $d = amb_icon_data();
+        if ($key !== '' && (isset($d['emoji'][$key]) || isset($d['icons'][$key]))) {
+            return amb_icon($key, $class);
+        }
+        return htmlspecialchars((string) $value);
+    }
+}
+
 $bodyClass = 'bg-fog text-ink font-sans antialiased';
 $cssBundle = 'single'; // fallback — folosim tailwind inline + custom CSS
 
@@ -394,14 +409,14 @@ require_once __DIR__ . '/includes/head.php';
                 'missing_access' => 'Lipsesc bilete acces',
                 'continue_to_payment' => 'Continuă spre plată →',
                 // Booking section labels
-                'date_label' => '📅 Data vizitei',
-                'access_types_label' => '🎫 Tipuri de acces',
+                'date_label' => 'Data vizitei',
+                'access_types_label' => 'Tipuri de acces',
                 'tickets_selected_one' => 'bilet selectat',
                 'tickets_selected_many' => 'bilete selectate',
                 'savings_short' => 'Economisești',
                 'requires_access_some' => 'Unele necesită bilet de acces',
                 // Upsell + recommended
-                'recommended_for_you' => '✨ Recomandate pentru tine',
+                'recommended_for_you' => 'Recomandate pentru tine',
                 'see_all' => 'Vezi toate',
                 // FAQ section
                 'faqs_title' => 'Întrebări frecvente',
@@ -486,13 +501,13 @@ require_once __DIR__ . '/includes/head.php';
                 'choose_date_first' => 'Előbb válassz dátumot',
                 'missing_access' => 'Hiányzó belépőjegyek',
                 'continue_to_payment' => 'Tovább a fizetéshez →',
-                'date_label' => '📅 Látogatás dátuma',
-                'access_types_label' => '🎫 Belépőtípusok',
+                'date_label' => 'Látogatás dátuma',
+                'access_types_label' => 'Belépőtípusok',
                 'tickets_selected_one' => 'jegy kiválasztva',
                 'tickets_selected_many' => 'jegy kiválasztva',
                 'savings_short' => 'Megtakarítás',
                 'requires_access_some' => 'Néhányhoz belépőjegy szükséges',
-                'recommended_for_you' => '✨ Ajánlott neked',
+                'recommended_for_you' => 'Ajánlott neked',
                 'see_all' => 'Mind megtekintése',
                 'faqs_title' => 'Gyakori kérdések',
                 'trail_length' => 'Hossz',
@@ -575,13 +590,13 @@ require_once __DIR__ . '/includes/head.php';
                 'choose_date_first' => 'Pick a date first',
                 'missing_access' => 'Missing access tickets',
                 'continue_to_payment' => 'Continue to payment →',
-                'date_label' => '📅 Visit date',
-                'access_types_label' => '🎫 Access types',
+                'date_label' => 'Visit date',
+                'access_types_label' => 'Access types',
                 'tickets_selected_one' => 'ticket selected',
                 'tickets_selected_many' => 'tickets selected',
                 'savings_short' => 'You save',
                 'requires_access_some' => 'Some require an access ticket',
-                'recommended_for_you' => '✨ Recommended for you',
+                'recommended_for_you' => 'Recommended for you',
                 'see_all' => 'See all',
                 'faqs_title' => 'Frequently asked questions',
                 'trail_length' => 'Length',
@@ -624,7 +639,7 @@ require_once __DIR__ . '/includes/head.php';
             <div class="lg:hidden relative" x-data="{ open: false }" @click.outside="open = false">
                 <button type="button" @click="open = !open"
                         class="inline-flex items-center gap-1 bg-white/15 backdrop-blur text-white px-3 py-2 rounded-full text-xs font-bold hover:bg-white/25 transition-colors">
-                    🌐 <span><?= $_currentLabel ?></span>
+                    <?= amb_icon('globe', 'w-3.5 h-3.5') ?> <span><?= $_currentLabel ?></span>
                     <svg class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div x-show="open" x-transition class="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-xl border border-forest-100 py-1 min-w-[80px] z-50">
@@ -741,7 +756,7 @@ require_once __DIR__ . '/includes/head.php';
             <?php foreach (array_slice($quickStats, 0, 1) as $qs): ?>
             <div class="py-4 px-4 flex items-center gap-3">
                 <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <span class="text-lg"><?= htmlspecialchars($qs['icon'] ?? '⚠️') ?></span>
+                    <span class="text-lg text-amber-600"><?= lv_icon($qs['icon'] ?? null, 'triangle-alert', 'w-5 h-5') ?></span>
                 </div>
                 <div class="min-w-0">
                     <p class="text-xs text-forest-700/60 font-medium"><?= htmlspecialchars($qs['label'] ?? 'Atenție') ?></p>
@@ -777,7 +792,7 @@ require_once __DIR__ . '/includes/head.php';
             <!-- LEFT: Calendar -->
             <div class="lg:col-span-5">
                 <div class="bg-white rounded-3xl border border-forest-100 shadow-sm p-6 lg:p-7 lg:sticky lg:top-24">
-                    <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3" data-i18n="date_label">📅 Data vizitei</p>
+                    <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3 flex items-center gap-1.5"><?= amb_icon('calendar', 'w-3.5 h-3.5') ?><span data-i18n="date_label">Data vizitei</span></p>
                     <div class="flex items-center justify-between mb-5">
                         <button @click="prevMonth()" class="lv-qty-btn" aria-label="Luna anterioară">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -840,7 +855,7 @@ require_once __DIR__ . '/includes/head.php';
 
             <!-- RIGHT: Tickets -->
             <div class="lg:col-span-7">
-                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3" data-i18n="access_types_label">🎫 Tipuri de acces</p>
+                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3 flex items-center gap-1.5"><?= amb_icon('ticket', 'w-3.5 h-3.5') ?><span data-i18n="access_types_label">Tipuri de acces</span></p>
 
                 <div x-show="!selectedDate" class="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-forest-200">
                     <svg class="w-12 h-12 mx-auto text-forest-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -866,7 +881,7 @@ require_once __DIR__ . '/includes/head.php';
                             <div class="aspect-[4/3] relative overflow-hidden flex items-center justify-center bg-fog"
                                  :style="!cat.image_url ? `background: linear-gradient(135deg, #DCF2E3 0%, #BFE5CD 100%)` : ''">
                                 <img x-show="cat.image_url" :src="cat.image_url" :alt="cat.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                                <span x-show="!cat.image_url" class="text-6xl opacity-70">🎟️</span>
+                                <span x-show="!cat.image_url" class="opacity-70 text-forest-700"><?= amb_icon('ticket', 'w-16 h-16') ?></span>
                                 <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4">
                                     <p class="text-white text-xs font-medium opacity-90" x-text="cat.items.length + ' ' + (cat.items.length === 1 ? (t('ticket_singular') || 'opțiune') : (t('ticket_plural') || 'opțiuni'))"></p>
                                 </div>
@@ -904,13 +919,13 @@ require_once __DIR__ . '/includes/head.php';
                                 <!-- Iconita tip bilet ascunsa pe mobile (eliberare spatiu) -->
                                 <div class="hidden lg:flex w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 transition-colors"
                                      :class="ticket.qty > 0 ? 'bg-forest-600 text-white' : 'bg-forest-50 text-forest-700'">
-                                    <span class="text-xl" x-text="ticket.icon || '🎟️'"></span>
+                                    <span class="text-xl" x-show="ticket.icon" x-text="ticket.icon"></span><span x-show="!ticket.icon" class="inline-flex"><?= amb_icon('ticket', 'w-5 h-5') ?></span>
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-1.5 flex-wrap">
                                         <h3 class="font-display text-base lg:text-lg font-bold text-ink leading-snug" x-text="ticket.name"></h3>
-                                        <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-[10px] !py-0.5">🅿️</span>
-                                        <span x-show="ticket.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold !py-0.5">🎁</span>
+                                        <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-[10px] !py-0.5"><?= amb_icon('circle-parking', 'w-3 h-3') ?></span>
+                                        <span x-show="ticket.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold !py-0.5"><?= amb_icon('gift', 'w-3 h-3') ?></span>
                                         <span x-show="ticket.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-[10px] font-bold !py-0.5">
                                             -<span x-text="parseFloat(ticket.package_savings).toFixed(0)"></span> RON
                                         </span>
@@ -1031,7 +1046,7 @@ require_once __DIR__ . '/includes/head.php';
                                         class="group bg-white border-2 border-forest-100 hover:border-forest-500 rounded-xl p-2 flex items-center gap-2.5 transition-all text-left">
                                     <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-fog flex items-center justify-center">
                                         <img x-show="cat.image_url" :src="cat.image_url" :alt="cat.name" class="w-full h-full object-cover">
-                                        <span x-show="!cat.image_url" class="text-xl">🎟️</span>
+                                        <span x-show="!cat.image_url" class="inline-flex text-forest-700"><?= amb_icon('ticket', 'w-5 h-5') ?></span>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-semibold text-ink truncate" x-text="cat.name"></p>
@@ -1050,7 +1065,7 @@ require_once __DIR__ . '/includes/head.php';
                         <div class="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-forest-400/20 blur-3xl"></div>
                         <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
                             <div class="flex-1">
-                                <p class="text-lake-200 text-xs uppercase tracking-[0.2em] font-bold mb-2" data-i18n="recommended_for_you">✨ Recomandate pentru tine</p>
+                                <p class="text-lake-200 text-xs uppercase tracking-[0.2em] font-bold mb-2 flex items-center gap-1.5"><?= amb_icon('sparkles', 'w-3.5 h-3.5') ?><span data-i18n="recommended_for_you">Recomandate pentru tine</span></p>
                                 <h3 class="font-display text-xl lg:text-2xl font-bold mb-2" data-i18n="upsell_title">Fă vizita o experiență completă</h3>
                                 <p class="text-white/80 text-sm">Alege ce te tentează și economisește timp pe loc.</p>
                             </div>
@@ -1068,7 +1083,7 @@ require_once __DIR__ . '/includes/head.php';
                                     <button @click="incrementService(service)"
                                             :disabled="service.requires_access_ticket && !hasAccessInCart"
                                             class="inline-flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur hover:bg-white/20 disabled:opacity-40 rounded-xl text-sm font-medium transition-colors group">
-                                        <span class="text-lg" x-text="serviceEmoji(service.service_category)"></span>
+                                        <span class="inline-flex" x-html="ambIcon(serviceIcon(service.service_category), 'w-5 h-5')"></span>
                                         <span x-text="service.name"></span>
                                         <span class="text-lake-200 font-bold">+<span x-text="service.effective_price"></span> <span class="text-xs" x-text="service.currency || 'RON'"></span></span>
                                         <svg class="w-4 h-4 text-white/60 group-hover:text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
@@ -1093,7 +1108,7 @@ require_once __DIR__ . '/includes/head.php';
                 <p class="text-forest-700/70 max-w-xl" data-i18n="step2_subtitle">Adaugă plimbare cu barca, ghid privat sau alte experiențe.</p>
             </div>
             <span class="lv-badge bg-fog text-forest-700 border border-forest-100" x-show="anyRequiresAccess">
-                ⚠️ <span data-i18n="requires_access_some">Unele necesită bilet de acces</span>
+                <?= amb_icon('triangle-alert', 'w-3.5 h-3.5 text-amber-600') ?> <span data-i18n="requires_access_some">Unele necesită bilet de acces</span>
             </span>
         </div>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -1106,12 +1121,12 @@ require_once __DIR__ . '/includes/head.php';
                         <div x-show="service.image_url" class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
                         <span class="absolute top-3 left-3 lv-badge bg-white/90 backdrop-blur text-forest-800 text-xs z-10"
                               x-text="categoryLabel(service.service_category)"></span>
-                        <span x-show="!service.image_url" class="text-6xl opacity-80" x-text="serviceEmoji(service.service_category)"></span>
+                        <span x-show="!service.image_url" class="opacity-80 text-white" x-html="ambIcon(serviceIcon(service.service_category), 'w-16 h-16')"></span>
                     </div>
                     <div class="p-5 bg-white">
                         <div class="flex items-start justify-between gap-2 mb-1">
                             <h3 class="font-display text-lg font-bold text-ink leading-tight" x-text="service.name"></h3>
-                            <span x-show="service.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold flex-shrink-0">🎁 PACHET</span>
+                            <span x-show="service.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold flex-shrink-0 inline-flex items-center gap-1"><?= amb_icon('gift', 'w-3 h-3') ?> PACHET</span>
                         </div>
                         <p class="text-sm text-forest-700/70 mb-2" x-text="service.description || ''"></p>
                         <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || (service.access_requirement && service.access_requirement !== 'none') || service.package_savings > 0">
@@ -1124,7 +1139,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
                         <!-- F10: Banner blocked time ranges pentru ziua selectată -->
                         <div x-show="Array.isArray(service.blocked_time_ranges_today) && service.blocked_time_ranges_today.length > 0" class="mb-3 p-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-900">
-                            <p class="font-bold mb-0.5">⚠️ Atenție — intervale rezervate astăzi:</p>
+                            <p class="font-bold mb-0.5 flex items-center gap-1"><?= amb_icon('triangle-alert', 'w-3.5 h-3.5 text-amber-600') ?> Atenție — intervale rezervate astăzi:</p>
                             <ul class="space-y-0.5">
                                 <template x-for="(b, idx) in (service.blocked_time_ranges_today || [])" :key="idx">
                                     <li><strong x-text="b.start_time + '–' + b.end_time"></strong><span x-show="b.reason"> · <span x-text="b.reason"></span></span></li>
@@ -1260,7 +1275,7 @@ require_once __DIR__ . '/includes/head.php';
                  nu aducea valoare suplimentară (POI-urile sunt deja in #locationMap). */ ?>
         <?php if ($safetyWarning): ?>
         <div class="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex items-start gap-3 max-w-3xl mx-auto">
-            <span class="text-2xl flex-shrink-0"><?= htmlspecialchars($safetyWarning['icon'] ?? '⚠️') ?></span>
+            <span class="text-2xl flex-shrink-0 text-amber-400"><?= lv_icon($safetyWarning['icon'] ?? null, 'triangle-alert', 'w-7 h-7') ?></span>
             <div class="text-sm">
                 <p class="font-bold text-amber-200 mb-1"><?= htmlspecialchars($safetyWarning['title'] ?? 'Atenție') ?></p>
                 <p class="text-amber-100/80"><?= htmlspecialchars($safetyWarning['body'] ?? '') ?></p>
@@ -1329,7 +1344,7 @@ require_once __DIR__ . '/includes/head.php';
                         $spImgUrl = str_starts_with($sp['image'], 'http') ? $sp['image'] : (STORAGE_URL . '/' . $sp['image']);
                     }
                     // Icon suporta atat cheia 'icon' (folosit in organizer form) cat si 'emoji' (legacy).
-                    $spIcon = $sp['icon'] ?? $sp['emoji'] ?? '🌿';
+                    $spIcon = $sp['icon'] ?? $sp['emoji'] ?? null;
                 ?>
                 <div class="text-center">
                     <?php if ($spImgUrl): ?>
@@ -1337,7 +1352,7 @@ require_once __DIR__ . '/includes/head.php';
                             <img src="<?= htmlspecialchars($spImgUrl) ?>" alt="<?= htmlspecialchars($sp['name'] ?? '') ?>" class="w-full h-full object-cover" loading="lazy">
                         </div>
                     <?php else: ?>
-                        <div class="w-16 h-16 mx-auto bg-white rounded-2xl flex items-center justify-center mb-3 text-3xl shadow-sm"><?= htmlspecialchars($spIcon) ?></div>
+                        <div class="w-16 h-16 mx-auto bg-white rounded-2xl flex items-center justify-center mb-3 text-3xl shadow-sm text-forest-700"><?= lv_icon($spIcon, 'leaf', 'w-8 h-8') ?></div>
                     <?php endif; ?>
                     <p class="font-bold text-ink text-sm"><?= htmlspecialchars($sp['name'] ?? '') ?></p>
                     <p class="text-xs text-forest-700/60 italic"><?= htmlspecialchars($sp['latin'] ?? '') ?></p>
@@ -1391,7 +1406,7 @@ require_once __DIR__ . '/includes/head.php';
             ?>
             <div class="bg-white rounded-3xl p-8 <?= $idx === 0 ? 'border-2 border-forest-500 relative' : 'border-2 border-forest-100' ?>">
                 <?php if ($idx === 0): ?>
-                <span class="absolute -top-3 left-8 lv-badge bg-forest-700 text-white">☀️ Activ</span>
+                <span class="absolute -top-3 left-8 lv-badge bg-forest-700 text-white inline-flex items-center gap-1"><?= amb_icon('sun', 'w-3.5 h-3.5') ?> Activ</span>
                 <?php endif; ?>
                 <?php
                 // Traduceri nume sezon: prefera translations[locale].name → name[locale] → name (string)
@@ -1443,7 +1458,7 @@ require_once __DIR__ . '/includes/head.php';
             <?php foreach ($gettingThere as $gt): ?>
             <div class="bg-fog rounded-2xl p-6">
                 <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-white" style="background: <?= htmlspecialchars($gt['icon_bg'] ?? '#1F4E37') ?>">
-                    <span class="text-2xl"><?= htmlspecialchars($gt['icon'] ?? '📍') ?></span>
+                    <span class="text-2xl"><?= lv_icon($gt['icon'] ?? null, 'map-pin', 'w-6 h-6') ?></span>
                 </div>
                 <h3 class="font-display text-lg font-bold text-ink mb-2"><?= htmlspecialchars($gt['title'] ?? '') ?></h3>
                 <p class="text-sm text-forest-800 mb-3"><?= htmlspecialchars($gt['description'] ?? '') ?></p>
@@ -1624,7 +1639,7 @@ require_once __DIR__ . '/includes/head.php';
                         </template>
                         <div x-show="item.meta && item.meta.is_group_ticket && item.meta.group_includes_guide && item.qty >= (parseInt(item.min_per_order,10)||1)"
                              class="flex items-center justify-between text-xs text-emerald-300 mt-0.5 pl-3">
-                            <span>🎁 +1 × <span x-text="(item.meta && item.meta.group_guide_label) ? item.meta.group_guide_label : 'Ghid grup'"></span> <span class="text-white/50">(gratuit)</span></span>
+                            <span class="inline-flex items-center gap-1"><?= amb_icon('gift', 'w-3.5 h-3.5') ?> +1 × <span x-text="(item.meta && item.meta.group_guide_label) ? item.meta.group_guide_label : 'Ghid grup'"></span> <span class="text-white/50">(gratuit)</span></span>
                             <span>0.00 RON</span>
                         </div>
                     </div>
@@ -1654,10 +1669,10 @@ require_once __DIR__ . '/includes/head.php';
             </button>
             <p x-show="!canCheckout && cartCount > 0" class="mt-2 text-xs text-amber-200">
                 <template x-if="requiresAccessAdult > accessAdultInCart">
-                    <span>⚠️ Adaugă <strong x-text="requiresAccessAdult - accessAdultInCart"></strong> bilet(e) acces ADULT (necesare pentru bărci).</span>
+                    <span><?= amb_icon('triangle-alert', 'inline-block w-3.5 h-3.5 align-middle') ?> Adaugă <strong x-text="requiresAccessAdult - accessAdultInCart"></strong> bilet(e) acces ADULT (necesare pentru bărci).</span>
                 </template>
                 <template x-if="requiresAccessAdult <= accessAdultInCart && requiresAccessAny > accessAnyInCart">
-                    <span>⚠️ Adaugă <strong x-text="requiresAccessAny - accessAnyInCart"></strong> bilet(e) acces (necesare pentru vaporașe).</span>
+                    <span><?= amb_icon('triangle-alert', 'inline-block w-3.5 h-3.5 align-middle') ?> Adaugă <strong x-text="requiresAccessAny - accessAnyInCart"></strong> bilet(e) acces (necesare pentru vaporașe).</span>
                 </template>
             </p>
         </div>
@@ -2530,9 +2545,9 @@ function reservationPage() {
             };
             return map[cat] || 'linear-gradient(135deg, #5BB17F, #155E75)';
         },
-        serviceEmoji(cat) {
-            const map = { access:'🎟️', parking:'🅿️', rental:'🎿', activity:'🚣', extra:'✨' };
-            return map[cat] || '✨';
+        serviceIcon(cat) {
+            const map = { access:'ticket', parking:'circle-parking', rental:'mountain-snow', activity:'sailboat', extra:'sparkles' };
+            return map[cat] || 'sparkles';
         },
         get currentScheduleLabel() {
             // Returneaza programul pe ziua curenta (sau "Verificați programul" fallback).
@@ -2741,7 +2756,7 @@ function reservationPage() {
             hotels.forEach(h => {
                 if (!h.lat || !h.lng) return;
                 const icon = L.divIcon({
-                    html: `<div style="background:#B89968;color:white;border-radius:8px;padding:4px 8px;font-weight:600;font-size:10px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:4px"><span>🏨</span><span>${(h.name || '').replace(/[<>&]/g, '')}</span></div>`,
+                    html: `<div style="background:#B89968;color:white;border-radius:8px;padding:4px 8px;font-weight:600;font-size:10px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:4px">${ambIcon('hotel', 'w-3 h-3')}<span>${(h.name || '').replace(/[<>&]/g, '')}</span></div>`,
                     className: '', iconSize: null,
                 });
                 const marker = L.marker([h.lat, h.lng], { icon }).addTo(map);
@@ -2773,7 +2788,7 @@ function reservationPage() {
             const map = L.map('locationMap').setView([lat, lng], (cfg.zoom || 13) - 1);
             AmbiletTileLayer('light_all').addTo(map);
             const icon = L.divIcon({
-                html: `<div style="background:#1F4E37;color:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;border:4px solid white;box-shadow:0 6px 16px rgba(0,0,0,0.3)">📍</div>`,
+                html: `<div style="background:#1F4E37;color:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;border:4px solid white;box-shadow:0 6px 16px rgba(0,0,0,0.3)">${ambIcon('map-pin', 'w-5 h-5')}</div>`,
                 className: '', iconSize: [48, 48],
             });
             L.marker([lat, lng], { icon }).addTo(map).bindPopup(EVENT.name || 'Locație');
