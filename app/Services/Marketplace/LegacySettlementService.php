@@ -753,6 +753,213 @@ class LegacySettlementService
         return $restored;
     }
 
+    // ---------------------------------------------------------------
+    // Invitațiile din sistemul vechi (bilete de 0 lei, comenzi cu total 0)
+    // ---------------------------------------------------------------
+
+    public const INVITATIONS_LOG = 'legacy-invitations';
+
+    /** Evenimentele cu invitații importate (comandă plătită cu 0 lei, bilet de 0 lei). */
+    public static function invitationEventIds(): array
+    {
+        return DB::table('tickets as t')
+            ->join('orders as o', 'o.id', '=', 't.order_id')
+            ->join('events as e', 'e.id', '=', 't.event_id')
+            ->where('o.source', 'legacy_import')
+            ->whereIn('o.status', SalesBreakdownService::PAID_ORDER_STATUSES)
+            ->where('o.total', '<=', 0)
+            ->whereIn('t.status', ['valid', 'used'])
+            ->whereRaw('coalesce(t.price, 0) <= 0')
+            ->where('e.marketplace_client_id', self::MARKETPLACE_ID)
+            ->distinct()
+            ->orderBy('t.event_id')
+            ->pluck('t.event_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Netul fiecărui eveniment cu și fără invitații numărate la prețul din
+     * catalog, și ce se face cu deconturile lui ca soldul să rămână corect:
+     *   a = deconturi vechi marcate de noi „plătit în sistemul anterior”
+     *   b = ciorne aprobate de noi (vechi / tranziție), încă neplătite
+     *   c = plătite real, d = alte deconturi aprobate — nu se ating.
+     * Plusul (suma deconturilor peste netul corect) se scade întâi din b, apoi
+     * din a. Ce rămâne peste c/d se raportează, nu se modifică.
+     * Cu $apply scrie și pornește setarea pe marketplace (calculul nou).
+     *
+     * @return array{rows: array<int, array>, batch: ?string}
+     */
+    public function invitations(bool $apply, ?Model $admin = null): array
+    {
+        $batch = $apply ? (string) \Illuminate\Support\Str::uuid() : null;
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $rows = [];
+        $orgs = [];
+        $events = [];
+
+        try {
+            foreach (Event::whereIn('id', self::invitationEventIds())->orderBy('id')->get() as $event) {
+                SalesBreakdownService::$legacyFreeZeroOverride = false;
+                $oldNet = round((float) (MarketplacePayout::balanceBreakdown($event, $this->breakdown)['total_net'] ?? 0), 2);
+                SalesBreakdownService::$legacyFreeZeroOverride = true;
+                $newNet = round((float) (MarketplacePayout::balanceBreakdown($event, $this->breakdown)['total_net'] ?? 0), 2);
+                if ($oldNet - $newNet < 0.01) {
+                    continue;
+                }
+
+                $payouts = MarketplacePayout::where('event_id', $event->id)
+                    ->whereIn('status', ['approved', 'processing', 'completed'])
+                    ->orderByDesc('id')
+                    ->get();
+                $cls = fn ($p) => $p->status === 'completed'
+                    ? ($p->payment_notes === self::PAID_NOTE ? 'a' : 'c')
+                    : (str_contains((string) $p->admin_notes, self::NOTE) || str_contains((string) $p->admin_notes, self::TRANSITION_NOTE) ? 'b' : 'd');
+                $sums = ['a' => 0.0, 'b' => 0.0, 'c' => 0.0, 'd' => 0.0];
+                foreach ($payouts as $p) {
+                    $sums[$cls($p)] += (float) $p->amount;
+                }
+
+                $excess = round($payouts->sum(fn ($p) => (float) $p->amount) - $newNet, 2);
+                $changes = [];
+                foreach (['b', 'a'] as $k) {
+                    foreach ($payouts->filter(fn ($p) => $cls($p) === $k) as $p) {
+                        if ($excess < 0.01) {
+                            break 2;
+                        }
+                        $amount = round((float) $p->amount, 2);
+                        $cut = round(min($excess, $amount), 2);
+                        if ($cut < 0.01) {
+                            continue;
+                        }
+                        $changes[] = ['payout' => $p, 'class' => $k, 'old' => $amount, 'new' => round($amount - $cut, 2)];
+                        $excess = round($excess - $cut, 2);
+                    }
+                }
+
+                $row = [
+                    'event_id' => $event->id,
+                    'event' => $this->title($event),
+                    'end' => $event->getEffectiveEndDatetime()?->format('d.m.Y'),
+                    'organizer_id' => (int) $event->marketplace_organizer_id,
+                    'net_old' => $oldNet,
+                    'net_new' => $newNet,
+                    'delta' => round($oldNet - $newNet, 2),
+                    'a' => round($sums['a'], 2),
+                    'b' => round($sums['b'], 2),
+                    'c' => round($sums['c'], 2),
+                    'd' => round($sums['d'], 2),
+                    'cut_a' => round(collect($changes)->where('class', 'a')->sum(fn ($c) => $c['old'] - $c['new']), 2),
+                    'cut_b' => round(collect($changes)->where('class', 'b')->sum(fn ($c) => $c['old'] - $c['new']), 2),
+                    'remaining' => max(0.0, $excess),
+                    'changes' => implode('; ', array_map(fn ($c) => '#' . $c['payout']->id . ' ' . $c['class'] . ' ' . $fmt($c['old']) . '→' . $fmt($c['new']), $changes)),
+                    'result' => $changes ? ($apply ? 'corectat' : 'de corectat') : 'fără decont de corectat',
+                ];
+                $orgs[] = $row['organizer_id'];
+                $events[] = $event->id;
+
+                if ($apply && $changes) {
+                    try {
+                        DB::transaction(function () use ($changes, $event, $row, $batch, $admin, $fmt) {
+                        $log = [];
+                        $paidOut = 0.0;
+                        foreach ($changes as $c) {
+                            $fresh = MarketplacePayout::whereKey($c['payout']->id)->lockForUpdate()->first();
+                            if (! $fresh || $fresh->status !== $c['payout']->status || abs((float) $fresh->amount - $c['old']) >= 0.01) {
+                                throw new \RuntimeException('decontul #' . $c['payout']->id . ' s-a schimbat între timp');
+                            }
+                            $oldNotes = $fresh->getRawOriginal('admin_notes');
+                            MarketplacePayout::whereKey($fresh->id)->update([
+                                'amount' => $c['new'],
+                                'admin_notes' => trim(($oldNotes ? $oldNotes . "\n" : '') . 'Corectat ' . now()->format('d.m.Y')
+                                    . ': invitațiile din sistemul vechi (bilete de 0 lei) nu mai sunt numărate ca vânzări; suma '
+                                    . $fmt($c['old']) . ' → ' . $fmt($c['new']) . ' lei.'),
+                            ]);
+                            if ($c['class'] === 'a') {
+                                $paidOut += $c['old'] - $c['new'];
+                            }
+                            $log[] = ['payout_id' => $fresh->id, 'class' => $c['class'], 'old' => ['amount' => $c['old'], 'admin_notes' => $oldNotes], 'new' => ['amount' => $c['new']]];
+                        }
+                        if ($paidOut > 0) {
+                            MarketplaceOrganizer::whereKey($row['organizer_id'])->decrement('total_paid_out', round($paidOut, 2));
+                        }
+                        activity(self::INVITATIONS_LOG)
+                            ->performedOn(MarketplaceOrganizer::find($row['organizer_id']))
+                            ->causedBy($admin)
+                            ->withProperties(['batch' => $batch, 'event_id' => $event->id, 'net_old' => $row['net_old'],
+                                'net_new' => $row['net_new'], 'paid_out_reduced' => round($paidOut, 2), 'payouts' => $log])
+                            ->log('invitations-corrected');
+                        });
+                    } catch (\RuntimeException $e) {
+                        $row['result'] = 'sărit: ' . $e->getMessage();
+                    }
+                }
+
+                $rows[] = $row;
+            }
+        } finally {
+            SalesBreakdownService::$legacyFreeZeroOverride = null;
+        }
+
+        if ($apply) {
+            $this->setLegacyFreeZero(true);
+            $this->afterChange(array_values(array_unique($orgs)), array_values(array_unique($events)));
+        }
+
+        return ['rows' => $rows, 'batch' => $batch];
+    }
+
+    /** Pune înapoi sumele dintr-un lot și oprește calculul nou. */
+    public function revertInvitations(string $batch, ?Model $admin = null): int
+    {
+        $activities = Activity::where('log_name', self::INVITATIONS_LOG)->where('description', 'invitations-corrected')
+            ->where('properties->batch', $batch)->get();
+
+        $restored = 0;
+        $orgs = [];
+        $events = [];
+        foreach ($activities as $a) {
+            DB::transaction(function () use ($a, &$restored, &$orgs, &$events) {
+                $back = 0.0;
+                foreach ($a->properties['payouts'] ?? [] as $c) {
+                    $n = MarketplacePayout::whereKey($c['payout_id'])->where('amount', $c['new']['amount'])->update($c['old']);
+                    if ($n) {
+                        $restored++;
+                        if (($c['class'] ?? '') === 'a') {
+                            $back += (float) $c['old']['amount'] - (float) $c['new']['amount'];
+                        }
+                    }
+                }
+                if ($back > 0) {
+                    MarketplaceOrganizer::whereKey($a->subject_id)->increment('total_paid_out', round($back, 2));
+                }
+                $orgs[] = (int) $a->subject_id;
+                $events[] = (int) ($a->properties['event_id'] ?? 0);
+            });
+            activity(self::INVITATIONS_LOG)->performedOn($a->subject)->causedBy($admin)
+                ->withProperties(['batch' => $batch, 'reverted_activity_id' => $a->id])->log('invitations-reverted');
+        }
+
+        $this->setLegacyFreeZero(false);
+        $this->afterChange(array_values(array_unique($orgs)), array_values(array_filter(array_unique($events))));
+
+        return $restored;
+    }
+
+    private function setLegacyFreeZero(bool $on): void
+    {
+        DB::transaction(function () use ($on) {
+            $client = \App\Models\MarketplaceClient::whereKey(self::MARKETPLACE_ID)->lockForUpdate()->first();
+            if (! $client) {
+                return;
+            }
+            $settings = $client->settings ?? [];
+            $settings[SalesBreakdownService::SETTING_LEGACY_FREE_ZERO] = $on;
+            $client->updateQuietly(['settings' => $settings]);
+        });
+        SalesBreakdownService::forgetLegacyFreeZeroCache();
+    }
+
     private function afterChange(array $organizerIds, array $eventIds): void
     {
         foreach ($eventIds as $id) {

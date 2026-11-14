@@ -24,7 +24,9 @@ class SettleLegacyPayouts extends Command
         {--revert-realign= : Anulează un lot de realiniere}
         {--finalize : Ciornele vechi aprobate → Finalizat, „plătit în sistemul anterior” (cu --apply scrie)}
         {--revert-finalize= : Anulează un lot de finalizare}
-        {--transition : Ciornele din tranziție (evenimente încheiate după data limită, cu vânzări și din sistemul anterior) în loc de cele vechi}';
+        {--transition : Ciornele din tranziție (evenimente încheiate după data limită, cu vânzări și din sistemul anterior) în loc de cele vechi}
+        {--invitations : Invitațiile din sistemul vechi (bilete de 0 lei) scoase din net + deconturile noastre corectate (cu --apply scrie și pornește calculul nou)}
+        {--revert-invitations= : Anulează un lot de corectare a invitațiilor}';
 
     protected $description = 'Ciornele vechi AmBilet: analizează / aprobă ciornele „În așteptare” pe evenimentele încheiate până la ' . LegacySettlementService::CUTOFF_DATE . '.';
 
@@ -64,6 +66,19 @@ class SettleLegacyPayouts extends Command
 
         if ($this->option('finalize')) {
             return $this->finalize($service);
+        }
+
+        if ($batch = $this->option('revert-invitations')) {
+            if (! $this->confirm("Anulez lotul {$batch} (sumele revin, calculul vechi repornește)?", false)) {
+                return self::FAILURE;
+            }
+            $this->info('Deconturi readuse: ' . $service->revertInvitations((string) $batch) . '.');
+
+            return self::SUCCESS;
+        }
+
+        if ($this->option('invitations')) {
+            return $this->invitations($service);
         }
 
         $transition = (bool) $this->option('transition');
@@ -180,6 +195,60 @@ class SettleLegacyPayouts extends Command
         $this->info('Finalizate: ' . $written->count() . ' (' . $fmt($written->sum('amount')) . " lei). Lot: {$done['batch']} (anulare: --revert-finalize={$done['batch']}).");
         foreach (collect($done['rows'])->filter(fn ($r) => str_starts_with($r['result'], 'sărit')) as $r) {
             $this->warn("Decont #{$r['payout_id']}: {$r['result']}");
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function invitations(LegacySettlementService $service): int
+    {
+        $rows = collect($service->invitations(false)['rows']);
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.');
+        $names = MarketplaceOrganizer::whereIn('id', $rows->pluck('organizer_id')->unique())->pluck('name', 'id');
+
+        $this->table(['', ''], [
+            ['Evenimente cu netul schimbat', $rows->count()],
+            ['Organizatori', $rows->pluck('organizer_id')->unique()->count()],
+            ['Net înainte', $fmt($rows->sum('net_old'))],
+            ['Net corect', $fmt($rows->sum('net_new'))],
+            ['Invitații scoase din net', $fmt($rows->sum('delta'))],
+            ['a) „plătit în sistemul anterior” (ale noastre) — se reduc cu', $fmt($rows->sum('cut_a'))],
+            ['b) aprobate de noi, neplătite — se reduc cu', $fmt($rows->sum('cut_b'))],
+            ['Rămâne peste plăți reale / alte aprobate (nu se atinge)', $fmt($rows->sum('remaining'))],
+            ['Evenimente cu rest peste plăți reale', $rows->where('remaining', '>', 0.004)->count()],
+        ]);
+
+        $this->table(['Org', 'Nume', 'Ev.', 'Invitații', 'Reducere a', 'Reducere b', 'Rest (real)'], $rows->groupBy('organizer_id')
+            ->map(fn ($g, $o) => [$o, mb_substr((string) ($names[$o] ?? ''), 0, 28), $g->count(), $g->sum('delta'), $g->sum('cut_a'), $g->sum('cut_b'), $g->sum('remaining')])
+            ->sortByDesc(3)->take(25)->map(fn ($r) => [$r[0], $r[1], $r[2], $fmt($r[3]), $fmt($r[4]), $fmt($r[5]), $fmt($r[6])])->values()->all());
+
+        $path = (getenv('HOME') ?: storage_path('app')) . '/settle-legacy/invitatii-' . now()->format('Ymd-His') . '.csv';
+        @mkdir(dirname($path), 0775, true);
+        $fh = fopen($path, 'w');
+        fwrite($fh, "\xEF\xBB\xBF");
+        fputcsv($fh, ['event_id', 'eveniment', 'final', 'organizer_id', 'organizator', 'net_inainte', 'net_corect', 'invitatii',
+            'a_platit_sistem_vechi', 'b_aprobate_noi', 'c_platite_real', 'd_alte_aprobate', 'reducere_a', 'reducere_b', 'rest_real', 'deconturi', 'rezultat'], ',', '"', '\\');
+        foreach ($rows as $r) {
+            fputcsv($fh, [$r['event_id'], $r['event'], $r['end'], $r['organizer_id'], $names[$r['organizer_id']] ?? '', $r['net_old'], $r['net_new'], $r['delta'],
+                $r['a'], $r['b'], $r['c'], $r['d'], $r['cut_a'], $r['cut_b'], $r['remaining'], $r['changes'], $r['result']], ',', '"', '\\');
+        }
+        fclose($fh);
+        $this->info("Raport: {$path}");
+
+        if (! $this->option('apply')) {
+            $this->comment('Simulare — nu s-a scris nimic. Pentru scriere: --invitations --apply.');
+
+            return self::SUCCESS;
+        }
+        if (! $this->confirm('Corectez deconturile a/b și pornesc calculul fără invitații?', false)) {
+            return self::SUCCESS;
+        }
+
+        $done = $service->invitations(true);
+        $written = collect($done['rows'])->where('result', 'corectat');
+        $this->info('Evenimente corectate: ' . $written->count() . ". Lot: {$done['batch']} (anulare: --revert-invitations={$done['batch']}).");
+        foreach (collect($done['rows'])->filter(fn ($r) => str_starts_with($r['result'], 'sărit')) as $r) {
+            $this->warn("Eveniment #{$r['event_id']}: {$r['result']}");
         }
 
         return self::SUCCESS;

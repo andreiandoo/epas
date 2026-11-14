@@ -75,6 +75,44 @@ class SalesBreakdownService
     public const REPORT_TZ = 'Europe/Bucharest';
 
     /**
+     * Setare pe marketplace: comenzile importate din sistemul vechi cu total 0
+     * (invitațiile, emise acolo ca bilete de 0 lei) valorează 0, nu prețul din
+     * catalog. Pornită de `payouts:settle-legacy --invitations --apply`, odată
+     * cu corectarea deconturilor, ca soldurile să nu se schimbe pe jumătate.
+     */
+    public const SETTING_LEGACY_FREE_ZERO = 'legacy_free_orders_zero';
+
+    /** null = după setarea marketplace-ului; true/false forțat (simulare). */
+    public static ?bool $legacyFreeZeroOverride = null;
+
+    private static array $legacyFreeZeroCache = [];
+
+    public static function legacyFreeOrdersZero(?int $marketplaceClientId): bool
+    {
+        if (static::$legacyFreeZeroOverride !== null) {
+            return static::$legacyFreeZeroOverride;
+        }
+        if (! $marketplaceClientId) {
+            return false;
+        }
+        // Cache scurt: workerii de coadă trăiesc mult și trebuie să vadă comutarea.
+        $hit = static::$legacyFreeZeroCache[$marketplaceClientId] ?? null;
+        if ($hit && $hit[1] > time()) {
+            return $hit[0];
+        }
+        $settings = \App\Models\MarketplaceClient::whereKey($marketplaceClientId)->value('settings');
+        $value = (bool) (is_array($settings) ? ($settings[self::SETTING_LEGACY_FREE_ZERO] ?? false) : false);
+        static::$legacyFreeZeroCache[$marketplaceClientId] = [$value, time() + 60];
+
+        return $value;
+    }
+
+    public static function forgetLegacyFreeZeroCache(): void
+    {
+        static::$legacyFreeZeroCache = [];
+    }
+
+    /**
      * Build the sales breakdown for an event, optionally scoped to a date
      * range on order.created_at.
      *
@@ -306,6 +344,7 @@ class SalesBreakdownService
         // is affected. ($event is guaranteed to have display_template loaded by
         // the lean-projection guard at the top of build().)
         $isLeisure = ($event->display_template ?? null) === 'leisure_venue';
+        $legacyFreeZero = self::legacyFreeOrdersZero((int) ($event->marketplace_client_id ?? 0) ?: null);
 
         $perType = [];
         $sumValidGross = 0.0;
@@ -351,6 +390,9 @@ class SalesBreakdownService
             }
             $order = $ordersById->get($orderId);
             if (!$order) continue;
+
+            // Invitație din sistemul vechi: comandă importată, plătită cu 0 lei.
+            $legacyFree = $legacyFreeZero && $order->source === 'legacy_import' && (float) $order->total <= 0.004;
 
             // Ziua căreia îi aparține comanda. Netul e aditiv pe zile — o comandă
             // cade întreagă într-o singură zi, iar alocarea ei (discount, comision)
@@ -417,7 +459,9 @@ class SalesBreakdownService
                     $commPerTicket = $validCount > 0 ? round($commission / $validCount, 2) : 0.0;
                 } else {
                     $firstTicketPrice = (float) ($group->first()->price ?? 0);
-                    if ($firstTicketPrice > 0) {
+                    if ($legacyFree) {
+                        $unitPrice = 0.0;
+                    } elseif ($firstTicketPrice > 0) {
                         $unitPrice = $firstTicketPrice;
                     } else {
                         $orderItem = $order->items->first(fn ($it) => (int) $it->ticket_type_id === (int) $ttId);
@@ -440,6 +484,9 @@ class SalesBreakdownService
                     // incasat efectiv la checkout (floor-ul organizatorului).
                     if ($unitPrice <= 0 && in_array($mode, ['on_top', 'added_on_top'], true)) {
                         $commPerTicket = max($commPerTicket, $this->chargedZeroPriceCommissionPerTicket($order, $tt));
+                    }
+                    if ($legacyFree) {
+                        $commPerTicket = 0.0;
                     }
                     $commission = $commPerTicket * $validCount;
                 }
@@ -474,7 +521,8 @@ class SalesBreakdownService
                 }
             }
 
-            $orderDiscount = (float) $order->discount_amount;
+            // Invitațiile vechi aveau uneori „reducere 100%”: nu e bani dați de organizator.
+            $orderDiscount = $legacyFree ? 0.0 : (float) $order->discount_amount;
             $orderSubtotal = (float) $order->subtotal;
             $meta = is_array($order->meta) ? $order->meta : [];
             $promoInfo = is_array($meta['promo_code'] ?? null) ? $meta['promo_code'] : null;
