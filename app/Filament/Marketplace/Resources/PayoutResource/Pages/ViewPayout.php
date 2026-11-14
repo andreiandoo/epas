@@ -391,6 +391,9 @@ class ViewPayout extends ViewRecord
                                 ->orderByDesc('completed_at')
                                 ->get(['id', 'reference', 'approved_amount', 'completed_at'])
                                 ->pipe(function ($refunds) use ($event) {
+                                    // Doar biletele plătite deja într-un decont anterior.
+                                    $ok = \App\Models\MarketplacePayout::filterDeductibleRefundIds($event->id, $refunds->pluck('id')->all(), $this->record->id);
+                                    $refunds = $refunds->whereIn('id', $ok)->values();
                                     $totals = \App\Models\MarketplaceRefundRequest::eventRefundTotals($refunds->pluck('id'), $event->id);
                                     return $refunds->mapWithKeys(fn ($r) => [
                                         $r->id => sprintf(
@@ -454,14 +457,9 @@ class ViewPayout extends ViewRecord
                             $refundIds = $get('included_refund_ids') ?? [];
                             $refundIds = is_array($refundIds) ? array_values(array_filter($refundIds)) : [];
                             $refundCount = count($refundIds);
-                            $refundTotal = 0.0;
-                            if (!empty($refundIds)) {
-                                $refundTotal = (float) \App\Models\MarketplaceRefundItem::query()
-                                    ->whereIn('refund_request_id', $refundIds)
-                                    ->where('status', 'refunded')
-                                    ->forEvent($this->record->event_id)
-                                    ->sum('face_value');
-                            }
+                            $refundTotal = (!empty($refundIds) && $this->record->event_id)
+                                ? \App\Models\MarketplacePayout::deductibleRefundTotal((int) $this->record->event_id, $refundIds, $this->record->id)
+                                : 0.0;
 
                             $finalNet = $ticketNet - $discountAmount - $refundTotal;
                             $diff = $targetNet - $finalNet;
@@ -524,12 +522,9 @@ class ViewPayout extends ViewRecord
                     // overshoot — it would drop ticket qtys to hit
                     // enteredNet from ticket_net alone, then subtract refunds
                     // on top, leaving the operator below their target.
+                    $includedRefundIds = \App\Models\MarketplacePayout::filterDeductibleRefundIds($event->id, $includedRefundIds, $this->record->id);
                     $refundTotal = !empty($includedRefundIds)
-                        ? (float) \App\Models\MarketplaceRefundItem::query()
-                            ->whereIn('refund_request_id', $includedRefundIds)
-                            ->where('status', 'refunded')
-                            ->forEvent($this->record->event_id)
-                            ->sum('face_value')
+                        ? \App\Models\MarketplacePayout::deductibleRefundTotal($event->id, $includedRefundIds, $this->record->id)
                         : 0.0;
 
                     $ticketTarget = $enteredNet > 0 ? $enteredNet + $refundTotal : null;

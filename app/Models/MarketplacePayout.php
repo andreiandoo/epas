@@ -823,7 +823,7 @@ class MarketplacePayout extends Model
     {
         $cutoffEnd = $cutoffDate->copy()->endOfDay();
 
-        return \App\Models\MarketplaceRefundRequest::query()
+        $ids = \App\Models\MarketplaceRefundRequest::query()
             ->touchingEvent($event->id)
             ->whereIn('status', ['refunded', 'partially_refunded'])
             ->where('created_at', '<=', $cutoffEnd)
@@ -835,6 +835,64 @@ class MarketplacePayout extends Model
             })
             ->pluck('id')
             ->all();
+
+        return static::filterDeductibleRefundIds($event->id, $ids, $excludePayoutId);
+    }
+
+    /**
+     * Până când au fost deja decontate biletele evenimentului: ultimul decont
+     * activ creat înaintea celui dat (sau ultimul, pentru un decont nou).
+     */
+    public static function refundDeductionCutoff(int $eventId, ?int $payoutId = null): ?\Carbon\Carbon
+    {
+        $q = static::query()->where('event_id', $eventId)->whereIn('status', ['approved', 'processing', 'completed']);
+        if ($payoutId) {
+            $q->whereKeyNot($payoutId);
+            if ($created = static::whereKey($payoutId)->value('created_at')) {
+                $q->where('created_at', '<', $created);
+            }
+        }
+        $max = $q->max('created_at');
+
+        return $max ? \Carbon\Carbon::parse($max) : null;
+    }
+
+    /**
+     * Rambursările care chiar se pot scădea dintr-un decont: biletul fusese
+     * vândut până la decontul anterior, deci plătit deja organizatorului.
+     * Un bilet rambursat înainte să fie decontat nu e oricum în vânzările
+     * decontului; scăzut și ca rambursare, organizatorul pierdea suma de două
+     * ori (ev. 4630: −300, 4855: −247).
+     */
+    public static function deductibleRefundItems(int $eventId, array $refundIds, ?int $payoutId = null): \Illuminate\Database\Eloquent\Builder
+    {
+        $q = MarketplaceRefundItem::query()
+            ->whereIn('refund_request_id', $refundIds ?: [0])
+            ->where('marketplace_refund_items.status', 'refunded')
+            ->forEvent($eventId);
+
+        $cutoff = static::refundDeductionCutoff($eventId, $payoutId);
+        if (! $cutoff) {
+            return $q->whereRaw('1 = 0');
+        }
+
+        return $q->whereIn('marketplace_refund_items.ticket_id', function ($s) use ($cutoff) {
+            $s->select('t.id')->from('tickets as t')
+                ->join('orders as o', 'o.id', '=', 't.order_id')
+                ->where('o.created_at', '<=', $cutoff);
+        });
+    }
+
+    public static function deductibleRefundTotal(int $eventId, array $refundIds, ?int $payoutId = null): float
+    {
+        return round((float) static::deductibleRefundItems($eventId, $refundIds, $payoutId)->sum('marketplace_refund_items.face_value'), 2);
+    }
+
+    /** @return array<int> doar cererile de rambursare care au ceva de scăzut */
+    public static function filterDeductibleRefundIds(int $eventId, array $refundIds, ?int $payoutId = null): array
+    {
+        return static::deductibleRefundItems($eventId, $refundIds, $payoutId)
+            ->distinct()->pluck('refund_request_id')->map(fn ($id) => (int) $id)->values()->all();
     }
 
     public static function resolveNextPeriodStart(int $eventId, int $organizerId, \App\Models\Event $event): ?\Carbon\Carbon
@@ -1494,6 +1552,10 @@ class MarketplacePayout extends Model
     public function syncIncludedRefunds(array $refundIds): float
     {
         $refundIds = array_values(array_unique(array_filter(array_map('intval', $refundIds))));
+        // Doar rambursările biletelor plătite deja într-un decont anterior.
+        if ($this->event_id) {
+            $refundIds = static::filterDeductibleRefundIds((int) $this->event_id, $refundIds, $this->id);
+        }
 
         // 1. Unlink refunds currently linked to this payout but no longer wanted.
         MarketplaceRefundRequest::where('marketplace_payout_id', $this->id)
@@ -1511,12 +1573,13 @@ class MarketplacePayout extends Model
 
         // 3. Recompute refund_amount: sum of face_value across the linked
         //    refund items (canonical per-ticket refund value).
-        $total = (float) MarketplaceRefundItem::query()
-            ->join('marketplace_refund_requests as rr', 'rr.id', '=', 'marketplace_refund_items.refund_request_id')
-            ->where('rr.marketplace_payout_id', $this->id)
-            ->where('marketplace_refund_items.status', 'refunded')
-            ->forEvent($this->event_id)
-            ->sum('marketplace_refund_items.face_value');
+        $total = $this->event_id
+            ? static::deductibleRefundTotal((int) $this->event_id, $refundIds, $this->id)
+            : (float) MarketplaceRefundItem::query()
+                ->join('marketplace_refund_requests as rr', 'rr.id', '=', 'marketplace_refund_items.refund_request_id')
+                ->where('rr.marketplace_payout_id', $this->id)
+                ->where('marketplace_refund_items.status', 'refunded')
+                ->sum('marketplace_refund_items.face_value');
 
         $this->update(['refund_amount' => round($total, 2)]);
 

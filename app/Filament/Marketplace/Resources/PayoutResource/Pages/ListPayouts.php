@@ -353,6 +353,10 @@ class ListPayouts extends ListRecords
                             ->orderByDesc('completed_at')
                             ->get(['id', 'reference', 'approved_amount', 'completed_at'])
                             ->pipe(function ($refunds) use ($eventId) {
+                                // Doar biletele plătite deja într-un decont anterior;
+                                // celelalte nu sunt în vânzările decontului.
+                                $ok = MarketplacePayout::filterDeductibleRefundIds((int) $eventId, $refunds->pluck('id')->all());
+                                $refunds = $refunds->whereIn('id', $ok)->values();
                                 $totals = \App\Models\MarketplaceRefundRequest::eventRefundTotals($refunds->pluck('id'), (int) $eventId);
                                 return $refunds->mapWithKeys(fn ($r) => [
                                     $r->id => sprintf(
@@ -397,14 +401,9 @@ class ListPayouts extends ListRecords
                         }
 
                         $refundIds = is_array($state) ? array_values(array_filter($state)) : [];
-                        $refundTotal = 0.0;
-                        if (!empty($refundIds)) {
-                            $refundTotal = (float) \App\Models\MarketplaceRefundItem::query()
-                                ->whereIn('refund_request_id', $refundIds)
-                                ->where('status', 'refunded')
-                                ->forEvent($event->id)
-                                ->sum('face_value');
-                        }
+                        $refundTotal = !empty($refundIds)
+                            ? MarketplacePayout::deductibleRefundTotal((int) $event->id, $refundIds)
+                            : 0.0;
 
                         $set('net_amount', number_format(max(0, $baseTicketNet - $refundTotal), 2, '.', ''));
                     })
@@ -928,12 +927,13 @@ class ListPayouts extends ListRecords
                 // scales ticket qtys to that ticket target, then we
                 // subtract refund_total to get back to the operator's
                 // entered net.
-                $refundTotal = !empty($includedRefundIds)
-                    ? (float) \App\Models\MarketplaceRefundItem::query()
-                        ->whereIn('refund_request_id', $includedRefundIds)
-                        ->where('status', 'refunded')
-                        ->forEvent($event?->id)
-                        ->sum('face_value')
+                // Se scad doar rambursările biletelor plătite deja într-un
+                // decont anterior (vezi MarketplacePayout::deductibleRefundItems).
+                if ($event) {
+                    $includedRefundIds = MarketplacePayout::filterDeductibleRefundIds((int) $event->id, $includedRefundIds);
+                }
+                $refundTotal = (!empty($includedRefundIds) && $event)
+                    ? MarketplacePayout::deductibleRefundTotal((int) $event->id, $includedRefundIds)
                     : 0.0;
 
                 if ($event && !empty($payoutTicketsInput)) {
