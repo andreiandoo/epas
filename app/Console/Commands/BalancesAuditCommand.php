@@ -216,6 +216,7 @@ class BalancesAuditCommand extends Command
             ->selectRaw("COALESCE(o.source,'(fara sursa)') src, o.status st, count(*) n, COALESCE(sum(t.price),0) s")->groupBy('o.source', 'o.status')->get();
         $refundedValid = DB::table('marketplace_refund_items as ri')->join('tickets as t', 't.id', '=', 'ri.ticket_id')
             ->join('orders as o', 'o.id', '=', 't.order_id')->where('o.marketplace_client_id', $mp)
+            ->when($onlyOrg, fn ($q) => $q->where('o.marketplace_organizer_id', $onlyOrg))
             ->where('ri.status', 'refunded')->whereIn('t.status', ['valid', 'used'])->whereIn('o.status', $paidStatuses)
             ->selectRaw('count(*) n, COALESCE(sum(ri.refund_amount),0) s')->first();
         $nullSource = $base()->whereIn('o.status', $paidStatuses)->whereNull('o.source')
@@ -231,9 +232,11 @@ class BalancesAuditCommand extends Command
             ->selectRaw('COALESCE(sum(o.total),0) incasat, COALESCE(sum(o.commission_amount),0) comision, count(*) n')->first();
         $refunded = DB::table('marketplace_refund_items as ri')->join('tickets as t', 't.id', '=', 'ri.ticket_id')
             ->join('orders as o', 'o.id', '=', 't.order_id')->where('o.marketplace_client_id', $mp)->where('ri.status', 'refunded')
+            ->when($onlyOrg, fn ($q) => $q->where('o.marketplace_organizer_id', $onlyOrg))
             ->where('o.created_at', '>=', $from)->whereNotIn('o.source', $offline)
             ->selectRaw('COALESCE(sum(ri.refund_amount),0) s, COALESCE(sum(case when ri.commission_refunded then ri.commission_amount else 0 end),0) c')->first();
         $paidOut = (float) MarketplacePayout::where('marketplace_client_id', $mp)->where('status', 'completed')
+            ->when($onlyOrg, fn ($q) => $q->where('marketplace_organizer_id', $onlyOrg))
             ->where('completed_at', '>=', $from)->where(fn ($q) => $q->whereNull('payment_notes')->orWhere('payment_notes', '!=', \App\Services\Marketplace\LegacySettlementService::PAID_NOTE))->sum('amount');
 
         // ---------------- fișiere ----------------
