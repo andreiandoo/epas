@@ -116,7 +116,9 @@ class BalancesReconcileCommand extends Command
 
             $driftAvailable = round($dbAvailable - $availableReal, 2);
             $driftPending = round($dbPending - $pendingReal, 2);
-            $worstDrift = max(abs($driftAvailable), abs($driftPending));
+            // Și coloana „Total plătit”, care devia separat.
+            $driftPaidOut = round((float) $organizer->total_paid_out - round($paid, 2), 2);
+            $worstDrift = max(abs($driftAvailable), abs($driftPending), abs($driftPaidOut));
 
             if ($worstDrift <= $threshold) {
                 $status = 'OK';

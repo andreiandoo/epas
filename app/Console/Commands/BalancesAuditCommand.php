@@ -193,8 +193,8 @@ class BalancesAuditCommand extends Command
             if (abs($derived - (float) $org->available_balance) > 1 || abs(round($pend, 2) - (float) $org->pending_balance) > 1) {
                 $this->anomaly('sold_salvat_diferit', null, $org->id, round((float) $org->available_balance - $derived, 2), "salvat {$org->available_balance}/{$org->pending_balance}, refăcut {$derived}/" . round($pend, 2));
             }
-            if (abs($completedSum - (float) $org->total_paid_out) > 1) {
-                $this->anomaly('total_platit_coloana', null, $org->id, round((float) $org->total_paid_out - $completedSum, 2), "coloana {$org->total_paid_out}, Σ finalizate {$completedSum}");
+            if (abs(round($paid, 2) - (float) $org->total_paid_out) > 1) {
+                $this->anomaly('total_platit_coloana', null, $org->id, round((float) $org->total_paid_out - $paid, 2), "coloana {$org->total_paid_out}, plătit refăcut " . round($paid, 2) . " (Σ finalizate {$completedSum})");
             }
             if (abs($orgLevel) > 1) {
                 $this->anomaly('sold_la_nivel_organizator', null, $org->id, $orgLevel, 'avansuri / deconturi fără eveniment / pe evenimente ale altui organizator');

@@ -728,9 +728,12 @@ class MarketplaceOrganizer extends Authenticatable
     {
         $derived = $this->deriveBalances($service);
 
+        // total_paid_out era ținut doar incremental și devia (Caravana +180,
+        // Promusic +14.875); acum e și el refăcut din deconturile finalizate.
         $this->forceFill([
             'available_balance' => $derived['available'],
             'pending_balance' => $derived['pending'],
+            'total_paid_out' => $derived['paid'],
         ])->save();
 
         return $derived;
