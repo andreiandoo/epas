@@ -661,6 +661,7 @@ class Invitations extends Page
                     'quota_sold' => 0,
                     'status' => 'active',
                     'meta' => ['is_invitation' => true],
+                    'is_declarable' => false,
                 ]
             );
         }

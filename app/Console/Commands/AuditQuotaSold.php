@@ -44,9 +44,14 @@ class AuditQuotaSold extends Command
     {
         $dry = (bool) $this->option('dry-run');
 
+        // Biletele din comenzile de test (preview_token) nu iau din stoc la
+        // checkout, deci nu se numara nici aici.
+        $testOrderIds = DB::table('orders')->where('source', 'test_order')->select('id');
+
         $active = DB::table('tickets')
             ->select('ticket_type_id', DB::raw('count(*) as active'))
             ->whereIn('status', ['valid', 'used', 'pending'])
+            ->where(fn ($q) => $q->whereNull('order_id')->orWhereNotIn('order_id', $testOrderIds))
             ->groupBy('ticket_type_id');
 
         $query = DB::table('ticket_types as tt')
@@ -72,7 +77,9 @@ class AuditQuotaSold extends Command
         // NO row — a historical import set quota_sold directly — and lowering
         // there would raise availability and enable oversell, so leave it.
         foreach ($over as $r) {
-            $r->total = (int) DB::table('tickets')->where('ticket_type_id', $r->id)->count();
+            $r->total = (int) DB::table('tickets')->where('ticket_type_id', $r->id)
+                ->where(fn ($q) => $q->whereNull('order_id')->orWhereNotIn('order_id', $testOrderIds))
+                ->count();
             $r->safe = $r->total >= (int) $r->quota_sold;
         }
         $overSafe = $over->filter(fn ($r) => $r->safe)->values();

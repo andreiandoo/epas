@@ -1431,7 +1431,9 @@ class CheckoutController extends BaseController
                         // effective attendance above quota_total, which is the
                         // organizer's setup responsibility). Idempotency: this
                         // runs once per order-item, so double-fire is impossible.
-                        TicketType::where('id', $tt->id)->increment('quota_sold', $bonusCount);
+                        if (! $isTestOrder) {
+                            TicketType::where('id', $tt->id)->increment('quota_sold', $bonusCount);
+                        }
                     }
                     for ($g = 0; $g < $bonusCount; $g++) {
                         Ticket::create([

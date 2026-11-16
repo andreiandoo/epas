@@ -481,7 +481,9 @@ class Order extends Model
             $ticketTypeIds = $this->items->pluck('ticket_type_id')->unique()->toArray();
             $marketplaceTicketTypes = MarketplaceTicketType::whereIn('id', $ticketTypeIds)->get()->keyBy('id');
 
-            foreach ($this->items as $orderItem) {
+            // Comenzile de test nu au luat din stoc la checkout, deci nu au ce
+            // returna (altfel ar scadea din vanzarile reale).
+            foreach ($this->source === 'test_order' ? [] : $this->items as $orderItem) {
                 if ($orderItem->quantity > 0) {
                     $mtt = $marketplaceTicketTypes->get($orderItem->ticket_type_id);
                     if ($mtt) {
@@ -608,8 +610,8 @@ class Order extends Model
                 }
             }
 
-            // 2. Restore stock grouped by ticket_type_id
-            $ticketsByType = $tickets->groupBy('ticket_type_id');
+            // 2. Restore stock grouped by ticket_type_id (nu si la comenzile de test)
+            $ticketsByType = $this->source === 'test_order' ? collect() : $tickets->groupBy('ticket_type_id');
 
             foreach ($ticketsByType as $typeId => $typeTickets) {
                 if (!$typeId) continue;

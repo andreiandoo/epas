@@ -154,7 +154,10 @@ class SalesBreakdownService
         // Note: imported events that KEPT SELLING after migration carry both
         // sources — excluding legacy_import leaves exactly the post-import
         // marketplace sales, which is what a decont should settle.
-        $excludedSources = ['external_import', 'pos_test'];
+        // Comenzile de test (pos_test, test_order din preview_token) nu sunt bani,
+        // oricare ar fi felia ceruta. Inainte test_order intra in total si iesea
+        // doar din felia online, deci aparea in card ca „Vanzari POS".
+        $excludedSources = array_merge(['external_import'], \App\Support\TestPos::ORDER_SOURCES);
         if ($excludeLegacyImport) {
             $excludedSources[] = 'legacy_import';
         }
@@ -902,7 +905,7 @@ class SalesBreakdownService
             ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                 $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                     $q->whereIn('status', self::PAID_ORDER_STATUSES)
-                        ->whereNotIn('source', ['external_import', 'pos_test']);
+                        ->whereNotIn('source', array_merge(['external_import'], \App\Support\TestPos::ORDER_SOURCES));
                     if ($excludePos) {
                         $q->whereNotIn('source', array_merge(self::POS_SOURCES, ['test_order']));
                     }

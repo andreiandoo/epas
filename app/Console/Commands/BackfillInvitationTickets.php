@@ -77,6 +77,7 @@ class BackfillInvitationTickets extends Command
                         'quota_total' => -1,
                         'quota_sold' => 0,
                         'meta' => ['is_invitation' => true],
+                        'is_declarable' => false,
                     ]);
                 }
                 $createdTicketTypes++;

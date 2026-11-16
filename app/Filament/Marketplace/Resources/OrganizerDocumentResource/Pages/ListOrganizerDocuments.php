@@ -326,6 +326,11 @@ class ListOrganizerDocuments extends ListRecords
                 if (isset($ticketType->is_declarable) && $ticketType->is_declarable === false) {
                     continue;
                 }
+                // Invitatiile si Test POS nu se declara, oricum ar fi bifa
+                $ttMeta = is_array($ticketType->meta ?? null) ? $ticketType->meta : [];
+                if ($ticketType->name === 'Invitatie' || ($ttMeta['is_invitation'] ?? false) || $ticketType->isTestPos()) {
+                    continue;
+                }
                 $available = (int) ($ticketType->quota_total ?? $ticketType->capacity ?? 0);
                 $sold = (int) ($ticketType->quota_sold ?? 0);
                 $price = (float) ($ticketType->display_price ?? $ticketType->price ?? 0);

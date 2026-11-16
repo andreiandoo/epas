@@ -958,6 +958,7 @@ class InvitationsController extends BaseController
                 'quota_total' => -1,
                 'quota_sold' => 0,
                 'meta' => ['is_invitation' => true],
+                'is_declarable' => false,
             ]);
         }
 
@@ -971,6 +972,11 @@ class InvitationsController extends BaseController
         }
         if (($tt->status ?? 'active') !== 'active') {
             $tt->status = 'active';
+            $needsSave = true;
+        }
+        // Invitatiile nu se declara (nu au serie, nu au pret)
+        if ($tt->is_declarable !== false) {
+            $tt->is_declarable = false;
             $needsSave = true;
         }
         if ($needsSave) {

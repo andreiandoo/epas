@@ -1479,7 +1479,7 @@ class EventResource extends Resource
                                             ->tap(fn ($q) => \App\Support\TestPos::excludeTickets($q, 'tickets.ticket_type_id'))
                                             ->where(function ($q) {
                                                 $q->whereHas('order', fn($oq) => $oq
-                                                    ->where('source', '!=', 'external_import')
+                                                    ->whereNotIn('source', array_merge(['external_import'], \App\Support\TestPos::ORDER_SOURCES))
                                                     ->whereIn('status', ['paid', 'confirmed', 'completed']))
                                                 ->orWhere(fn ($iq) => $iq
                                                     ->whereNull('order_id')
@@ -1517,7 +1517,7 @@ class EventResource extends Resource
                                         // Anulate/Rambursate (those are order-status driven).
                                         $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
                                             ->where(function ($q) {
-                                                $q->whereHas('order', fn($oq) => $oq->where('source', '!=', 'external_import'))
+                                                $q->whereHas('order', fn($oq) => $oq->whereNotIn('source', array_merge(['external_import'], \App\Support\TestPos::ORDER_SOURCES)))
                                                   ->orWhere(fn ($iq) => $iq->whereNull('order_id')->where('meta->is_invitation', true));
                                             })
                                             // Test POS nu intra in statistici
@@ -1934,7 +1934,7 @@ class EventResource extends Resource
                                             $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
                                                 ->where(function ($q) {
                                                     $q->whereDoesntHave('order')
-                                                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
+                                                      ->orWhereHas('order', fn ($qq) => $qq->whereNotIn('source', array_merge(['external_import'], \App\Support\TestPos::ORDER_SOURCES)));
                                                 });
                                             $valid = (clone $base)->whereIn('status', ['valid', 'used'])->count();
                                             $cancelled = (clone $base)->where('status', 'cancelled')->count();
