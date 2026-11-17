@@ -161,6 +161,8 @@ class OpsBoard extends Page
             ->fillForm(fn () => ['filed_on' => Carbon::now($this->tz())->toDateString()])
             ->form([
                 Forms\Components\DatePicker::make('filed_on')
+                    ->native(false)
+                    ->displayFormat('d/m/Y')
                     ->label('Data depunerii')
                     ->maxDate(Carbon::now($this->tz())->toDateString())
                     ->required(),
@@ -170,6 +172,8 @@ class OpsBoard extends Page
                     ->maxLength(100)
                     ->live(onBlur: true),
                 Forms\Components\DatePicker::make('registration_date')
+                    ->native(false)
+                    ->displayFormat('d/m/Y')
                     ->label('Data înregistrării')
                     ->helperText('Implicit, ziua depunerii.')
                     ->maxDate(Carbon::now($this->tz())->toDateString())

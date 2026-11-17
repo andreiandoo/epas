@@ -626,7 +626,7 @@ class OpsBoardService
         // don't count. A request saved before fingerprints existed can't be
         // judged and counts as fine. Irrelevant once the event is over.
         if (! $ended && $this->cerereOutdated($event, $facts['cerere_fingerprint'][$event->id] ?? null)) {
-            return $this->cell(
+            $cell = $this->cell(
                 'redo',
                 'De refăcut',
                 'bilete modificate după generare',
@@ -635,6 +635,15 @@ class OpsBoardService
                 true,
                 $url,
             );
+            // Cererea veche a fost totuși depusă: se vede ce și când.
+            if ($filing && ! empty($filing['filed_at'])) {
+                $cell['prior'] = 'Depusă anterior: '
+                    . Carbon::parse((string) $filing['filed_at'], 'UTC')->setTimezone($this->tz)->locale('ro')->translatedFormat('j M')
+                    . (! empty($filing['registration_number']) ? ' · nr. ' . $filing['registration_number'] : ' · fără nr. înregistrare')
+                    . (! empty($filing['by']) ? ' · ' . $filing['by'] : '');
+            }
+
+            return $cell;
         }
 
         return $this->filedCell($filing, $generatedAt, $due, $url);

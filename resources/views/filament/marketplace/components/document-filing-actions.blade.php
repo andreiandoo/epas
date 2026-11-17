@@ -156,7 +156,7 @@
 
                 <label style="display:block;margin-top:12px;max-width:220px;">
                     <span style="{{ $label }}display:block;margin-bottom:2px;">Data depunerii</span>
-                    <input type="date" x-model="filedOn" max="{{ $today }}" required x-on:keydown.enter.prevent style="{{ $input }}">
+                    @include('filament.marketplace.components.eu-date-input', ['model' => 'filedOn', 'max' => $today, 'style' => $input])
                 </label>
 
                 <div x-show="error" x-text="error" style="margin-top:8px;color:#dc2626;"></div>
@@ -189,7 +189,7 @@
                     </label>
                     <label style="display:block;">
                         <span style="{{ $label }}display:block;margin-bottom:2px;">Data înregistrării</span>
-                        <input type="date" x-model="registrationDate" max="{{ $today }}" x-on:keydown.enter.prevent style="{{ $input }}">
+                        @include('filament.marketplace.components.eu-date-input', ['model' => 'registrationDate', 'max' => $today, 'style' => $input])
                     </label>
                 </div>
                 @if(($filing['registered_source'] ?? null) !== \App\Models\EventDocumentFiling::REGISTERED_UPLOADED)
@@ -230,7 +230,7 @@
                     </label>
                     <label style="display:block;">
                         <span style="{{ $label }}display:block;margin-bottom:2px;">Data înregistrării</span>
-                        <input type="date" x-model="registrationDate" max="{{ $today }}" x-on:keydown.enter.prevent style="{{ $input }}">
+                        @include('filament.marketplace.components.eu-date-input', ['model' => 'registrationDate', 'max' => $today, 'style' => $input])
                     </label>
                 </div>
 

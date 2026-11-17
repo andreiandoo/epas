@@ -190,6 +190,12 @@ class DashboardManual extends Page
                         ],
                         [
                             'text' => [
+                                'ro' => 'Sectiunea e inchisa la deschiderea paginii, la fel ca tichetele, TODO-urile si celelalte liste; apasa pe titlu ca sa o deschizi. Sectiunea deschisa ocupa tot randul.',
+                                'en' => 'The section starts collapsed, like the tickets, TODOs and the other lists; click its title to open it. An open section takes the full row.',
+                            ],
+                        ],
+                        [
+                            'text' => [
                                 'ro' => 'Pentru fiecare eveniment vezi organizatorul, data, locatia si cand a fost publicat.',
                                 'en' => 'For each event you see the organizer, date, venue and when it was published.',
                             ],

@@ -55,6 +55,7 @@
         .opsb-cell { display: block; width: 9.5rem; padding: .35rem .5rem; border-radius: .4rem; border: 1px solid transparent; line-height: 1.25; }
         .opsb-cell strong { display: block; font-weight: 600; }
         .opsb-cell small { display: block; font-size: .6875rem; opacity: .85; }
+        .opsb-cell small.opsb-prior { margin-top: .15rem; font-weight: 600; color: #047857; }
         .opsb-cell small.opsb-actor { margin-top: .15rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         a.opsb-cell:hover { filter: brightness(.96); }
         .opsb-mark { display: block; width: 9.5rem; margin-top: .3rem; padding: .25rem .5rem; border-radius: .4rem; border: 1px solid var(--opsb-line); background: var(--opsb-card); color: var(--opsb-text); font-size: .75rem; font-weight: 600; text-align: center; cursor: pointer; }
@@ -216,12 +217,14 @@
                                                     <a href="{{ $cell['url'] }}" target="_blank" rel="noopener" class="opsb-cell opsb-{{ $cell['state'] }}">
                                                         <strong>{{ $cell['label'] }}</strong>
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
+                                                        @if($cell['prior'] ?? null)<small class="opsb-prior">{{ $cell['prior'] }}</small>@endif
                                                         @if($cell['at'] ?? null)<small class="opsb-actor" title="Rezolvat{{ ($cell['by'] ?? null) ? ' de ' . $cell['by'] : '' }} la {{ $cell['at'] }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
                                                     </a>
                                                 @else
                                                     <span class="opsb-cell opsb-{{ $cell['state'] }}">
                                                         <strong>{{ $cell['label'] }}</strong>
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
+                                                        @if($cell['prior'] ?? null)<small class="opsb-prior">{{ $cell['prior'] }}</small>@endif
                                                         @if($cell['at'] ?? null)<small class="opsb-actor" title="Rezolvat{{ ($cell['by'] ?? null) ? ' de ' . $cell['by'] : '' }} la {{ $cell['at'] }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
                                                     </span>
                                                 @endif
