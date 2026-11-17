@@ -330,83 +330,20 @@ class ListPayouts extends ListRecords
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
-                // Refund picker — operator opts in to including refunds in
-                // this new decont right from the create modal. Mirrors the
-                // edit-page picker (ViewPayout.php) so operators don't
-                // need a two-step Create-then-Edit. On submit, the action
-                // handler reads `included_refund_ids`, links them via
-                // syncIncludedRefunds(), and stores `refund_amount` on
-                // the payout. The PDF then renders 1a/2a/E correctly.
-                \Filament\Forms\Components\CheckboxList::make('included_refund_ids')
-                    ->label('Rambursări incluse în acest decont')
-                    ->helperText('Bifează rambursările care intră în decontul curent — valoarea lor se scade din suma de plată și apar în PDF.')
-                    ->options(function (Get $get) {
-                        $eventId = $get('event_id');
-                        if (!$eventId) return [];
-                        return \App\Models\MarketplaceRefundRequest::query()
-                            ->whereIn('status', [
-                                \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
-                                \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
-                            ])
-                            ->touchingEvent((int) $eventId)
-                            ->whereNull('marketplace_payout_id') // unlinked only — already-linked stay on their payout
-                            ->orderByDesc('completed_at')
-                            ->get(['id', 'reference', 'approved_amount', 'completed_at'])
-                            ->pipe(function ($refunds) use ($eventId) {
-                                // Doar biletele plătite deja într-un decont anterior;
-                                // celelalte nu sunt în vânzările decontului.
-                                $ok = MarketplacePayout::filterDeductibleRefundIds((int) $eventId, $refunds->pluck('id')->all());
-                                $refunds = $refunds->whereIn('id', $ok)->values();
-                                $totals = \App\Models\MarketplaceRefundRequest::eventRefundTotals($refunds->pluck('id'), (int) $eventId);
-                                return $refunds->mapWithKeys(fn ($r) => [
-                                    $r->id => sprintf(
-                                        '%s · %s RON · %s',
-                                        $r->reference,
-                                        number_format((float) ($totals[$r->id] ?? $r->approved_amount), 2),
-                                        optional($r->completed_at)->format('d.m.Y') ?: '—'
-                                    ),
-                                ]);
-                            })
-                            ->all();
+                // Rambursările nu se mai bifează: decontul le ia singur pe toate
+                // ale evenimentului care nu sunt pe alt decont. Se scad doar cele
+                // ale biletelor plătite într-un decont anterior; restul apar
+                // informativ (rândul 2 din PDF, factura organizator).
+                Forms\Components\Placeholder::make('auto_refunds_summary')
+                    ->label('Rambursări incluse automat în acest decont')
+                    ->content(function (Get $get) {
+                        $eventId = (int) $get('event_id');
+                        if (!$eventId) return '';
+                        $asOf = ($to = $get('period_to')) ? \Carbon\Carbon::parse($to)->endOfDay() : now();
+                        $ids = MarketplacePayout::autoRefundIdsForEvent($eventId, $asOf);
+                        return new HtmlString(MarketplacePayout::autoRefundsSummaryHtml($eventId, $ids));
                     })
-                    ->live()
-                    ->columns(1)
-                    ->bulkToggleable()
                     ->columnSpanFull()
-                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                        // Recompute net_amount to reflect refund deduction in
-                        // real time so the operator sees the final payable
-                        // before submit. Falls back to the event balance
-                        // when no tickets are selected.
-                        $event = Event::find($get('event_id'));
-                        if (!$event) return;
-                        $fin = self::calculateEventFinancials($event);
-                        $populated = $get('payout_tickets') ?? [];
-                        $hasTickets = collect($populated)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
-
-                        $baseTicketNet = 0.0;
-                        if ($hasTickets) {
-                            foreach ($populated as $t) {
-                                $qty = (int) ($t['qty'] ?? 0);
-                                if ($qty <= 0) continue;
-                                $unit = (float) ($t['unit_price'] ?? 0);
-                                $commPer = (float) ($t['commission_per_ticket'] ?? 0);
-                                $rowMode = $t['commission_mode'] ?? 'included';
-                                $isOnTop = in_array($rowMode, ['added_on_top', 'on_top'], true);
-                                $baseTicketNet += $qty * $unit + ($isOnTop ? $qty * $commPer : 0) - $qty * $commPer;
-                            }
-                            $baseTicketNet -= (float) ($get('discount_amount') ?? 0);
-                        } else {
-                            $baseTicketNet = (float) ($fin['balance'] ?? 0);
-                        }
-
-                        $refundIds = is_array($state) ? array_values(array_filter($state)) : [];
-                        $refundTotal = !empty($refundIds)
-                            ? MarketplacePayout::deductibleRefundTotal((int) $event->id, $refundIds)
-                            : 0.0;
-
-                        $set('net_amount', number_format(max(0, $baseTicketNet - $refundTotal), 2, '.', ''));
-                    })
                     ->visible(function (Get $get) {
                         $eventId = $get('event_id');
                         if (!$eventId) return false;
@@ -918,20 +855,16 @@ class ListPayouts extends ListRecords
 
                 $payoutTicketsInput = $data['payout_tickets'] ?? [];
                 $enteredNet = (float) ($data['net_amount'] ?? 0);
-                $includedRefundIds = is_array($data['included_refund_ids'] ?? null) ? $data['included_refund_ids'] : [];
-
-                // Sum refund face_value for the selected refunds. The
-                // entered net is the FINAL amount paid to the organizer,
-                // so the ticket-only target before refund deduction is
-                // enteredNet + refund_total. buildBreakdownFromSelection
-                // scales ticket qtys to that ticket target, then we
-                // subtract refund_total to get back to the operator's
-                // entered net.
-                // Se scad doar rambursările biletelor plătite deja într-un
-                // decont anterior (vezi MarketplacePayout::deductibleRefundItems).
-                if ($event) {
-                    $includedRefundIds = MarketplacePayout::filterDeductibleRefundIds((int) $event->id, $includedRefundIds);
-                }
+                // Rambursările se iau automat: toate ale evenimentului, nelegate
+                // de alt decont, intrate până la data decontului. Se scad doar
+                // cele ale biletelor plătite deja într-un decont anterior (vezi
+                // MarketplacePayout::deductibleRefundItems); restul sunt informative.
+                $refundAsOf = !empty($data['created_at_override'])
+                    ? \Carbon\Carbon::parse($data['created_at_override'])->endOfDay()
+                    : $periodEnd;
+                $includedRefundIds = $event
+                    ? MarketplacePayout::autoRefundIdsForEvent((int) $event->id, $refundAsOf)
+                    : [];
                 $refundTotal = (!empty($includedRefundIds) && $event)
                     ? MarketplacePayout::deductibleRefundTotal((int) $event->id, $includedRefundIds)
                     : 0.0;
@@ -969,7 +902,8 @@ class ListPayouts extends ListRecords
                     $finalGross = (float) ($data['gross_amount'] ?? 0);
                     $finalCommission = (float) ($data['commission_amount'] ?? 0);
                     $discountAmount = (float) ($data['discount_amount'] ?? 0);
-                    $finalNet = $enteredNet;
+                    // Rambursările nu mai sunt scăzute în fereastră (nu se mai bifează).
+                    $finalNet = round(max(0, $enteredNet - $refundTotal), 2);
                     $commissionMode = $event?->getTicketTypesCommissionMode() ?: 'included';
                 }
 
@@ -1055,8 +989,13 @@ class ListPayouts extends ListRecords
                 // refund_amount from the actual linked rows (defensive — in
                 // case some refund_id became stale between option-render
                 // and submit).
-                if (!empty($includedRefundIds)) {
-                    $payout->syncIncludedRefunds($includedRefundIds);
+                if ($event) {
+                    $linkedRefund = $payout->applyAutoRefunds($includedRefundIds);
+                    // Decont cu dată în trecut: decontul anterior se stabilește
+                    // după created_at-ul final, deci suma scăzută poate diferi.
+                    if (abs($linkedRefund - $refundTotal) > 0.005) {
+                        $payout->update(['amount' => round(max(0, (float) $payout->amount + $refundTotal - $linkedRefund), 2)]);
+                    }
                 }
 
                 // Generate decont document immediately based on commission mode

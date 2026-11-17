@@ -876,10 +876,15 @@ class MarketplacePayout extends Model
             return $q->whereRaw('1 = 0');
         }
 
+        // Plătit anterior = vândut până la decontul anterior ȘI rambursat după
+        // el. Rambursat înainte, biletul nu mai era în vânzările acelui decont.
         return $q->whereIn('marketplace_refund_items.ticket_id', function ($s) use ($cutoff) {
             $s->select('t.id')->from('tickets as t')
                 ->join('orders as o', 'o.id', '=', 't.order_id')
                 ->where('o.created_at', '<=', $cutoff);
+        })->whereIn('marketplace_refund_items.refund_request_id', function ($s) use ($cutoff) {
+            $s->select('rrc.id')->from('marketplace_refund_requests as rrc')
+                ->whereRaw('COALESCE(rrc.completed_at, rrc.updated_at) > ?', [$cutoff]);
         });
     }
 
@@ -1015,7 +1020,14 @@ class MarketplacePayout extends Model
         $isIncluded = ($this->commission_mode ?? 'included') !== 'added_on_top';
         $totals = $this->getBreakdownTotals();
 
-        if ($isIncluded) {
+        if ($this->usesAutoRefunds()) {
+            // Rambursări luate automat: se scade doar refund_amount (bilete
+            // plătite anterior); cele informative nu sunt nici în vânzări.
+            $baseAmount = $isIncluded
+                ? ($totals['online']['gross'] ?? 0) + ($totals['pos']['gross'] ?? 0)
+                : ($totals['online']['net'] ?? 0) + ($totals['pos']['net'] ?? 0);
+            $refundToSubtract = (float) $this->refund_amount;
+        } elseif ($isIncluded) {
             $baseAmount = ($totals['online']['gross'] ?? 0) + ($totals['pos']['gross'] ?? 0);
             $refundToSubtract = $this->deductible_refund_amount + $this->informational_refund_amount;
         } else {
@@ -1047,6 +1059,9 @@ class MarketplacePayout extends Model
     public function refundsAlreadyExcludedFromNet(): bool
     {
         if (($this->commission_mode ?? 'included') !== 'added_on_top' || $this->net_override !== null) {
+            return false;
+        }
+        if ($this->usesAutoRefunds()) {
             return false;
         }
         if ($this->deductible_refund_amount < 0.01 || empty($this->ticket_breakdown)) {
@@ -1095,6 +1110,10 @@ class MarketplacePayout extends Model
      */
     public function getDeductibleRefundAmountAttribute(): float
     {
+        if ($this->usesAutoRefunds()) {
+            return round((float) $this->refund_amount, 2);
+        }
+
         $sum = (float) \App\Models\MarketplaceRefundItem::query()
             ->whereHas('refundRequest', function ($q) {
                 $q->where('marketplace_payout_id', $this->id)
@@ -1122,6 +1141,10 @@ class MarketplacePayout extends Model
      */
     public function getInformationalRefundAmountAttribute(): float
     {
+        if ($this->usesAutoRefunds()) {
+            return $this->informativeRefundTotal();
+        }
+
         $sum = (float) \App\Models\MarketplaceRefundItem::query()
             ->whereHas('refundRequest', function ($q) {
                 $q->where('marketplace_payout_id', $this->id)
@@ -1552,9 +1575,12 @@ class MarketplacePayout extends Model
     public function syncIncludedRefunds(array $refundIds): float
     {
         $refundIds = array_values(array_unique(array_filter(array_map('intval', $refundIds))));
-        // Doar rambursările biletelor plătite deja într-un decont anterior.
+
+        // Decont pe eveniment: se leagă toate rambursările primite, dar se scad
+        // doar cele ale biletelor plătite deja într-un decont anterior. Restul
+        // apar doar informativ (rândul 2 din PDF, factura organizator).
         if ($this->event_id) {
-            $refundIds = static::filterDeductibleRefundIds((int) $this->event_id, $refundIds, $this->id);
+            return $this->applyAutoRefunds($refundIds);
         }
 
         // 1. Unlink refunds currently linked to this payout but no longer wanted.
@@ -1584,6 +1610,160 @@ class MarketplacePayout extends Model
         $this->update(['refund_amount' => round($total, 2)]);
 
         return round($total, 2);
+    }
+
+    /**
+     * Rambursările pe care sistemul le ia singur într-un decont: ale
+     * evenimentului, încă nelegate de alt decont, intrate până la $asOf.
+     *
+     * @return array<int>
+     */
+    public static function autoRefundIdsForEvent(int $eventId, ?\Carbon\CarbonInterface $asOf = null, ?int $payoutId = null): array
+    {
+        return MarketplaceRefundRequest::query()
+            ->touchingEvent($eventId)
+            ->whereIn('status', [
+                MarketplaceRefundRequest::STATUS_REFUNDED,
+                MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
+            ])
+            ->where(function ($q) use ($payoutId, $asOf) {
+                $q->where(function ($u) use ($asOf) {
+                    $u->whereNull('marketplace_payout_id')
+                        ->when($asOf, fn ($w) => $w->where('created_at', '<=', $asOf));
+                });
+                // Cele deja legate de acest decont rămân, indiferent de dată.
+                if ($payoutId) {
+                    $q->orWhere('marketplace_payout_id', $payoutId);
+                }
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Leagă rambursările de decont. refund_amount = doar ce se scade din plată
+     * (bilete plătite deja într-un decont anterior); id-urile acelor itemi se
+     * păstrează în payout_method.refunds_auto ca PDF-ul și pagina să le
+     * deosebească de cele informative.
+     */
+    public function applyAutoRefunds(array $refundIds): float
+    {
+        $refundIds = array_values(array_unique(array_filter(array_map('intval', $refundIds))));
+
+        MarketplaceRefundRequest::where('marketplace_payout_id', $this->id)
+            ->whereNotIn('id', $refundIds ?: [0])
+            ->update(['marketplace_payout_id' => null]);
+
+        if (!empty($refundIds)) {
+            MarketplaceRefundRequest::whereIn('id', $refundIds)
+                ->update(['marketplace_payout_id' => $this->id]);
+        }
+
+        $deducted = static::deductibleRefundItems((int) $this->event_id, $refundIds, $this->id)
+            ->get(['marketplace_refund_items.id', 'marketplace_refund_items.face_value']);
+        $total = round((float) $deducted->sum('face_value'), 2);
+
+        $method = $this->payout_method ?? [];
+        $method['refunds_auto'] = [
+            'deducted_item_ids' => $deducted->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+        ];
+
+        $this->update([
+            'refund_amount' => $total,
+            'payout_method' => $method,
+        ]);
+
+        return $total;
+    }
+
+    /**
+     * Lista (doar citire) cu rambursările pe care decontul le ia singur, cu ce
+     * se întâmplă cu fiecare. Folosită în ferestrele de creare / editare.
+     */
+    public static function autoRefundsSummaryHtml(int $eventId, array $refundIds, ?int $payoutId = null): string
+    {
+        if (empty($refundIds)) {
+            return '<div style="font-size:12px;color:#6b7280;">Nu există rambursări pe acest eveniment care să nu fie deja într-un alt decont.</div>';
+        }
+
+        $refunds = MarketplaceRefundRequest::whereIn('id', $refundIds)
+            ->orderBy('completed_at')
+            ->get(['id', 'reference', 'approved_amount', 'completed_at']);
+        $totals = MarketplaceRefundRequest::eventRefundTotals($refunds->pluck('id'), $eventId);
+        $deductedByRequest = static::deductibleRefundItems($eventId, $refundIds, $payoutId)
+            ->selectRaw('marketplace_refund_items.refund_request_id as rid, SUM(marketplace_refund_items.face_value) as total')
+            ->groupBy('marketplace_refund_items.refund_request_id')
+            ->pluck('total', 'rid');
+
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.') . ' RON';
+        $rows = '';
+        $sumDeducted = 0.0;
+        $sumInfo = 0.0;
+        foreach ($refunds as $r) {
+            $value = (float) ($totals[$r->id] ?? $r->approved_amount);
+            $deducted = (float) ($deductedByRequest[$r->id] ?? 0);
+            $info = max(0.0, $value - $deducted);
+            $sumDeducted += $deducted;
+            $sumInfo += $info;
+
+            $status = $deducted > 0.005
+                ? '<span style="color:#b91c1c;font-weight:600;">se scade ' . e($fmt($deducted)) . '</span>'
+                    . ($info > 0.005 ? ' · <span style="color:#6b7280;">informativ ' . e($fmt($info)) . '</span>' : '')
+                : '<span style="color:#6b7280;">doar informativ</span>';
+
+            $rows .= '<tr>'
+                . '<td style="padding:4px 8px;">' . e($r->reference) . '</td>'
+                . '<td style="padding:4px 8px;">' . e(optional($r->completed_at)->format('d.m.Y') ?: '—') . '</td>'
+                . '<td style="padding:4px 8px;text-align:right;font-family:monospace;">' . e($fmt($value)) . '</td>'
+                . '<td style="padding:4px 8px;">' . $status . '</td>'
+                . '</tr>';
+        }
+
+        return '<div style="font-size:12px;">'
+            . '<table style="width:100%;border-collapse:collapse;">' . $rows . '</table>'
+            . '<div style="margin-top:6px;color:#374151;">Se scad din plată: <b>' . e($fmt($sumDeducted)) . '</b> (bilete plătite într-un decont anterior)'
+            . ' · Doar informativ: <b>' . e($fmt($sumInfo)) . '</b> (bilete rambursate înainte de decontare, neincluse în vânzări)</div>'
+            . '</div>';
+    }
+
+    /** Decont cu rambursări luate automat (scăzute vs. informative). */
+    public function usesAutoRefunds(): bool
+    {
+        return is_array($this->payout_method['refunds_auto'] ?? null);
+    }
+
+    /** @return array<int> itemii de rambursare scăzuți din plata acestui decont */
+    public function deductedRefundItemIds(): array
+    {
+        return array_map('intval', $this->payout_method['refunds_auto']['deducted_item_ids'] ?? []);
+    }
+
+    /** Itemii rambursați legați de decont, doar biletele acestui eveniment. */
+    public function linkedRefundItemsQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) {
+                $q->where('marketplace_payout_id', $this->id)
+                  ->whereIn('status', ['refunded', 'partially_refunded']);
+            })
+            ->where('status', 'refunded')
+            ->forEvent($this->event_id);
+    }
+
+    /**
+     * Rambursări legate dar nescăzute: bilete rambursate înainte să fie
+     * decontate, deci neincluse nici în vânzări. Doar informativ.
+     */
+    public function informativeRefundTotal(): float
+    {
+        if (!$this->usesAutoRefunds()) {
+            return 0.0;
+        }
+
+        return round((float) $this->linkedRefundItemsQuery()
+            ->whereNotIn('marketplace_refund_items.id', $this->deductedRefundItemIds() ?: [0])
+            ->sum('face_value'), 2);
     }
 
     public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
@@ -2011,6 +2191,12 @@ class MarketplacePayout extends Model
             ->where('commission_refunded', false)
             ->where('status', 'refunded')
             ->tap(fn ($q) => $this->scopeRefundItemsBySaleDate($q, $soldFrom, $soldBefore))
+            // Comision peste preț: biletele plătite într-un decont anterior au
+            // comisionul deja facturat pe factura acelui decont.
+            ->when(
+                $this->usesAutoRefunds() && $this->commission_mode === 'added_on_top' && $this->deductedRefundItemIds(),
+                fn ($q) => $q->whereNotIn('marketplace_refund_items.id', $this->deductedRefundItemIds())
+            )
             ->with('ticketType:id,name')
             ->get();
 

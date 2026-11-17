@@ -370,7 +370,7 @@ class PayoutResource extends Resource
                                             ? "<div style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff5f5;'>"
                                                 . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări deductibile</div>"
                                                 . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($deductibleRefund)}</div>"
-                                                . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>" . ($record->refundsAlreadyExcludedFromNet() ? 'bilete deja excluse din net' : 'scad din net') . "</div>"
+                                                . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>" . ($record->refundsAlreadyExcludedFromNet() ? 'bilete deja excluse din net' : ($record->usesAutoRefunds() ? 'plătite într-un decont anterior, scad din net' : 'scad din net')) . "</div>"
                                                 . "</div>"
                                             : '';
 
@@ -383,7 +383,13 @@ class PayoutResource extends Resource
                                         //           deductible one.
                                         $informationalCard = '';
                                         if ($hasInformational) {
-                                            if ($isIncludedMode) {
+                                            if ($record->usesAutoRefunds()) {
+                                                $informationalCard = "<div style='padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;'>"
+                                                    . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
+                                                    . "<div style='font-size:16px;font-weight:700;color:#6b7280;'>{$fmt($informationalRefund)}</div>"
+                                                    . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>rambursate înainte de decont, nu scad din net</div>"
+                                                    . "</div>";
+                                            } elseif ($isIncludedMode) {
                                                 $informationalCard = "<div style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff5f5;'>"
                                                     . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
                                                     . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($informationalRefund)}</div>"

@@ -22,6 +22,20 @@ class ViewPayout extends ViewRecord
 {
     protected static string $resource = PayoutResource::class;
 
+    /** Rambursările luate automat de acest decont (legate + nelegate până la data lui). */
+    protected function autoRefundIdsForRecord(): array
+    {
+        if (!$this->record->event_id) {
+            return [];
+        }
+
+        return \App\Models\MarketplacePayout::autoRefundIdsForEvent(
+            (int) $this->record->event_id,
+            $this->record->created_at,
+            $this->record->id
+        );
+    }
+
     protected function getHeaderActions(): array
     {
         $decont = $this->record->decontDocument;
@@ -362,53 +376,20 @@ class ViewPayout extends ViewRecord
                         ->live()
                         ->columnSpanFull(),
 
-                    // Refund picker — operator chooses which refunds for this
-                    // event are accounted for IN this payout. Selected refund
-                    // amounts are deducted from the payout's net (visible in
-                    // the live preview) and the refunds appear in this payout's
-                    // PDF document. Available refunds = event refunds in
-                    // refunded/partially_refunded status that aren't linked
-                    // to ANOTHER payout (currently linked to this one or to
-                    // nothing — operator can re-toggle freely).
-                    \Filament\Forms\Components\CheckboxList::make('included_refund_ids')
-                        ->label('Rambursări incluse în acest decont')
-                        ->helperText('Bifează rambursările care intră în decontul curent — valoarea lor se scade din suma de plată și apar în documentul PDF.')
-                        ->options(function () {
+                    // Rambursările nu se mai bifează: decontul le ia singur (cele
+                    // deja legate + cele nelegate intrate până la data decontului).
+                    // Se scad doar cele ale biletelor plătite într-un decont anterior.
+                    \Filament\Forms\Components\Placeholder::make('auto_refunds_summary')
+                        ->label('Rambursări incluse automat în acest decont')
+                        ->content(function () {
                             $event = $this->record->event;
-                            if (!$event) return [];
-
-                            return \App\Models\MarketplaceRefundRequest::query()
-                                ->whereIn('status', [
-                                    \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
-                                    \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
-                                ])
-                                ->touchingEvent($event->id)
-                                ->where(function ($q) {
-                                    // Show refunds that are unlinked OR already on this payout.
-                                    $q->whereNull('marketplace_payout_id')
-                                        ->orWhere('marketplace_payout_id', $this->record->id);
-                                })
-                                ->orderByDesc('completed_at')
-                                ->get(['id', 'reference', 'approved_amount', 'completed_at'])
-                                ->pipe(function ($refunds) use ($event) {
-                                    // Doar biletele plătite deja într-un decont anterior.
-                                    $ok = \App\Models\MarketplacePayout::filterDeductibleRefundIds($event->id, $refunds->pluck('id')->all(), $this->record->id);
-                                    $refunds = $refunds->whereIn('id', $ok)->values();
-                                    $totals = \App\Models\MarketplaceRefundRequest::eventRefundTotals($refunds->pluck('id'), $event->id);
-                                    return $refunds->mapWithKeys(fn ($r) => [
-                                        $r->id => sprintf(
-                                            '%s · %s RON · %s',
-                                            $r->reference,
-                                            number_format((float) ($totals[$r->id] ?? $r->approved_amount), 2),
-                                            MarketplaceTz::fmt($r->completed_at, 'd.m.Y', $this->record->marketplaceClient ?? null, fallback: '—')
-                                        ),
-                                    ]);
-                                })
-                                ->all();
+                            if (!$event) return '';
+                            return new \Illuminate\Support\HtmlString(\App\Models\MarketplacePayout::autoRefundsSummaryHtml(
+                                $event->id,
+                                $this->autoRefundIdsForRecord(),
+                                $this->record->id
+                            ));
                         })
-                        ->live()
-                        ->columns(1)
-                        ->bulkToggleable()
                         ->columnSpanFull(),
 
                     // Live preview — re-renders whenever payout_tickets state
@@ -454,8 +435,7 @@ class ViewPayout extends ViewRecord
                             // the hidden field's state.
                             $discountAmount = (float) ($get('discount_amount') ?? 0);
 
-                            $refundIds = $get('included_refund_ids') ?? [];
-                            $refundIds = is_array($refundIds) ? array_values(array_filter($refundIds)) : [];
+                            $refundIds = $this->autoRefundIdsForRecord();
                             $refundCount = count($refundIds);
                             $refundTotal = (!empty($refundIds) && $this->record->event_id)
                                 ? \App\Models\MarketplacePayout::deductibleRefundTotal((int) $this->record->event_id, $refundIds, $this->record->id)
@@ -508,7 +488,7 @@ class ViewPayout extends ViewRecord
 
                     $payoutTickets = $data['payout_tickets'] ?? [];
                     $enteredNet = (float) ($data['net_amount'] ?? 0);
-                    $includedRefundIds = is_array($data['included_refund_ids'] ?? null) ? $data['included_refund_ids'] : [];
+                    $includedRefundIds = $this->autoRefundIdsForRecord();
 
                     if (empty($payoutTickets)) {
                         Notification::make()->title('Lista de bilete goală')->body('Adaugă cel puțin un rând cu qty > 0.')->warning()->send();
@@ -522,7 +502,6 @@ class ViewPayout extends ViewRecord
                     // overshoot — it would drop ticket qtys to hit
                     // enteredNet from ticket_net alone, then subtract refunds
                     // on top, leaving the operator below their target.
-                    $includedRefundIds = \App\Models\MarketplacePayout::filterDeductibleRefundIds($event->id, $includedRefundIds, $this->record->id);
                     $refundTotal = !empty($includedRefundIds)
                         ? \App\Models\MarketplacePayout::deductibleRefundTotal($event->id, $includedRefundIds, $this->record->id)
                         : 0.0;

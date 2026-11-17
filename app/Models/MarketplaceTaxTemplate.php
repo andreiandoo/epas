@@ -2565,6 +2565,14 @@ class MarketplaceTaxTemplate extends Model
             // instead of 3,200 (and propagated the same double-subtraction
             // to the PDF's "VALOARE TOTALA").
             $refundDeduction = (float) ($payout->refund_amount ?? 0);
+            // Rambursări luate automat: în 1a se adaugă doar cele informative
+            // (bilete rambursate înainte de decontare); cele ale biletelor
+            // plătite anterior nu sunt vânzări ale acestui decont și se scad din E.
+            $refundPaidBefore = 0.0;
+            if ($payout->usesAutoRefunds() && $payout->net_override === null) {
+                $refundPaidBefore = $refundDeduction;
+                $refundDeduction = $payout->informativeRefundTotal();
+            }
             // Avans (rand C): campul vechi payout_method.advance_amount, iar daca
             // lipseste, avansurile compensate automat pe decont (FIFO). Avansul
             // compensat nu e scazut din amount, deci E = A - B - C iese exact
@@ -2615,7 +2623,7 @@ class MarketplaceTaxTemplate extends Model
             // Row E — active post-discount, advance subtracted, refund NOT
             // subtracted (already excluded via Ticket status filter).
             $variables['payout_amount'] = number_format(
-                max(0.0, $organizerNetFromTickets - $advanceDeduction),
+                max(0.0, $organizerNetFromTickets - $advanceDeduction - $refundPaidBefore),
                 2
             );
 
@@ -2661,7 +2669,7 @@ class MarketplaceTaxTemplate extends Model
                     2
                 );
                 $variables['payout_amount'] = number_format(
-                    max(0.0, $grossIncludingRefunded - $refundDeduction - $advanceDeduction),
+                    max(0.0, $grossIncludingRefunded - $refundDeduction - $advanceDeduction - $refundPaidBefore),
                     2
                 );
                 $variables['payout_commission_amount'] = number_format(0, 2);
@@ -2687,9 +2695,12 @@ class MarketplaceTaxTemplate extends Model
                           ->where('marketplace_payout_id', $payout->id);
                     })
                     ->where('status', 'refunded')
-                    ->forEvent($payout->event_id);
+                    ->forEvent($payout->event_id)
+                    // Biletele plătite într-un decont anterior nu sunt vânzări ale acestuia.
+                    ->when($payout->usesAutoRefunds() && $payout->deductedRefundItemIds(),
+                        fn ($q) => $q->whereNotIn('marketplace_refund_items.id', $payout->deductedRefundItemIds()));
                 $refundedTicketsForMerge = $refundQ->get();
-                if ($refundedTicketsForMerge->isEmpty() && (float) ($payout->refund_amount ?? 0) > 0.01) {
+                if ($refundedTicketsForMerge->isEmpty() && !$payout->usesAutoRefunds() && (float) ($payout->refund_amount ?? 0) > 0.01) {
                     $refundedTicketsForMerge = self::fetchLegacyPeriodRefundItems($payout);
                 }
 
@@ -3270,7 +3281,9 @@ class MarketplaceTaxTemplate extends Model
         array $ticketBreakdown,
         array $posTypeIdsSet
     ): array {
-        $refundTotal = (float) ($payout->refund_amount ?? 0);
+        // Rambursări automate: în rândurile 1a intră doar cele informative.
+        $autoRefunds = $payout->usesAutoRefunds();
+        $refundTotal = $autoRefunds ? $payout->informativeRefundTotal() : (float) ($payout->refund_amount ?? 0);
         if ($refundTotal <= 0) return [];
 
         // Pull `face_value` alongside `ticket_id` so the per-tier rebuild
@@ -3287,6 +3300,8 @@ class MarketplaceTaxTemplate extends Model
         )
             ->where('status', 'refunded')
             ->forEvent($payout->event_id)
+            ->when($autoRefunds && $payout->deductedRefundItemIds(),
+                fn ($q) => $q->whereNotIn('marketplace_refund_items.id', $payout->deductedRefundItemIds()))
             ->get(['id', 'ticket_id', 'face_value']);
         $itemCount = $refundItems->count();
         if ($itemCount === 0) return [];
