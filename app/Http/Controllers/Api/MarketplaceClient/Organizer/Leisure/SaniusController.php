@@ -227,6 +227,13 @@ class SaniusController extends BaseController
                 if ($open) {
                     return $this->error('Există sănii încă închiriate în modul curent. Închide-le înainte de a schimba modul.', 422);
                 }
+                if (! $wasTest) {
+                    $unpaid = SaniusTab::where('event_id', $ctx['event']->id)->where('is_test', false)->where('status', 'open')
+                        ->whereHas('rentals')->count();
+                    if ($unpaid) {
+                        return $this->error('Există '.$unpaid.' cont(uri) cu sănii returnate și neachitate. Încasează-le înainte de a schimba modul.', 422);
+                    }
+                }
             }
             $s->mode = $v['mode'];
         }
@@ -468,6 +475,13 @@ class SaniusController extends BaseController
         if (! $circuit->ticketIsUsable($ticket)) {
             return $this->error('Biletul nu este valid (anulat, rambursat sau comandă neplătită).', 422);
         }
+        if (! $circuit->isAccessTicket($ticket)) {
+            return $this->error('Nu este bilet de acces.', 422);
+        }
+        $visit = $circuit->ticketVisitDate($ticket);
+        if ($visit !== null && $visit !== $circuit->tabDay($tabModel)) {
+            return $this->error('Biletul este pentru '.Carbon::parse($visit)->format('d.m.Y').', nu pentru azi.', 422);
+        }
 
         $point = $v['point'] ?? ($ctx['role'] === 'cashier' ? 'cashier' : 'desk');
         $result = $circuit->linkTicketWithOrder($tabModel, $ticket, $this->memberOrNull($ctx), $point);
@@ -598,6 +612,10 @@ class SaniusController extends BaseController
         try {
             $rental = $circuit->requestReturn($rental, $v['condition'], $v['damage_level'] ?? null, $photoPath, $this->memberOrNull($ctx));
         } catch (SaniusException $e) {
+            if ($photoPath) {
+                \Illuminate\Support\Facades\Storage::disk('local')->delete($photoPath);
+            }
+
             return $this->error($e->getMessage(), 422);
         }
 
@@ -925,8 +943,8 @@ class SaniusController extends BaseController
         $tab = null;
         $foundBy = null;
         if ($parsed = ParkingTicketCode::parse($q)) {
-            $tab = $base()->where('parking_code', $parsed['code'])->orderByRaw("CASE WHEN status = 'open' THEN 0 ELSE 1 END")
-                ->orderByDesc('id')->first();
+            $tab = $base()->where('parking_code', $parsed['code'])->where('status', 'open')->orderByDesc('id')->first()
+                ?? $base()->where('parking_code', $parsed['code'])->orderByDesc('id')->first();
             $foundBy = 'parking';
             if (! $tab) {
                 return $this->success([
@@ -942,8 +960,9 @@ class SaniusController extends BaseController
             $foundBy = 'sled';
         }
         if (! $tab && ($ticket = $circuit->findTicket($q))) {
-            $tab = $base()->whereHas('tickets', fn ($t) => $t->where('ticket_id', $ticket->id))
-                ->orderByRaw("CASE WHEN status = 'open' THEN 0 ELSE 1 END")->orderByDesc('id')->first();
+            $byTicket = fn () => $base()->whereHas('tickets', fn ($t) => $t->where('ticket_id', $ticket->id));
+            $tab = $byTicket()->where('status', 'open')->orderByDesc('id')->first()
+                ?? $byTicket()->orderByDesc('id')->first();
             $foundBy = 'ticket';
         }
         if (! $tab) {
@@ -973,6 +992,7 @@ class SaniusController extends BaseController
         $v = $request->validate([
             'vehicle_type' => 'required|in:car,bus',
             'payment_method' => 'required|in:cash,card',
+            'expected_total' => 'nullable|numeric|min:0',
         ]);
         $tabModel = $this->findTab($ctx, $tab);
         if (! $tabModel) {
@@ -984,7 +1004,15 @@ class SaniusController extends BaseController
 
         $circuit = $this->circuit($ctx);
         if (! $circuit->isTest()) {
-            return $this->settleLive($request, $ctx, $circuit, $tabModel, $v['vehicle_type'], $v['payment_method']);
+            return $this->settleLive($request, $ctx, $circuit, $tabModel, $v['vehicle_type'], $v['payment_method'],
+                isset($v['expected_total']) ? (float) $v['expected_total'] : null);
+        }
+
+        if (isset($v['expected_total'])) {
+            $now = (float) $circuit->tabSummary($tabModel, $v['vehicle_type'])['total'];
+            if (abs($now - (float) $v['expected_total']) > 0.009) {
+                return $this->error('Suma s-a schimbat: acum sunt '.number_format($now, 2, ',', '.').' lei. Nu s-a încasat nimic; confirmă din nou.', 422);
+            }
         }
 
         try {
@@ -1005,12 +1033,12 @@ class SaniusController extends BaseController
      * intr-o singura tranzactie cu inchiderea contului. Daca totalul comenzii nu e
      * exact cel aratat casierului, nu se salveaza nimic.
      */
-    private function settleLive(Request $request, array $ctx, SaniusCircuit $circuit, SaniusTab $tab, string $vehicleType, string $paymentMethod): JsonResponse
+    private function settleLive(Request $request, array $ctx, SaniusCircuit $circuit, SaniusTab $tab, string $vehicleType, string $paymentMethod, ?float $expectedTotal = null): JsonResponse
     {
         $eventId = $ctx['event']->id;
 
         try {
-            $result = DB::transaction(function () use ($request, $ctx, $circuit, $tab, $vehicleType, $paymentMethod, $eventId) {
+            $result = DB::transaction(function () use ($request, $ctx, $circuit, $tab, $vehicleType, $paymentMethod, $eventId, $expectedTotal) {
                 $locked = SaniusTab::whereKey($tab->id)->lockForUpdate()->first();
                 if (! $locked || ! $locked->isOpen()) {
                     throw new SaniusException('Contul a fost deja achitat.');
@@ -1022,6 +1050,11 @@ class SaniusController extends BaseController
                 $charge = $summary['charge'];
                 if (empty($charge['lines'])) {
                     throw new SaniusException('Contul nu are nimic de încasat.');
+                }
+                // Parcarea poate trece in intervalul urmator intre afisare si plata.
+                if ($expectedTotal !== null && abs($expectedTotal - (float) $charge['total']) > 0.009) {
+                    throw new SaniusException('Suma s-a schimbat: acum sunt '.number_format((float) $charge['total'], 2, ',', '.')
+                        .' lei. Nu s-a încasat nimic; confirmă din nou.');
                 }
 
                 $label = 'Sanius · tichet parcare nr. '.($locked->parking_number ?: $locked->parking_code);

@@ -254,7 +254,7 @@ $scriptsExtra = <<<'JS'
         const label = method === 'cash' ? 'cash' : 'card';
         if (!confirm(`Încasezi ${money(d.total)} ${label}?`)) return;
         try {
-            const res = await AmbiletAPI.post(base() + `/tabs/${d.tab.id}/settle`, { vehicle_type: vehicleType, payment_method: method });
+            const res = await AmbiletAPI.post(base() + `/tabs/${d.tab.id}/settle`, { vehicle_type: vehicleType, payment_method: method, expected_total: d.total });
             current = Object.assign({ found: true }, res.data || {});
             render();
             if (current.tab && !current.tab.settled_simulated) printReceipt(current);

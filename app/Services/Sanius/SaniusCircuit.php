@@ -144,7 +144,7 @@ class SaniusCircuit
                     continue;
                 }
 
-                $code = SaniusSled::normalizeCode($rawCode);
+                $code = mb_substr(SaniusSled::normalizeCode($rawCode), 0, 32);
                 $deviceAt = $this->deviceTime($scan['scanned_at'] ?? null) ?? $now->copy();
                 $scannedAt = $deviceAt->copy()->addMilliseconds($offsetMs);
                 if ($scannedAt->gt($now)) {
@@ -258,6 +258,7 @@ class SaniusCircuit
     public function openTab(array $parsed, ?int $memberId): SaniusTab
     {
         return DB::transaction(function () use ($parsed, $memberId) {
+            SaniusSetting::whereKey($this->settings->id)->lockForUpdate()->first();
             $existing = SaniusTab::query()
                 ->where('event_id', $this->event->id)
                 ->where('parking_code', $parsed['code'])
@@ -304,18 +305,38 @@ class SaniusCircuit
         if ($code === '') {
             return null;
         }
-        $lower = strtolower($code);
+        $variants = array_values(array_unique([$code, strtoupper($code), strtolower($code)]));
         $eventId = $this->event->id;
 
         return Ticket::with(['ticketType', 'order'])
-            ->where(function ($q) use ($lower) {
-                $q->whereRaw('LOWER(barcode) = ?', [$lower])->orWhereRaw('LOWER(code) = ?', [$lower]);
+            ->where(function ($q) use ($variants) {
+                $q->whereIn('barcode', $variants)->orWhereIn('code', $variants);
             })
             ->where(function ($q) use ($eventId) {
                 $q->where('event_id', $eventId)
                     ->orWhereIn('ticket_type_id', TicketType::select('id')->where('event_id', $eventId));
             })
             ->first();
+    }
+
+    /** Ziua pentru care e biletul (Y-m-d) sau null daca nu are zi fixa. */
+    public function ticketVisitDate(Ticket $ticket): ?string
+    {
+        $meta = is_array($ticket->meta) ? $ticket->meta : [];
+        $visit = isset($meta['visit_date']) && $meta['visit_date'] !== '' ? substr((string) $meta['visit_date'], 0, 10) : null;
+
+        return $visit ?: optional($ticket->ticketType?->valid_date)->toDateString();
+    }
+
+    /** Ziua contului (ora RO a intrarii in parcare). */
+    public function tabDay(SaniusTab $tab): string
+    {
+        return Carbon::parse($tab->parking_entry_at ?? $tab->created_at)->setTimezone('Europe/Bucharest')->toDateString();
+    }
+
+    public function isAccessTicket(Ticket $ticket): bool
+    {
+        return in_array($ticket->ticketType?->effective_service_category ?? 'access', self::ACCESS_CATEGORIES, true);
     }
 
     public function ticketIsUsable(Ticket $ticket): bool
@@ -348,20 +369,30 @@ class SaniusCircuit
                         ->orWhereIn('ticket_type_id', TicketType::select('id')->where('event_id', $this->event->id));
                 })
                 ->get()
-                ->filter(fn (Ticket $t) => $this->ticketIsUsable($t))
+                ->filter(fn (Ticket $t) => $this->ticketIsUsable($t) && $this->isAccessTicket($t))
                 ->values();
             if ($tickets->isEmpty()) {
                 $tickets = collect([$ticket]);
             }
         }
+        // Doar biletele de acces pentru ziua contului (o comanda poate avea si alte zile).
+        $day = $this->tabDay($tab);
+        $tickets = $tickets->filter(function (Ticket $t) use ($day) {
+            $visit = $this->ticketVisitDate($t);
+
+            return $visit === null || $visit === $day;
+        })->values();
 
         $result = ['linked' => [], 'already_here' => [], 'elsewhere' => []];
 
-        DB::transaction(function () use ($tab, $tickets, $memberId, $point, &$result) {
+        DB::transaction(function () use ($tab, $tickets, $memberId, $point, $day, &$result) {
             foreach ($tickets as $t) {
+                // Un bilet sta pe un singur cont: deschis, sau achitat in aceeasi zi.
                 $links = SaniusTabTicket::query()
                     ->where('ticket_id', $t->id)
-                    ->whereHas('tab', fn ($q) => $q->where('status', 'open')->where('is_test', $tab->is_test))
+                    ->whereHas('tab', fn ($q) => $q->where('is_test', $tab->is_test)->where(fn ($w) => $w
+                        ->where('status', 'open')
+                        ->orWhere(fn ($x) => $x->where('status', 'settled')->where('parking_entry_at', '>=', Carbon::parse($day, 'Europe/Bucharest')->startOfDay()->utc()))))
                     ->get();
                 if ($links->contains(fn ($l) => (int) $l->tab_id === (int) $tab->id)) {
                     $result['already_here'][] = $t->id;
@@ -429,7 +460,7 @@ class SaniusCircuit
             if (SaniusRental::where('sled_id', $sled->id)->whereIn('status', ['active', 'pending_sync'])->exists()) {
                 throw new SaniusException($sled->displayName().' are deja o închiriere deschisă.');
             }
-            if (! $tab->tickets()->exists()) {
+            if (! $this->tabHasAccessTicket($tab)) {
                 throw new SaniusException('Leagă întâi biletul de acces de tichetul de parcare.');
             }
 
