@@ -83,6 +83,15 @@ $currentPage = $currentPage ?? getCurrentPage();
             <svg class="w-5 h-5 text-muted group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Deconturi
         </a>
+        <?php /* Circuit Sanius: ascunse implicit; le arata scriptul de jos doar daca serverul confirma accesul. */ ?>
+        <a data-org-show="sanius" data-sanius-link="settings" href="/organizator/leisure-sanius" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_sanius' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <?= amb_icon('snowflake', 'w-5 h-5 text-muted group-hover:text-white') ?>
+            Circuit Sanius
+        </a>
+        <a data-org-show="sanius" data-sanius-link="casa" href="/organizator/leisure-sanius-casa" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_sanius_casa' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <?= amb_icon('banknote', 'w-5 h-5 text-muted group-hover:text-white') ?>
+            Casierie Sanius
+        </a>
         <?php /* Curse bărci + Gestiune — ascunse momentan la cererea Sf. Ana. Se pot reactiva scotand acest wrap comment. */ ?>
         <?php if (false): ?>
         <a data-org-show="leisure" href="/organizator/leisure-rentals" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_rentals' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
@@ -280,6 +289,11 @@ window.addEventListener('load', async function() {
             document.body.setAttribute('data-restricted-role', 'staff');
         }
 
+        // Circuit Sanius: linkurile apar doar la organizatorii cu circuitul disponibil.
+        if (orgType === 'leisure' && orgData && orgData.id) {
+            showSaniusLinks(orgData.id).catch(() => {});
+        }
+
         if (orgData) {
             const orgName = document.getElementById('sidebar-org-name');
             const orgInitials = document.getElementById('sidebar-org-initials');
@@ -301,4 +315,43 @@ window.addEventListener('load', async function() {
         console.error('Sidebar init error:', error);
     }
 });
+
+// Setari: cont principal / manager, la organizatorii din SANIUS_ORGANIZER_IDS.
+// Casierie: la fel, plus casierii cu rol in circuit, cat timp circuitul nu e oprit.
+// Raspunsul se tine 5 minute in sesiune, ca sa nu se ceara la fiecare pagina.
+async function showSaniusLinks(orgId) {
+    const key = 'ambilet_sanius_menu_' + orgId;
+    let state = null;
+    try {
+        const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+        if (cached && Date.now() - cached.at < 300000) state = cached;
+    } catch (e) { /* fara cache */ }
+
+    if (!state) {
+        state = { at: Date.now(), settings: false, casa: false };
+        const events = await AmbiletAPI.getAllOrganizerEvents();
+        const ev = (events.data || []).find(e => (e.display_template || 'standard') === 'leisure_venue');
+        if (ev) {
+            const base = `/organizer/events/${ev.id}/leisure/sanius`;
+            try {
+                const st = (await AmbiletAPI.get(base + '/settings')).data || {};
+                if (st.available) {
+                    state.settings = true;
+                    state.casa = st.mode && st.mode !== 'off';
+                }
+            } catch (e) {
+                try {
+                    const me = (await AmbiletAPI.get(base + '/me')).data || {};
+                    state.casa = me.mode && me.mode !== 'off' && ['cashier', 'manager'].includes(me.role);
+                } catch (e2) { /* fara acces */ }
+            }
+        }
+        try { sessionStorage.setItem(key, JSON.stringify(state)); } catch (e) { /* fara cache */ }
+    }
+
+    document.querySelectorAll('[data-sanius-link]').forEach(el => {
+        const show = el.getAttribute('data-sanius-link') === 'settings' ? state.settings : state.casa;
+        el.style.display = show ? 'flex' : 'none';
+    });
+}
 </script>

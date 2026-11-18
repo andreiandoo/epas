@@ -264,6 +264,7 @@ const LeisureDash = {
             if (!confirm(`Schimbi circuitul Sanius pe „${labels[mode]}”?`)) return;
             try { await AmbiletAPI.put(`/organizer/events/${this.eventId}/leisure/sanius/settings`, { mode }); }
             catch (e) { alert(e?.message || 'Eroare'); }
+            try { Object.keys(sessionStorage).filter(k => k.startsWith('ambilet_sanius_menu_')).forEach(k => sessionStorage.removeItem(k)); } catch (e) {}
             this.loadSanius();
         }));
     },

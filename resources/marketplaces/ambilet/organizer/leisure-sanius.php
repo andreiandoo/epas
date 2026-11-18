@@ -190,7 +190,7 @@ $scriptsExtra = <<<'JS'
         const msg = { off: 'Oprești circuitul Sanius? Ecranele circuitului dispar pentru toți operatorii.', test: 'Pornești modul Test? Doar membrii cu rol în circuit îl vor vedea.', live: 'Pornești modul Activ (fluxul real)?' }[mode];
         if (!confirm(msg)) return;
         const res = await call(() => AmbiletAPI.put(base() + '/settings', { mode }));
-        if (res) { settings = res.data; renderMode(); flash(res.message || 'Mod schimbat'); refreshTow(); }
+        if (res) { settings = res.data; renderMode(); flash(res.message || 'Mod schimbat'); refreshTow(); try { Object.keys(sessionStorage).filter(k => k.startsWith('ambilet_sanius_menu_')).forEach(k => sessionStorage.removeItem(k)); } catch (e) {} }
     }
 
     function renderMembers() {
