@@ -2296,6 +2296,38 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->whereNumber('event')->whereNumber('rental')
             ->name('api.marketplace-client.organizer.leisure.rentals.finalize');
 
+        // Circuitul Sanius (Sf. Ana): sanii pe tichetul de parcare, tractari offline,
+        // plata la iesire. Oprit implicit; vezi SaniusController.
+        Route::prefix('/events/{event}/leisure/sanius')->whereNumber('event')->group(function () {
+            $c = \App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\SaniusController::class;
+            $n = 'api.marketplace-client.organizer.leisure.sanius.';
+            Route::get('/me', [$c, 'me'])->name($n.'me');
+            Route::get('/settings', [$c, 'settingsShow'])->name($n.'settings.show');
+            Route::put('/settings', [$c, 'settingsUpdate'])->name($n.'settings.update');
+            Route::post('/products/bootstrap', [$c, 'productsBootstrap'])->name($n.'products.bootstrap');
+            Route::get('/sleds', [$c, 'sledsIndex'])->name($n.'sleds.index');
+            Route::post('/sleds', [$c, 'sledsStore'])->name($n.'sleds.store');
+            Route::put('/sleds/{sled}', [$c, 'sledsUpdate'])->whereNumber('sled')->name($n.'sleds.update');
+            Route::post('/tabs/resolve', [$c, 'tabsResolve'])->name($n.'tabs.resolve');
+            Route::get('/tabs/lookup', [$c, 'tabsLookup'])->name($n.'tabs.lookup');
+            Route::post('/tabs/{tab}/link', [$c, 'tabsLink'])->whereNumber('tab')->name($n.'tabs.link');
+            Route::post('/tabs/{tab}/vehicle', [$c, 'tabsVehicle'])->whereNumber('tab')->name($n.'tabs.vehicle');
+            Route::post('/tabs/{tab}/settle', [$c, 'tabsSettle'])->whereNumber('tab')->name($n.'tabs.settle');
+            Route::post('/rentals/start', [$c, 'rentalsStart'])->name($n.'rentals.start');
+            Route::post('/rentals/lookup', [$c, 'rentalsLookup'])->name($n.'rentals.lookup');
+            Route::post('/rentals/return', [$c, 'rentalsReturn'])->name($n.'rentals.return');
+            Route::get('/rentals/{rental}', [$c, 'rentalsShow'])->whereNumber('rental')->name($n.'rentals.show');
+            Route::get('/rentals/{rental}/photo', [$c, 'rentalsPhoto'])->whereNumber('rental')->name($n.'rentals.photo');
+            Route::post('/rentals/{rental}/lost', [$c, 'rentalsLost'])->whereNumber('rental')->name($n.'rentals.lost');
+            Route::post('/tow/shift/start', [$c, 'towShiftStart'])->name($n.'tow.shift.start');
+            Route::post('/tow/shift/end', [$c, 'towShiftEnd'])->name($n.'tow.shift.end');
+            Route::post('/tow/ping', [$c, 'towPing'])->name($n.'tow.ping');
+            Route::get('/tow/status', [$c, 'towStatus'])->name($n.'tow.status');
+            Route::post('/tow/shifts/{shift}/unlock', [$c, 'towShiftUnlock'])->whereNumber('shift')->name($n.'tow.shifts.unlock');
+            Route::post('/tow/shifts/{shift}/close', [$c, 'towShiftClose'])->whereNumber('shift')->name($n.'tow.shifts.close');
+            Route::get('/reports/overview', [$c, 'reportsOverview'])->name($n.'reports.overview');
+        });
+
         // F11 — Active shift pentru rolul curent
         Route::get('/me/active-shift', [OrganizerLeisureController::class, 'myActiveShift'])
             ->name('api.marketplace-client.organizer.me.active-shift');
