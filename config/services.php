@@ -248,4 +248,9 @@ return [
     // Marketplace sites whose home page services:check-status fetches every 5 minutes (public status pages).
     'status_sites' => array_filter(array_map('trim', explode(',', (string) env('STATUS_SITES', 'bilete.online')))),
 
+    // Circuitul Sanius: organizatorii la care apare cardul din dashboard (implicit Sf. Ana).
+    'sanius' => [
+        'organizer_ids' => array_values(array_filter(array_map('intval', explode(',', (string) env('SANIUS_ORGANIZER_IDS', '538'))))),
+    ],
+
 ];

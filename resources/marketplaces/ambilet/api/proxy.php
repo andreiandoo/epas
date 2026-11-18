@@ -2387,6 +2387,28 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.sanius':
+        // Circuitul Sanius (Sf. Ana). O singura actiune pentru toate rutele
+        // /organizer/events/{id}/leisure/sanius/*; sub-calea trece printr-o lista alba.
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $saniusPath = (string) ($_GET['sp'] ?? '');
+        $saniusAllowed = '#^(me|settings|products/bootstrap|sleds|sleds/\d+|tabs/resolve|tabs/lookup|tabs/\d+/(link|vehicle|settle)'
+            . '|rentals/(start|lookup|return)|rentals/\d+|rentals/\d+/(photo|lost)'
+            . '|tow/(shift/start|shift/end|ping|status)|tow/shifts/\d+/(unlock|close)|reports/overview)$#';
+        if (!$eventId || !preg_match($saniusAllowed, $saniusPath)) {
+            http_response_code(400); echo json_encode(['error' => 'Invalid sanius path']); exit;
+        }
+        $method = in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'PUT'], true) ? $_SERVER['REQUEST_METHOD'] : 'GET';
+        $body = in_array($method, ['POST', 'PUT'], true) ? file_get_contents('php://input') : null;
+        $saniusQuery = array_diff_key($_GET, array_flip(['action', 'event', 'sp', 'preview', 'token']));
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/sanius/' . $saniusPath
+            . ($saniusQuery ? '?' . http_build_query($saniusQuery) : '');
+        $requiresAuth = true;
+        if (str_ends_with($saniusPath, '/photo')) {
+            $rawResponse = true;
+        }
+        break;
+
     case 'organizer.event.leisure.boats':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }

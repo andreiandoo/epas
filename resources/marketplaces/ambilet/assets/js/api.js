@@ -411,6 +411,8 @@ const AmbiletAPI = {
 
         // Organizer events
         // Leisure venue endpoints (organizer-side)
+        // Circuitul Sanius: o singura actiune, sub-calea e verificata in proxy.php
+        if (endpoint.match(/^\/organizer\/events\/\d+\/leisure\/sanius\//)) return 'organizer.event.leisure.sanius';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/config$/)) return 'organizer.event.leisure.config';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/reports\/by-issuer/)) return 'organizer.event.leisure.reports.by-issuer';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/venue-config$/)) return 'organizer.event.leisure.venue-config';
@@ -585,6 +587,11 @@ const AmbiletAPI = {
         const ciOrganizer = endpoint.match(/^\/organizer\/company-invoices\/(\d+)\/(?:upload|file)$/);
         if (ciOrganizer) return `id=${encodeURIComponent(ciOrganizer[1])}`;
 
+        // Circuitul Sanius: event + sub-calea (ex. tabs/12/settle)
+        const saniusMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/sanius\/([a-z0-9\/_-]+)$/);
+        if (saniusMatch) {
+            return `event=${encodeURIComponent(saniusMatch[1])}&sp=${encodeURIComponent(saniusMatch[2])}`;
+        }
         // Extract event ID + optional shift ID from leisure shifts CRUD
         const leisureShiftMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/shifts\/(\d+)/);
         if (leisureShiftMatch) {

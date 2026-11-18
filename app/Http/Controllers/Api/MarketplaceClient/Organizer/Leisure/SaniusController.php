@@ -250,6 +250,8 @@ class SaniusController extends BaseController
         }
 
         return [
+            // Cardul din dashboard apare doar la organizatorii din config (sau unde circuitul a fost deja folosit).
+            'available' => $s->exists || in_array((int) $ctx['organizer']->id, (array) config('services.sanius.organizer_ids', []), true),
             'mode' => $s->mode ?: 'off',
             'live_available' => self::LIVE_AVAILABLE,
             'members' => array_values((array) $s->members),

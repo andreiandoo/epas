@@ -613,8 +613,17 @@ class SaniusCircuit
         $parking['has_access_ticket'] = $hasAccess;
         $parking['entry_at'] = $tab->parking_entry_at?->toIso8601String();
 
+        $total = round($rentalsTotal + $parking['amount'], 2);
         if (! $tab->isOpen()) {
             $blockers[] = 'Contul a fost deja achitat.';
+            // Dupa plata aratam ce s-a incasat, nu o parcare recalculata cu ora de acum.
+            $paid = (array) $tab->settlement;
+            if (isset($paid['parking']) && is_array($paid['parking'])) {
+                $parking = $paid['parking'];
+            }
+            if (isset($paid['total'])) {
+                $total = round((float) $paid['total'], 2);
+            }
         }
 
         return [
@@ -639,7 +648,7 @@ class SaniusCircuit
             'rentals' => $lines,
             'rentals_total' => round($rentalsTotal, 2),
             'parking' => $parking,
-            'total' => round($rentalsTotal + $parking['amount'], 2),
+            'total' => $total,
             'can_settle' => empty($blockers),
             'blockers' => $blockers,
         ];
