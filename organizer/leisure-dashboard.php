@@ -48,6 +48,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- filled by JS -->
             </section>
 
+            <!-- ===== CIRCUIT SANIUS (doar organizatorii din config, doar pentru manager) ===== -->
+            <section id="ld-sanius" class="hidden p-4 bg-white border shadow-sm rounded-2xl border-border"></section>
+
             <!-- ===== WEATHER FORECAST (7 zile) ===== -->
             <!-- Se ascunde daca API-ul pica sau venue-ul n-are lat/lng — via JS. -->
             <section id="ld-weather" class="hidden overflow-hidden bg-white border shadow-sm rounded-2xl border-border">
@@ -182,6 +185,7 @@ const LeisureDash = {
             return;
         }
         this.refreshAll();
+        this.loadSanius();
         // Live refresh: KPI + casa la 20s; compare la 60s (mai lent, sunt date agregate);
         // weather doar la init (cache-uit 1h server-side).
         setInterval(() => { this.loadLive(); this.loadCasa(); }, 20000);
@@ -234,6 +238,37 @@ const LeisureDash = {
     },
 
     // ---- Casă (cash drawer) ----
+    // ---- Circuit Sanius: comutatorul general. Ascuns daca endpoint-ul nu raspunde. ----
+    async loadSanius() {
+        const box = document.getElementById('ld-sanius');
+        if (!box) return;
+        let st;
+        try { st = (await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/sanius/settings`)).data; } catch (e) { return; }
+        if (!st || !st.available) return;
+        const labels = { off: 'Oprit', test: 'Test', live: 'Activ' };
+        const colors = { off: 'border-slate-500 bg-slate-50', test: 'border-amber-500 bg-amber-50', live: 'border-emerald-600 bg-emerald-50' };
+        box.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0">
+                <p class="font-bold text-secondary">${ambIcon('snowflake', 'w-5 h-5')} Circuit Sanius</p>
+                <p class="text-xs text-muted">Sănii pe tichetul de parcare, plată la ieșire. <a href="/organizator/leisure-sanius" class="underline">Setări</a> · <a href="/organizator/leisure-sanius-casa" class="underline">Casierie</a></p>
+            </div>
+            <div class="inline-flex gap-2">${['off', 'test', 'live'].map(m => {
+                const disabled = m === 'live' && !st.live_available;
+                return `<button type="button" data-sanius-mode="${m}" ${disabled ? 'disabled title="Se deblochează după etapa de încasare reală"' : ''} class="px-3 py-2 text-xs font-bold border-2 rounded-lg ${st.mode === m ? colors[m] : 'border-border bg-white'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}">${labels[m]}</button>`;
+            }).join('')}</div>
+        </div>`;
+        box.classList.remove('hidden');
+        box.querySelectorAll('[data-sanius-mode]').forEach(btn => btn.addEventListener('click', async () => {
+            const mode = btn.dataset.saniusMode;
+            if (btn.disabled || mode === st.mode) return;
+            if (!confirm(`Schimbi circuitul Sanius pe „${labels[mode]}”?`)) return;
+            try { await AmbiletAPI.put(`/organizer/events/${this.eventId}/leisure/sanius/settings`, { mode }); }
+            catch (e) { alert(e?.message || 'Eroare'); }
+            try { Object.keys(sessionStorage).filter(k => k.startsWith('ambilet_sanius_menu_')).forEach(k => sessionStorage.removeItem(k)); } catch (e) {}
+            this.loadSanius();
+        }));
+    },
+
     async loadCasa() {
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${this.eventId}/leisure/cashier/current`);
