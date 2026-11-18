@@ -56,6 +56,7 @@ $scriptsExtra = <<<'JS'
     const hhmm = (d) => d ? new Date(d).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '—';
     const DAMAGE = { small: 'mică', medium: 'medie', large: 'mare' };
     const RENTAL_STATUS = { active: 'Nereturnată', pending_sync: 'Așteaptă sincronizarea', closed: 'Returnată', lost: 'Pierdută' };
+    const CHARGE_LABELS = { rent: 'Chirie sanie', tow: 'Tractare', damage_small: 'Avarie mică', damage_medium: 'Avarie medie', damage_large: 'Avarie mare', lost: 'Sanie pierdută', parking_car: 'Parcare auto (interval)', parking_bus: 'Parcare autobuz (interval)' };
 
     let eventId = null;
     let mode = 'off';
@@ -146,9 +147,12 @@ $scriptsExtra = <<<'JS'
         let footer;
         if (settled) {
             const s = tab.settled_simulated ? ' (TEST, simulat)' : '';
+            const pm = tab.payment_method === 'cash' ? 'cash' : (tab.payment_method === 'card' ? 'card' : '');
             footer = `<div class="p-5 text-center border-2 rounded-2xl border-emerald-400 bg-emerald-50">
                 <p class="text-2xl font-extrabold text-emerald-800">${ambIcon('circle-check', 'w-7 h-7')} Achitat la ${hhmm(tab.settled_at)}${s}</p>
-                <p class="mt-1 text-sm text-emerald-900">${tab.settled_simulated ? 'Test: nu valida în Mohos.' : 'Poți valida tichetul de parcare în Mohos.'}</p></div>`;
+                ${tab.order_number ? `<p class="mt-1 text-sm font-semibold text-emerald-900">Comanda ${esc(tab.order_number)}${pm ? ' · ' + pm : ''}</p>` : ''}
+                <p class="mt-1 text-sm text-emerald-900">${tab.settled_simulated ? 'Test: nu valida în Mohos.' : 'Poți valida tichetul de parcare în Mohos.'}</p>
+                ${tab.settled_simulated ? '' : `<button type="button" id="sc-print" class="mt-3 px-4 py-2 text-sm font-semibold bg-white border rounded-lg border-emerald-300">${ambIcon('printer', 'w-4 h-4')} Tipărește chitanța</button>`}</div>`;
         } else if (blockers.length) {
             footer = `<div class="p-4 border-2 rounded-2xl border-rose-400 bg-rose-50">
                 <p class="text-lg font-extrabold text-rose-800">${ambIcon('triangle-alert', 'w-5 h-5')} Nu se poate încasa încă</p>
@@ -192,6 +196,8 @@ $scriptsExtra = <<<'JS'
                 <p class="mt-1 text-right text-lg font-bold tabular-nums">${money(pk.amount)}</p>
             </div>
 
+            ${chargeHtml(d.charge)}
+
             ${settled ? '' : `
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <form id="sc-link-form" class="flex gap-2"><input id="sc-link" type="text" placeholder="Leagă un bilet de acces (scanează)" class="flex-1 px-3 py-2 text-sm border rounded-lg border-border"><button class="px-3 py-2 text-sm font-semibold border rounded-lg border-border hover:bg-slate-50">${ambIcon('link', 'w-4 h-4')}</button></form>
@@ -205,8 +211,41 @@ $scriptsExtra = <<<'JS'
         document.querySelectorAll('#sc-result [data-pay]').forEach(b => b.addEventListener('click', () => settle(b.dataset.pay)));
         document.querySelectorAll('#sc-result [data-photo]').forEach(b => b.addEventListener('click', () => showPhoto(b.dataset.photo)));
         const reload = $('sc-reload'); if (reload) reload.addEventListener('click', () => lookup(lastQuery));
+        const printBtn = $('sc-print'); if (printBtn) printBtn.addEventListener('click', () => printReceipt(d));
         const lf = $('sc-link-form'); if (lf) lf.addEventListener('submit', (e) => { e.preventDefault(); linkTicket(); });
         const pf = $('sc-plate-form'); if (pf) pf.addEventListener('submit', (e) => { e.preventDefault(); savePlate(); });
+    }
+
+    // Ce se incaseaza efectiv (aceleasi linii ca in comanda POS), cu comisionul daca e peste pret.
+    function chargeHtml(c) {
+        if (!c || !(c.lines || []).length) return '';
+        const rows = c.lines.map(l => `<div class="flex justify-between text-sm"><span>${esc(CHARGE_LABELS[l.key] || l.key)} × ${l.qty}</span><span class="tabular-nums">${money(l.line_total)}</span></div>`).join('');
+        const extra = (Number(c.commission) > 0 ? `<div class="flex justify-between text-sm text-muted"><span>Comision</span><span class="tabular-nums">${money(c.commission)}</span></div>` : '')
+            + (Number(c.commission_vat) > 0 ? `<div class="flex justify-between text-sm text-muted"><span>TVA comision</span><span class="tabular-nums">${money(c.commission_vat)}</span></div>` : '');
+        return `<div class="p-3 space-y-1 border rounded-xl border-border bg-surface">
+            <p class="text-xs font-semibold tracking-wider uppercase text-muted">Se încasează</p>${rows}${extra}
+            <div class="flex justify-between pt-1 mt-1 font-bold border-t border-border"><span>Total</span><span class="tabular-nums">${money(c.total)}</span></div></div>`;
+    }
+
+    function printReceipt(d) {
+        const tab = d.tab || {};
+        const c = d.charge || {};
+        const w = window.open('', '_blank', 'width=420,height=640');
+        if (!w) { showError('Browserul a blocat fereastra de tipărire.'); return; }
+        const rows = (c.lines || []).map(l => `<tr><td>${esc(CHARGE_LABELS[l.key] || l.key)} × ${l.qty}</td><td style="text-align:right">${money(l.line_total)}</td></tr>`).join('');
+        const extra = (Number(c.commission) > 0 ? `<tr><td>Comision</td><td style="text-align:right">${money(c.commission)}</td></tr>` : '')
+            + (Number(c.commission_vat) > 0 ? `<tr><td>TVA comision</td><td style="text-align:right">${money(c.commission_vat)}</td></tr>` : '');
+        w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Chitanță Sanius</title>
+            <style>body{font-family:'Plus Jakarta Sans',Arial,sans-serif;width:72mm;margin:0 auto;padding:4mm;font-size:11pt}
+            h1{font-size:13pt;text-align:center;margin:0 0 2mm}p{margin:1mm 0;text-align:center}table{width:100%;border-collapse:collapse;margin-top:3mm}
+            td{padding:1mm 0;vertical-align:top}.t td{border-top:1px dashed #000;font-weight:800;padding-top:2mm}.s{font-size:9pt}</style></head><body>
+            <h1>Sanius · Lacul Sf. Ana</h1>
+            <p class="s">Comanda ${esc(tab.order_number || '')} · ${new Date(tab.settled_at || Date.now()).toLocaleString('ro-RO')}</p>
+            <p class="s">Tichet parcare nr. ${esc(tab.parking_number || '')}${tab.vehicle_plate ? ' · ' + esc(tab.vehicle_plate) : ''}</p>
+            <table>${rows}${extra}<tr class="t"><td>TOTAL</td><td style="text-align:right">${money(d.total)}</td></tr></table>
+            <p class="s" style="margin-top:3mm">Plătit ${esc(tab.payment_method || '')}. Document nefiscal.</p>
+            <script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script></body></html>`);
+        w.document.close();
     }
 
     async function settle(method) {
@@ -218,6 +257,7 @@ $scriptsExtra = <<<'JS'
             const res = await AmbiletAPI.post(base() + `/tabs/${d.tab.id}/settle`, { vehicle_type: vehicleType, payment_method: method });
             current = Object.assign({ found: true }, res.data || {});
             render();
+            if (current.tab && !current.tab.settled_simulated) printReceipt(current);
         } catch (e) {
             showError(e?.message || 'Încasarea a eșuat');
             lookup(lastQuery);

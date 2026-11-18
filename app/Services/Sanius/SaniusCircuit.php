@@ -3,6 +3,7 @@
 namespace App\Services\Sanius;
 
 use App\Models\Event;
+use App\Models\MarketplaceOrganizer;
 use App\Models\Sanius\SaniusRental;
 use App\Models\Sanius\SaniusSetting;
 use App\Models\Sanius\SaniusSled;
@@ -36,6 +37,7 @@ class SaniusCircuit
     public function __construct(
         public readonly SaniusSetting $settings,
         public readonly Event $event,
+        public readonly ?MarketplaceOrganizer $organizer = null,
     ) {}
 
     public function isTest(): bool
@@ -566,6 +568,84 @@ class SaniusCircuit
     // ------------------------------------------------------------------
 
     /**
+     * Ce se incaseaza: cantitati pe produsele circuitului, la pretul de acum al
+     * produselor, cu acelasi calcul de comision ca posSale. Totalul de aici e exact
+     * totalul comenzii pe care o creeaza posSale la incasarea reala.
+     *
+     * @return array{lines: array<int, array{key: string, ticket_type_id: ?int, qty: int, unit_price: float, line_total: float}>, subtotal: float, commission: float, commission_vat: float, total: float, missing: string[]}
+     */
+    public function chargeLines(SaniusTab $tab, array $parking): array
+    {
+        $qty = array_fill_keys(SaniusSetting::PRODUCT_KEYS, 0);
+        foreach ($tab->rentals()->whereIn('status', ['closed', 'lost'])->get() as $r) {
+            $qty['rent']++;
+            $qty['tow'] += (int) $r->tows_paid;
+            if ($r->status === 'lost') {
+                $qty['lost']++;
+            } elseif ($r->condition === 'damaged' && in_array($r->damage_level, SaniusRental::DAMAGE_LEVELS, true)) {
+                $qty['damage_'.$r->damage_level]++;
+            }
+        }
+        $qty[($parking['vehicle_type'] ?? 'car') === 'bus' ? 'parking_bus' : 'parking_car'] = (int) ($parking['units'] ?? 0);
+
+        [$rate, $fixed, $onTop, $vatRate] = $this->commissionTerms();
+
+        $lines = [];
+        $missing = [];
+        $subtotal = 0.0;
+        $commission = 0.0;
+        foreach ($qty as $key => $n) {
+            if ($n <= 0) {
+                continue;
+            }
+            $ttId = $this->settings->productId($key);
+            if (! $ttId) {
+                $missing[] = $key;
+            }
+            $unit = $this->unitPrice($ttId);
+            // posSale accepta cel mult 100 bucati pe linie
+            while ($n > 0) {
+                $chunk = min(100, $n);
+                $line = round($unit * $chunk, 2);
+                $lines[] = ['key' => $key, 'ticket_type_id' => $ttId, 'qty' => $chunk, 'unit_price' => $unit, 'line_total' => $line];
+                $subtotal += $line;
+                if ($onTop) {
+                    $commission += round(max($unit * $rate / 100, $fixed) * $chunk, 2);
+                }
+                $n -= $chunk;
+            }
+        }
+        $subtotal = round($subtotal, 2);
+        $commission = round($commission, 2);
+        $vat = ($vatRate > 0 && $commission > 0) ? round($commission * $vatRate / 100, 2) : 0.0;
+
+        return [
+            'lines' => $lines,
+            'subtotal' => $subtotal,
+            'commission' => $commission,
+            'commission_vat' => $vat,
+            'total' => round($subtotal + $commission + $vat, 2),
+            'missing' => $missing,
+        ];
+    }
+
+    /** [rata %, fix per bilet, comision peste pret?, TVA marketplace %] — ca in posSale. */
+    private function commissionTerms(): array
+    {
+        $o = $this->organizer;
+        if (! $o) {
+            return [0.0, 0.0, false, 0.0];
+        }
+
+        return [
+            (float) $o->getEffectiveCommissionRate(),
+            (float) ($o->fixed_commission_default ?? 0),
+            $o->getEffectiveCommissionMode() === 'added_on_top',
+            (float) ($o->marketplaceClient?->vatRate() ?? 0),
+        ];
+    }
+
+    /**
      * Tot ce are contul de plata acum: inchirieri, parcare, ce blocheaza plata.
      */
     public function tabSummary(SaniusTab $tab, ?string $vehicleType = null, ?Carbon $now = null): array
@@ -613,7 +693,11 @@ class SaniusCircuit
         $parking['has_access_ticket'] = $hasAccess;
         $parking['entry_at'] = $tab->parking_entry_at?->toIso8601String();
 
-        $total = round($rentalsTotal + $parking['amount'], 2);
+        $charge = $this->chargeLines($tab, $parking);
+        $total = $charge['total'];
+        if ($tab->isOpen() && $charge['missing']) {
+            $blockers[] = 'Lipsesc produsele circuitului pentru: '.implode(', ', $charge['missing']).'.';
+        }
         if (! $tab->isOpen()) {
             $blockers[] = 'Contul a fost deja achitat.';
             // Dupa plata aratam ce s-a incasat, nu o parcare recalculata cu ora de acum.
@@ -623,6 +707,9 @@ class SaniusCircuit
             }
             if (isset($paid['total'])) {
                 $total = round((float) $paid['total'], 2);
+            }
+            if (isset($paid['charge']) && is_array($paid['charge'])) {
+                $charge = $paid['charge'];
             }
         }
 
@@ -638,6 +725,8 @@ class SaniusCircuit
                 'settled_at' => $tab->settled_at?->toIso8601String(),
                 'settled_simulated' => $tab->settled_simulated,
                 'order_id' => $tab->order_id,
+                'order_number' => $tab->settlement['order_number'] ?? null,
+                'payment_method' => $tab->settlement['payment_method'] ?? null,
             ],
             'tickets' => $tab->tickets()->with('ticket.ticketType')->get()->map(fn (SaniusTabTicket $l) => [
                 'ticket_id' => $l->ticket_id,
@@ -648,6 +737,7 @@ class SaniusCircuit
             'rentals' => $lines,
             'rentals_total' => round($rentalsTotal, 2),
             'parking' => $parking,
+            'charge' => $charge,
             'total' => $total,
             'can_settle' => empty($blockers),
             'blockers' => $blockers,
@@ -688,6 +778,7 @@ class SaniusCircuit
                     'payment_method' => $paymentMethod,
                     'rentals_total' => $summary['rentals_total'],
                     'parking' => $summary['parking'],
+                    'charge' => $summary['charge'],
                     'total' => $summary['total'],
                 ],
             ]);

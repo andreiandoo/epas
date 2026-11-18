@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerTeamMember;
+use App\Models\Order;
 use App\Models\Sanius\SaniusRental;
 use App\Models\Sanius\SaniusSetting;
 use App\Models\Sanius\SaniusSled;
@@ -32,8 +33,8 @@ use Illuminate\Support\Facades\Storage;
  */
 class SaniusController extends BaseController
 {
-    /** Plata reala (prin posSale) vine intr-o etapa separata; pana atunci modul Activ e blocat. */
-    private const LIVE_AVAILABLE = false;
+    /** Modul Activ: incasarea reala prin posSale (comanda, sesiunea de casa, comision, societatea emitenta). */
+    private const LIVE_AVAILABLE = true;
 
     // ==================================================================
     // Context: organizator, eveniment, setari, rol
@@ -103,7 +104,7 @@ class SaniusController extends BaseController
 
     private function circuit(array $ctx): SaniusCircuit
     {
-        return new SaniusCircuit($ctx['settings'], $ctx['event']);
+        return new SaniusCircuit($ctx['settings'], $ctx['event'], $ctx['organizer']);
     }
 
     private function memberOrNull(array $ctx): ?int
@@ -983,7 +984,7 @@ class SaniusController extends BaseController
 
         $circuit = $this->circuit($ctx);
         if (! $circuit->isTest()) {
-            return $this->error('Încasarea reală nu este încă activă.', 409);
+            return $this->settleLive($request, $ctx, $circuit, $tabModel, $v['vehicle_type'], $v['payment_method']);
         }
 
         try {
@@ -996,6 +997,105 @@ class SaniusController extends BaseController
             $circuit->tabSummary($tabModel),
             'TEST: plată simulată. Poți valida tichetul în Mohos.'
         );
+    }
+
+    /**
+     * Incasarea reala: o vanzare posSale cu produsele circuitului (aceeasi comanda,
+     * sesiune de casa, comision si societate emitenta ca orice vanzare POS), totul
+     * intr-o singura tranzactie cu inchiderea contului. Daca totalul comenzii nu e
+     * exact cel aratat casierului, nu se salveaza nimic.
+     */
+    private function settleLive(Request $request, array $ctx, SaniusCircuit $circuit, SaniusTab $tab, string $vehicleType, string $paymentMethod): JsonResponse
+    {
+        $eventId = $ctx['event']->id;
+
+        try {
+            $result = DB::transaction(function () use ($request, $ctx, $circuit, $tab, $vehicleType, $paymentMethod, $eventId) {
+                $locked = SaniusTab::whereKey($tab->id)->lockForUpdate()->first();
+                if (! $locked || ! $locked->isOpen()) {
+                    throw new SaniusException('Contul a fost deja achitat.');
+                }
+                $summary = $circuit->tabSummary($locked, $vehicleType);
+                if (! $summary['can_settle']) {
+                    throw new SaniusException(implode(' ', $summary['blockers']));
+                }
+                $charge = $summary['charge'];
+                if (empty($charge['lines'])) {
+                    throw new SaniusException('Contul nu are nimic de încasat.');
+                }
+
+                $label = 'Sanius · tichet parcare nr. '.($locked->parking_number ?: $locked->parking_code);
+                $sub = Request::create($request->getUri(), 'POST', [
+                    'items' => array_map(fn ($l) => ['ticket_type_id' => $l['ticket_type_id'], 'qty' => $l['qty']], $charge['lines']),
+                    'customer' => array_filter([
+                        'name' => $label,
+                        'vehicle_plate' => $locked->vehicle_plate,
+                    ]),
+                    'payment_method' => $paymentMethod,
+                ]);
+                $sub->setUserResolver(fn () => $request->user());
+                $sub->attributes->set('sanius_settle_ticket_type_ids', array_values(array_unique(array_map(
+                    fn ($l) => (int) $l['ticket_type_id'],
+                    $charge['lines']
+                ))));
+
+                try {
+                    $response = app(LeisureController::class)->posSale($sub, $eventId);
+                } catch (\Illuminate\Validation\ValidationException $e) {
+                    throw new SaniusException(collect($e->errors())->flatten()->first() ?: 'Date invalide pentru vânzare.');
+                }
+                $payload = $response->getData(true);
+                if (! $response->isSuccessful() || empty($payload['success'])) {
+                    throw new SaniusException($payload['message'] ?? 'Vânzarea POS a eșuat.');
+                }
+
+                $order = $payload['data']['order'] ?? [];
+                $orderTotal = round((float) ($order['total'] ?? 0), 2);
+                if (abs($orderTotal - (float) $charge['total']) > 0.009) {
+                    throw new SaniusException('Totalul comenzii ('.number_format($orderTotal, 2, ',', '.').' lei) diferă de cel afișat ('
+                        .number_format((float) $charge['total'], 2, ',', '.').' lei). Nu s-a încasat nimic; reîncarcă contul.');
+                }
+
+                $orderModel = Order::find($order['id'] ?? 0);
+                if ($orderModel) {
+                    $meta = is_array($orderModel->meta) ? $orderModel->meta : [];
+                    $meta['sanius_tab_id'] = $locked->id;
+                    $meta['sanius_parking_code'] = $locked->parking_code;
+                    $orderModel->meta = $meta;
+                    $orderModel->save();
+                }
+
+                $locked->update([
+                    'status' => 'settled',
+                    'vehicle_type' => $vehicleType,
+                    'settled_at' => Carbon::now(),
+                    'settled_by_member_id' => $this->memberOrNull($ctx),
+                    'settled_simulated' => false,
+                    'order_id' => $order['id'] ?? null,
+                    'settlement' => [
+                        'payment_method' => $paymentMethod,
+                        'rentals_total' => $summary['rentals_total'],
+                        'parking' => $summary['parking'],
+                        'charge' => $charge,
+                        'total' => $orderTotal,
+                        'order_number' => $order['order_number'] ?? null,
+                    ],
+                ]);
+
+                return ['tab' => $locked->fresh(), 'sale' => $payload['data']];
+            });
+        } catch (SaniusException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
+
+        return $this->success(array_merge(
+            $circuit->tabSummary($result['tab']),
+            ['sale' => [
+                'order' => $result['sale']['order'] ?? null,
+                'items' => $result['sale']['items'] ?? [],
+                'issuer' => $result['sale']['issuer'] ?? null,
+            ]]
+        ), 'Încasat. Poți valida tichetul în Mohos.');
     }
 
     // ==================================================================

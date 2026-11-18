@@ -1157,7 +1157,10 @@ class LeisureController extends BaseController
             if (!$tt) continue;
             // Defensiv: blocheaza vanzarea de produse dezactivate (is_active=false),
             // chiar daca UI le-a lasat sa treaca (cache stale, request modificat).
-            if ($tt->is_active === false) {
+            // Exceptie: produsele ascunse ale circuitului Sanius, doar cand vanzarea
+            // vine intern de la incasarea Sanius (atributul nu poate veni din HTTP).
+            $saniusAllowed = (array) $request->attributes->get('sanius_settle_ticket_type_ids', []);
+            if ($tt->is_active === false && ! in_array((int) $tt->id, $saniusAllowed, true)) {
                 $ttName = is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name;
                 return $this->error("Produsul „{$ttName}\" este dezactivat si nu poate fi vandut.", 422);
             }
