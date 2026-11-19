@@ -1157,11 +1157,11 @@ Schedule::command('customers:fetch-brevo-suppressions', [
 // MX audit — DNS-checks every customer email domain and flags rows
 // whose domain has no MX record. Offline (no API quota), runs weekly
 // so signups with typo'd domains (gmail.con etc.) get caught within
-// 7 days. --apply auto-flags; weekly cadence is plenty given DNS-MX
-// records on the long tail of weird domains rarely change.
+// 7 days. Report-only for now: with --apply a DNS outage during the
+// run would flag valid customers in bulk (audit JOB-008). Re-enable
+// --apply only once the command skips domains on resolver errors.
 Schedule::command('customers:audit-email-mx', [
         '--marketplace=1',
-        '--apply',
     ])
     ->weeklyOn(1, '04:30') // Monday 04:30
     ->timezone('Europe/Bucharest')
