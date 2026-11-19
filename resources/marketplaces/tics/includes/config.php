@@ -12,7 +12,10 @@ if (!defined('TICS_ROOT')) {
 
 // API Configuration - Tixello Core API
 define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
-define('API_KEY', 'mpc_vnZ1jJekvmxnsZpOitiCPhR95PcpYE9PCTMVFG41HpwRM1yq96w0rCpCjNin'); // Replace with actual API key
+// The API key lives in data/secrets.php on the server only (same format as bilete.online's
+// includes/secrets.example.php); it must never be committed to this public repo.
+$ticsSecrets = is_file(dirname(__DIR__) . '/data/secrets.php') ? (array) require dirname(__DIR__) . '/data/secrets.php' : [];
+define('API_KEY', (string) ($ticsSecrets['api_key'] ?? ''));
 define('STORAGE_URL', 'https://core.tixello.com/storage'); // Core storage URL for images
 
 // Site Configuration
