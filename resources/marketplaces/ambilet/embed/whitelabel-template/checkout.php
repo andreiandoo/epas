@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
-$pageTitle = 'Finalizare comandă — ' . ORG_NAME;
+$pageTitle = 'Finalizare comandă';
 $showBackLink = true;
 $backLabel = 'Înapoi';
 $bp = BASE_PATH;

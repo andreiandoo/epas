@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
-$pageTitle = 'Confidențialitate — ' . ORG_NAME;
+$pageTitle = 'Confidențialitate';
 $showBackLink = true;
 require_once __DIR__ . '/includes/head.php';
 

@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 $orderNumber = $_GET['order'] ?? '';
-$pageTitle = 'Comandă confirmată — ' . ORG_NAME;
+$pageTitle = 'Comandă confirmată';
 $showBackLink = true;
 $backLabel = 'Înapoi la spectacole';
 require_once __DIR__ . '/includes/head.php';
