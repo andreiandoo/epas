@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
-$pageTitle = 'Termeni și condiții — ' . ORG_NAME;
+$pageTitle = 'Termeni și condiții';
 $showBackLink = true;
 require_once __DIR__ . '/includes/head.php';
 

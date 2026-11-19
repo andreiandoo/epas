@@ -66,9 +66,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 <div id="sn-products" class="grid grid-cols-1 gap-2 mt-4 sm:grid-cols-2 lg:grid-cols-4"></div>
 
-                <div class="grid grid-cols-2 gap-3 mt-5 lg:grid-cols-5">
-                    <label class="block"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Tractări incluse</span>
-                        <input id="sn-included-tows" type="number" min="0" max="20" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></label>
+                <h3 class="mt-5 text-sm font-bold text-secondary">Chiria pe cicluri</h3>
+                <div class="grid grid-cols-2 gap-3 mt-2 lg:grid-cols-3">
+                    <label class="block"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Durata ciclului (min.)</span>
+                        <input id="sn-cycle-min" type="number" min="5" max="1440" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></label>
+                    <label class="block"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Tractări incluse pe ciclu</span>
+                        <input id="sn-tows-cycle" type="number" min="0" max="100" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></label>
+                    <label class="block"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Toleranță la returnare (min.)</span>
+                        <input id="sn-grace-min" type="number" min="0" max="120" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></label>
+                </div>
+                <label class="block mt-3"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Zile cu preț de weekend, pe lângă sâmbătă și duminică (sărbători)</span>
+                    <textarea id="sn-weekend-dates" rows="2" placeholder="2026-12-01, 2026-12-25, 2026-12-26, 2027-01-01, 2027-01-02, 2027-01-06, 2027-01-07" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></textarea></label>
+                <p class="mt-2 text-xs text-muted">Se plătesc ciclurile începute; toleranța se scade din durată (cu 60 min și 10 min toleranță, 1 h 10 min = 1 ciclu, 1 h 11 min = 2 cicluri). Ciclurile de depășire includ și ele tractări. Prețul e al zilei în care a pornit închirierea. Azi: <strong id="sn-today-type">—</strong>.</p>
+
+                <h3 class="mt-5 text-sm font-bold text-secondary">Parcare și sincronizare</h3>
+                <div class="grid grid-cols-2 gap-3 mt-2 lg:grid-cols-4">
                     <label class="block"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Parcare: min. gratuite</span>
                         <input id="sn-free-min" type="number" min="0" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></label>
                     <label class="block"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Gratuit cu bilet (min.)</span>
@@ -80,6 +92,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 <p class="mt-2 text-xs text-muted">Cu bilet de acces: se plătește doar timpul care depășește minutele gratuite. Fără bilet: peste minutele gratuite se plătește toată durata. Intervalele începute se plătesc întregi.</p>
                 <div class="mt-3"><button id="sn-save-rules" class="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-primary hover:bg-primary-dark">Salvează regulile</button></div>
+            </section>
+
+            <!-- ===== CONTRACT ===== -->
+            <section class="p-5 bg-white border shadow-sm rounded-2xl border-border">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h2 class="text-lg font-bold text-secondary">Contract</h2>
+                        <p class="mt-1 text-sm text-muted">Casiera completează datele clientului în leisure-pos, iar clientul semnează pe tabletă sau pe hârtie. Tableta de semnat deschide <a href="/organizator/leisure-sanius-semnatura" target="_blank" class="underline text-primary">/organizator/leisure-sanius-semnatura</a>.</p>
+                    </div>
+                </div>
+                <label class="flex items-center gap-2 mt-4 text-sm font-semibold"><input id="sn-con-required" type="checkbox" class="w-4 h-4"> Fără contract semnat, ghișeul nu dă sănii</label>
+                <label class="block mt-3"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Titlu</span>
+                    <input id="sn-con-title" type="text" maxlength="160" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></label>
+                <label class="block mt-3"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Text (paragrafele se despart cu un rând gol)</span>
+                    <textarea id="sn-con-body" rows="10" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border"></textarea></label>
+                <p id="sn-con-vars" class="mt-1 text-xs text-muted"></p>
+                <label class="block mt-3"><span class="text-xs font-semibold tracking-wider uppercase text-muted">Tablete de semnat (câte una pe casă, separate prin virgulă)</span>
+                    <input id="sn-con-stations" type="text" class="w-full px-3 py-2 mt-1 text-sm border rounded-lg border-border" placeholder="Casa 1, Casa 2"></label>
+                <p class="mt-2 text-xs text-muted">Versiunea textului: <strong id="sn-con-version">—</strong>. La fiecare schimbare a textului crește versiunea; contractele semnate păstrează textul pe care l-a văzut clientul.</p>
+                <div class="mt-3"><button id="sn-save-contract" class="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-primary hover:bg-primary-dark">Salvează contractul</button></div>
             </section>
 
             <!-- ===== SANII ===== -->
@@ -138,7 +170,7 @@ $scriptsExtra = <<<'JS'
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const money = (n) => (Number(n) || 0).toFixed(2).replace('.', ',') + ' lei';
     const ROLE_LABELS = { '': 'Fără rol', desk: 'Ghișeu Sanius', tow: 'Șofer tractare', cashier: 'Casier', manager: 'Manager' };
-    const PRODUCT_LABELS = { rent: 'Chirie sanie', tow: 'Tractare', damage_small: 'Avarie mică', damage_medium: 'Avarie medie', damage_large: 'Avarie mare', lost: 'Sanie pierdută', parking_car: 'Parcare auto / interval', parking_bus: 'Parcare autobuz / interval' };
+    const PRODUCT_LABELS = { cycle_weekday: 'Ciclu sanie (L–V)', cycle_weekend: 'Ciclu sanie (weekend)', tow: 'Tractare', damage_small: 'Avarie mică', damage_medium: 'Avarie medie', damage_large: 'Avarie mare', lost: 'Sanie pierdută', parking_car: 'Parcare auto / interval', parking_bus: 'Parcare autobuz / interval' };
     const SLED_STATUS = { available: ['Disponibilă', 'bg-emerald-100 text-emerald-800'], rented: ['Închiriată', 'bg-amber-100 text-amber-800'], repair: ['În reparație', 'bg-rose-100 text-rose-800'], lost: ['Pierdută', 'bg-slate-800 text-white'], retired: ['Retrasă', 'bg-slate-200 text-slate-600'] };
     const RENTAL_STATUS = { active: 'Închiriată', pending_sync: 'Așteaptă sincronizarea', closed: 'Returnată', lost: 'Pierdută' };
     const ANOMALY = { duplicate: 'Scanare dublă', unknown_sled: 'Cod necunoscut', no_rental: 'Sanie neînchiriată', other_mode: 'Sanie din alt mod', after_close: 'Ajunsă după închidere' };
@@ -230,7 +262,12 @@ $scriptsExtra = <<<'JS'
 
     function renderRules() {
         const pk = settings.parking || {};
-        $('sn-included-tows').value = settings.included_tows ?? 1;
+        const rl = settings.rental || {};
+        $('sn-cycle-min').value = rl.cycle_minutes ?? 60;
+        $('sn-tows-cycle').value = rl.tows_per_cycle ?? 1;
+        $('sn-grace-min').value = rl.grace_minutes ?? 10;
+        $('sn-weekend-dates').value = (rl.weekend_extra_dates || []).join(', ');
+        $('sn-today-type').textContent = settings.today_day_type === 'weekend' ? 'preț de weekend' : 'preț L–V';
         $('sn-free-min').value = pk.free_minutes ?? 10;
         $('sn-free-access').value = pk.free_minutes_with_access ?? 240;
         $('sn-unit-min').value = pk.unit_minutes ?? 30;
@@ -239,7 +276,12 @@ $scriptsExtra = <<<'JS'
 
     async function saveRules() {
         const body = {
-            included_tows: parseInt($('sn-included-tows').value || '0', 10),
+            rental: {
+                cycle_minutes: parseInt($('sn-cycle-min').value || '60', 10),
+                tows_per_cycle: parseInt($('sn-tows-cycle').value || '0', 10),
+                grace_minutes: parseInt($('sn-grace-min').value || '0', 10),
+                weekend_extra_dates: $('sn-weekend-dates').value.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean),
+            },
             ping_timeout_seconds: parseInt($('sn-ping-timeout').value || '30', 10),
             parking: {
                 free_minutes: parseInt($('sn-free-min').value || '0', 10),
@@ -249,6 +291,27 @@ $scriptsExtra = <<<'JS'
         };
         const res = await call(() => AmbiletAPI.put(base() + '/settings', body));
         if (res) { settings = res.data; renderRules(); renderProducts(); flash('Reguli salvate'); }
+    }
+
+    function renderContract() {
+        const c = settings.contract || {};
+        $('sn-con-required').checked = !!c.required;
+        $('sn-con-title').value = c.title || '';
+        $('sn-con-body').value = c.body || '';
+        $('sn-con-stations').value = (c.stations || []).join(', ');
+        $('sn-con-version').textContent = c.version || 1;
+        $('sn-con-vars').textContent = 'Variabile: ' + (settings.contract_variables || []).join(' ');
+    }
+
+    async function saveContract() {
+        const body = { contract: {
+            required: $('sn-con-required').checked,
+            title: $('sn-con-title').value,
+            body: $('sn-con-body').value,
+            stations: $('sn-con-stations').value.split(',').map(x => x.trim()).filter(Boolean),
+        } };
+        const res = await call(() => AmbiletAPI.put(base() + '/settings', body));
+        if (res) { settings = res.data; renderContract(); flash('Contract salvat'); }
     }
 
     async function bootstrapProducts() {
@@ -369,7 +432,8 @@ $scriptsExtra = <<<'JS'
                 ${tile(t.tabs ?? 0, 'Conturi')}${tile(t.tabs_open ?? 0, 'Deschise')}${tile(t.tabs_settled ?? 0, 'Achitate')}${tile(money(t.settled_amount), 'Încasat')}
                 ${tile(t.rentals ?? 0, 'Închirieri')}${tile(t.tows_counted ?? 0, 'Tractări')}${tile(t.damaged ?? 0, 'Avariate')}${tile(t.lost ?? 0, 'Pierdute')}
             </div>
-            <p class="mt-2 text-xs text-muted">Mediana între tractări: ${t.median_minutes_between_tows ? Math.round(t.median_minutes_between_tows) + ' min' : '—'} · anomalii: ${t.tows_anomalies ?? 0}</p>
+            <p class="mt-2 text-xs text-muted">Plătit la intrare: ${t.prepaid_sled_cycles ?? 0} sanie-cicluri (${money(t.prepaid_amount)}) · cicluri folosite de săniile returnate: ${t.cycles_used ?? 0} · închirieri în weekend: ${t.weekend_rentals ?? 0}</p>
+            <p class="mt-1 text-xs text-muted">Mediana între tractări: ${t.median_minutes_between_tows ? Math.round(t.median_minutes_between_tows) + ' min' : '—'} · anomalii: ${t.tows_anomalies ?? 0}</p>
             ${open ? `<h3 class="mt-4 mb-2 text-sm font-bold text-secondary">Sănii încă afară</h3><div class="space-y-1">${open}</div>` : ''}
             ${gaps ? `<h3 class="mt-4 mb-1 text-sm font-bold text-secondary">Pauze suspecte între tractări (posibile scanări uitate)</h3><ul class="text-sm list-disc list-inside text-muted">${gaps}</ul>` : ''}
             ${anomalies ? `<h3 class="mt-4 mb-1 text-sm font-bold text-secondary">Scanări netaxate</h3><ul class="text-sm list-disc list-inside text-muted">${anomalies}</ul>` : ''}
@@ -399,6 +463,8 @@ $scriptsExtra = <<<'JS'
         document.querySelectorAll('#sn-modes button').forEach(b => b.addEventListener('click', () => { if (!b.disabled) setMode(b.dataset.mode); }));
         $('sn-save-members').addEventListener('click', saveMembers);
         $('sn-save-rules').addEventListener('click', saveRules);
+        $('sn-save-contract').addEventListener('click', saveContract);
+        renderContract();
         $('sn-bootstrap').addEventListener('click', bootstrapProducts);
         document.querySelectorAll('#sn-sled-kind button').forEach(b => b.addEventListener('click', () => { sledsTest = b.dataset.test === '1'; loadSleds(); }));
         $('sn-sled-add').addEventListener('click', addSleds);

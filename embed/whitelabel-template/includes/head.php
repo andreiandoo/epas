@@ -11,7 +11,7 @@ $ac = ACCENT_COLOR ?: '#D4A843';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= htmlspecialchars($pageTitle ?? ORG_NAME) ?></title>
+<title><?= htmlspecialchars($pageTitle ?? (HOME_TITLE ?: 'Bilete')) ?></title>
 
 <?php if (defined('TRACKING_GTM_ID') && TRACKING_GTM_ID): ?>
 <!-- Google Tag Manager -->

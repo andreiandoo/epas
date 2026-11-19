@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
-$pageTitle = ORG_NAME . ' — Bilete';
+$pageTitle = HOME_TITLE ?: 'Bilete';
 
 $orgData = api_cached('wl_org_' . ORG_SLUG, function () {
     return api_get('/marketplace-events/organizers/' . urlencode(ORG_SLUG));

@@ -19,7 +19,7 @@ $commMode = $eventData['data']['commission_mode'] ?? 'included';
 $commRate = (float) ($eventData['data']['commission_rate'] ?? 5);
 $commVatRate = (float) ($eventData['data']['commission_vat_rate'] ?? 0);
 
-$pageTitle = ($ev['name'] ?? 'Eveniment') . ' — ' . ORG_NAME;
+$pageTitle = ($ev['name'] ?? 'Eveniment') . ' — Bilete';
 $coverUrl = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $ev['poster_url'] ?? '';
 $description = $ev['description'] ?? '';
 $ticketTerms = $ev['ticket_terms'] ?? '';

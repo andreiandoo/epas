@@ -56,7 +56,7 @@ $scriptsExtra = <<<'JS'
     const hhmm = (d) => d ? new Date(d).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) : '—';
     const DAMAGE = { small: 'mică', medium: 'medie', large: 'mare' };
     const RENTAL_STATUS = { active: 'Nereturnată', pending_sync: 'Așteaptă sincronizarea', closed: 'Returnată', lost: 'Pierdută' };
-    const CHARGE_LABELS = { rent: 'Chirie sanie', tow: 'Tractare', damage_small: 'Avarie mică', damage_medium: 'Avarie medie', damage_large: 'Avarie mare', lost: 'Sanie pierdută', parking_car: 'Parcare auto (interval)', parking_bus: 'Parcare autobuz (interval)' };
+    const CHARGE_LABELS = { rent: 'Chirie sanie', cycle_weekday: 'Cicluri sanie peste cele plătite (L–V)', cycle_weekend: 'Cicluri sanie peste cele plătite (weekend)', tow: 'Tractare', damage_small: 'Avarie mică', damage_medium: 'Avarie medie', damage_large: 'Avarie mare', lost: 'Sanie pierdută', parking_car: 'Parcare auto (interval)', parking_bus: 'Parcare autobuz (interval)' };
 
     let eventId = null;
     let mode = 'off';
@@ -122,9 +122,13 @@ $scriptsExtra = <<<'JS'
         const pk = d.parking || {};
 
         const rentals = (d.rentals || []).map(r => {
-            const a = r.amounts || {};
+            const a = r.amounts || r.estimate || {};
             const parts = [];
             if (a.rent !== undefined) parts.push(`chirie ${money(a.rent)}`);
+            if (a.cycles_used !== undefined) {
+                const m = a.minutes || 0;
+                parts.push(`${Math.floor(m / 60)} h ${m % 60} min = ${a.cycles_used} ${a.cycles_used === 1 ? 'ciclu' : 'cicluri'} (${a.day_type === 'weekend' ? 'weekend' : 'L–V'}, ${money(a.cycle_unit)})`);
+            }
             if (a.tows_count !== undefined) parts.push(`${a.tows_count} tractări (${a.tows_included} incluse, ${a.tows_paid} × ${money(a.tow_unit)})`);
             if (a.damage) parts.push(`avarie ${DAMAGE[a.damage_level] || ''} ${money(a.damage)}`);
             if (a.lost) parts.push(`sanie pierdută ${money(a.lost)}`);
@@ -135,10 +139,20 @@ $scriptsExtra = <<<'JS'
                     <p class="text-xs text-muted">${hhmm(r.started_at)} → ${hhmm(r.returned_at)}${parts.length ? ' · ' + parts.join(' · ') : ''}</p>
                     ${r.has_photo ? `<button type="button" data-photo="${r.id}" class="mt-1 text-xs font-semibold underline text-primary">${ambIcon('camera', 'w-3.5 h-3.5')} Vezi poza avariei</button>` : ''}
                 </div>
-                <p class="text-lg font-bold tabular-nums text-secondary">${done ? money(a.total) : '—'}</p>
+                <p class="text-lg font-bold tabular-nums text-secondary" title="Valoarea întreagă, înainte de ce s-a plătit la intrare">${done ? money(a.total) : '—'}</p>
             </div>`;
         }).join('');
 
+        const pre = d.prepaid || {};
+        const prepaidHtml = (pre.sled_cycles || 0) > 0
+            ? `<div class="flex flex-wrap justify-between gap-2 p-3 text-sm border rounded-xl border-sky-200 bg-sky-50">
+                <span>${ambIcon('circle-check', 'w-4 h-4')} Plătit la intrare: <strong>${pre.sled_cycles} sanie-cicluri</strong> (${money(pre.amount)})</span>
+                <span class="text-muted">folosite de săniile returnate: ${pre.used_by_returned || 0}${pre.left > 0 ? ` · ${pre.left} nefolosite (nu se returnează)` : ''}</span></div>`
+            : '';
+        const con = d.contract || {};
+        const contractHtml = con.signed
+            ? `<p class="text-xs text-emerald-700">${ambIcon('scroll-text', 'w-3.5 h-3.5')} Contract semnat${con.signer_name ? ' de ' + esc(con.signer_name) : ''}</p>`
+            : (con.required ? `<p class="text-xs font-semibold text-rose-700">${ambIcon('scroll-text', 'w-3.5 h-3.5')} Fără contract semnat</p>` : '');
         const tickets = (d.tickets || []).map(t => `<span class="inline-block px-2 py-0.5 mr-1 mb-1 text-xs rounded bg-surface border border-border">${esc(t.type || 'Bilet')} · ${esc(t.code)}</span>`).join('');
         const blockers = (d.blockers || []).filter(b => !settled || !/achitat/i.test(b));
 
@@ -159,6 +173,8 @@ $scriptsExtra = <<<'JS'
                 <ul class="mt-1 text-sm list-disc list-inside text-rose-900">${blockers.map(b => `<li>${esc(b)}</li>`).join('')}</ul>
                 <p class="mt-2 text-xs text-rose-800">NU valida tichetul în Mohos.</p>
                 <button type="button" id="sc-reload" class="mt-3 px-3 py-1.5 text-xs font-semibold bg-white border rounded-lg border-rose-300">${ambIcon('refresh-cw', 'w-3.5 h-3.5')} Verifică din nou</button></div>`;
+        } else if (!((d.charge && d.charge.lines) || []).length) {
+            footer = `<button type="button" data-pay="cash" class="w-full px-4 py-4 text-lg font-extrabold text-white rounded-2xl bg-emerald-600 hover:bg-emerald-700">${ambIcon('circle-check', 'w-6 h-6')} Nimic de plată: închide contul</button>`;
         } else {
             footer = `<div class="grid grid-cols-2 gap-3">
                 <button type="button" data-pay="cash" class="px-4 py-4 text-lg font-extrabold text-white rounded-2xl bg-emerald-600 hover:bg-emerald-700">${ambIcon('banknote', 'w-6 h-6')} Cash</button>
@@ -180,10 +196,12 @@ $scriptsExtra = <<<'JS'
                 </div>
             </div>
 
-            <div>${tickets || '<span class="text-xs text-muted">Niciun bilet de acces legat.</span>'}</div>
+            <div>${tickets || '<span class="text-xs text-muted">Niciun bilet de acces legat.</span>'}${contractHtml}</div>
+
+            ${prepaidHtml}
 
             <div class="space-y-2">${rentals || '<p class="text-sm text-muted">Nicio sanie pe acest tichet.</p>'}
-                <div class="flex justify-between px-3 text-sm"><span class="text-muted">Total sănii</span><strong class="tabular-nums">${money(d.rentals_total)}</strong></div>
+                <div class="flex justify-between px-3 text-sm"><span class="text-muted">Sănii de plată acum (după plata de la intrare)</span><strong class="tabular-nums">${money(d.rentals_total)}</strong></div>
             </div>
 
             <div class="p-3 border rounded-xl border-border">
@@ -252,12 +270,13 @@ $scriptsExtra = <<<'JS'
         const d = current || {};
         if (!d.tab) return;
         const label = method === 'cash' ? 'cash' : 'card';
-        if (!confirm(`Încasezi ${money(d.total)} ${label}?`)) return;
+        const zero = !((d.charge && d.charge.lines) || []).length;
+        if (!confirm(zero ? 'Contul nu are nimic de plată. Îl închizi?' : `Încasezi ${money(d.total)} ${label}?`)) return;
         try {
             const res = await AmbiletAPI.post(base() + `/tabs/${d.tab.id}/settle`, { vehicle_type: vehicleType, payment_method: method, expected_total: d.total });
             current = Object.assign({ found: true }, res.data || {});
             render();
-            if (current.tab && !current.tab.settled_simulated) printReceipt(current);
+            if (current.tab && !current.tab.settled_simulated && !zero) printReceipt(current);
         } catch (e) {
             showError(e?.message || 'Încasarea a eșuat');
             lookup(lastQuery);
