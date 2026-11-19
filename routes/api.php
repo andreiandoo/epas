@@ -2326,6 +2326,15 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             Route::post('/tow/shifts/{shift}/unlock', [$c, 'towShiftUnlock'])->whereNumber('shift')->name($n.'tow.shifts.unlock');
             Route::post('/tow/shifts/{shift}/close', [$c, 'towShiftClose'])->whereNumber('shift')->name($n.'tow.shifts.close');
             Route::get('/reports/overview', [$c, 'reportsOverview'])->name($n.'reports.overview');
+            Route::get('/prepay/quote', [$c, 'prepayQuote'])->name($n.'prepay.quote');
+            Route::post('/prepay', [$c, 'prepay'])->name($n.'prepay');
+            Route::post('/contracts', [$c, 'contractsStore'])->name($n.'contracts.store');
+            Route::get('/contracts/pending', [$c, 'contractsPending'])->name($n.'contracts.pending');
+            Route::get('/contracts/{contract}', [$c, 'contractsShow'])->whereNumber('contract')->name($n.'contracts.show');
+            Route::post('/contracts/{contract}/sign', [$c, 'contractsSign'])->whereNumber('contract')->name($n.'contracts.sign');
+            Route::post('/contracts/{contract}/paper', [$c, 'contractsPaper'])->whereNumber('contract')->name($n.'contracts.paper');
+            Route::post('/contracts/{contract}/void', [$c, 'contractsVoid'])->whereNumber('contract')->name($n.'contracts.void');
+            Route::get('/contracts/{contract}/pdf', [$c, 'contractsPdf'])->whereNumber('contract')->name($n.'contracts.pdf');
         });
 
         // F11 — Active shift pentru rolul curent

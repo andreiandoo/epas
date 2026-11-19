@@ -469,6 +469,10 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure-sanius-casa/?$ organizer/leisure-sanius-casa.php [L]
 
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/leisure-sanius-semnatura/?$ organizer/leisure-sanius-semnatura.php [L]
+
 # Pagina deconturi leisure (Sf. Ana etc.) — lista de payouts + PDF + breakdown
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -477,7 +481,7 @@ RewriteRule ^organizator/deconturi/?$ organizer/leisure-deconturi.php [L]
 # Handle organizer public page - /organizator/slug (excludes login, register, dashboard routes)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|semneaza-contract|facturare|echipa|sold|panou|panou-nou|vanzari|widget-uri|widgets|invitatii|suport|leisure|leisure-event|leisure-dashboard|leisure-participants|leisure-orders|leisure-orders-history|leisure-invoices|leisure-sessions|leisure-sales|leisure-pos|leisure-team|leisure-raport|leisure-rentals|leisure-boats|leisure-sanius|leisure-sanius-casa|deconturi|facturi-clienti)/?$
+RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|semneaza-contract|facturare|echipa|sold|panou|panou-nou|vanzari|widget-uri|widgets|invitatii|suport|leisure|leisure-event|leisure-dashboard|leisure-participants|leisure-orders|leisure-orders-history|leisure-invoices|leisure-sessions|leisure-sales|leisure-pos|leisure-team|leisure-raport|leisure-rentals|leisure-boats|leisure-sanius|leisure-sanius-casa|leisure-sanius-semnatura|deconturi|facturi-clienti)/?$
 RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /organizer/slug to /organizator/slug

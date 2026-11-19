@@ -166,6 +166,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- F6: Banner gating bilete acces -->
                 <div id="lv-access-banner" class="hidden mx-5 my-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900"></div>
 
+                <!-- Sanius (Sf. Ana): sănii plătite la intrare, pe tichetul de parcare. Apare doar când circuitul e pornit. -->
+                <details id="lv-sanius-section" class="hidden px-5 py-3 border-t border-border text-sm" open>
+                    <summary class="cursor-pointer font-medium text-secondary"><?= amb_icon('snowflake', 'w-4 h-4') ?> Sanius · sănii</summary>
+                    <div id="lv-sanius-body" class="mt-2"></div>
+                </details>
+
                 <!-- Date client opțional -->
                 <details id="lv-customer-section" class="px-5 py-3 border-t border-border text-sm">
                     <summary class="cursor-pointer font-medium text-secondary">Date client (opțional)</summary>
@@ -284,6 +290,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     </main>
 </div>
 <script src="<?= asset('assets/js/pos-printer.js') ?>"></script>
+<script src="<?= asset('assets/js/pos-sanius.js') ?>"></script>
 <script>
 (function(){
     const $ = (id) => document.getElementById(id);
@@ -581,7 +588,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Buton "Golește coș" — vizibil doar cand sunt produse in cos
         const clearBtn = $('lv-cart-clear');
         if (clearBtn) clearBtn.hidden = entries.length === 0;
-        if (!entries.length) {
+        const snLine = (window.PosSanius && PosSanius.active()) ? PosSanius.cartLine() : null;
+        if (!entries.length && !snLine) {
             wrap.innerHTML = '<p class="text-sm text-muted text-center py-6">Coș gol. Apasă pe un bilet ca să-l adaugi.</p>';
             $('lv-subtotal').textContent = '0.00 RON';
             $('lv-total').textContent = '0.00 RON';
@@ -690,6 +698,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 ${addonsRows}
             </div>`;
         }).join('');
+        if (snLine) {
+            wrap.insertAdjacentHTML('beforeend', snLine.html);
+            subtotal += snLine.subtotal;
+            commissionTotal += snLine.commission;
+            wrap.querySelector('[data-sn-clear]')?.addEventListener('click', () => PosSanius.clearSleds());
+        }
         // Marketplace VAT on the on-top commission, rounded once as the server does
         const commissionVatRate = parseFloat(commission.vat_rate || 0);
         const commissionVat = (commissionVatRate > 0 && commissionTotal > 0)
@@ -1401,6 +1415,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 return;
             }
         }
+        const withSanius = !!(window.PosSanius && PosSanius.active());
+        if (withSanius) {
+            const snErr = PosSanius.validate(payment);
+            if (snErr) { alert(snErr); return; }
+        }
         $('lv-checkout').disabled = true;
         $('lv-checkout').textContent = 'Procesează...';
         $('lv-error').classList.add('hidden');
@@ -1447,8 +1466,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         };
 
         try {
-            const res = await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/pos-sale`, body);
+            // Cu sănii în coș, vânzarea trece prin circuitul Sanius (tot posSale, un singur bon).
+            const res = withSanius
+                ? await PosSanius.checkout(body)
+                : await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/pos-sale`, body);
             const data = res.data || {};
+            if (withSanius && !data.order) {
+                // Modul Test fără alte produse în coș: săniile sunt pe tichet, nu există bon.
+                cart = {};
+                renderCart();
+                renderGrid();
+                return;
+            }
             // „Via email": clientul primește totul pe email — la casă nu se
             // tipărește nimic (nici bilete, nici factură, nici chitanță).
             const viaEmail = data?.order?.payment_method === 'invoice';
@@ -1514,7 +1543,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-error').classList.remove('hidden');
         } finally {
             $('lv-checkout').textContent = 'Finalizează';
-            $('lv-checkout').disabled = Object.keys(cart).length === 0;
+            $('lv-checkout').disabled = Object.keys(cart).length === 0 && !(window.PosSanius && PosSanius.active());
         }
     }
 
@@ -1790,6 +1819,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         renderCart();
         selectPayment('cash');
         selectLocale('ro');
+        if (window.PosSanius) {
+            PosSanius.init({ eventId: currentEventId, commissionPerTicket, onChange: () => renderCart() });
+        }
 
         document.querySelectorAll('.lv-pay-btn').forEach(b => b.addEventListener('click', () => selectPayment(b.dataset.pay)));
         document.querySelectorAll('.lv-lang-btn').forEach(b => b.addEventListener('click', () => selectLocale(b.dataset.lang)));

@@ -34,6 +34,16 @@ class SaniusTab extends Model
         return $this->hasMany(SaniusTabTicket::class, 'tab_id');
     }
 
+    public function prepaids(): HasMany
+    {
+        return $this->hasMany(SaniusPrepaid::class, 'tab_id');
+    }
+
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(SaniusContract::class, 'tab_id');
+    }
+
     public function isOpen(): bool
     {
         return $this->status === 'open';

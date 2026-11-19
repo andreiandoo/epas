@@ -7,21 +7,27 @@ use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerTeamMember;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Sanius\SaniusContract;
+use App\Models\Sanius\SaniusPrepaid;
 use App\Models\Sanius\SaniusRental;
 use App\Models\Sanius\SaniusSetting;
 use App\Models\Sanius\SaniusSled;
 use App\Models\Sanius\SaniusTab;
 use App\Models\Sanius\SaniusTow;
 use App\Models\Sanius\SaniusTowShift;
+use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Services\Sanius\ParkingTicketCode;
 use App\Services\Sanius\SaniusCircuit;
 use App\Services\Sanius\SaniusException;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Circuitul Sanius (Sf. Ana): sanie inchiriata pe tichetul de parcare, tractari
@@ -132,6 +138,8 @@ class SaniusController extends BaseController
             'enabled' => ! $s->isOff() && $appRole !== null,
             'mode' => $s->mode ?: 'off',
             'role' => $appRole,
+            // Rolul pe web (contul principal = owner); leisure-pos arata blocul Sanius dupa el.
+            'web_role' => $ctx['role'],
             'is_test' => $s->isTestMode(),
             'ping_timeout_seconds' => (int) ($s->ping_timeout_seconds ?: 30),
         ]);
@@ -168,6 +176,18 @@ class SaniusController extends BaseController
             'parking.free_minutes_with_access' => 'nullable|integer|min:0|max:1440',
             'parking.unit_minutes' => 'nullable|integer|min:1|max:1440',
             'ping_timeout_seconds' => 'nullable|integer|min:10|max:300',
+            'rental' => 'nullable|array',
+            'rental.cycle_minutes' => 'nullable|integer|min:5|max:1440',
+            'rental.tows_per_cycle' => 'nullable|integer|min:0|max:100',
+            'rental.grace_minutes' => 'nullable|integer|min:0|max:120',
+            'rental.weekend_extra_dates' => 'nullable|array|max:120',
+            'rental.weekend_extra_dates.*' => 'nullable|date_format:Y-m-d',
+            'contract' => 'nullable|array',
+            'contract.required' => 'nullable|boolean',
+            'contract.title' => 'nullable|string|max:160',
+            'contract.body' => 'nullable|string|max:20000',
+            'contract.stations' => 'nullable|array|max:20',
+            'contract.stations.*' => 'nullable|string|max:40',
         ]);
 
         $s = $ctx['settings'];
@@ -207,6 +227,45 @@ class SaniusController extends BaseController
         }
         if (array_key_exists('parking', $v)) {
             $s->parking = array_intersect_key((array) $v['parking'], SaniusSetting::PARKING_DEFAULTS);
+        }
+        if (array_key_exists('rental', $v)) {
+            $r = (array) $v['rental'];
+            $own = (array) $s->rental;
+            foreach (array_keys(SaniusSetting::RENTAL_DEFAULTS) as $k) {
+                if (array_key_exists($k, $r)) {
+                    $own[$k] = $r[$k] === null || $r[$k] === '' ? null : (int) $r[$k];
+                }
+            }
+            if (array_key_exists('weekend_extra_dates', $r)) {
+                $own['weekend_extra_dates'] = SaniusSetting::cleanDates($r['weekend_extra_dates'] ?? []);
+            }
+            $s->rental = $own;
+        }
+        if (array_key_exists('contract', $v)) {
+            $c = (array) $v['contract'];
+            $before = $s->contractRules();
+            $own = (array) $s->contract;
+            if (array_key_exists('required', $c)) {
+                $own['required'] = (bool) $c['required'];
+            }
+            foreach (['title', 'body'] as $k) {
+                if (array_key_exists($k, $c)) {
+                    $own[$k] = trim((string) $c[$k]) ?: null;
+                }
+            }
+            if (array_key_exists('stations', $c)) {
+                $own['stations'] = array_values(array_unique(array_filter(array_map(
+                    fn ($x) => mb_substr(trim((string) $x), 0, 40),
+                    (array) ($c['stations'] ?? [])
+                ))));
+            }
+            $s->contract = $own;
+            $after = $s->contractRules();
+            // Versiunea textului creste la fiecare schimbare, ca fiecare contract semnat sa stie ce text a vazut.
+            if ($after['title'] !== $before['title'] || $after['body'] !== $before['body']) {
+                $own['version'] = $before['version'] + 1;
+                $s->contract = $own;
+            }
         }
 
         if (! empty($v['mode']) && $v['mode'] !== $s->mode) {
@@ -271,6 +330,10 @@ class SaniusController extends BaseController
             'products' => $products,
             'missing_products' => $circuit->missingProducts(),
             'parking' => $s->parkingRules(),
+            'rental' => $s->rentalRules(),
+            'contract' => $s->contractRules(),
+            'contract_variables' => ['{nume}', '{act_tip}', '{act_serie}', '{act_numar}', '{telefon}', '{adresa}', '{data}', '{ora}', '{tichet_parcare}', '{sanii}', '{organizator}'],
+            'today_day_type' => $circuit->dayType(),
             'ping_timeout_seconds' => (int) ($s->ping_timeout_seconds ?: 30),
         ];
     }
@@ -290,7 +353,8 @@ class SaniusController extends BaseController
         $eventId = $ctx['event']->id;
 
         $defs = [
-            'rent' => ['Sanius · Chirie sanie', 'rental', false],
+            'cycle_weekday' => ['Sanius · Ciclu sanie (luni–vineri)', 'rental', false],
+            'cycle_weekend' => ['Sanius · Ciclu sanie (weekend și sărbători)', 'rental', false],
             'tow' => ['Sanius · Tractare', 'rental', false],
             'damage_small' => ['Sanius · Avarie mică', 'rental', false],
             'damage_medium' => ['Sanius · Avarie medie', 'rental', false],
@@ -613,7 +677,7 @@ class SaniusController extends BaseController
             $rental = $circuit->requestReturn($rental, $v['condition'], $v['damage_level'] ?? null, $photoPath, $this->memberOrNull($ctx));
         } catch (SaniusException $e) {
             if ($photoPath) {
-                \Illuminate\Support\Facades\Storage::disk('local')->delete($photoPath);
+                Storage::disk('local')->delete($photoPath);
             }
 
             return $this->error($e->getMessage(), 422);
@@ -624,7 +688,7 @@ class SaniusController extends BaseController
         return $this->success(
             ['rental' => $this->presentRental($rental)],
             $closed
-                ? 'Sanie primită. De plată la casierie: '.number_format((float) ($rental->amounts['total'] ?? 0), 2, ',', '.').' lei.'
+                ? 'Sanie primită: '.$this->rentalLine($rental).'. Restul se plătește la casierie.'
                 : 'Sanie primită. Se așteaptă sincronizarea mașinii de tractare; suma apare automat.'
         );
     }
@@ -703,9 +767,23 @@ class SaniusController extends BaseController
             'tows_count' => $r->status === 'closed' || $r->status === 'lost'
                 ? $r->tows_count
                 : SaniusTow::where('rental_id', $r->id)->where('status', 'counted')->count(),
+            'day_type' => $r->day_type,
+            'minutes' => $r->duration_minutes,
+            'cycles_used' => $r->cycles_used,
             'amounts' => $r->amounts,
             'is_test' => $r->is_test,
         ];
+    }
+
+    /** „1 h 25 min, 2 cicluri, 5 tractări (2 incluse)” pentru mesajele ghiseului. */
+    private function rentalLine(SaniusRental $r): string
+    {
+        $m = (int) ($r->duration_minutes ?? 0);
+        $time = $m >= 60 ? intdiv($m, 60).' h '.($m % 60).' min' : $m.' min';
+        $cycles = (int) ($r->cycles_used ?? 1);
+
+        return $time.', '.$cycles.' '.($cycles === 1 ? 'ciclu' : 'cicluri').', '
+            .(int) $r->tows_count.' tractări ('.(int) $r->tows_included.' incluse)';
     }
 
     private function findTab(array $ctx, int $id): ?SaniusTab
@@ -1049,7 +1127,23 @@ class SaniusController extends BaseController
                 }
                 $charge = $summary['charge'];
                 if (empty($charge['lines'])) {
-                    throw new SaniusException('Contul nu are nimic de încasat.');
+                    // Totul platit la intrare, fara depasiri si fara parcare: se inchide cu 0 lei.
+                    $locked->update([
+                        'status' => 'settled',
+                        'vehicle_type' => $vehicleType,
+                        'settled_at' => Carbon::now(),
+                        'settled_by_member_id' => $this->memberOrNull($ctx),
+                        'settled_simulated' => false,
+                        'settlement' => [
+                            'payment_method' => null,
+                            'rentals_total' => 0,
+                            'parking' => $summary['parking'],
+                            'charge' => $charge,
+                            'total' => 0,
+                        ],
+                    ]);
+
+                    return ['tab' => $locked->fresh(), 'sale' => null];
                 }
                 // Parcarea poate trece in intervalul urmator intre afisare si plata.
                 if ($expectedTotal !== null && abs($expectedTotal - (float) $charge['total']) > 0.009) {
@@ -1074,7 +1168,7 @@ class SaniusController extends BaseController
 
                 try {
                     $response = app(LeisureController::class)->posSale($sub, $eventId);
-                } catch (\Illuminate\Validation\ValidationException $e) {
+                } catch (ValidationException $e) {
                     throw new SaniusException(collect($e->errors())->flatten()->first() ?: 'Date invalide pentru vânzare.');
                 }
                 $payload = $response->getData(true);
@@ -1121,6 +1215,10 @@ class SaniusController extends BaseController
             return $this->error($e->getMessage(), 422);
         }
 
+        if ($result['sale'] === null) {
+            return $this->success($circuit->tabSummary($result['tab']), 'Nimic de plată. Contul e închis.');
+        }
+
         return $this->success(array_merge(
             $circuit->tabSummary($result['tab']),
             ['sale' => [
@@ -1129,6 +1227,489 @@ class SaniusController extends BaseController
                 'issuer' => $result['sale']['issuer'] ?? null,
             ]]
         ), 'Încasat. Poți valida tichetul în Mohos.');
+    }
+
+    // ==================================================================
+    // Plata la intrare (casierie, leisure-pos)
+    // ==================================================================
+
+    /** GET .../sanius/prepay/quote?sleds=&cycles= — pretul ciclului azi, pentru blocul din leisure-pos. */
+    public function prepayQuote(Request $request, int $event): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier']);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $v = $request->validate([
+            'sleds' => 'nullable|integer|min:0|max:50',
+            'cycles' => 'nullable|integer|min:0|max:24',
+        ]);
+        $circuit = $this->circuit($ctx);
+        $q = $circuit->prepayQuote((int) ($v['sleds'] ?? 1), (int) ($v['cycles'] ?? 1));
+        $q['available'] = (bool) $q['ticket_type_id'] && TicketType::where('id', $q['ticket_type_id'])->where('event_id', $ctx['event']->id)->exists();
+        $q['mode'] = $ctx['settings']->mode;
+        $q['is_test'] = $circuit->isTest();
+        $q['contract'] = [
+            'required' => $ctx['settings']->contractRules()['required'],
+            'stations' => $ctx['settings']->contractRules()['stations'],
+        ];
+
+        return $this->success($q);
+    }
+
+    /**
+     * POST .../sanius/prepay { parking_code, sleds, cycles, expected_unit_price?, sale: {corpul posSale} }
+     *
+     * Biletele din cos + ciclurile de sanie intr-o singura vanzare posSale (un bon).
+     * Ciclurile se trec pe contul tichetului de parcare ca si credit, iar biletele de
+     * acces vandute se leaga de cont. In modul Test biletele se vand normal, dar
+     * ciclurile se trec pe cont fara sa fie incasate.
+     */
+    public function prepay(Request $request, int $event): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier']);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $v = $request->validate([
+            'parking_code' => 'required|string|max:40',
+            'sleds' => 'required|integer|min:1|max:50',
+            'cycles' => 'required|integer|min:1|max:24',
+            'expected_unit_price' => 'nullable|numeric|min:0',
+            'sale' => 'required|array',
+            'sale.items' => 'nullable|array|max:48',
+            'sale.items.*.ticket_type_id' => 'required|integer',
+            'sale.items.*.qty' => 'required|integer|min:1|max:100',
+            'sale.payment_method' => 'required|in:cash,card',
+            'sale.date' => 'nullable|date',
+        ]);
+
+        $parsed = ParkingTicketCode::parse($v['parking_code']);
+        if (! $parsed) {
+            return $this->error('Nu e un tichet de parcare valid (cod de 15 cifre).', 422);
+        }
+        if (! ParkingTicketCode::isFromToday($parsed['entry_at'])) {
+            return $this->error('Tichetul de parcare nu este din ziua de azi.', 422);
+        }
+        $today = Carbon::now(ParkingTicketCode::TZ)->toDateString();
+        if (! empty($v['sale']['date']) && Carbon::parse($v['sale']['date'])->toDateString() !== $today) {
+            return $this->error('Săniile se plătesc doar pentru ziua de azi. Schimbă data vizitei pe azi sau scoate săniile din coș.', 422);
+        }
+
+        $eventId = $ctx['event']->id;
+        $circuit = $this->circuit($ctx);
+        $quote = $circuit->prepayQuote((int) $v['sleds'], (int) $v['cycles']);
+        if (! $quote['ticket_type_id'] || ! TicketType::where('id', $quote['ticket_type_id'])->where('event_id', $eventId)->exists()) {
+            return $this->error('Lipsește produsul pentru ciclul de sanie ('.($quote['day_type'] === 'weekend' ? 'weekend' : 'luni–vineri').'). Generează-l din setările Sanius.', 422);
+        }
+        if ($quote['unit_price'] <= 0) {
+            return $this->error('Ciclul de sanie nu are preț. Setează prețul produsului înainte de vânzare.', 422);
+        }
+        if (isset($v['expected_unit_price']) && abs((float) $v['expected_unit_price'] - $quote['unit_price']) > 0.009) {
+            return $this->error('Prețul ciclului s-a schimbat: acum e '.number_format($quote['unit_price'], 2, ',', '.').' lei. Nu s-a încasat nimic; verifică și încearcă din nou.', 422);
+        }
+
+        // Liniile intregi din cerere (variante, ore, extra-uri); posSale le valideaza mai departe.
+        $saleItems = array_values(array_filter((array) $request->input('sale.items', []), 'is_array'));
+        $cycleIds = array_filter([$circuit->settings->productId('cycle_weekday'), $circuit->settings->productId('cycle_weekend')]);
+        $types = TicketType::whereIn('id', collect($saleItems)->pluck('ticket_type_id')->map(fn ($id) => (int) $id))
+            ->where('event_id', $eventId)->get()->keyBy('id');
+        $accessInCart = false;
+        foreach ($saleItems as $row) {
+            if (in_array((int) $row['ticket_type_id'], $cycleIds, true)) {
+                return $this->error('Ciclurile de sanie se adaugă doar din blocul Sanius.', 422);
+            }
+            $tt = $types->get((int) $row['ticket_type_id']);
+            if ($tt && in_array($tt->effective_service_category ?? 'access', ['access', 'package'], true)) {
+                $accessInCart = true;
+            }
+        }
+
+        $memberId = $this->memberOrNull($ctx);
+        $tab = $circuit->openTab($parsed, $memberId);
+        if (! $accessInCart && ! $circuit->tabHasAccessTicket($tab)) {
+            return $this->error('Fără bilet de acces nu se închiriază sănii. Adaugă biletele de acces în coș sau leagă biletul cumpărat online de tichetul de parcare.', 422);
+        }
+
+        $live = ! $circuit->isTest();
+        $items = $saleItems;
+        if ($live) {
+            $n = $quote['sled_cycles'];
+            while ($n > 0) {
+                $chunk = min(100, $n);
+                $items[] = ['ticket_type_id' => $quote['ticket_type_id'], 'qty' => $chunk];
+                $n -= $chunk;
+            }
+        }
+        if (count($items) > 50) {
+            return $this->error('Prea multe linii în coș.', 422);
+        }
+
+        try {
+            $result = DB::transaction(function () use ($request, $v, $items, $live, $quote, $circuit, $tab, $memberId, $eventId) {
+                $locked = SaniusTab::whereKey($tab->id)->lockForUpdate()->first();
+                if (! $locked || ! $locked->isOpen()) {
+                    throw new SaniusException('Contul acestui tichet a fost deja închis la ieșire. Nu s-a încasat nimic.');
+                }
+                $payload = null;
+                $orderId = null;
+                if ($items) {
+                    $body = (array) $request->input('sale', []);
+                    $body['items'] = $items;
+                    $sub = Request::create($request->getUri(), 'POST', $body);
+                    $sub->setUserResolver(fn () => $request->user());
+                    if ($live) {
+                        $sub->attributes->set('sanius_settle_ticket_type_ids', [(int) $quote['ticket_type_id']]);
+                    }
+                    try {
+                        $response = app(LeisureController::class)->posSale($sub, $eventId);
+                    } catch (ValidationException $e) {
+                        throw new SaniusException(collect($e->errors())->flatten()->first() ?: 'Date invalide pentru vânzare.');
+                    }
+                    $payload = $response->getData(true);
+                    if (! $response->isSuccessful() || empty($payload['success'])) {
+                        throw new SaniusException($payload['message'] ?? 'Vânzarea POS a eșuat.');
+                    }
+                    $orderId = (int) ($payload['data']['order']['id'] ?? 0) ?: null;
+
+                    if ($live) {
+                        $lines = OrderItem::where('order_id', $orderId)->where('ticket_type_id', $quote['ticket_type_id'])->get();
+                        $unit = (float) ($lines->first()->unit_price ?? -1);
+                        if ((int) $lines->sum('quantity') !== $quote['sled_cycles'] || abs($unit - $quote['unit_price']) > 0.009) {
+                            throw new SaniusException('Prețul ciclului din comandă diferă de cel afișat. Nu s-a încasat nimic; reîncarcă pagina.');
+                        }
+                    }
+
+                    if ($orderId) {
+                        $first = Ticket::with(['ticketType', 'order'])->where('order_id', $orderId)->get()
+                            ->first(fn ($t) => $circuit->isAccessTicket($t) && $circuit->ticketIsUsable($t));
+                        if ($first) {
+                            $circuit->linkTicketWithOrder($tab, $first, $memberId, 'cashier');
+                        }
+                        $order = Order::find($orderId);
+                        if ($order) {
+                            $meta = is_array($order->meta) ? $order->meta : [];
+                            $meta['sanius_tab_id'] = $tab->id;
+                            $meta['sanius_parking_code'] = $tab->parking_code;
+                            $meta['sanius_prepaid_sled_cycles'] = $live ? $quote['sled_cycles'] : 0;
+                            $order->meta = $meta;
+                            $order->save();
+                        }
+                    }
+                }
+
+                $circuit->recordPrepaid($tab, $quote, $live ? $orderId : null, $v['sale']['payment_method'], ! $live, $memberId);
+
+                return ['payload' => $payload, 'tab' => $tab->fresh()];
+            });
+        } catch (SaniusException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
+
+        $data = $result['payload']['data'] ?? ['order' => null, 'items' => [], 'tickets' => []];
+        if (! empty($data['order']['id']) && ! empty($data['tickets'])) {
+            // Ciclurile sunt credit pe tichetul de parcare, nu bilete: nu le tiparim pe termica.
+            $cycleTicketIds = Ticket::where('order_id', $data['order']['id'])
+                ->where('ticket_type_id', $quote['ticket_type_id'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $data['tickets'] = array_values(array_filter($data['tickets'], fn ($t) => ! in_array((int) ($t['id'] ?? 0), $cycleTicketIds, true)));
+        }
+        $data['sanius'] = $circuit->tabSummary($result['tab']);
+        $data['sanius_prepay'] = [
+            'simulated' => ! $live,
+            'sleds' => $quote['sleds'],
+            'cycles' => $quote['cycles'],
+            'sled_cycles' => $quote['sled_cycles'],
+            'day_type' => $quote['day_type'],
+            'amount' => $quote['subtotal'],
+        ];
+
+        $what = $quote['sleds'].' '.($quote['sleds'] === 1 ? 'sanie' : 'sănii').' × '.$quote['cycles'].' '.($quote['cycles'] === 1 ? 'ciclu' : 'cicluri');
+
+        return $this->success($data, $live
+            ? 'Încasat. '.$what.' trecute pe tichetul de parcare.'
+            : 'TEST: '.$what.' trecute pe tichet fără încasare'.($result['payload'] ? '; biletele din coș s-au vândut normal.' : '.'));
+    }
+
+    // ==================================================================
+    // Contract (semnat pe tableta sau pe hartie)
+    // ==================================================================
+
+    /**
+     * POST .../sanius/contracts { tab_id?|parking_code?, signer_name, doc_type, doc_series?, doc_number, phone?, address?, method: tablet|paper, station? }
+     */
+    public function contractsStore(Request $request, int $event): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier', 'desk']);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $v = $request->validate([
+            'tab_id' => 'nullable|integer',
+            'parking_code' => 'nullable|string|max:40',
+            'signer_name' => 'required|string|max:120',
+            'doc_type' => 'required|in:'.implode(',', SaniusContract::DOC_TYPES),
+            'doc_series' => 'nullable|string|max:12',
+            'doc_number' => 'required|string|max:20',
+            'phone' => 'nullable|string|max:30',
+            'address' => 'nullable|string|max:255',
+            'method' => 'required|in:tablet,paper',
+            'station' => 'nullable|string|max:40',
+        ]);
+        $circuit = $this->circuit($ctx);
+        $tab = null;
+        if (! empty($v['tab_id'])) {
+            $tab = $this->findTab($ctx, (int) $v['tab_id']);
+        } elseif (! empty($v['parking_code'])) {
+            $parsed = ParkingTicketCode::parse($v['parking_code']);
+            if (! $parsed || ! ParkingTicketCode::isFromToday($parsed['entry_at'])) {
+                return $this->error('Tichetul de parcare nu e valid sau nu e din ziua de azi.', 422);
+            }
+            $tab = $circuit->openTab($parsed, $this->memberOrNull($ctx));
+        }
+        if (! $tab || ! $tab->isOpen()) {
+            return $this->error('Scanează întâi tichetul de parcare (contul trebuie să fie deschis).', 422);
+        }
+
+        $rules = $ctx['settings']->contractRules();
+        $station = null;
+        if ($v['method'] === 'tablet') {
+            $station = in_array($v['station'] ?? null, $rules['stations'], true) ? $v['station'] : $rules['stations'][0];
+        }
+        $data = [
+            'signer_name' => trim($v['signer_name']),
+            'doc_type' => $v['doc_type'],
+            'doc_series' => isset($v['doc_series']) ? strtoupper(trim($v['doc_series'])) : null,
+            'doc_number' => strtoupper(trim($v['doc_number'])),
+            'phone' => isset($v['phone']) ? trim($v['phone']) : null,
+            'address' => isset($v['address']) ? trim($v['address']) : null,
+        ];
+        $body = $circuit->renderContractBody($tab, $data);
+
+        $contract = DB::transaction(function () use ($ctx, $tab, $v, $station, $data, $rules, $body, $circuit) {
+            // Un singur contract in asteptare pe cont: cel vechi nesemnat se anuleaza.
+            SaniusContract::where('tab_id', $tab->id)->whereIn('status', ['awaiting_signature', 'awaiting_paper'])->update(['status' => 'void']);
+            // Pe tableta sta un singur contract: ce astepta acolo (alt client) se anuleaza,
+            // ca nimeni sa nu vada sau sa semneze datele altcuiva.
+            if ($station !== null) {
+                SaniusContract::where('event_id', $ctx['event']->id)->where('station', $station)
+                    ->where('status', 'awaiting_signature')->update(['status' => 'void']);
+            }
+
+            return SaniusContract::create(array_merge($data, [
+                'event_id' => $ctx['event']->id,
+                'tab_id' => $tab->id,
+                'status' => $v['method'] === 'paper' ? 'awaiting_paper' : 'awaiting_signature',
+                'station' => $station,
+                'title' => $rules['title'],
+                'body' => $body,
+                'template_version' => $rules['version'],
+                'body_hash' => hash('sha256', $rules['title']."\n".$body),
+                'created_by_member_id' => $this->memberOrNull($ctx),
+                'is_test' => $circuit->isTest(),
+            ]));
+        });
+
+        return $this->success(['contract' => $this->presentContractFull($contract)], $v['method'] === 'paper'
+            ? 'Contract pregătit. Tipărește-l și dă-l clientului să-l semneze.'
+            : 'Contract trimis la tableta „'.$station.'”.');
+    }
+
+    /** GET .../sanius/contracts/pending?station= — tableta de semnat intreaba daca are ceva de semnat. */
+    public function contractsPending(Request $request, int $event): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier', 'desk']);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $v = $request->validate(['station' => 'nullable|string|max:40']);
+        $rules = $ctx['settings']->contractRules();
+        $station = $v['station'] ?? $rules['stations'][0];
+        $c = SaniusContract::where('event_id', $ctx['event']->id)
+            ->where('is_test', $ctx['settings']->isTestMode())
+            ->where('status', 'awaiting_signature')
+            ->where('station', $station)
+            ->where('created_at', '>=', Carbon::now()->subMinutes(30))
+            ->orderByDesc('id')
+            ->first();
+
+        return $this->success([
+            'station' => $station,
+            'stations' => $rules['stations'],
+            'is_test' => $ctx['settings']->isTestMode(),
+            'contract' => $c ? $this->presentContractFull($c) : null,
+        ]);
+    }
+
+    /** GET .../sanius/contracts/{contract} — casiera urmareste semnarea. */
+    public function contractsShow(Request $request, int $event, int $contract): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier', 'desk'], false);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $c = SaniusContract::where('id', $contract)->where('event_id', $ctx['event']->id)->first();
+        if (! $c) {
+            return $this->error('Contractul nu există.', 404);
+        }
+
+        return $this->success(['contract' => $this->presentContractFull($c)]);
+    }
+
+    /** POST .../sanius/contracts/{contract}/sign { signature: data:image/png;base64,..., accepted: true } */
+    public function contractsSign(Request $request, int $event, int $contract): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier', 'desk']);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $v = $request->validate([
+            'signature' => 'required|string|max:700000',
+            'accepted' => 'accepted',
+        ]);
+        if (! preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', $v['signature'], $m)) {
+            return $this->error('Semnătura nu e o imagine validă.', 422);
+        }
+        $png = base64_decode($m[1], true);
+        if ($png === false || strlen($png) < 200 || ! str_starts_with($png, "\x89PNG")) {
+            return $this->error('Semnătura nu e o imagine validă.', 422);
+        }
+
+        $eventId = $ctx['event']->id;
+        try {
+            $c = DB::transaction(function () use ($contract, $eventId, $png, $request) {
+                $c = SaniusContract::where('id', $contract)->where('event_id', $eventId)->lockForUpdate()->first();
+                if (! $c) {
+                    throw new SaniusException('Contractul nu există.');
+                }
+                if ($c->status !== 'awaiting_signature') {
+                    throw new SaniusException($c->isSigned() ? 'Contractul e deja semnat.' : 'Contractul a fost anulat.');
+                }
+                $dir = 'sanius/'.$eventId.'/contracts';
+                $sigPath = $dir.'/'.$c->id.'-semnatura.png';
+                Storage::disk('local')->put($sigPath, $png);
+                $c->forceFill([
+                    'status' => 'signed',
+                    'signature_path' => $sigPath,
+                    'signed_at' => Carbon::now(),
+                    'signed_ip' => $request->ip(),
+                    'signed_device' => mb_substr((string) $request->userAgent(), 0, 160),
+                ])->save();
+                $pdfPath = $dir.'/'.$c->id.'.pdf';
+                Storage::disk('local')->put($pdfPath, $this->contractPdf($c));
+                $c->forceFill(['pdf_path' => $pdfPath])->save();
+
+                return $c;
+            });
+        } catch (SaniusException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
+
+        return $this->success(['contract' => $this->presentContractFull($c)], 'Contract semnat.');
+    }
+
+    /** POST .../sanius/contracts/{contract}/paper — clientul a semnat exemplarul tiparit. */
+    public function contractsPaper(Request $request, int $event, int $contract): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier', 'desk']);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $c = SaniusContract::where('id', $contract)->where('event_id', $ctx['event']->id)->first();
+        if (! $c || ! in_array($c->status, ['awaiting_paper', 'awaiting_signature'], true)) {
+            return $this->error('Contractul nu așteaptă semnătura.', 422);
+        }
+        $c->forceFill([
+            'status' => 'signed_paper',
+            'station' => null,
+            'signed_at' => Carbon::now(),
+            'signed_ip' => $request->ip(),
+            'signed_device' => 'hartie',
+        ])->save();
+
+        return $this->success(['contract' => $this->presentContractFull($c)], 'Contract semnat pe hârtie. Păstrează exemplarul semnat.');
+    }
+
+    /** POST .../sanius/contracts/{contract}/void */
+    public function contractsVoid(Request $request, int $event, int $contract): JsonResponse
+    {
+        $ctx = $this->context($request, $event, ['cashier', 'desk']);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $c = SaniusContract::where('id', $contract)->where('event_id', $ctx['event']->id)->first();
+        if (! $c || $c->status === 'void') {
+            return $this->error('Contractul nu există.', 404);
+        }
+        if ($c->isSigned() && ! in_array($ctx['role'], ['owner', 'manager'], true)) {
+            return $this->error('Un contract semnat îl poate anula doar managerul.', 403);
+        }
+        $c->forceFill(['status' => 'void'])->save();
+
+        return $this->success(['contract' => $this->presentContractFull($c)], 'Contract anulat.');
+    }
+
+    /** GET .../sanius/contracts/{contract}/pdf — semnat (arhivat) sau de tiparit pentru semnatura pe hartie. */
+    public function contractsPdf(Request $request, int $event, int $contract)
+    {
+        $ctx = $this->context($request, $event, ['cashier', 'desk'], false);
+        if ($ctx instanceof JsonResponse) {
+            return $ctx;
+        }
+        $c = SaniusContract::where('id', $contract)->where('event_id', $ctx['event']->id)->first();
+        if (! $c) {
+            return $this->error('Contractul nu există.', 404);
+        }
+        if ($c->pdf_path && Storage::disk('local')->exists($c->pdf_path)) {
+            $pdf = Storage::disk('local')->get($c->pdf_path);
+        } else {
+            $pdf = $this->contractPdf($c);
+        }
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="contract-sanius-'.$c->id.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    private function contractPdf(SaniusContract $c): string
+    {
+        $signature = null;
+        if ($c->signature_path && Storage::disk('local')->exists($c->signature_path)) {
+            $signature = 'data:image/png;base64,'.base64_encode(Storage::disk('local')->get($c->signature_path));
+        }
+        $c->loadMissing('tab');
+
+        return Pdf::loadView('pdf.sanius-contract', [
+            'contract' => $c,
+            'signature' => $signature,
+            'signedAt' => $c->signed_at?->copy()->setTimezone(ParkingTicketCode::TZ),
+            'createdAt' => $c->created_at?->copy()->setTimezone(ParkingTicketCode::TZ),
+        ])->setPaper('a4')->output();
+    }
+
+    private function presentContractFull(SaniusContract $c): array
+    {
+        $c->loadMissing('tab');
+
+        return [
+            'id' => $c->id,
+            'tab_id' => $c->tab_id,
+            'parking_number' => $c->tab?->parking_number ?: $c->tab?->parking_code,
+            'status' => $c->status,
+            'station' => $c->station,
+            'signer_name' => $c->signer_name,
+            'doc_type' => $c->doc_type,
+            'doc_series' => $c->doc_series,
+            'doc_number' => $c->doc_number,
+            'phone' => $c->phone,
+            'address' => $c->address,
+            'title' => $c->title,
+            'body' => $c->body,
+            'template_version' => $c->template_version,
+            'signed_at' => $c->signed_at?->toIso8601String(),
+            'is_test' => $c->is_test,
+        ];
     }
 
     // ==================================================================
@@ -1176,6 +1757,9 @@ class SaniusController extends BaseController
 
         $tabs = SaniusTab::where('event_id', $eventId)->where('is_test', $isTest)
             ->whereBetween('created_at', [$from, $to])->get();
+        $prepaids = SaniusPrepaid::where('event_id', $eventId)->where('is_test', $isTest)->where('status', 'paid')
+            ->whereBetween('created_at', [$from, $to])->get();
+        $finished = $rentals->whereIn('status', ['closed', 'lost']);
 
         return $this->success([
             'date' => $day->toDateString(),
@@ -1192,6 +1776,10 @@ class SaniusController extends BaseController
                 'tows_counted' => $tows->where('status', 'counted')->count(),
                 'tows_anomalies' => $tows->where('status', 'anomaly')->count(),
                 'median_minutes_between_tows' => $median,
+                'prepaid_sled_cycles' => (int) $prepaids->sum('sled_cycles'),
+                'prepaid_amount' => round((float) $prepaids->where('simulated', false)->sum('amount'), 2),
+                'cycles_used' => (int) $finished->sum(fn ($r) => $r->cycles_used ?? 1),
+                'weekend_rentals' => $rentals->where('day_type', 'weekend')->count(),
             ],
             'open_rentals' => $rentals->whereIn('status', ['active', 'pending_sync'])->map(fn ($r) => $this->presentRental($r))->values(),
             'anomalies' => $tows->where('status', 'anomaly')->map(fn ($t) => [

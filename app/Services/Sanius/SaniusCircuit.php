@@ -4,6 +4,9 @@ namespace App\Services\Sanius;
 
 use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
+use App\Models\Order;
+use App\Models\Sanius\SaniusContract;
+use App\Models\Sanius\SaniusPrepaid;
 use App\Models\Sanius\SaniusRental;
 use App\Models\Sanius\SaniusSetting;
 use App\Models\Sanius\SaniusSled;
@@ -73,6 +76,17 @@ class SaniusCircuit
     public function price(string $key): float
     {
         return $this->unitPrice($this->settings->productId($key));
+    }
+
+    /** Produsul ciclului pentru tipul zilei (weekday / weekend). */
+    public static function cycleKey(string $dayType): string
+    {
+        return $dayType === 'weekend' ? 'cycle_weekend' : 'cycle_weekday';
+    }
+
+    public function dayType(?Carbon $at = null): string
+    {
+        return SaniusPricing::dayType($at ?? Carbon::now(), $this->settings->rentalRules()['weekend_extra_dates']);
     }
 
     /** Produsele obligatorii care lipsesc din setari (fara ele nu se poate taxa corect). */
@@ -463,6 +477,9 @@ class SaniusCircuit
             if (! $this->tabHasAccessTicket($tab)) {
                 throw new SaniusException('Leagă întâi biletul de acces de tichetul de parcare.');
             }
+            if ($this->settings->contractRules()['required'] && ! $this->signedContract($tab)) {
+                throw new SaniusException('Contractul nu e semnat. Clientul semnează contractul la casierie înainte să primească sănii.');
+            }
 
             $rental = SaniusRental::create([
                 'event_id' => $this->event->id,
@@ -541,23 +558,43 @@ class SaniusCircuit
         return $closed;
     }
 
-    private function computeAndClose(SaniusRental $rental): void
+    /**
+     * Suma unei inchirieri la valoare intreaga: cicluri incepute pana la $end
+     * (returnare sau acum), tractarile peste cele incluse, avaria.
+     */
+    public function rentalAmounts(SaniusRental $rental, ?Carbon $end = null, ?string $damageLevel = null): array
     {
+        $start = $rental->started_at ?? Carbon::now();
+        $end = $end ?? $rental->returned_at ?? Carbon::now();
+        $minutes = max(0, (int) floor($start->diffInSeconds($end, false) / 60));
+        $dayType = $rental->day_type ?: $this->dayType($start);
         $towsCount = SaniusTow::where('rental_id', $rental->id)->where('status', 'counted')->count();
-        $damageKey = $rental->condition === 'damaged' && $rental->damage_level ? 'damage_'.$rental->damage_level : null;
+        $damageKey = $damageLevel ? 'damage_'.$damageLevel : null;
 
-        $amounts = SaniusPricing::rental(
-            $this->price('rent'),
+        return SaniusPricing::rental(
+            $dayType,
+            $minutes,
+            $this->settings->rentalRules(),
+            $this->price(self::cycleKey($dayType)),
             $this->price('tow'),
             $towsCount,
-            (int) $this->settings->included_tows,
-            $damageKey ? $rental->damage_level : null,
+            $damageLevel,
             $damageKey ? $this->price($damageKey) : 0.0,
         );
+    }
+
+    private function computeAndClose(SaniusRental $rental): void
+    {
+        $damage = $rental->condition === 'damaged' && in_array($rental->damage_level, SaniusRental::DAMAGE_LEVELS, true)
+            ? $rental->damage_level : null;
+        $amounts = $this->rentalAmounts($rental, $rental->returned_at ?? Carbon::now(), $damage);
 
         $rental->update([
             'status' => 'closed',
             'closed_at' => $rental->closed_at ?? Carbon::now(),
+            'day_type' => $amounts['day_type'],
+            'duration_minutes' => $amounts['minutes'],
+            'cycles_used' => $amounts['cycles_used'],
             'tows_count' => $amounts['tows_count'],
             'tows_included' => $amounts['tows_included'],
             'tows_paid' => $amounts['tows_paid'],
@@ -576,13 +613,16 @@ class SaniusCircuit
             if (! $locked || ! in_array($locked->status, ['active', 'pending_sync'], true)) {
                 throw new SaniusException('Închirierea nu mai e deschisă.');
             }
-            $towsCount = SaniusTow::where('rental_id', $locked->id)->where('status', 'counted')->count();
-            $amounts = SaniusPricing::rental($this->price('rent'), $this->price('tow'), $towsCount, (int) $this->settings->included_tows);
+            $now = Carbon::now();
+            $amounts = $this->rentalAmounts($locked, $locked->returned_at ?? $now);
             $amounts['lost'] = round($this->price('lost'), 2);
             $amounts['total'] = round($amounts['total'] + $amounts['lost'], 2);
             $locked->update([
                 'status' => 'lost',
-                'closed_at' => Carbon::now(),
+                'closed_at' => $now,
+                'day_type' => $amounts['day_type'],
+                'duration_minutes' => $amounts['minutes'],
+                'cycles_used' => $amounts['cycles_used'],
                 'tows_count' => $amounts['tows_count'],
                 'tows_included' => $amounts['tows_included'],
                 'tows_paid' => $amounts['tows_paid'],
@@ -608,8 +648,10 @@ class SaniusCircuit
     public function chargeLines(SaniusTab $tab, array $parking): array
     {
         $qty = array_fill_keys(SaniusSetting::PRODUCT_KEYS, 0);
-        foreach ($tab->rentals()->whereIn('status', ['closed', 'lost'])->get() as $r) {
-            $qty['rent']++;
+        $finished = $tab->rentals()->whereIn('status', ['closed', 'lost'])->orderBy('started_at')->orderBy('id')->get();
+        $credit = $this->creditFor($tab, $finished);
+        foreach ($finished as $r) {
+            $qty[self::cycleKey($r->day_type ?: 'weekday')] += (int) ($credit['to_pay'][$r->id] ?? 0);
             $qty['tow'] += (int) $r->tows_paid;
             if ($r->status === 'lost') {
                 $qty['lost']++;
@@ -652,6 +694,7 @@ class SaniusCircuit
 
         return [
             'lines' => $lines,
+            'credit' => ['sled_cycles' => $credit['credit'], 'used' => $credit['credit_used'], 'left' => $credit['credit_left']],
             'subtotal' => $subtotal,
             'commission' => $commission,
             'commission_vat' => $vat,
@@ -660,8 +703,46 @@ class SaniusCircuit
         ];
     }
 
+    /** Sanie-ciclurile platite la intrare pe cont (fara cele anulate). */
+    public function prepaidCycles(SaniusTab $tab): int
+    {
+        return (int) $this->validPrepaids($tab)->sum('sled_cycles');
+    }
+
+    /**
+     * Platile de la intrare care inca valoreaza: o comanda rambursata sau anulata
+     * nu mai da credit. Fara comanda = modul Test (simulat).
+     */
+    public function validPrepaids(SaniusTab $tab)
+    {
+        return $tab->prepaids()->where('status', 'paid')->where(function ($q) {
+            $q->whereNull('order_id')
+                ->orWhereIn('order_id', Order::select('id')->whereIn('status', self::VALID_ORDER_STATUSES));
+        });
+    }
+
+    /**
+     * Cat din ciclurile inchirierilor terminate acopera creditul de la intrare.
+     * O inchiriere veche, fara cicluri salvate, conteaza ca un ciclu.
+     */
+    public function creditFor(SaniusTab $tab, ?Collection $finished = null): array
+    {
+        $finished = $finished ?? $tab->rentals()->whereIn('status', ['closed', 'lost'])->orderBy('started_at')->orderBy('id')->get();
+        $byRental = [];
+        foreach ($finished as $r) {
+            $byRental[$r->id] = $r->cycles_used !== null ? (int) $r->cycles_used : 1;
+        }
+
+        return SaniusPricing::applyCredit($byRental, $this->prepaidCycles($tab));
+    }
+
+    public function signedContract(SaniusTab $tab): ?SaniusContract
+    {
+        return $tab->contracts()->whereIn('status', SaniusContract::SIGNED)->orderByDesc('id')->first();
+    }
+
     /** [rata %, fix per bilet, comision peste pret?, TVA marketplace %] — ca in posSale. */
-    private function commissionTerms(): array
+    public function commissionTerms(): array
     {
         $o = $this->organizer;
         if (! $o) {
@@ -689,7 +770,11 @@ class SaniusCircuit
         $blockers = [];
         $rentalsTotal = 0.0;
 
+        $rules = $this->settings->rentalRules();
         foreach ($rentals as $r) {
+            $live = in_array($r->status, ['active', 'pending_sync'], true)
+                ? $this->rentalAmounts($r, $r->returned_at ?? $now)
+                : null;
             $row = [
                 'id' => $r->id,
                 'sled' => $r->sled?->displayName(),
@@ -700,10 +785,15 @@ class SaniusCircuit
                 'condition' => $r->condition,
                 'damage_level' => $r->damage_level,
                 'has_photo' => (bool) $r->damage_photo_path,
+                'day_type' => $r->day_type ?? $live['day_type'] ?? null,
+                'minutes' => $r->duration_minutes ?? $live['minutes'] ?? null,
+                'cycles_used' => $r->cycles_used ?? $live['cycles_used'] ?? null,
+                'tows_count' => $r->amounts['tows_count'] ?? $live['tows_count'] ?? 0,
                 'amounts' => $r->amounts,
+                'estimate' => $live,
             ];
             if (in_array($r->status, ['closed', 'lost'], true)) {
-                $rentalsTotal += (float) ($r->amounts['total'] ?? 0);
+                // suma de plata vine din charge (dupa creditul de la intrare)
             } elseif ($r->status === 'active') {
                 $blockers[] = $r->sled?->displayName().' nu a fost returnată.';
             } else {
@@ -726,6 +816,11 @@ class SaniusCircuit
 
         $charge = $this->chargeLines($tab, $parking);
         $total = $charge['total'];
+        foreach ($charge['lines'] as $l) {
+            if (! str_starts_with($l['key'], 'parking_')) {
+                $rentalsTotal += (float) $l['line_total'];
+            }
+        }
         if ($tab->isOpen() && $charge['missing']) {
             $blockers[] = 'Lipsesc produsele circuitului pentru: '.implode(', ', $charge['missing']).'.';
         }
@@ -767,6 +862,13 @@ class SaniusCircuit
             ])->values()->all(),
             'rentals' => $lines,
             'rentals_total' => round($rentalsTotal, 2),
+            'rules' => [
+                'cycle_minutes' => $rules['cycle_minutes'],
+                'tows_per_cycle' => $rules['tows_per_cycle'],
+                'grace_minutes' => $rules['grace_minutes'],
+            ],
+            'prepaid' => $this->presentPrepaid($tab, $rentals),
+            'contract' => $this->presentContract($tab),
             'parking' => $parking,
             'charge' => $charge,
             'total' => $total,
@@ -816,5 +918,132 @@ class SaniusCircuit
 
             return $locked->fresh();
         });
+    }
+
+    private function presentPrepaid(SaniusTab $tab, Collection $rentals): array
+    {
+        $rows = $this->validPrepaids($tab)->orderBy('id')->get();
+        $credit = (int) $rows->sum('sled_cycles');
+        $used = 0;
+        foreach ($rentals as $r) {
+            if (in_array($r->status, ['closed', 'lost'], true)) {
+                $used += $r->cycles_used !== null ? (int) $r->cycles_used : 1;
+            }
+        }
+
+        return [
+            'sled_cycles' => $credit,
+            'sleds' => (int) $rows->sum('sleds'),
+            'amount' => round((float) $rows->sum('amount'), 2),
+            'used_by_returned' => min($credit, $used),
+            'left' => max(0, $credit - $used),
+            'sleds_out' => $rentals->whereIn('status', ['active', 'pending_sync'])->count(),
+            'entries' => $rows->map(fn (SaniusPrepaid $p) => [
+                'id' => $p->id,
+                'sleds' => $p->sleds,
+                'cycles_per_sled' => $p->cycles_per_sled,
+                'day_type' => $p->day_type,
+                'amount' => $p->amount,
+                'simulated' => $p->simulated,
+                'order_id' => $p->order_id,
+                'at' => $p->created_at?->toIso8601String(),
+            ])->values()->all(),
+        ];
+    }
+
+    public function presentContract(SaniusTab $tab): array
+    {
+        $c = $tab->contracts()->where('status', '!=', 'void')->orderByDesc('id')->first();
+
+        return [
+            'required' => $this->settings->contractRules()['required'],
+            'signed' => (bool) $c?->isSigned(),
+            'id' => $c?->id,
+            'status' => $c?->status,
+            'signer_name' => $c?->signer_name,
+            'signed_at' => $c?->signed_at?->toIso8601String(),
+        ];
+    }
+
+    // ------------------------------------------------------------------
+    // Plata la intrare (casierie)
+    // ------------------------------------------------------------------
+
+    /**
+     * Ce costa la intrare N sanii x M cicluri, azi (pretul zilei, comision ca in posSale).
+     */
+    public function prepayQuote(int $sleds, int $cycles, ?Carbon $at = null): array
+    {
+        $dayType = $this->dayType($at);
+        $key = self::cycleKey($dayType);
+        $unit = $this->price($key);
+        [$rate, $fixed, $onTop] = $this->commissionTerms();
+        $rules = $this->settings->rentalRules();
+        $sledCycles = max(0, $sleds) * max(0, $cycles);
+
+        return [
+            'day_type' => $dayType,
+            'product_key' => $key,
+            'ticket_type_id' => $this->settings->productId($key),
+            'unit_price' => round($unit, 2),
+            'commission_per_unit' => $onTop ? round(max($unit * $rate / 100, $fixed), 2) : 0.0,
+            'sleds' => $sleds,
+            'cycles' => $cycles,
+            'sled_cycles' => $sledCycles,
+            'subtotal' => round($unit * $sledCycles, 2),
+            'rules' => [
+                'cycle_minutes' => $rules['cycle_minutes'],
+                'tows_per_cycle' => $rules['tows_per_cycle'],
+                'grace_minutes' => $rules['grace_minutes'],
+            ],
+        ];
+    }
+
+    public function recordPrepaid(SaniusTab $tab, array $quote, ?int $orderId, ?string $paymentMethod, bool $simulated, ?int $memberId): SaniusPrepaid
+    {
+        return SaniusPrepaid::create([
+            'event_id' => $this->event->id,
+            'tab_id' => $tab->id,
+            'order_id' => $orderId,
+            'sleds' => $quote['sleds'],
+            'cycles_per_sled' => $quote['cycles'],
+            'sled_cycles' => $quote['sled_cycles'],
+            'day_type' => $quote['day_type'],
+            'ticket_type_id' => $quote['ticket_type_id'],
+            'unit_price' => $quote['unit_price'],
+            'amount' => $quote['subtotal'],
+            'payment_method' => $paymentMethod,
+            'simulated' => $simulated,
+            'status' => 'paid',
+            'member_id' => $memberId,
+            'is_test' => $this->isTest(),
+        ]);
+    }
+
+    // ------------------------------------------------------------------
+    // Contract
+    // ------------------------------------------------------------------
+
+    /** Textul contractului cu datele completate (text simplu; HTML-ul il face vederea). */
+    public function renderContractBody(SaniusTab $tab, array $data, ?Carbon $at = null): string
+    {
+        $at = ($at ?? Carbon::now())->copy()->setTimezone(SaniusPricing::TZ);
+        $docTypes = ['ci' => 'carte de identitate', 'passport' => 'pașaport', 'other' => 'act de identitate'];
+        $organizerName = $this->organizer?->company_name ?: ($this->organizer?->name ?: '');
+        $vars = [
+            '{nume}' => (string) ($data['signer_name'] ?? ''),
+            '{act_tip}' => $docTypes[$data['doc_type'] ?? 'ci'] ?? 'act de identitate',
+            '{act_serie}' => ((string) ($data['doc_series'] ?? '')) ?: '—',
+            '{act_numar}' => (string) ($data['doc_number'] ?? ''),
+            '{telefon}' => ((string) ($data['phone'] ?? '')) ?: '—',
+            '{adresa}' => ((string) ($data['address'] ?? '')) ?: '—',
+            '{data}' => $at->format('d.m.Y'),
+            '{ora}' => $at->format('H:i'),
+            '{tichet_parcare}' => (string) ($tab->parking_number ?: $tab->parking_code),
+            '{sanii}' => (string) max(1, (int) $this->validPrepaids($tab)->sum('sleds')),
+            '{organizator}' => (string) $organizerName,
+        ];
+
+        return strtr($this->settings->contractRules()['body'], $vars);
     }
 }

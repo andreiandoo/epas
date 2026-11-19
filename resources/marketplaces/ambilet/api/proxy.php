@@ -2394,7 +2394,8 @@ switch ($action) {
         $saniusPath = (string) ($_GET['sp'] ?? '');
         $saniusAllowed = '#^(me|settings|products/bootstrap|sleds|sleds/\d+|tabs/resolve|tabs/lookup|tabs/\d+/(link|vehicle|settle)'
             . '|rentals/(start|lookup|return)|rentals/\d+|rentals/\d+/(photo|lost)'
-            . '|tow/(shift/start|shift/end|ping|status)|tow/shifts/\d+/(unlock|close)|reports/overview)$#';
+            . '|tow/(shift/start|shift/end|ping|status)|tow/shifts/\d+/(unlock|close)|reports/overview'
+            . '|prepay|prepay/quote|contracts|contracts/pending|contracts/\d+|contracts/\d+/(sign|paper|void|pdf))$#';
         if (!$eventId || !preg_match($saniusAllowed, $saniusPath)) {
             http_response_code(400); echo json_encode(['error' => 'Invalid sanius path']); exit;
         }
@@ -2404,7 +2405,7 @@ switch ($action) {
         $endpoint = '/organizer/events/' . $eventId . '/leisure/sanius/' . $saniusPath
             . ($saniusQuery ? '?' . http_build_query($saniusQuery) : '');
         $requiresAuth = true;
-        if (str_ends_with($saniusPath, '/photo')) {
+        if (str_ends_with($saniusPath, '/photo') || str_ends_with($saniusPath, '/pdf')) {
             $rawResponse = true;
         }
         break;

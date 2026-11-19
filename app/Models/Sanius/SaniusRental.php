@@ -15,7 +15,7 @@ class SaniusRental extends Model
     protected $fillable = [
         'event_id', 'tab_id', 'sled_id', 'status', 'started_at', 'started_by_member_id', 'returned_at',
         'returned_by_member_id', 'closed_at', 'condition', 'damage_level', 'damage_photo_path',
-        'tows_count', 'tows_included', 'tows_paid', 'amounts', 'is_test',
+        'tows_count', 'tows_included', 'tows_paid', 'amounts', 'is_test', 'day_type', 'duration_minutes', 'cycles_used',
     ];
 
     protected $casts = [
@@ -25,6 +25,8 @@ class SaniusRental extends Model
         'tows_count' => 'integer',
         'tows_included' => 'integer',
         'tows_paid' => 'integer',
+        'duration_minutes' => 'integer',
+        'cycles_used' => 'integer',
         'amounts' => 'array',
         'is_test' => 'boolean',
     ];
