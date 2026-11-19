@@ -1739,7 +1739,10 @@ Route::prefix('marketplace-client')->middleware(['throttle:marketplace', 'market
     Route::get('/orders', [MarketplaceOrdersController::class, 'index'])
         ->middleware('marketplace.closed')
         ->name('api.marketplace-client.orders');
+    // marketplace.pos-owner: the organizer token must own the order/event (log-only
+    // until MARKETPLACE_POS_ENFORCE_OWNER is on).
     Route::post('/orders', [MarketplaceOrdersController::class, 'create'])
+        ->middleware('marketplace.pos-owner')
         ->name('api.marketplace-client.orders.create');
     Route::get('/orders/{order}', [MarketplaceOrdersController::class, 'show'])
         ->name('api.marketplace-client.orders.show');
@@ -1750,12 +1753,16 @@ Route::prefix('marketplace-client')->middleware(['throttle:marketplace', 'market
         ->middleware('marketplace.closed')
         ->name('api.marketplace-client.orders.refund');
     Route::post('/orders/{order}/send-tickets', [MarketplaceOrdersController::class, 'sendTickets'])
+        ->middleware('marketplace.pos-owner')
         ->name('api.marketplace-client.orders.send-tickets');
     Route::post('/orders/{order}/pos-complete', [MarketplaceOrdersController::class, 'posComplete'])
+        ->middleware('marketplace.pos-owner')
         ->name('api.marketplace-client.orders.pos-complete');
     Route::post('/orders/{order}/generate-claim-url', [MarketplaceOrdersController::class, 'generateClaimUrl'])
+        ->middleware('marketplace.pos-owner')
         ->name('api.marketplace-client.orders.generate-claim-url');
     Route::get('/events/{event}/sales-breakdown', [MarketplaceOrdersController::class, 'salesBreakdown'])
+        ->middleware('marketplace.pos-owner')
         ->name('api.marketplace-client.events.sales-breakdown');
 
     // Payment

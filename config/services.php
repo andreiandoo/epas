@@ -248,6 +248,12 @@ return [
     // Marketplace sites whose home page services:check-status fetches every 5 minutes (public status pages).
     'status_sites' => array_filter(array_map('trim', explode(',', (string) env('STATUS_SITES', 'bilete.online')))),
 
+    // POS routes of the marketplace API (create order, send tickets, complete, claim link, sales breakdown):
+    // the organizer token must own the order/event. Off = log only, on = refuse (audit SEC-001).
+    'marketplace_pos' => [
+        'enforce_owner' => (bool) env('MARKETPLACE_POS_ENFORCE_OWNER', false),
+    ],
+
     // Circuitul Sanius: organizatorii la care apare cardul din dashboard (implicit Sf. Ana).
     'sanius' => [
         'organizer_ids' => array_values(array_filter(array_map('intval', explode(',', (string) env('SANIUS_ORGANIZER_IDS', '538'))))),
