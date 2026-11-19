@@ -11,7 +11,8 @@ use Illuminate\Support\Str;
  * API key of one organizer's whitelabel site.
  *
  * Unlike the marketplace API key it only opens the endpoints such a site
- * needs, and only for the organizer's own events — see scopeViolation().
+ * needs, and only for the organizer's own events (plus those of the
+ * organizers linked to it in admin) — see scopeViolation().
  */
 class MarketplaceWhitelabelKey extends Model
 {
@@ -31,6 +32,9 @@ class MarketplaceWhitelabelKey extends Model
     ];
 
     protected $hidden = ['secret', 'key_hash'];
+
+    /** @var array<int, int>|null */
+    protected ?array $allowedOrganizerIdsCache = null;
 
     public function organizer(): BelongsTo
     {
@@ -124,7 +128,7 @@ class MarketplaceWhitelabelKey extends Model
                 return 'event_not_found';
             }
 
-            return (int) $event->marketplace_organizer_id === (int) $this->marketplace_organizer_id
+            return in_array((int) $event->marketplace_organizer_id, $this->allowedOrganizerIds(), true)
                 ? null
                 : 'event_not_owned';
         }
@@ -231,7 +235,7 @@ class MarketplaceWhitelabelKey extends Model
         $organizerId = $order->marketplace_organizer_id
             ?? ($order->event_id ? Event::where('id', $order->event_id)->value('marketplace_organizer_id') : null);
         if ($organizerId !== null) {
-            return (int) $organizerId === (int) $this->marketplace_organizer_id;
+            return in_array((int) $organizerId, $this->allowedOrganizerIds(), true);
         }
 
         $eventIds = Ticket::where('order_id', $order->id)
@@ -251,8 +255,21 @@ class MarketplaceWhitelabelKey extends Model
         }
 
         return Event::where('marketplace_client_id', $this->marketplace_client_id)
-            ->where('marketplace_organizer_id', $this->marketplace_organizer_id)
+            ->whereIn('marketplace_organizer_id', $this->allowedOrganizerIds())
             ->whereIn('id', $eventIds)
             ->count() === count($eventIds);
+    }
+
+    /**
+     * Organizatorii ale căror evenimente le poate vinde cheia: al ei + cei
+     * asociați în admin (MarketplaceOrganizer::whitelabelOrganizerIds).
+     *
+     * @return array<int, int>
+     */
+    public function allowedOrganizerIds(): array
+    {
+        return $this->allowedOrganizerIdsCache ??= $this->organizer
+            ? $this->organizer->whitelabelOrganizerIds()
+            : [(int) $this->marketplace_organizer_id];
     }
 }

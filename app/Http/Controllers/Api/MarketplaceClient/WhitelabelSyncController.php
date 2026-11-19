@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
+use App\Models\MarketplaceOrganizer;
 use App\Services\Whitelabel\WhitelabelEventFeed;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,8 +11,9 @@ use Illuminate\Http\Request;
  * Event sync for an organizer's own site, read only.
  *
  * Works only with the organizer's whitelabel key (wlk_...), and only returns
- * that organizer's events. The site is told by a signed POST when an event
- * changes (NotifyWhitelabelSiteJob) and comes here to read it.
+ * that organizer's events, plus those of the organizers linked to it in
+ * admin. The site is told by a signed POST when an event changes
+ * (NotifyWhitelabelSiteJob) and comes here to read it.
  */
 class WhitelabelSyncController extends BaseController
 {
@@ -23,7 +25,7 @@ class WhitelabelSyncController extends BaseController
             return $this->error('This endpoint needs an organizer whitelabel key', 403);
         }
 
-        $events = (new WhitelabelEventFeed($this->requireClient($request)))->upcoming($organizerId);
+        $events = (new WhitelabelEventFeed($this->requireClient($request)))->upcoming($this->organizerIds($organizerId));
 
         return $this->success([
             'events' => $events,
@@ -41,9 +43,15 @@ class WhitelabelSyncController extends BaseController
         }
 
         return $this->success([
-            'event' => (new WhitelabelEventFeed($this->requireClient($request)))->single($organizerId, $id),
+            'event' => (new WhitelabelEventFeed($this->requireClient($request)))->single($this->organizerIds($organizerId), $id),
             'generated_at' => now()->toIso8601String(),
         ]);
+    }
+
+    /** @return array<int, int> */
+    protected function organizerIds(int $organizerId): array
+    {
+        return MarketplaceOrganizer::find($organizerId)?->whitelabelOrganizerIds() ?? [$organizerId];
     }
 
     protected function organizerId(Request $request): ?int

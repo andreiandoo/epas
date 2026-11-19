@@ -551,6 +551,10 @@ class AuthController extends BaseController
             $validated['settings']['embed_domains'] = array_slice($domains, 0, 20);
         }
 
+        // Organizatorii asociați se setează doar din admin: altfel oricine ar
+        // putea vinde pe site-ul lui evenimentele altui organizator
+        unset($validated['settings']['linked_organizer_ids']);
+
         // Merge new settings into existing (don't replace)
         $existingSettings = $organizer->settings ?? [];
         $newSettings = array_merge($existingSettings, $validated['settings']);

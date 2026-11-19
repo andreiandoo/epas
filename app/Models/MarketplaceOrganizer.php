@@ -523,6 +523,54 @@ class MarketplaceOrganizer extends Authenticatable
     }
 
     /**
+     * Organizatorii ale căror evenimente le arată și le vinde site-ul
+     * whitelabel al acestui organizator: el însuși + cei asociați din admin
+     * (settings.linked_organizer_ids). Ex.: aceeași afacere pe două firme.
+     * Doar organizatori activi din același marketplace.
+     *
+     * @return array<int, int>
+     */
+    public function whitelabelOrganizerIds(): array
+    {
+        $linked = array_values(array_diff(
+            array_unique(array_filter(array_map('intval', (array) ($this->settings['linked_organizer_ids'] ?? [])))),
+            [(int) $this->id]
+        ));
+
+        if (empty($linked)) {
+            return [(int) $this->id];
+        }
+
+        $active = static::where('marketplace_client_id', $this->marketplace_client_id)
+            ->where('status', 'active')
+            ->whereIn('id', $linked)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return array_values(array_unique(array_merge([(int) $this->id], $active)));
+    }
+
+    /**
+     * Organizatorii care au asociat organizatorul dat pe site-ul lor whitelabel
+     * (trebuie anunțați și ei când se schimbă un eveniment al lui).
+     *
+     * @return array<int, int>
+     */
+    public static function whitelabelHostIds(self $organizer): array
+    {
+        // Filament poate salva id-urile ca text, așa că le căutăm în ambele forme
+        return static::where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->where('id', '!=', $organizer->id)
+            ->where(fn ($q) => $q
+                ->whereJsonContains('settings->linked_organizer_ids', (int) $organizer->id)
+                ->orWhereJsonContains('settings->linked_organizer_ids', (string) $organizer->id))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
      * Get the effective commission mode for this organizer
      * Returns 'included' or 'added_on_top'
      */

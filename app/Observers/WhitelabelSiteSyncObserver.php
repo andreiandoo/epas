@@ -81,8 +81,19 @@ class WhitelabelSiteSyncObserver
         if (!$organizerId) {
             return;
         }
-        if (NotifyWhitelabelSiteJob::siteUrl(MarketplaceOrganizer::find($organizerId))) {
-            NotifyWhitelabelSiteJob::dispatch($organizerId, $eventId)->delay(now()->addSeconds(self::DELAY_SECONDS));
+        $organizer = MarketplaceOrganizer::find($organizerId);
+        if (!$organizer) {
+            return;
+        }
+
+        // Site-ul organizatorului + site-urile care l-au asociat (ex. o a doua firmă a aceleiași afaceri)
+        $siteOwnerIds = array_unique(array_merge([$organizerId], MarketplaceOrganizer::whitelabelHostIds($organizer)));
+
+        foreach ($siteOwnerIds as $siteOwnerId) {
+            $siteOwner = $siteOwnerId === $organizerId ? $organizer : MarketplaceOrganizer::find($siteOwnerId);
+            if (NotifyWhitelabelSiteJob::siteUrl($siteOwner)) {
+                NotifyWhitelabelSiteJob::dispatch($siteOwnerId, $eventId)->delay(now()->addSeconds(self::DELAY_SECONDS));
+            }
         }
     }
 

@@ -287,6 +287,25 @@ class OrganizerResource extends Resource
                                 ->placeholder('ex: https://qfeel.ro/wp-json/qfeel-manager/v1/ambilet/notify')
                                 ->helperText('Opțional. La fiecare modificare a unui eveniment al organizatorului, trimitem aici un semnal semnat cu cheia whitelabel, iar site-ul își citește singur datele. Doar https.')
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
+                            // Aceeași afacere pe mai multe firme: site-ul whitelabel vinde și evenimentele lor
+                            Forms\Components\Select::make('settings.linked_organizer_ids')
+                                ->label('Organizatori asociați pe site-ul whitelabel')
+                                ->multiple()
+                                ->searchable()
+                                ->options(function (?MarketplaceOrganizer $record) {
+                                    $clientId = $record?->marketplace_client_id
+                                        ?? Auth::guard('marketplace_admin')->user()?->marketplace_client_id;
+
+                                    return MarketplaceOrganizer::where('marketplace_client_id', $clientId)
+                                        ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                        ->orderBy('name')
+                                        ->get(['id', 'name', 'company_name'])
+                                        ->mapWithKeys(fn ($o) => [$o->id => '#' . $o->id . ' ' . $o->name . ($o->company_name && $o->company_name !== $o->name ? ' (' . $o->company_name . ')' : '')])
+                                        ->all();
+                                })
+                                ->dehydrateStateUsing(fn ($state) => array_values(array_unique(array_filter(array_map('intval', (array) $state)))))
+                                ->helperText('Opțional. Site-ul whitelabel al acestui organizator (cheia wlk_ și sincronizarea cu site-ul lui) va arăta și vinde și evenimentele organizatorilor aleși aici. Comenzile, decontul și facturile rămân pe organizatorul fiecărui eveniment. Site-ul le preia la următoarea sincronizare completă.')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
                         ]),
 
                                 ]), // end Tab 1 (Cont)

@@ -32,15 +32,16 @@ class WhitelabelEventFeed
     }
 
     /**
-     * Published events of the organizer that are not over yet, cancelled ones included.
+     * Published events of the organizer(s) that are not over yet, cancelled ones included.
      *
+     * @param  int|array<int, int>  $organizerIds  the site's organizer + the ones linked to it
      * @return array<int, array<string, mixed>>
      */
-    public function upcoming(int $organizerId): array
+    public function upcoming(int|array $organizerIds): array
     {
         $today = now()->toDateString();
 
-        return $this->baseQuery($organizerId)
+        return $this->baseQuery($organizerIds)
             ->where('is_published', true)
             ->where(fn ($q) => $q->where('is_template', false)->orWhereNull('is_template'))
             ->where(function ($q) use ($today) {
@@ -66,9 +67,9 @@ class WhitelabelEventFeed
      * One event of the organizer. Missing events and events of other
      * organizers look the same ("deleted"), so nothing leaks through here.
      */
-    public function single(int $organizerId, int $eventId): array
+    public function single(int|array $organizerIds, int $eventId): array
     {
-        $event = $this->baseQuery($organizerId)->whereKey($eventId)->first();
+        $event = $this->baseQuery($organizerIds)->whereKey($eventId)->first();
 
         if (!$event) {
             return ['id' => $eventId, 'status' => 'deleted', 'occurrences' => []];
@@ -84,11 +85,11 @@ class WhitelabelEventFeed
         return $this->payload($event);
     }
 
-    protected function baseQuery(int $organizerId)
+    protected function baseQuery(int|array $organizerIds)
     {
         return Event::query()
             ->where('marketplace_client_id', $this->client->id)
-            ->where('marketplace_organizer_id', $organizerId)
+            ->whereIn('marketplace_organizer_id', (array) $organizerIds)
             ->with([
                 'venue',
                 'parent.venue',
