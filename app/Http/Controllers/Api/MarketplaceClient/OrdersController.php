@@ -556,13 +556,14 @@ class OrdersController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $order = Order::where(function ($q) use ($orderId) {
-                if (is_numeric($orderId)) {
-                    $q->where('id', (int) $orderId);
-                } else {
-                    $q->where('order_number', $orderId);
-                }
-            })
+        // Looked up by order_number only. Numeric ids are sequential, so with
+        // the (public) API key anyone could walk every order (audit PAY-004).
+        // Every site and app already sends the order number.
+        if (is_numeric($orderId)) {
+            return $this->error('Order not found', 404);
+        }
+
+        $order = Order::where('order_number', $orderId)
             ->where('marketplace_client_id', $client->id)
             ->with([
                 'marketplaceEvent',

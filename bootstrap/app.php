@@ -56,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.key' => \App\Http\Middleware\VerifyApiKey::class,
             'tenant.client.cors' => \App\Http\Middleware\TenantClientCors::class,
             'marketplace.auth' => \App\Http\Middleware\MarketplaceClientAuth::class,
+            'marketplace.closed' => \App\Http\Middleware\ClosedMarketplaceRoute::class,
             'tixello.app.auth' => \App\Http\Middleware\TixelloAppAuth::class,
             'tixello.widget' => \App\Http\Middleware\AuthenticateTixelloWidget::class,
             'vendor.auth' => \App\Http\Middleware\AuthenticateVendor::class,

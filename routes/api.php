@@ -1734,15 +1734,20 @@ Route::prefix('marketplace-client')->middleware(['throttle:marketplace', 'market
         ->name("api.marketplace-client.favorites.summary");
 
     // Orders
+    // marketplace.closed: routes the API key alone must not reach (audit SEC-001);
+    // no site or app calls them, attempts are logged.
     Route::get('/orders', [MarketplaceOrdersController::class, 'index'])
+        ->middleware('marketplace.closed')
         ->name('api.marketplace-client.orders');
     Route::post('/orders', [MarketplaceOrdersController::class, 'create'])
         ->name('api.marketplace-client.orders.create');
     Route::get('/orders/{order}', [MarketplaceOrdersController::class, 'show'])
         ->name('api.marketplace-client.orders.show');
     Route::post('/orders/{order}/cancel', [MarketplaceOrdersController::class, 'cancel'])
+        ->middleware('marketplace.closed')
         ->name('api.marketplace-client.orders.cancel');
     Route::post('/orders/{order}/refund', [MarketplaceOrdersController::class, 'refund'])
+        ->middleware('marketplace.closed')
         ->name('api.marketplace-client.orders.refund');
     Route::post('/orders/{order}/send-tickets', [MarketplaceOrdersController::class, 'sendTickets'])
         ->name('api.marketplace-client.orders.send-tickets');
@@ -1765,16 +1770,20 @@ Route::prefix('marketplace-client')->middleware(['throttle:marketplace', 'market
 
     // Tickets
     Route::get('/orders/{order}/tickets', [MarketplaceTicketsController::class, 'index'])
+        ->middleware('marketplace.closed')
         ->name('api.marketplace-client.orders.tickets');
     Route::get('/orders/{order}/tickets/download', [MarketplaceTicketsController::class, 'downloadAll'])
+        ->middleware('marketplace.closed')
         ->name('api.marketplace-client.orders.tickets.download');
     Route::get('/tickets/download-pdf', [MarketplaceTicketsController::class, 'downloadPdf'])
         ->name('api.marketplace-client.tickets.download-pdf');
     Route::get('/tickets/{ticket}/download', [MarketplaceTicketsController::class, 'download'])
         ->name('api.marketplace-client.tickets.download');
     Route::get('/tickets/{ticket}/qr', [MarketplaceTicketsController::class, 'qrCode'])
+        ->middleware('marketplace.closed')
         ->name('api.marketplace-client.tickets.qr');
     Route::post('/tickets/validate', [MarketplaceTicketsController::class, 'validate'])
+        ->middleware('marketplace.closed')
         ->name('api.marketplace-client.tickets.validate');
 
     // Statistics & Reports
