@@ -63,7 +63,29 @@ if (!is_dir($pageCacheDir)) {
     @mkdir($pageCacheDir, 0755, true);
 }
 
-ob_start(function ($html) use ($pageCacheFile) {
+// Expired files were never removed (TTL is only checked on read), so every
+// distinct URL left a file behind until the disk filled up. On ~1% of misses,
+// drop files older than an hour (longest TTL in use is 30 min), within a
+// short time budget so a large backlog is cleared over several requests.
+if (mt_rand(1, 100) === 1 && ($dh = @opendir($pageCacheDir))) {
+    $gcStart = microtime(true);
+    $gcCutoff = time() - 3600;
+    while (($gcName = readdir($dh)) !== false) {
+        if (substr($gcName, -5) !== '.html') {
+            continue;
+        }
+        $gcPath = $pageCacheDir . '/' . $gcName;
+        if (@filemtime($gcPath) < $gcCutoff) {
+            @unlink($gcPath);
+        }
+        if (microtime(true) - $gcStart > 0.5) {
+            break;
+        }
+    }
+    closedir($dh);
+}
+
+ob_start(function ($html) use ($pageCacheFile, $pageCacheDir) {
     // Callers can opt out by setting $skipPageCache = true at any point
     // before the buffer flushes (e.g. event.php flags the shell when the
     // event isn't published yet, so the blank "not found" HTML doesn't
@@ -71,9 +93,20 @@ ob_start(function ($html) use ($pageCacheFile) {
     if (!empty($GLOBALS['skipPageCache'])) {
         return $html;
     }
-    // Only cache successful responses with actual content
+    // Only cache successful responses with actual content, and never when the
+    // disk is nearly full (the cache must not take the site down with it).
     if (strlen($html) > 500 && http_response_code() === 200) {
-        @file_put_contents($pageCacheFile, $html);
+        $free = @disk_free_space($pageCacheDir);
+        if ($free === false || $free > 500 * 1024 * 1024) {
+            // Write to a temp file and rename, so a write cut short by a full
+            // disk never leaves a truncated page that would be served as a hit.
+            $tmp = $pageCacheFile . '.' . getmypid() . '.tmp';
+            if (@file_put_contents($tmp, $html) === strlen($html)) {
+                @rename($tmp, $pageCacheFile);
+            } else {
+                @unlink($tmp);
+            }
+        }
     }
     return $html;
 });
