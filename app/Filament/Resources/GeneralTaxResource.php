@@ -92,6 +92,14 @@ class GeneralTaxResource extends Resource
                             ->helperText('Select one or more event types. Leave empty to apply to all events.')
                             ->columnSpanFull(),
 
+                        Forms\Components\Select::make('manifestation_types')
+                            ->label('Tipuri manifestare')
+                            ->options(\App\Models\Tax\GeneralTax::MANIFESTATION_TYPES)
+                            ->multiple()
+                            ->placeholder('Neetichetat')
+                            ->helperText('Pentru declarația de impozit pe spectacole: timbrul se aplică evenimentelor cu acest „Tip manifestare”. Când evenimentul are tip de manifestare și există timbre etichetate, se ignoră Event Types pentru timbre.')
+                            ->columnSpanFull(),
+
                         SC\Grid::make(3)
                             ->schema([
                                 Forms\Components\TextInput::make('value')

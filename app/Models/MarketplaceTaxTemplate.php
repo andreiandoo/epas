@@ -1491,9 +1491,26 @@ class MarketplaceTaxTemplate extends Model
                     ->orderByDesc('priority')
                     ->get();
 
+                // „Tip manifestare” al evenimentului (Teatrală, Muzicală…) decide
+                // timbrele, nu taxonomia publică (Tipuri eveniment). Se aplică doar
+                // când evenimentul are tipul setat și există timbre etichetate cu
+                // tipuri de manifestare; altfel rămâne potrivirea pe Tipuri eveniment.
+                $eventManifestation = (string) ($event->manifestation_type ?? '');
+                $byManifestation = $eventManifestation !== ''
+                    && $applicableTaxes->contains(fn ($t) => !empty($t->manifestation_types));
+
                 foreach ($applicableTaxes as $tax) {
                     $taxEventTypeIds = $tax->eventTypes->pluck('id')->toArray();
-                    $applies = empty($taxEventTypeIds) || !empty(array_intersect($taxEventTypeIds, $eventTypeIds));
+                    $taxManifestations = (array) ($tax->manifestation_types ?? []);
+                    if ($byManifestation) {
+                        // etichetat → după tipul de manifestare; neetichetat → doar
+                        // dacă e global (fără Tipuri eveniment), ca să nu se dubleze
+                        $applies = !empty($taxManifestations)
+                            ? in_array($eventManifestation, $taxManifestations, true)
+                            : empty($taxEventTypeIds);
+                    } else {
+                        $applies = empty($taxEventTypeIds) || !empty(array_intersect($taxEventTypeIds, $eventTypeIds));
+                    }
                     if (!$applies) continue;
 
                     // Bug fix (2026-08-17): GeneralTax::value_type is stored

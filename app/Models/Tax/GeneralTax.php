@@ -59,9 +59,21 @@ class GeneralTax extends Model
         'min_revenue_threshold',
         'max_revenue_threshold',
         'min_guaranteed_amount',
+        'manifestation_types',
+    ];
+
+    /** Valorile din events.manifestation_type („Tip manifestare”). */
+    public const MANIFESTATION_TYPES = [
+        'muzicala' => 'Muzicală',
+        'artistica' => 'Artistică',
+        'teatrala' => 'Teatrală',
+        'standup' => 'Stand-up',
+        'sportiva' => 'Sportivă',
+        'altele' => 'Altele',
     ];
 
     protected $casts = [
+        'manifestation_types' => 'array',
         'value' => 'decimal:4',
         'priority' => 'integer',
         'is_compound' => 'boolean',
