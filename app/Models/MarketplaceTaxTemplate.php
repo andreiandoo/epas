@@ -1392,6 +1392,11 @@ class MarketplaceTaxTemplate extends Model
                     $realSold = \App\Models\Ticket::where('event_id', $event->id)
                         ->where('ticket_type_id', $tt->id)
                         ->whereIn('status', ['valid', 'used', 'checked_in'])
+                        // Biletele din comenzi de test (test_order din preview_token,
+                        // pos_test) nu sunt bani — pagina 2 le exclude deja.
+                        ->where(fn ($q) => $q->whereNull('order_id')
+                            ->orWhereNotIn('order_id', fn ($sub) => $sub->select('id')->from('orders')
+                                ->whereIn('source', \App\Support\TestPos::ORDER_SOURCES)))
                         ->count();
                     $ttPrice = (float) ($tt->display_price ?? $tt->price ?? 0);
                     $realSalesValue += $realSold * $ttPrice;
