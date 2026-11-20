@@ -2253,6 +2253,7 @@ class EventResource extends Resource
                                         'altele' => $t('Altele', 'Other'),
                                     ])
                                     ->placeholder($t('Selectează tipul', 'Select type'))
+                                    ->live()
                                     ->nullable(),
 
                                 Forms\Components\Select::make('eventTypes')
@@ -2438,10 +2439,11 @@ class EventResource extends Resource
                                 Forms\Components\Placeholder::make('applicable_taxes')
                                     ->label('Taxe aplicabile')
                                     ->columnSpanFull()
-                                    ->visible(fn (SGet $get) => !empty($get('eventTypes')))
+                                    ->visible(fn (SGet $get) => !empty($get('eventTypes')) || !empty($get('manifestation_type')))
                                     ->content(function (SGet $get) use ($marketplace) {
                                         $eventTypeIds = (array) ($get('eventTypes') ?? []);
-                                        if (empty($eventTypeIds)) {
+                                        $manifestation = (string) ($get('manifestation_type') ?? '');
+                                        if (empty($eventTypeIds) && $manifestation === '') {
                                             return '';
                                         }
 
@@ -2455,14 +2457,32 @@ class EventResource extends Resource
                                         $taxDisplayMode = $marketplace?->tax_display_mode ?? 'included';
 
                                         // Get applicable taxes using the new forEventTypes scope
-                                        $allTaxes = GeneralTax::query()
+                                        $taxBase = GeneralTax::query()
                                             ->whereNull('tenant_id') // Global taxes only (not tenant-specific)
                                             ->active()
-                                            ->validOn(\Carbon\Carbon::today())
-                                            ->forEventTypes($eventTypeIds)
-                                            ->orderByDesc('priority')
-                                            ->get()
-                                            ->unique('id');
+                                            ->validOn(\Carbon\Carbon::today());
+
+                                        // Aceeași regulă ca declarația de impozit: cu „Tip manifestare”
+                                        // setat și taxe etichetate, taxele etichetate se aleg după tipul
+                                        // de manifestare, iar cele neetichetate doar dacă sunt globale.
+                                        $byManifestation = $manifestation !== ''
+                                            && (clone $taxBase)->whereNotNull('manifestation_types')->get(['id', 'manifestation_types'])
+                                                ->contains(fn ($t) => !empty($t->manifestation_types));
+
+                                        if ($byManifestation) {
+                                            $allTaxes = (clone $taxBase)->with('eventTypes:id')->orderByDesc('priority')->get()
+                                                ->filter(fn ($t) => !empty($t->manifestation_types)
+                                                    ? in_array($manifestation, (array) $t->manifestation_types, true)
+                                                    : $t->eventTypes->isEmpty())
+                                                ->unique('id')
+                                                ->values();
+                                        } else {
+                                            $allTaxes = $taxBase
+                                                ->forEventTypes($eventTypeIds)
+                                                ->orderByDesc('priority')
+                                                ->get()
+                                                ->unique('id');
+                                        }
 
                                         if ($allTaxes->isEmpty()) {
                                             return new HtmlString('<div class="text-sm italic text-gray-500">Nu există taxe configurate pentru tipul de eveniment selectat.</div>');
