@@ -58,6 +58,17 @@ class TicketCheckin
         $windows = $info['windows'];
         $kind = $info['kind'];
 
+        // Bilet dintr-o comanda TEST- (link de test din admin): nu intra nimeni cu el.
+        // Biletele Test POS (pos_test) raman scanabile, cu ele se invata aplicatia.
+        if (self::isTestOrderTicket($ticket)) {
+            return [
+                'status' => 'rejected',
+                'code' => 'test_order',
+                'message' => 'Bilet de test, nu este valabil la intrare',
+                'validity' => self::validity($ticket, $event, $now, $info),
+            ];
+        }
+
         $current = self::windowAt($windows, $now);
 
         if (!empty($windows) && !$current) {
@@ -520,6 +531,18 @@ class TicketCheckin
         }
         $client = $event->relationLoaded('marketplaceClient') ? $event->marketplaceClient : $event->marketplaceClient()->first();
         return $client ? MarketplaceTz::tz($client) : MarketplaceTz::DEFAULT_TIMEZONE;
+    }
+
+    public static function isTestOrderTicket(Ticket $ticket): bool
+    {
+        if (!$ticket->order_id) {
+            return false;
+        }
+        $source = $ticket->relationLoaded('order')
+            ? $ticket->order?->source
+            : DB::table('orders')->where('id', $ticket->order_id)->value('source');
+
+        return $source === 'test_order';
     }
 
     private static function hasTable(): bool

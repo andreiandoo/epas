@@ -81,6 +81,12 @@ Schedule::command('ticket-types:expire-sales')
     ->everyMinute()
     ->timezone('Europe/Bucharest');
 
+// Biletele din comenzile TEST- (link de test) se anuleaza dupa 24h.
+Schedule::command('tickets:cancel-test-orders')
+    ->hourlyAt(23)
+    ->withoutOverlapping()
+    ->timezone('Europe/Bucharest');
+
 // Expire pending orders that have passed their expires_at time (every 2 minutes)
 Schedule::command('orders:expire-pending')
     ->everyTwoMinutes()
