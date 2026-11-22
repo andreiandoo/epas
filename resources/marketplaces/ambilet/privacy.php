@@ -187,6 +187,17 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
             </div>
 
+            <h3 id="aplicatia-organizatori" class="mb-3 text-lg font-bold text-gray-900 mt-7">2.1 Aplicația AmBilet pentru organizatori (Android)</h3>
+            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Aplicația mobilă AmBilet e folosită de organizatori și de echipele lor la intrarea în eveniment, pentru vânzare și scanarea biletelor. Prin ea prelucrăm:</p>
+            <ul class="my-4 pl-6 list-disc space-y-2.5">
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Datele contului:</strong> numele, adresa de email și identificatorul intern al utilizatorului, pentru autentificare.</li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Activitatea din aplicație:</strong> vânzările, scanările și check-in-urile, cu operatorul și ora la care au fost făcute, pentru rapoartele organizatorului.</li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Camera:</strong> folosită doar ca să citească codurile QR ale biletelor. Imaginile de la scanare nu se salvează.</li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Microfonul și poze, opțional:</strong> la un raport de urgență, operatorul poate atașa un mesaj vocal sau o poză. Microfonul pornește doar cât timp operatorul ține apăsat butonul de înregistrare, după ce și-a dat acordul în telefon. Mesajul și poza ajung doar la echipa evenimentului.</li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Emailul cumpărătorului, opțional:</strong> dacă un cumpărător nu poate scana codul QR, operatorul îi poate trimite biletul pe adresa de email pe care o introduce.</li>
+            </ul>
+            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Aplicația nu folosește localizarea, nu conține reclame și nu trimite date către terți în scop de marketing. Comunicarea cu serverele noastre e criptată (HTTPS). Pentru ștergerea contului sau a datelor scrie-ne la <a href="mailto:suport@ambilet.ro" class="font-medium text-primary">suport@ambilet.ro</a>.</p>
+
             <div class="p-5 my-6 border-l-4 bg-sky-50 border-sky-500 rounded-r-xl">
                 <p class="text-[15px] leading-[1.8] text-sky-900 mb-0"><strong>Notă:</strong> Nu stocăm niciodată numărul complet al cardului sau codul CVV. Plățile sunt procesate de parteneri certificați PCI-DSS.</p>
             </div>
