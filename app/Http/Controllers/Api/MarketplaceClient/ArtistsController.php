@@ -477,7 +477,11 @@ class ArtistsController extends BaseController
                     'commission_mode' => $commissionMode,
                     'commission_rate' => $commissionRate,
                 ];
-            });
+            })
+            // SQL orders by day only: same-day events must follow their start
+            // time too (13:00 listed before 11:00 confused buyers). Undated last.
+            ->sortBy(fn ($e) => ($e['event_date'] ?? '9999-12-31') . ' ' . substr((string) ($e['start_time'] ?? '99:99'), 0, 5))
+            ->values();
 
         // Get past events count — accept 'published' or 'archived' here since
         // events that have ended are routinely flipped to status='archived'
@@ -534,7 +538,11 @@ class ArtistsController extends BaseController
                     })
                     ->with('venue:id,name,city')
                     ->orderByRaw('COALESCE(event_date, range_start_date) ASC')
-                    ->get();
+                    ->get()
+                    // Same day: earlier start time first
+                    ->sortBy(fn ($e) => (($e->event_date ?? $e->range_start_date)?->format('Y-m-d') ?? '9999-12-31')
+                        . ' ' . substr((string) ($e->start_time ?? $e->range_start_time ?? '99:99'), 0, 5))
+                    ->values();
 
                 if ($liveEvents->isEmpty()) return null;
 

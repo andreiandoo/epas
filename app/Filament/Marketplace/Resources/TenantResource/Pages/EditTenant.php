@@ -96,6 +96,15 @@ class EditTenant extends EditRecord
                     if (!empty($dirty)) {
                         $owner->update($dirty);
                     }
+                    if ($password !== '') {
+                        // New password = sign out everywhere: app/site tokens never
+                        // expire on their own, so the old session would live on.
+                        $owner->tokens()->delete();
+                        $owner->forceFill(['remember_token' => \Illuminate\Support\Str::random(60)])->saveQuietly();
+                        if (config('session.driver') === 'database') {
+                            DB::table(config('session.table', 'sessions'))->where('user_id', $owner->id)->delete();
+                        }
+                    }
                 }
             }
 
