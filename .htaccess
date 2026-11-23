@@ -780,6 +780,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^finalizare/?$ checkout.php [L]
 
+# /bilete-comanda -> bilete-comanda.php (tickets page behind the email download button)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^bilete-comanda/?$ bilete-comanda.php [L,QSA]
+
 # /multumim -> thank-you.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
