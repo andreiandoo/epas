@@ -34,6 +34,7 @@ const THANK_YOU_I18N = {
         for_event: 'pentru',
         event: 'eveniment',
         no_tickets: 'Nu există bilete',
+        tickets_in_email: 'Biletele au fost trimise pe email',
         subtotal: 'Subtotal',
         service_fee: 'Comision serviciu',
         return_fee: 'Taxa de retur',
@@ -82,6 +83,7 @@ const THANK_YOU_I18N = {
         for_event: 'esemény:',
         event: 'esemény',
         no_tickets: 'Nincsenek jegyek',
+        tickets_in_email: 'A jegyeket e-mailben elküldtük',
         subtotal: 'Részösszeg',
         service_fee: 'Szolgáltatási díj',
         return_fee: 'Visszatérítési díj',
@@ -128,6 +130,7 @@ const THANK_YOU_I18N = {
         for_event: 'for',
         event: 'event',
         no_tickets: 'No tickets found',
+        tickets_in_email: 'Your tickets were sent by email',
         subtotal: 'Subtotal',
         service_fee: 'Service fee',
         return_fee: 'Return insurance',
@@ -284,14 +287,18 @@ const ThankYouPage = {
             return;
         }
 
-        // Clean up duplicate URL params (keep only ?order=)
+        // Order key from the checkout return URL: unlocks the tickets on this page
+        this.orderKey = urlParams.get('k') || '';
+
+        // Clean up duplicate URL params (keep only ?order= and the key)
         if (urlParams.get('orderId') || urlParams.has('orderId')) {
-            const cleanUrl = window.location.pathname + '?order=' + encodeURIComponent(orderRef);
+            const cleanUrl = window.location.pathname + '?order=' + encodeURIComponent(orderRef)
+                + (this.orderKey ? '&k=' + encodeURIComponent(this.orderKey) : '');
             history.replaceState(null, '', cleanUrl);
         }
 
         try {
-            const response = await AmbiletAPI.get(`/order-confirmation/${orderRef}`);
+            const response = await AmbiletAPI.get(`/order-confirmation/${orderRef}`, this.orderKey ? { k: this.orderKey } : {});
             if (response.success && response.data?.order) {
                 this.order = response.data.order;
                 if (this.isPaymentFailed()) {
@@ -878,7 +885,8 @@ const ThankYouPage = {
         // ticket template (falling back to the marketplace default). The old
         // client-side window.print() path ignored the template entirely.
         window.location.href = '/api/proxy.php?action=order.download-tickets-pdf&order='
-            + encodeURIComponent(order.order_number) + '&dl=1';
+            + encodeURIComponent(order.order_number)
+            + '&k=' + encodeURIComponent(order.download_key || this.orderKey || '') + '&dl=1';
     },
 
     downloadTicketsLegacyPrint() {
@@ -992,7 +1000,11 @@ const ThankYouPage = {
         const total = tickets.length;
 
         if (total === 0) {
-            document.getElementById('ticketsCount').textContent = this.t('no_tickets');
+            // Opened without the order key: tickets stay hidden, they are in the email
+            // and behind the download button (which asks for the order email).
+            document.getElementById('ticketsCount').textContent = this.order?.tickets_locked
+                ? this.t('tickets_in_email')
+                : this.t('no_tickets');
             return;
         }
 

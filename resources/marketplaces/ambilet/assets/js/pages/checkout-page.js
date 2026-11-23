@@ -1136,8 +1136,9 @@ const CheckoutPage = {
                 // Preserva locale-ul (leisureLocale) in URL-ul de return spre /multumim
                 // ca pagina de multumire sa fie in aceeasi limba ca restul checkout-ului.
                 const langSuffix = leisureLocale ? '&lang=' + encodeURIComponent(leisureLocale) : '';
+                const keySuffix = order.download_key ? '&k=' + encodeURIComponent(order.download_key) : '';
                 const payResponse = await AmbiletAPI.post(`/orders/${order.id}/pay`, {
-                    return_url: window.location.origin + '/multumim?order=' + order.order_number + langSuffix,
+                    return_url: window.location.origin + '/multumim?order=' + order.order_number + keySuffix + langSuffix,
                     cancel_url: window.location.origin + '/checkout'
                 });
 
@@ -1174,7 +1175,8 @@ const CheckoutPage = {
                 AmbiletCart.clear({ skipRelease: true });
                 localStorage.removeItem('cart_end_time');
                 const langSuffix = leisureLocale ? '&lang=' + encodeURIComponent(leisureLocale) : '';
-                window.location.href = '/multumim?order=' + order.order_number + langSuffix;
+                const keySuffix = order.download_key ? '&k=' + encodeURIComponent(order.download_key) : '';
+                window.location.href = '/multumim?order=' + order.order_number + keySuffix + langSuffix;
             }
         } catch (error) {
             if (typeof AmbiletNotifications !== 'undefined') {

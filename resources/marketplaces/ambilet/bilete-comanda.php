@@ -14,12 +14,27 @@ $orderRef = trim((string) ($_GET['order'] ?? ''));
 if (!preg_match('/^[A-Za-z0-9_-]{4,64}$/', $orderRef)) {
     $orderRef = '';
 }
+// Access: the order key from the email link (k), or the email the order was
+// placed with (form below, for links without a key). An order number alone
+// shows nothing.
+$orderKey = preg_match('/^[a-f0-9]{16,64}$/', (string) ($_GET['k'] ?? '')) ? (string) $_GET['k'] : '';
+$postedEmail = ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' ? trim((string) ($_POST['email'] ?? '')) : '';
 
 $order = null;
-if ($orderRef !== '') {
-    $res = api_get('/orders/' . rawurlencode($orderRef));
-    $order = $res['success'] ? ($res['data']['order'] ?? null) : null;
+if ($orderRef !== '' && ($orderKey !== '' || $postedEmail !== '')) {
+    $res = api_get('/orders/' . rawurlencode($orderRef), array_filter(['key' => $orderKey, 'email' => $postedEmail], 'strlen'));
+    $found = $res['success'] ? ($res['data']['order'] ?? null) : null;
+    if ($found && !empty($found['access_verified'])) {
+        $order = $found;
+        $orderKey = (string) ($found['download_key'] ?? $orderKey);
+        if ($postedEmail !== '' && $orderKey !== '') {
+            // Verified by email: continue on the keyed URL so a reload keeps working
+            header('Location: /bilete-comanda?order=' . rawurlencode($orderRef) . '&k=' . rawurlencode($orderKey), true, 303);
+            exit;
+        }
+    }
 }
+$accessFailed = !$order && $postedEmail !== '';
 $canDownload = $order && !empty($order['can_download_tickets']);
 
 $tickets = [];
@@ -68,8 +83,8 @@ if ($tickets) {
     curl_multi_close($mh);
 }
 
-$pdfBase = '/api/proxy.php?action=order.download-tickets-pdf&order=' . rawurlencode($orderRef);
-$pageUrl = SITE_URL . '/bilete-comanda?order=' . rawurlencode($orderRef);
+$pdfBase = '/api/proxy.php?action=order.download-tickets-pdf&order=' . rawurlencode($orderRef) . '&k=' . rawurlencode($orderKey);
+$pageUrl = SITE_URL . '/bilete-comanda?order=' . rawurlencode($orderRef) . '&k=' . rawurlencode($orderKey);
 $event = $order['event'] ?? null;
 $eventDate = '';
 if (!empty($event['date'])) {
@@ -120,7 +135,24 @@ $h = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 </style>
 
 <main class="bc-wrap">
-<?php if (!$order): ?>
+<?php if (!$order && $orderRef !== ''): ?>
+    <div class="bc-card">
+        <h1 class="bc-h1">Biletele comenzii #<?= $h($orderRef) ?></h1>
+        <p class="bc-sub">Ca să-ți protejăm biletele, confirmă adresa de email cu care ai plasat comanda.</p>
+        <form method="post" action="/bilete-comanda?order=<?= $h(rawurlencode($orderRef)) ?>" style="margin-top:18px;" novalidate>
+            <label for="bc-email" style="display:block;font-size:14px;font-weight:600;margin-bottom:6px;">Adresa de email a comenzii</label>
+            <input id="bc-email" name="email" type="email" inputmode="email" autocomplete="email" required
+                   value="<?= $h($postedEmail) ?>"
+                   <?= $accessFailed ? 'aria-invalid="true" aria-describedby="bc-email-err"' : '' ?>
+                   style="width:100%;min-height:48px;padding:12px 14px;font-size:16px;border:1px solid <?= $accessFailed ? '#EF4444' : '#E2E8F0' ?>;border-radius:12px;outline-color:#A51C30;">
+            <?php if ($accessFailed): ?>
+            <p id="bc-email-err" role="alert" style="margin:8px 0 0;font-size:14px;color:#B91C1C;">Adresa nu se potrivește cu comanda. Folosește emailul pe care ai primit confirmarea.</p>
+            <?php endif; ?>
+            <button type="submit" class="bc-btn bc-btn-primary" style="margin-top:14px;">Vezi biletele</button>
+        </form>
+        <p class="bc-help">Poți vedea biletele și în contul tău, la <a href="/cont/bilete" style="color:#A51C30;font-weight:700;">Biletele mele</a>. Pentru ajutor, scrie-ne la <a href="mailto:contact@ambilet.ro" style="color:#A51C30;font-weight:700;">contact@ambilet.ro</a>.</p>
+    </div>
+<?php elseif (!$order): ?>
     <div class="bc-card">
         <h1 class="bc-h1">Nu am găsit comanda</h1>
         <p class="bc-sub">Verifică linkul din email. Dacă problema continuă, intră în contul tău la <a href="/cont/bilete" style="color:#A51C30;font-weight:700;">Biletele mele</a> sau scrie-ne la <a href="mailto:contact@ambilet.ro" style="color:#A51C30;font-weight:700;">contact@ambilet.ro</a>.</p>

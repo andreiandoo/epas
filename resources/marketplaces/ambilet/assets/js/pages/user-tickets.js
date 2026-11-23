@@ -684,7 +684,10 @@ ${tickets.map((t, i) => {
 
     downloadTicketPDF(ticketId) {
         if (!ticketId) return;
-        const url = '/api/proxy.php?action=ticket.download-pdf&id=' + encodeURIComponent(ticketId);
+        // The account token proves the ticket is ours (the link opens in a new tab, no headers)
+        const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : '';
+        const url = '/api/proxy.php?action=ticket.download-pdf&id=' + encodeURIComponent(ticketId)
+            + (token ? '&token=' + encodeURIComponent(token) : '');
         const link = document.createElement('a');
         link.href = url;
         link.download = 'bilet-' + ticketId + '.pdf';

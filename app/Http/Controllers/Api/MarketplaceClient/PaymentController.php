@@ -953,9 +953,15 @@ class PaymentController extends BaseController
         if ($marketplaceDomain && !str_starts_with($marketplaceDomain, 'http')) {
             $marketplaceDomain = 'https://' . $marketplaceDomain;
         }
+        // The key (k) proves the link came from this email: order numbers alone
+        // could be guessed. Sites that don't check it just ignore it.
         $downloadUrl = $marketplaceDomain
             ? $marketplaceDomain . '/api/proxy.php?action=order.download-tickets-pdf&order=' . urlencode($orderNumber)
+                . '&k=' . \App\Support\OrderAccessKey::make($orderNumber)
             : '';
+
+        // Yahoo Mail often hides images until the reader allows them: say so above the QR codes
+        $ticketsHtml = $this->hiddenImagesNotice($customerEmail) . $ticketsHtml;
 
         // Build full email HTML (fallback when no template configured)
         $subject = "Confirmare comandă #{$orderNumber} — {$firstEventName}";
@@ -1223,6 +1229,32 @@ class PaymentController extends BaseController
     /**
      * Send individual ticket emails to beneficiaries (attendees with a different email from the order customer)
      */
+    /**
+     * Note for mailboxes that hide images by default (Yahoo and its sister
+     * domains): the QR codes are images, so tell the reader how to show them.
+     * Plain text, so it's visible exactly when the images are not.
+     */
+    private function hiddenImagesNotice(?string $email, bool $mentionDownload = true): string
+    {
+        $domain = strtolower(substr(strrchr((string) $email, '@') ?: '', 1));
+        $isYahoo = $domain !== '' && (
+            preg_match('/^yahoo\.[a-z.]+$/', $domain) || in_array($domain, ['ymail.com', 'rocketmail.com'], true)
+        );
+        if (!$isYahoo) {
+            return '';
+        }
+
+        $text = 'Nu vezi codurile QR? Yahoo Mail ascunde uneori imaginile. '
+            . 'Apasă pe <strong>„Afișează imaginile”</strong> (sau „Show images”), deasupra mesajului, '
+            . 'ori activează afișarea imaginilor din setările Yahoo Mail.';
+        if ($mentionDownload) {
+            $text .= ' Poți folosi și butonul <strong>„Descarcă biletele”</strong> din acest email.';
+        }
+
+        return '<div style="background:#fff8e6;border:1px solid #f5d27a;border-radius:10px;padding:14px 18px;margin:0 0 20px;'
+            . 'font-size:14px;line-height:1.5;color:#5c4400;">' . $text . '</div>';
+    }
+
     public function sendBeneficiaryEmails(Order $order): void
     {
         $marketplace = $order->marketplaceClient;
@@ -1306,6 +1338,7 @@ class PaymentController extends BaseController
                 . '<p style="margin:0 0 12px;font-size:16px;color:#333;">Salut, <strong>' . e($attendeeName) . '</strong>!</p>'
                 . '<p style="margin:0 0 16px;font-size:15px;color:#555;">Ai primit un bilet pentru evenimentul de mai jos. Prezintă codul QR la intrare.</p>'
                 . '</div>'
+                . $this->hiddenImagesNotice($attendeeEmail, false)
                 . '<div style="margin-bottom:20px;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;">'
                 . '<div style="background:#1a1a2e;color:#ffffff;padding:20px 24px;">'
                 . '<h2 style="margin:0 0 8px;font-size:20px;font-weight:700;">' . e($eventName) . '</h2>'

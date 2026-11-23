@@ -1612,6 +1612,8 @@ class CheckoutController extends BaseController
                 'total' => (float) $order->total,
                 'currency' => $order->currency,
                 'expires_at' => $order->expires_at?->toIso8601String(),
+                // Unlocks the tickets on the thank-you page without logging in
+                'download_key' => \App\Support\OrderAccessKey::make($order->order_number),
             ]];
 
             // Factură pe persoană juridică: firma se verifică la ANAF și se

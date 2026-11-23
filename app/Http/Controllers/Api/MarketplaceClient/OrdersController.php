@@ -577,6 +577,11 @@ class OrdersController extends BaseController
             return $this->error('Order not found', 404);
         }
 
+        $accessEmail = trim((string) $request->query('email', ''));
+        $accessVerified = \App\Support\OrderAccessKey::check($order->order_number, $request->query('key'))
+            || ($accessEmail !== '' && $order->customer_email
+                && strcasecmp($accessEmail, trim((string) $order->customer_email)) === 0);
+
         // Inline Stripe Checkout Session reconciliation. Without a webhook
         // configured, an order stays pending forever after a successful
         // Stripe payment — the customer lands on the thank-you page,
@@ -826,6 +831,11 @@ class OrdersController extends BaseController
                 'can_download_tickets' => in_array($order->status, ['completed', 'paid', 'confirmed']) || $order->payment_status === 'paid',
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
+                // Proof the caller may see the tickets without logging in: the order
+                // key (email/thank-you links) or the email the order was placed with.
+                // Sites that check it (ambilet proxy) hide tickets when it's false.
+                'access_verified' => $accessVerified,
+                'download_key' => $accessVerified ? \App\Support\OrderAccessKey::make($order->order_number) : null,
             ],
         ];
 

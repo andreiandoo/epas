@@ -1457,7 +1457,16 @@ switch ($action) {
             exit;
         }
         $endpoint = '/orders/' . urlencode($orderId);
-        // No auth required — uses marketplace API key only
+        // No auth required — uses marketplace API key only. Tickets and buyer
+        // details are only returned with the order key (k) or the order email;
+        // without them they are stripped below (see ORDER ACCESS).
+        $accessQuery = array_filter([
+            'key' => (string) ($_GET['k'] ?? ''),
+            'email' => (string) ($_GET['email'] ?? ''),
+        ], 'strlen');
+        if ($accessQuery) {
+            $endpoint .= '?' . http_build_query($accessQuery);
+        }
         break;
 
     case 'order.download-tickets-pdf':
@@ -1468,18 +1477,22 @@ switch ($action) {
             echo json_encode(['error' => 'Missing order reference']);
             exit;
         }
-        // Opened from outside the site (email button, mail app browsers): show the
-        // tickets page instead of a bare file download, which many mail apps
-        // silently block. The site itself (same-origin) and the page's own
-        // buttons (dl=1 / inline=1) still get the PDF directly.
-        if (empty($_GET['dl']) && empty($_GET['inline'])
+        // The PDF needs the order key (k), which only the order email and the
+        // buyer's thank-you page have; order numbers alone could be guessed.
+        // Without it, or when opened from outside the site (email button, mail
+        // app browsers that silently block file downloads), send the visitor to
+        // the tickets page. The page's own buttons (dl=1 / inline=1) and the
+        // site itself (same-origin) get the PDF directly.
+        $orderKey = (string) ($_GET['k'] ?? '');
+        if ($orderKey === '' || (empty($_GET['dl']) && empty($_GET['inline'])
             && ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '') !== 'same-origin'
-            && ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '') !== 'empty') {
+            && ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '') !== 'empty')) {
             header('Cache-Control: no-store');
-            header('Location: /bilete-comanda?order=' . rawurlencode($orderRef), true, 302);
+            header('Location: /bilete-comanda?order=' . rawurlencode($orderRef)
+                . ($orderKey !== '' ? '&k=' . rawurlencode($orderKey) : ''), true, 302);
             exit;
         }
-        $endpoint = '/tickets/download-pdf?order=' . urlencode($orderRef);
+        $endpoint = '/tickets/download-pdf?order=' . urlencode($orderRef) . '&key=' . urlencode($orderKey);
         $rawResponse = true;
         // No auth required — uses marketplace API key + order reference
         break;
@@ -1492,8 +1505,16 @@ switch ($action) {
             echo json_encode(['error' => 'Missing ticket ID']);
             exit;
         }
+        // Account page only: the customer's token is required and core checks
+        // the ticket is theirs (ticket ids are sequential).
+        if (empty($_SERVER['HTTP_AUTHORIZATION']) && empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) && empty($_GET['token'])) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Autentifică-te în cont ca să descarci biletul.']);
+            exit;
+        }
         $endpoint = '/tickets/' . urlencode($ticketId) . '/download';
         $rawResponse = true;
+        $requiresAuth = true;
         break;
 
     case 'customer.orders':
@@ -5277,6 +5298,25 @@ if ($response === false || $statusCode === 0) {
 // Debug log for non-2xx responses
 if ($statusCode >= 400) {
     error_log("[proxy.php] API ERROR: {$method} {$url} => HTTP {$statusCode} | action={$action} | response=" . substr($response ?: '(empty)', 0, 500));
+}
+
+// ORDER ACCESS: the thank-you endpoint answers to an order number alone, so
+// unless core confirmed the order key / order email, drop what identifies
+// the buyer or lets someone in (ticket codes = QR codes).
+if ($action === 'order-confirmation' && $response !== false && $statusCode >= 200 && $statusCode < 300) {
+    $decoded = json_decode($response, true);
+    if (is_array($decoded) && isset($decoded['data']['order']) && is_array($decoded['data']['order'])
+        && empty($decoded['data']['order']['access_verified'])) {
+        $o = &$decoded['data']['order'];
+        $o['tickets'] = [];
+        $o['beneficiaries'] = [];
+        $o['customer_email'] = null;
+        $o['customer_name'] = null;
+        $o['download_key'] = null;
+        $o['tickets_locked'] = true;
+        unset($o);
+        $response = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
 }
 
 // Store in cache if cacheable

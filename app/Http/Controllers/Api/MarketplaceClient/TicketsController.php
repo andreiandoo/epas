@@ -98,6 +98,12 @@ class TicketsController extends BaseController
             return $this->error('Order not found', 404);
         }
 
+        // Links from the order email / thank-you page carry the order key; when
+        // one is sent it has to match (the ambilet site always sends one).
+        if ($request->filled('key') && !\App\Support\OrderAccessKey::check($order->order_number, (string) $request->query('key'))) {
+            return $this->error('Order not found', 404);
+        }
+
         // Skip umbrella tickets (meta.is_package_umbrella=true). Ele exista in DB pentru
         // raportare dar customer-ul primeste doar componentele reale ale pachetului
         // (meta.from_package=true), care sunt scanabile la intrare.
@@ -230,6 +236,17 @@ class TicketsController extends BaseController
 
         if (!$ticket) {
             return $this->error('Ticket not found or not available for download', 404);
+        }
+
+        // Customer download (site account page): the Authorization header holds the
+        // customer's token next to the X-API-Key, and the ticket must be theirs.
+        $bearer = $request->bearerToken();
+        if ($bearer && $request->hasHeader('X-API-Key')) {
+            $customer = \Laravel\Sanctum\PersonalAccessToken::findToken($bearer)?->tokenable;
+            $ownerId = $ticket->current_owner_customer_id ?? $ticket->marketplace_customer_id;
+            if (!$customer instanceof \App\Models\MarketplaceCustomer || (int) $ownerId !== (int) $customer->id) {
+                return $this->error('Ticket not found or not available for download', 404);
+            }
         }
 
         $ticketCode = $ticket->code ?? $ticket->barcode ?? $ticket->id;

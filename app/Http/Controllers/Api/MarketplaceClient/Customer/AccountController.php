@@ -62,6 +62,7 @@ class AccountController extends BaseController
 
         $perPage = min((int) $request->input('per_page', 20), 50);
         $orders = $query->paginate($perPage);
+        $this->attachTicketEvent($orders->getCollection());
 
         $paginatedResponse = $this->paginated($orders, function ($order) {
             // Handle both marketplace events and tenant events
@@ -323,6 +324,7 @@ class AccountController extends BaseController
         if (!$order) {
             return $this->error('Order not found', 404);
         }
+        $this->attachTicketEvent(collect([$order]));
 
         // Determine refund eligibility
         $canRequestRefund = false;
@@ -446,13 +448,16 @@ class AccountController extends BaseController
             $ticketType = $first->marketplaceTicketType ?? $first->ticketType;
             $typeName = $ticketType?->name ?? 'Bilet';
             $price = (float) ($first->price ?? $ticketType?->price ?? 0);
+            // Multi-event orders: each ticket type names its own event
+            $typeEvent = $first->marketplaceTicketType ? null : $first->ticketType?->event;
+            $typeEventTitle = $typeEvent ? $this->resolveTranslatable($typeEvent->title) : null;
 
             return [
                 'name' => $typeName,
                 'quantity' => $tickets->count(),
                 'price' => $price,
                 'total' => $price * $tickets->count(),
-                'event_title' => $eventData['name'] ?? '',
+                'event_title' => $typeEventTitle ?: ($eventData['name'] ?? ''),
                 'event_date' => $eventData['date'] ?? null,
                 'image' => $eventData['image'] ?? null,
             ];
@@ -695,6 +700,11 @@ class AccountController extends BaseController
         }
 
         $event = $order->marketplaceEvent;
+        // Regular events (and multi-event orders): the ticket's own event
+        $native = $event ? null : ($ticket->resolveEvent() ?? $order->event);
+        if (!$event && !$native) {
+            return $this->error('Ticket not found', 404);
+        }
 
         // Count ticket position
         $ticketPosition = 1;
@@ -711,7 +721,7 @@ class AccountController extends BaseController
         // Event (via ticket->resolveEvent()) does. If it's a physical
         // event or the resolver returns null, the client-side JS falls
         // back to the QR/scan flow it already has.
-        $nativeEvent = $ticket->resolveEvent();
+        $nativeEvent = $native ?? $ticket->resolveEvent();
         $onlineJoinable = $nativeEvent?->isOnlineJoinable() ?? false;
         $onlineData = [
             'is_online'          => (bool) ($nativeEvent?->is_online ?? false),
@@ -723,33 +733,57 @@ class AccountController extends BaseController
                 : null,
         ];
 
+        if ($event) {
+            $eventPayload = [
+                'id' => $event->id,
+                'title' => $event->name,
+                'subtitle' => $event->short_description ?? '',
+                'slug' => $event->slug,
+                'date' => $event->starts_at->format('l, d F Y'),
+                'time' => 'Ora ' . $event->starts_at->format('H:i') . ($event->doors_open_at ? ' (Porti: ' . $event->doors_open_at->format('H:i') . ')' : ''),
+                'venue' => $event->venue_name,
+                'address' => $event->venue_address ?? '',
+                'city' => $event->venue_city,
+                'image' => $event->image_url,
+                'is_upcoming' => $event->starts_at >= now(),
+                'online' => $onlineData,
+            ];
+        } else {
+            $start = $native->start_date ? \Carbon\Carbon::parse($native->start_date) : null;
+            $startTime = $native->duration_mode === 'range' ? ($native->range_start_time ?? $native->start_time) : $native->start_time;
+            $imagePath = $native->featured_image ?: $native->poster_url;
+            $eventPayload = [
+                'id' => $native->id,
+                'title' => $this->resolveTranslatable($native->title) ?? '',
+                'subtitle' => $this->resolveTranslatable($native->short_description) ?? '',
+                'slug' => $native->slug,
+                'date' => $start ? $start->format('l, d F Y') : '',
+                'time' => $startTime
+                    ? 'Ora ' . substr((string) $startTime, 0, 5) . ($native->door_time ? ' (Porti: ' . substr((string) $native->door_time, 0, 5) . ')' : '')
+                    : ($native->door_time ? 'Porti: ' . substr((string) $native->door_time, 0, 5) : ''),
+                'venue' => $this->resolveTranslatable($native->venue?->name) ?? '',
+                'address' => $native->venue?->address ?? '',
+                'city' => $native->venue?->city ?? '',
+                'image' => $imagePath ? \Illuminate\Support\Facades\Storage::disk('public')->url($imagePath) : null,
+                'is_upcoming' => !$native->isPast(),
+                'online' => $onlineData,
+            ];
+        }
+
         return $this->success([
             'ticket' => [
                 'id' => $ticket->id,
                 'code' => $ticket->barcode,
-                'type' => $ticket->marketplaceTicketType?->name ?? 'Standard',
-                'type_description' => $ticket->marketplaceTicketType?->description ?? '',
-                'price' => number_format((float) ($ticket->marketplaceTicketType?->price ?? 0), 2, ',', '.') . ' RON',
+                'type' => $ticket->marketplaceTicketType?->name ?? $this->resolveTranslatable($ticket->ticketType?->name) ?? 'Standard',
+                'type_description' => $ticket->marketplaceTicketType?->description ?? $this->resolveTranslatable($ticket->ticketType?->description) ?? '',
+                'price' => number_format((float) ($ticket->marketplaceTicketType?->price ?? $ticket->price ?? 0), 2, ',', '.') . ' RON',
                 'status' => $ticket->status,
                 'attendee_name' => $ticket->attendee_name ?? $customer->full_name,
                 'attendee_email' => $ticket->attendee_email ?? $customer->email,
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                 'transferable' => $ticket->is_transferable ?? true,
-                'event' => [
-                    'id' => $event->id,
-                    'title' => $event->name,
-                    'subtitle' => $event->short_description ?? '',
-                    'slug' => $event->slug,
-                    'date' => $event->starts_at->format('l, d F Y'),
-                    'time' => 'Ora ' . $event->starts_at->format('H:i') . ($event->doors_open_at ? ' (Porti: ' . $event->doors_open_at->format('H:i') . ')' : ''),
-                    'venue' => $event->venue_name,
-                    'address' => $event->venue_address ?? '',
-                    'city' => $event->venue_city,
-                    'image' => $event->image_url,
-                    'is_upcoming' => $event->starts_at >= now(),
-                    'online' => $onlineData,
-                ],
+                'event' => $eventPayload,
                 'order' => [
                     'id' => $order->id,
                     'number' => $order->order_number,
@@ -1058,6 +1092,38 @@ class AccountController extends BaseController
     /**
      * Require authenticated customer
      */
+    /**
+     * Multi-event orders carry no event on the order itself. Give them the
+     * event of their first ticket so lists and details show an event
+     * instead of an empty card. Orders that already have one are untouched.
+     */
+    protected function attachTicketEvent($orders): void
+    {
+        $missing = $orders->filter(fn ($o) => !$o->marketplaceEvent && !$o->event);
+        if ($missing->isEmpty()) {
+            return;
+        }
+
+        $typeIds = $missing->flatMap(fn ($o) => $o->tickets->pluck('ticket_type_id'))->filter()->unique()->values();
+        if ($typeIds->isEmpty()) {
+            return;
+        }
+        $typeEvent = \App\Models\TicketType::whereIn('id', $typeIds)->pluck('event_id', 'id');
+        $events = \App\Models\Event::with(['venue', 'marketplaceOrganizer'])
+            ->whereIn('id', $typeEvent->filter()->unique()->values())
+            ->get()
+            ->keyBy('id');
+
+        foreach ($missing as $order) {
+            $first = $order->tickets->sortBy('id')->first(
+                fn ($t) => $t->ticket_type_id && isset($events[$typeEvent[$t->ticket_type_id] ?? 0])
+            );
+            if ($first) {
+                $order->setRelation('event', $events[$typeEvent[$first->ticket_type_id]]);
+            }
+        }
+    }
+
     protected function requireCustomer(Request $request): MarketplaceCustomer
     {
         $customer = $request->user();
