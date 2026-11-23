@@ -808,6 +808,10 @@ class AccountController extends BaseController
                 // narrow select can silently break the date logic if any field is missing.
                 'event',
                 'event.venue:id,name,city',
+                // Multi-event orders have no event on the order itself:
+                // each ticket carries its own event through its ticket type.
+                'tickets.event',
+                'tickets.event.venue:id,name,city',
                 'tickets.marketplaceTicketType:id,name',
                 'tickets.ticketType:id,name,is_refundable',
                 'tickets.marketplaceTicketType:id,name,is_refundable',
@@ -863,8 +867,9 @@ class AccountController extends BaseController
                             'is_upcoming' => !$isPast,
                         ],
                     ];
-                } elseif ($order->event) {
-                    $event = $order->event;
+                } elseif ($ticket->event || $order->event) {
+                    // The ticket's own event first (multi-event orders), then the order's
+                    $event = $ticket->event ?? $order->event;
                     // Get full URL for featured image
                     $imageUrl = null;
                     if ($event->featured_image) {

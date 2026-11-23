@@ -1468,6 +1468,17 @@ switch ($action) {
             echo json_encode(['error' => 'Missing order reference']);
             exit;
         }
+        // Opened from outside the site (email button, mail app browsers): show the
+        // tickets page instead of a bare file download, which many mail apps
+        // silently block. The site itself (same-origin) and the page's own
+        // buttons (dl=1 / inline=1) still get the PDF directly.
+        if (empty($_GET['dl']) && empty($_GET['inline'])
+            && ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '') !== 'same-origin'
+            && ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '') !== 'empty') {
+            header('Cache-Control: no-store');
+            header('Location: /bilete-comanda?order=' . rawurlencode($orderRef), true, 302);
+            exit;
+        }
         $endpoint = '/tickets/download-pdf?order=' . urlencode($orderRef);
         $rawResponse = true;
         // No auth required — uses marketplace API key + order reference
@@ -5318,6 +5329,10 @@ if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $status
             header($upstreamContentDisposition);
         } else {
             header('Content-Disposition: attachment; filename="document.pdf"');
+        }
+        // "Deschide PDF-ul": show it in the browser's viewer instead of saving
+        if ($action === 'order.download-tickets-pdf' && !empty($_GET['inline'])) {
+            header('Content-Disposition: inline; filename="bilete-' . preg_replace('/[^A-Za-z0-9_-]/', '-', (string) ($_GET['order'] ?? '')) . '.pdf"');
         }
         header('Content-Length: ' . strlen($response));
     } elseif (str_starts_with($response, "\x89PNG\r\n\x1a\n")) {
