@@ -2740,6 +2740,10 @@ class MarketplacePayout extends Model
         if ($this->isAdvance() || !$this->event_id || $this->net_override !== null) {
             return 0.0;
         }
+        // Locațiile leisure au compensarea lor (net online vs comision POS) — neschimbate.
+        if ($this->event?->isLeisureVenue()) {
+            return 0.0;
+        }
 
         $rows ??= $this->ticket_breakdown ?? [];
         $posSet = array_flip($this->getPosTicketTypeIds());
