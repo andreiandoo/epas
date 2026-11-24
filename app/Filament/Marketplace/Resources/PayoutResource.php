@@ -1134,18 +1134,25 @@ class PayoutResource extends Resource
         ]));
 
         // Cine a marcat plătit: salvat din 10.10.2026 (completed_by).
+        // Finalizat = plătit, indiferent de unde s-a marcat (pagina decontului
+        // sau Lista deconturi din Sold organizator): ambele trec prin complete().
         $completedNote = '';
         if ($record->completed_at) {
             $who = static::adminName($record->completed_by ?? null);
-            $completedNote = $who ? 'de ' . e($who) . ' (admin)'
-                : ($record->completed_at < '2026-10-10' ? 'cine: neînregistrat (înainte de 10.10.2026)' : '');
+            $whoText = $who ? 'marcat de ' . e($who) . ' (admin)'
+                : ($record->completed_at < '2026-10-10' ? 'cine a marcat: neînregistrat (înainte de 10.10.2026)' : null);
+            $completedNote = implode(' · ', array_filter([
+                static::uiMoney($record->transferAmount(), $record->currency ?? 'RON'),
+                $whoText,
+                $record->payment_reference ? 'ref. ' . e($record->payment_reference) : null,
+            ]));
         }
 
         $steps = [
             ['Creat', $dt($createdAt), $createdNote],
             ['Aprobat', $dt($record->approved_at), $approvedNote],
             ['Procesat', $dt($record->processed_at), ''],
-            ['Finalizat', $dt($record->completed_at), $completedNote],
+            ['Plătit', $dt($record->completed_at), $completedNote],
         ];
 
         $items = '';
