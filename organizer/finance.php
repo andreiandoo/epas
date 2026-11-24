@@ -410,7 +410,7 @@ function payoutBreakdownHtml(list, emptyLabel) {
             <div class="flex items-start justify-between gap-4 py-2 border-b border-border last:border-0">
                 <div class="min-w-0">
                     <p class="text-sm truncate text-secondary" title="${escAttr(label)}">${label}</p>
-                    <p class="text-xs text-muted">${ref}${when ? ' · ' + fmtDateTime(when) : ''}${(p.advance_covered || 0) > 0.005 ? ' · decont ' + fmt(p.decont_amount) + ', din care ' + fmt(p.advance_covered) + ' compensat din avans' : ''}</p>
+                    <p class="text-xs text-muted">${ref}${when ? ' · ' + fmtDateTime(when) : ''}${(p.advance_covered || 0) > 0.005 ? ' · decont ' + fmt(p.decont_amount) + ', din care ' + fmt(p.advance_covered) + ' compensat din avans' : ''}${(p.invoiced_commission || 0) > 0.005 ? ' · primești ' + fmt(p.transfer_amount) + ', inclusiv comisionul de ' + fmt(p.invoiced_commission) + ' (îl plătești pe factura de comision)' : ''}</p>
                 </div>
                 <span class="text-sm font-semibold whitespace-nowrap text-secondary">${fmt(p.amount)}</span>
             </div>`;
@@ -729,7 +729,7 @@ function renderEventPayments(eventId, payouts) {
                     <p class="text-sm font-medium text-secondary">${p.decont_series || p.reference || '#' + p.id}</p>
                     ${p.decont_series && p.reference ? `<p class="text-xs text-muted">${p.reference}</p>` : ''}
                 </td>
-                <td class="px-4 py-3 text-sm font-semibold">${AmbiletUtils.formatCurrency(p.amount)}</td>
+                <td class="px-4 py-3 text-sm font-semibold">${AmbiletUtils.formatCurrency(p.amount)}${(p.invoiced_commission || 0) > 0.005 ? `<p class="text-xs font-normal text-muted">+ ${AmbiletUtils.formatCurrency(p.invoiced_commission)} comision facturat separat</p>` : ''}</td>
                 <td class="px-4 py-3">
                     <span class="px-2 py-0.5 ${statusInfo.class} text-xs rounded-full">${statusInfo.label}</span>
                     ${rejectionTooltip}
