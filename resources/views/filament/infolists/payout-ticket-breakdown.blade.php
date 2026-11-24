@@ -13,7 +13,9 @@
     // left empty here — the saved breakdown aggregates by ticket type, so
     // promo-tier granularity is lost. If we ever need promo splits, the
     // write path needs to emit one row per (type × price × promo) tuple.
-    $splitRows = collect($breakdown)->map(function ($item) {
+    $splitInvoiced = $record->invoicedCommission() > 0.005;
+    $splitPosSet = ($splitInvoiced && !empty($breakdown)) ? array_flip($record->getPosTicketTypeIds()) : [];
+    $splitRows = collect($breakdown)->map(function ($item) use ($splitInvoiced, $splitPosSet) {
         $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
         $qty = (int) ($item['qty'] ?? $item['quantity'] ?? $item['tickets'] ?? 0);
         $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
@@ -29,6 +31,10 @@
             ? (float) $item['gross']
             : ($price * $qty + ($isOnTop ? $commission : 0));
         $net = isset($item['net']) ? (float) $item['net'] : ($gross - $commission);
+        $invoiced = $splitInvoiced && !$isOnTop && !isset($splitPosSet[$item['ticket_type_id'] ?? 0]);
+        if ($invoiced) {
+            $net += $commission;
+        }
 
         return [
             'ticket_type_id' => $item['ticket_type_id'] ?? null,
@@ -45,6 +51,7 @@
             'commission_rate' => $item['commission_rate'] ?? null,
             'commission_fixed' => $item['commission_fixed'] ?? null,
             'net' => round($net, 2),
+            'invoiced' => $invoiced,
             'promo_code' => null,
             'promo_label' => '',
         ];
@@ -65,6 +72,8 @@
     $totalNetFinal = 0;
     // Pre-pass to know whether to render the Extras column.
     $hasExtras = collect($breakdown)->contains(fn ($i) => (float) ($i['extras'] ?? 0) > 0);
+    // Comision inclus facturat separat: nu se scade din ce primește organizatorul.
+    $commissionInvoiced = $record->invoicedCommission() > 0.005;
 @endphp
 
 @once
@@ -137,6 +146,11 @@
                     $extras = (float) ($item['extras'] ?? 0);
                     if ($extras > 0) $hasExtras = true;
                     $netFinal = (float) ($item['net'] ?? ($netTickets - $discounts - $extras));
+                    $rowInvoiced = $commissionInvoiced && !$isPos && !$isOnTop;
+                    if ($rowInvoiced) {
+                        $netTickets += $commission;
+                        $netFinal += $commission;
+                    }
                     // Build the parenthesized rate label from commission_type so
                     // fixed-amount commissions also show their value (was: only %).
                     $commissionType = $item['commission_type'] ?? null;
@@ -183,7 +197,7 @@
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($price, 2) }}</td>
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-semibold">{{ $qty }}</td>
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($gross, 2) }}</td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">-{{ number_format($commission, 2) }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $rowInvoiced ? '' : '-' }}{{ number_format($commission, 2) }}@if($rowInvoiced)<div class="text-[10px] text-gray-400">facturat separat</div>@endif</td>
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($netTickets, 2) }}</td>
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $discounts > 0 ? '-' . number_format($discounts, 2) : '0.00' }}</td>
                     @if($hasExtras)
@@ -205,7 +219,7 @@
                 <td class="py-2 px-3"></td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white">{{ $totalQty }}</td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalGross, 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($totalCommission, 2) }} {{ $currency }}</td>
+                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $commissionInvoiced ? '' : '-' }}{{ number_format($totalCommission, 2) }} {{ $currency }}</td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalNetTickets, 2) }} {{ $currency }}</td>
                 <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $totalDiscounts > 0 ? '-' . number_format($totalDiscounts, 2) : '0.00' }} {{ $currency }}</td>
                 @if($hasExtras)
@@ -284,7 +298,7 @@
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($sr['price'], 2) }}</td>
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-semibold">{{ $sr['qty'] }}</td>
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($sr['gross'], 2) }}</td>
-                    <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($sr['commission_amount'], 2) }}</td>
+                    <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $sr['invoiced'] ? '' : '-' }}{{ number_format($sr['commission_amount'], 2) }}</td>
                     <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono font-semibold">{{ number_format($sr['net'], 2) }}</td>
                     <td class="py-2 px-3 text-left text-xs {{ $sr['is_reduced'] ? 'text-emerald-700 dark:text-emerald-300 font-medium' : 'text-gray-400 dark:text-gray-500' }}">{{ $sr['promo_label'] }}</td>
                     <td class="py-2 px-3 text-right text-gray-500 dark:text-gray-400 text-xs">{{ $sCommissionLabel }}</td>
@@ -297,7 +311,7 @@
                 <td class="py-2 px-3"></td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white">{{ $splitTotalQty }}</td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($splitTotalGross, 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($splitTotalCommission, 2) }} {{ $currency }}</td>
+                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $commissionInvoiced ? '' : '-' }}{{ number_format($splitTotalCommission, 2) }} {{ $currency }}</td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($splitTotalNet, 2) }} {{ $currency }}</td>
                 <td class="py-2 px-3"></td>
                 <td class="py-2 px-3"></td>

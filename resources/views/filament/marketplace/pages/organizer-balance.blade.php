@@ -351,14 +351,14 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
-                                    {{ number_format((float) $payout->amount, 2, ',', '.') }} {{ $payout->currency ?? 'RON' }}
+                                    @php
+                                        // Comision inclus facturat separat: organizatorul primește brutul.
+                                        $shownAmount = (float) $payout->amount + (float) ($payout->invoiced_commission_amount ?? 0);
+                                    @endphp
+                                    {{ number_format($shownAmount, 2, ',', '.') }} {{ $payout->currency ?? 'RON' }}
                                     @if((float) ($payout->advance_covered ?? 0) > 0)
                                         <div class="text-xs font-normal text-amber-600 dark:text-amber-400 mt-0.5">din avans: −{{ number_format((float) $payout->advance_covered, 2, ',', '.') }}</div>
-                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400">de plată: {{ number_format(max(0, (float) $payout->amount - (float) $payout->advance_covered), 2, ',', '.') }}</div>
-                                    @endif
-                                    @if((float) ($payout->invoiced_commission_amount ?? 0) > 0.005)
-                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400 mt-0.5">+ comision facturat separat: {{ number_format((float) $payout->invoiced_commission_amount, 2, ',', '.') }}</div>
-                                        <div class="text-xs font-semibold text-emerald-700 dark:text-emerald-400">de transferat: {{ number_format(max(0, (float) $payout->amount - (float) ($payout->advance_covered ?? 0)) + (float) $payout->invoiced_commission_amount, 2, ',', '.') }}</div>
+                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400">de plată: {{ number_format(max(0, $shownAmount - (float) $payout->advance_covered), 2, ',', '.') }}</div>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 text-center">

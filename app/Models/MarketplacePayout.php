@@ -2729,6 +2729,16 @@ class MarketplacePayout extends Model
         return round($this->cashAmount() + $this->invoicedCommission(), 2);
     }
 
+    /** Factura organizator (comisionul) emisă pe acest decont, dacă există. */
+    public function commissionInvoice(): ?\App\Models\Invoice
+    {
+        return \App\Models\Invoice::where('marketplace_payout_id', $this->id)
+            ->where('status', '!=', 'cancelled')
+            ->orderByDesc('id')
+            ->get()
+            ->first(fn ($i) => (bool) data_get($i->meta, 'is_pos_commission'));
+    }
+
     /**
      * Comisionul inclus de pe rândurile online din breakdown: tipurile cu
      * comision peste preț și cele POS nu intră (POS se facturează oricum,

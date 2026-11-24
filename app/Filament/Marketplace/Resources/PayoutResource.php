@@ -364,9 +364,13 @@ class PayoutResource extends Resource
                                         // Comision inclus facturat separat: nu se scade din plată.
                                         $invoicedCom = $record->invoicedCommission();
                                         $comDisplay = $invoicedCom > 0.005 ? $fmt($com) : '-' . $fmt($com);
-                                        $comNote = $invoicedCom > 0.005
-                                            ? "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu se reține: " . $fmt($invoicedCom) . " pe factura organizator</div>"
-                                            : '';
+                                        $comNote = '';
+                                        if ($invoicedCom > 0.005) {
+                                            $inv = $record->commissionInvoice();
+                                            $comNote = "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu se reține, se facturează"
+                                                . ($inv ? ': ' . e($inv->number) . ' = ' . $fmt((float) $inv->amount) . ' cu TVA' : '')
+                                                . '</div>';
+                                        }
                                         $hasDeductible = $deductibleRefund > 0.01;
                                         $hasInformational = $informationalRefund > 0.01;
                                         $extraCards = ($hasDeductible ? 1 : 0) + ($hasInformational ? 1 : 0);
@@ -446,8 +450,10 @@ class PayoutResource extends Resource
                                 Infolists\Components\TextEntry::make('online_commission')
                                     ->label('Comision bilete online')
                                     ->state(fn ($record) => $record->getBreakdownTotals()['online']['commission'])
-                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
-                                    ->color('danger'),
+                                    ->formatStateUsing(fn ($state, $record) => $record->invoicedCommission() > 0.005
+                                        ? number_format((float) $state, 2) . ' RON (nu se reține, se facturează separat)'
+                                        : '-' . number_format((float) $state, 2) . ' RON')
+                                    ->color(fn ($record) => $record->invoicedCommission() > 0.005 ? 'gray' : 'danger'),
 
                                 Infolists\Components\TextEntry::make('online_discount')
                                     ->label('Discounts bilete online')
@@ -465,17 +471,24 @@ class PayoutResource extends Resource
 
                                 Infolists\Components\TextEntry::make('online_net')
                                     ->label('Sumă netă bilete online')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['net'])
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['net'] + $record->invoicedCommission())
                                     ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
                                     ->weight('bold')
                                     ->size('lg')
                                     ->color('success'),
 
                                 Infolists\Components\TextEntry::make('invoiced_commission')
-                                    ->label('Comision inclus, facturat separat (nu se reține)')
-                                    ->state(fn ($record) => $record->invoicedCommission())
-                                    ->formatStateUsing(fn ($state) => '+' . number_format((float) $state, 2) . ' RON')
-                                    ->helperText('Organizatorul primește și această sumă; comisionul îl plătește pe factura organizator.')
+                                    ->label('Factura de comision către organizator')
+                                    ->state(function ($record) {
+                                        $inv = $record->commissionInvoice();
+                                        if (! $inv) {
+                                            return 'negenerată: comision ' . number_format($record->invoicedCommission(), 2) . ' RON + TVA';
+                                        }
+
+                                        return $inv->number . ': ' . number_format((float) $inv->subtotal, 2) . ' + TVA '
+                                            . number_format((float) $inv->vat_amount, 2) . ' = ' . number_format((float) $inv->amount, 2) . ' RON';
+                                    })
+                                    ->helperText('Comisionul nu se reține din decont; organizatorul plătește factura.')
                                     ->visible(fn ($record) => $record->invoicedCommission() > 0.005),
 
                                 Infolists\Components\TextEntry::make('pos_gross')
