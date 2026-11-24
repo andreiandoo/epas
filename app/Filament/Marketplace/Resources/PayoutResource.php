@@ -346,83 +346,9 @@ class PayoutResource extends Resource
                             ->description('Sume cumulate pe toate deconturile evenimentului — context, nu cifrele acestui decont.')
                             ->schema([
                                 Infolists\Components\TextEntry::make('event_totals')
-                                    ->label('')
+                                    ->hiddenLabel()
                                     ->getStateUsing(fn () => '—')
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if (!$record->event_id) return '';
-                                        $event = \App\Models\Event::with('ticketTypes')->find($record->event_id);
-                                        if (!$event) return '';
-
-                                        $financials = \App\Filament\Marketplace\Resources\PayoutResource\Pages\ListPayouts::calculateEventFinancials($event);
-                                        $gross = (float) ($financials['gross'] ?? 0);
-                                        $commission = (float) ($financials['commission'] ?? 0);
-                                        $net = (float) ($financials['net'] ?? 0);
-                                        $refunds = (float) ($financials['refunds'] ?? 0);
-                                        $paid = (float) ($financials['paid'] ?? 0);
-                                        $pending = (float) ($financials['pending'] ?? 0);
-                                        $balance = (float) ($financials['balance'] ?? 0);
-
-                                        $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
-
-                                        // Base commission recorded on payouts (from ticket_breakdown snapshots).
-                                        $paidCommission = (float) MarketplacePayout::where('event_id', $record->event_id)
-                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
-                                            ->sum('commission_amount');
-                                        // Add kept commission from refunds — on on_top events these are
-                                        // already Ambilet revenue (customer paid it, refund face-value went
-                                        // back but commission portion stayed on Ambilet's Netopia balance).
-                                        // Event totals must reflect what Ambilet has, not just the payout
-                                        // snapshot slice.
-                                        $paidCommission += (float) ($financials['kept_commission'] ?? 0);
-                                        $paidCommission = round($paidCommission, 2);
-                                        $remainingCommission = max(0, $commission - $paidCommission);
-
-                                        // Comision inclus facturat separat: nu s-a reținut, organizatorul îl primește
-                                        // în decont și îl plătește pe factura de comision.
-                                        $invoicedRows = MarketplacePayout::where('event_id', $record->event_id)
-                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
-                                            ->whereNotNull('invoiced_commission_amount')
-                                            ->get(['status', 'invoiced_commission_amount']);
-                                        $invoicedPaid = round((float) $invoicedRows->where('status', 'completed')->sum('invoiced_commission_amount'), 2);
-                                        $invoicedTotal = round((float) $invoicedRows->sum('invoiced_commission_amount'), 2);
-                                        $invoicedPending = round($invoicedTotal - $invoicedPaid, 2);
-                                        $paid += $invoicedPaid;
-                                        $pending += $invoicedPending;
-                                        $withheldCommission = max(0, round($paidCommission - $invoicedTotal, 2));
-                                        $netLine = $invoicedTotal > 0.005
-                                            ? "<div style='font-size:11px;color:#666;'>Net organizator: {$fmt($net + $invoicedTotal)}</div>"
-                                            : "<div style='font-size:11px;color:#666;'>Net total: {$fmt($net)}</div>";
-                                        $commissionLines = ($withheldCommission > 0.005 || $invoicedTotal <= 0.005
-                                                ? "<div style='font-size:11px;color:#666;'>Comision reținut: {$fmt($withheldCommission)}</div>" : '')
-                                            . ($invoicedTotal > 0.005
-                                                ? "<div style='font-size:11px;color:#666;'>Comision facturat separat: {$fmt($invoicedTotal)}</div>" : '');
-
-                                        return new \Illuminate\Support\HtmlString("
-                                        <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;'>
-                                            <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;'>
-                                                <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Vânzări totale eveniment</div>
-                                                <div style='font-size:16px;font-weight:700;color:#1a1a2e;'>{$fmt($gross)}</div>
-                                                <div style='font-size:11px;color:#666;margin-top:2px;'>Comision total: {$fmt($commission)}</div>
-                                                {$netLine}
-                                                " . ($refunds > 0 ? "<div style='font-size:11px;color:#dc2626;'>Returnări: -{$fmt($refunds)}</div>" : "") . "
-                                            </div>
-                                            <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fef3c7;'>
-                                                <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Decontat (toate deconturile)</div>
-                                                <div style='font-size:16px;font-weight:700;color:#92400e;'>{$fmt($paid + $pending)}</div>
-                                                <div style='font-size:11px;color:#666;margin-top:2px;'>Plătit: {$fmt($paid)}</div>
-                                                " . ($pending > 0 ? "<div style='font-size:11px;color:#d97706;'>În așteptare: {$fmt($pending)}</div>" : "") . "
-                                                {$commissionLines}
-                                            </div>
-                                            <div style='padding:12px;border:1px solid #059669;border-radius:8px;background:#f0fdf4;'>
-                                                <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Disponibil restant</div>
-                                                <div style='font-size:16px;font-weight:700;color:#059669;'>{$fmt($balance)}</div>
-                                                <div style='font-size:11px;color:#666;margin-top:2px;'>Comision rămas: {$fmt($remainingCommission)}</div>
-                                            </div>
-                                        </div>
-                                        ");
-                                    })
+                                    ->formatStateUsing(fn ($state, $record) => static::renderEventTotals($record))
                                     ->html()
                                     ->columnSpanFull(),
                             ])
@@ -733,14 +659,11 @@ class PayoutResource extends Resource
                             ->icon('heroicon-o-building-library')
                             ->compact()
                             ->schema([
-                                Infolists\Components\TextEntry::make('payout_method.bank_name')
-                                    ->label('Bancă'),
-                                Infolists\Components\TextEntry::make('payout_method.iban')
-                                    ->label('IBAN')
-                                    ->copyable(),
-                                Infolists\Components\TextEntry::make('payout_method.account_holder')
-                                    ->label('Titular')
-                                    ->copyable(),
+                                Infolists\Components\TextEntry::make('bank_account_view')
+                                    ->hiddenLabel()
+                                    ->getStateUsing(fn () => '—')
+                                    ->formatStateUsing(fn ($state, $record) => static::renderBankAccount($record))
+                                    ->html(),
                             ]),
 
                         // Event decont context
@@ -748,82 +671,11 @@ class PayoutResource extends Resource
                             ->icon('heroicon-o-chart-bar')
                             ->compact()
                             ->schema([
-                                Infolists\Components\TextEntry::make('decont_number')
-                                    ->label('Nr. decont pe eveniment')
-                                    ->getStateUsing(function ($record) {
-                                        if (!$record->event_id) return '—';
-                                        $total = MarketplacePayout::where('event_id', $record->event_id)
-                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
-                                            ->count();
-                                        $nr = MarketplacePayout::where('event_id', $record->event_id)
-                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
-                                            ->where('id', '<=', $record->id)
-                                            ->count();
-                                        return "{$nr} din {$total}";
-                                    }),
-                                Infolists\Components\TextEntry::make('event_payouts_summary')
-                                    ->label('Deconturi pe eveniment')
+                                Infolists\Components\TextEntry::make('event_context_view')
+                                    ->hiddenLabel()
                                     ->getStateUsing(fn () => '—')
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if (!$record->event_id) return '—';
-                                        $payouts = MarketplacePayout::where('event_id', $record->event_id)
-                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
-                                            ->orderBy('created_at')
-                                            ->get(['id', 'reference', 'amount', 'status', 'created_at']);
-
-                                        if ($payouts->isEmpty()) return '—';
-
-                                        $statusColor = [
-                                            'pending' => '#d97706',
-                                            'approved' => '#2563eb',
-                                            'processing' => '#7c3aed',
-                                            'completed' => '#059669',
-                                        ];
-                                        $statusLabel = [
-                                            'pending' => 'În așteptare',
-                                            'approved' => 'Aprobat',
-                                            'processing' => 'Procesare',
-                                            'completed' => 'Finalizat',
-                                        ];
-
-                                        $rows = $payouts->map(function ($p) use ($record, $statusColor, $statusLabel) {
-                                            $isCurrent = $p->id === $record->id;
-                                            $url = static::getUrl('view', ['record' => $p->id]);
-                                            $color = $statusColor[$p->status] ?? '#6b7280';
-                                            $label = $statusLabel[$p->status] ?? $p->status;
-                                            $date = MarketplaceTz::fmt($p->created_at, 'd.m.Y', $p->marketplaceClient ?? null, fallback: '—');
-                                            $amount = number_format((float) $p->amount, 2, ',', '.');
-                                            $marker = $isCurrent ? '<span style="margin-left:6px;color:#059669;font-weight:700;">← acest decont</span>' : '';
-                                            $linkOrText = $isCurrent
-                                                ? '<span style="font-weight:600;color:#1f2937;">' . e($p->reference) . '</span>'
-                                                : '<a href="' . e($url) . '" style="color:#2563eb;text-decoration:underline;font-weight:500;">' . e($p->reference) . '</a>';
-
-                                            return '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;">'
-                                                . $linkOrText
-                                                . '<span style="color:#6b7280;font-size:12px;">' . $date . '</span>'
-                                                . '<span style="color:#374151;font-weight:600;">' . $amount . ' RON</span>'
-                                                . '<span style="display:inline-block;padding:2px 8px;border-radius:9999px;background:' . $color . '20;color:' . $color . ';font-size:11px;font-weight:600;">' . $label . '</span>'
-                                                . $marker
-                                                . '</div>';
-                                        })->implode('');
-
-                                        return new \Illuminate\Support\HtmlString('<div>' . $rows . '</div>');
-                                    })
+                                    ->formatStateUsing(fn ($state, $record) => static::renderEventContext($record))
                                     ->html(),
-                                Infolists\Components\TextEntry::make('event_remaining_balance')
-                                    ->label('Sold disponibil eveniment')
-                                    ->getStateUsing(function ($record) {
-                                        if (!$record->event_id || !$record->organizer) return '—';
-                                        $event = \App\Models\Event::find($record->event_id);
-                                        if (!$event) return '—';
-                                        $balance = \App\Filament\Marketplace\Resources\PayoutResource\Pages\ListPayouts::calculateEventBalance($event);
-                                        return number_format($balance, 2) . ' RON';
-                                    })
-                                    ->color('success')
-                                    ->weight('bold'),
                             ])
                             ->visible(fn ($record) => $record->event_id),
 
@@ -832,98 +684,11 @@ class PayoutResource extends Resource
                             ->icon('heroicon-o-clock')
                             ->compact()
                             ->schema([
-                                Infolists\Components\TextEntry::make('created_at')
-                                    ->label(fn ($record) => match ($record->source) {
-                                        'organizer' => 'Solicitat de organizator',
-                                        'manual', 'automated' => 'Creat de admin',
-                                        default => 'Solicitat',
-                                    })
-                                    // For admin-created payouts (manual / automated)
-                                    // the operator can back-date created_at to match
-                                    // an offline generation, so created_at no longer
-                                    // tells us when the record was actually inserted.
-                                    // approved_at is stamped at real insert time and
-                                    // never overridden — use it here as the audit
-                                    // timestamp. Organizer-requested payouts fall
-                                    // back to created_at (no back-dating possible).
-                                    ->state(function ($record) {
-                                        if (in_array($record->source, ['manual', 'automated'], true)
-                                            && $record->approved_at) {
-                                            return $record->approved_at;
-                                        }
-                                        return $record->created_at;
-                                    })
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
-                                // Show the actual user (admin) or organizer who
-                                // created the payout. Prefer the approving
-                                // admin recorded in approved_by — that field
-                                // is populated whenever a human (admin or
-                                // automation acting on their behalf) creates
-                                // the record, regardless of the legacy source
-                                // value. Fall back to organizer for organizer-
-                                // requested payouts, then to "Sistem (cron)"
-                                // only when there's truly no human attached.
-                                Infolists\Components\TextEntry::make('creator_label')
-                                    ->label('Creat de')
-                                    ->state(function ($record) {
-                                        if ($record->approvedByUser) {
-                                            $admin = $record->approvedByUser;
-                                            return trim($admin->name . ' (' . $admin->email . ')');
-                                        }
-                                        if ($record->source === 'organizer' && $record->organizer) {
-                                            $org = $record->organizer;
-                                            $email = $org->email ? ' (' . $org->email . ')' : '';
-                                            return $org->name . $email;
-                                        }
-                                        // Pre-2026-05-05 the "Generează decont"
-                                        // modal stored source='automated' with
-                                        // no approved_by even though a human
-                                        // admin had clicked it. The cron has
-                                        // been disabled the whole time, so
-                                        // these are factually admin-created —
-                                        // we just no longer have the admin id.
-                                        if ($record->source === 'automated'
-                                            && $record->approved_by === null
-                                            && $record->created_at
-                                            && $record->created_at < '2026-05-05') {
-                                            return 'Admin (legacy)';
-                                        }
-                                        if ($record->source === 'automated') {
-                                            return 'Sistem (cron)';
-                                        }
-                                        return '—';
-                                    }),
-                                Infolists\Components\TextEntry::make('source')
-                                    ->label('Tip')
-                                    ->badge()
-                                    ->formatStateUsing(fn ($state) => match ($state) {
-                                        'manual' => 'Admin',
-                                        'organizer' => 'Solicitat de organizator',
-                                        'automated' => 'Admin',
-                                        default => ucfirst($state),
-                                    })
-                                    ->color(fn ($state) => match ($state) {
-                                        'manual' => 'warning',
-                                        'organizer' => 'primary',
-                                        'automated' => 'info',
-                                        default => 'gray',
-                                    }),
-                                Infolists\Components\TextEntry::make('approved_at')
-                                    ->label('Aprobat')
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz())
-                                    ->visible(fn ($record) => $record->approved_at),
-                                Infolists\Components\TextEntry::make('processed_at')
-                                    ->label('Procesat')
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz())
-                                    ->visible(fn ($record) => $record->processed_at),
-                                Infolists\Components\TextEntry::make('completed_at')
-                                    ->label('Finalizat')
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz())
-                                    ->visible(fn ($record) => $record->completed_at),
-                                Infolists\Components\TextEntry::make('period_start')
-                                    ->label('Perioadă')
-                                    ->formatStateUsing(fn ($state, $record) => ($record->period_start?->format('d.m.Y') ?? '—') . ' → ' . ($record->period_end?->format('d.m.Y') ?? '—'))
-                                    ->visible(fn ($record) => $record->period_start),
+                                Infolists\Components\TextEntry::make('timeline_view')
+                                    ->hiddenLabel()
+                                    ->getStateUsing(fn () => '—')
+                                    ->formatStateUsing(fn ($state, $record) => static::renderTimeline($record))
+                                    ->html(),
                             ]),
 
                         // Invoice
@@ -1278,22 +1043,9 @@ class PayoutResource extends Resource
         $invoiced = $record->invoicedCommission() > 0.005;
         $isOnTop = ($record->commission_mode ?? 'included') === 'added_on_top';
 
-        $line = function (string $label, string $value, string $note = '', string $tone = '') {
-            $color = match ($tone) {
-                'minus' => '#dc2626',
-                'muted' => '#9ca3af',
-                default => 'inherit',
-            };
-
-            return "<div style='display:flex;justify-content:space-between;gap:16px;padding:6px 0;'>"
-                . "<div><div style='font-size:13px;'>{$label}</div>"
-                . ($note !== '' ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>{$note}</div>" : '')
-                . "</div><div style='font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;color:{$color};'>{$value}</div></div>";
-        };
-        $group = fn (string $title, string $body) => $body === '' ? '' :
-            "<div style='padding:10px 0;border-top:1px solid rgba(127,127,127,.2);'>"
-            . "<div style='font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;'>{$title}</div>{$body}</div>";
-        $subtotal = fn (string $label, $v) => "<div style='display:flex;justify-content:space-between;gap:16px;padding:6px 0 0;margin-top:2px;border-top:1px dashed rgba(127,127,127,.25);font-weight:600;font-size:13px;'><div>{$label}</div><div style='font-variant-numeric:tabular-nums;white-space:nowrap;'>{$fmt($v)}</div></div>";
+        $line = fn (string $label, string $value, string $note = '', string $tone = '') => static::uiLine($label, $value, $note, $tone);
+        $group = fn (string $title, string $body) => static::uiGroup($title, $body);
+        $subtotal = fn (string $label, $v) => static::uiSubtotal($label, $fmt($v));
 
         // Bilete online
         $o = $t['online'];
@@ -1375,15 +1127,252 @@ class PayoutResource extends Resource
         };
         $meta = e(implode(' · ', array_filter([$modeLabel, $recipient])));
 
+        return static::uiWrap(
+            $group('Bilete online', $online),
+            $group('Bilete vândute prin aplicație', $pos),
+            $group('Alte sume', $other),
+            static::uiTotal('De plată organizatorului', $fmt($final), $meta)
+        );
+    }
+
+    // ── Afișare comună pentru secțiunile paginii de decont (același stil peste tot).
+    // Etichetele și valorile primite sunt deja HTML sigur (escapat de apelant).
+
+    public static function uiLine(string $label, string $value, string $note = '', string $tone = ''): string
+    {
+        $color = match ($tone) {
+            'minus' => '#dc2626',
+            'muted' => '#9ca3af',
+            'success' => '#059669',
+            'warning' => '#d97706',
+            default => 'inherit',
+        };
+
+        return "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:5px 0;'>"
+            . "<div style='min-width:0;'><div style='font-size:13px;'>{$label}</div>"
+            . ($note !== '' ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>{$note}</div>" : '')
+            . "</div><div style='font-size:13px;font-variant-numeric:tabular-nums;text-align:right;color:{$color};'>{$value}</div></div>";
+    }
+
+    public static function uiGroup(string $title, string $body): string
+    {
+        if ($body === '') {
+            return '';
+        }
+
+        return "<div>"
+            . "<div style='font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;'>{$title}</div>{$body}</div>";
+    }
+
+    public static function uiSubtotal(string $label, string $value): string
+    {
+        return "<div style='display:flex;justify-content:space-between;gap:16px;padding:6px 0 0;margin-top:2px;border-top:1px dashed rgba(127,127,127,.25);font-weight:600;font-size:13px;'>"
+            . "<div>{$label}</div><div style='font-variant-numeric:tabular-nums;white-space:nowrap;'>{$value}</div></div>";
+    }
+
+    public static function uiTotal(string $label, string $value, string $note = '', string $tone = 'success'): string
+    {
+        [$fg, $bg, $bd] = $tone === 'success'
+            ? ['#059669', 'rgba(5,150,105,.08)', 'rgba(5,150,105,.35)']
+            : ['inherit', 'rgba(127,127,127,.06)', 'rgba(127,127,127,.25)'];
+
+        return "<div style='display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 14px;border-radius:8px;background:{$bg};border:1px solid {$bd};'>"
+            . "<div><div style='font-size:13px;font-weight:600;color:{$fg};'>{$label}</div>"
+            . ($note !== '' ? "<div style='font-size:11px;color:#9ca3af;margin-top:2px;'>{$note}</div>" : '')
+            . "</div><div style='font-size:18px;font-weight:700;color:{$fg};font-variant-numeric:tabular-nums;white-space:nowrap;'>{$value}</div></div>";
+    }
+
+    public static function uiWrap(string ...$parts): \Illuminate\Support\HtmlString
+    {
         return new \Illuminate\Support\HtmlString(
-            "<div style='max-width:640px;'>"
-            . $group('Bilete online', $online)
-            . $group('Bilete vândute prin aplicație', $pos)
-            . $group('Alte sume', $other)
-            . "<div style='display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-top:4px;padding:12px 14px;border-radius:8px;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.35);'>"
-            . "<div><div style='font-size:13px;font-weight:600;color:#059669;'>De plată organizatorului</div>"
-            . "<div style='font-size:11px;color:#9ca3af;margin-top:2px;'>{$meta}</div></div>"
-            . "<div style='font-size:20px;font-weight:700;color:#059669;font-variant-numeric:tabular-nums;white-space:nowrap;'>{$fmt($final)}</div></div>"
+            "<div style='display:flex;flex-direction:column;gap:14px;width:100%;'>" . implode('', array_filter($parts)) . '</div>'
+        );
+    }
+
+    public static function uiChip(string $text, string $color): string
+    {
+        return "<span style='display:inline-block;padding:1px 8px;border-radius:9999px;background:{$color}1f;color:{$color};font-size:11px;font-weight:600;white-space:nowrap;'>{$text}</span>";
+    }
+
+    protected static function uiMoney($v, string $cur = 'RON'): string
+    {
+        return number_format((float) $v, 2, ',', '.') . ' ' . $cur;
+    }
+
+    /** Cont bancar */
+    public static function renderBankAccount(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $m = $record->payout_method ?? [];
+        $copy = function (?string $v) {
+            if (! $v) {
+                return '—';
+            }
+            $js = e(json_encode($v));
+
+            return e($v) . " <button type='button' title='Copiază' onclick=\"navigator.clipboard.writeText({$js});this.textContent='copiat';setTimeout(()=>this.textContent='copiază',1200)\" style='margin-left:6px;font-size:11px;color:#2563eb;'>copiază</button>";
+        };
+
+        $body = static::uiLine('Bancă', e($m['bank_name'] ?? '—'))
+            . static::uiLine('Titular', $copy($m['account_holder'] ?? null))
+            . "<div style='padding:5px 0;'><div style='font-size:13px;'>IBAN</div>"
+            . "<div style='font-size:13px;font-family:ui-monospace,monospace;margin-top:2px;word-break:break-all;'>" . $copy($m['iban'] ?? null) . '</div></div>';
+
+        return static::uiWrap($body);
+    }
+
+    /** Context eveniment: toate deconturile evenimentului + soldul rămas */
+    public static function renderEventContext(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $payouts = MarketplacePayout::where('event_id', $record->event_id)
+            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+            ->orderBy('created_at')
+            ->get(['id', 'reference', 'decont_series', 'amount', 'invoiced_commission_amount', 'status', 'created_at', 'marketplace_client_id']);
+
+        $statusColor = ['pending' => '#d97706', 'approved' => '#2563eb', 'processing' => '#7c3aed', 'completed' => '#059669'];
+        $statusLabel = ['pending' => 'În așteptare', 'approved' => 'Aprobat', 'processing' => 'Procesare', 'completed' => 'Finalizat'];
+
+        $rows = '';
+        $nr = 0;
+        foreach ($payouts as $i => $p) {
+            $isCurrent = $p->id === $record->id;
+            if ($isCurrent) {
+                $nr = $i + 1;
+            }
+            $ref = e($p->decont_series ?: $p->reference);
+            $title = $isCurrent
+                ? "<span style='font-weight:600;'>{$ref}</span> <span style='font-size:11px;color:#059669;font-weight:600;'>acest decont</span>"
+                : "<a href='" . e(static::getUrl('view', ['record' => $p->id])) . "' style='color:#2563eb;font-weight:500;'>{$ref}</a>";
+            $date = MarketplaceTz::fmt($p->created_at, 'd.m.Y', null, fallback: '—');
+            $amount = (float) $p->amount + (float) ($p->invoiced_commission_amount ?? 0);
+            $rows .= static::uiLine(
+                $title,
+                static::uiMoney($amount),
+                e($date) . ' &nbsp;' . static::uiChip($statusLabel[$p->status] ?? e($p->status), $statusColor[$p->status] ?? '#6b7280')
+            );
+        }
+
+        $balance = 0.0;
+        if ($record->organizer && ($event = \App\Models\Event::find($record->event_id))) {
+            $balance = \App\Filament\Marketplace\Resources\PayoutResource\Pages\ListPayouts::calculateEventBalance($event);
+        }
+
+        $title = $payouts->count() > 0 ? "Deconturi pe eveniment ({$nr} din {$payouts->count()})" : 'Deconturi pe eveniment';
+
+        return static::uiWrap(
+            static::uiGroup($title, $rows ?: static::uiLine('—', '')),
+            static::uiTotal('Sold disponibil eveniment', static::uiMoney($balance), 'nedecontat încă')
+        );
+    }
+
+    /** Cronologie */
+    public static function renderTimeline(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $tz = MarketplaceTz::tz();
+        $dt = fn ($d) => $d ? e($d->copy()->timezone($tz)->format('d.m.Y H:i')) : null;
+
+        $createdAt = (in_array($record->source, ['manual', 'automated'], true) && $record->approved_at)
+            ? $record->approved_at : $record->created_at;
+
+        if ($record->approvedByUser) {
+            $by = $record->approvedByUser->name;
+        } elseif ($record->source === 'organizer' && $record->organizer) {
+            $by = $record->organizer->name;
+        } elseif ($record->source === 'automated' && $record->approved_by === null && $record->created_at && $record->created_at < '2026-05-05') {
+            $by = 'Admin (legacy)';
+        } elseif ($record->source === 'automated') {
+            $by = 'Sistem (cron)';
+        } else {
+            $by = null;
+        }
+        $type = match ($record->source) {
+            'organizer' => 'solicitat de organizator',
+            'manual', 'automated' => 'creat de admin',
+            default => null,
+        };
+
+        $steps = [
+            ['Creat', $dt($createdAt), e(implode(' · ', array_filter([$by, $type])))],
+            ['Aprobat', $dt($record->approved_at), ''],
+            ['Procesat', $dt($record->processed_at), ''],
+            ['Finalizat', $dt($record->completed_at), ''],
+        ];
+
+        $items = '';
+        foreach ($steps as [$label, $when, $note]) {
+            if ($label !== 'Creat' && ! $when) {
+                continue;
+            }
+            $items .= "<div style='position:relative;padding:0 0 12px 18px;'>"
+                . "<span style='position:absolute;left:-5px;top:5px;width:8px;height:8px;border-radius:9999px;background:#059669;'></span>"
+                . "<div style='display:flex;justify-content:space-between;gap:12px;font-size:13px;'><span>{$label}</span><span style='font-variant-numeric:tabular-nums;color:#6b7280;'>" . ($when ?? '—') . '</span></div>'
+                . ($note !== '' ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>{$note}</div>" : '')
+                . '</div>';
+        }
+        $timeline = "<div style='border-left:1px solid rgba(127,127,127,.25);margin-left:3px;padding-left:0;'>"
+            . $items . '</div>';
+
+        $period = $record->period_start
+            ? static::uiLine('Perioadă vânzări', e(($record->period_start?->format('d.m.Y') ?? '—') . ' → ' . ($record->period_end?->format('d.m.Y') ?? '—')))
+            : '';
+
+        return static::uiWrap($timeline, $period);
+    }
+
+    /** Total eveniment: sume cumulate pe toate deconturile evenimentului */
+    public static function renderEventTotals(MarketplacePayout $record): \Illuminate\Support\HtmlString|string
+    {
+        if (! $record->event_id) {
+            return '';
+        }
+        $event = \App\Models\Event::with('ticketTypes')->find($record->event_id);
+        if (! $event) {
+            return '';
+        }
+
+        $f = \App\Filament\Marketplace\Resources\PayoutResource\Pages\ListPayouts::calculateEventFinancials($event);
+        $gross = (float) ($f['gross'] ?? 0);
+        $commission = (float) ($f['commission'] ?? 0);
+        $net = (float) ($f['net'] ?? 0);
+        $refunds = (float) ($f['refunds'] ?? 0);
+        $paid = (float) ($f['paid'] ?? 0);
+        $pending = (float) ($f['pending'] ?? 0);
+        $balance = (float) ($f['balance'] ?? 0);
+
+        // Comision înregistrat pe deconturi + comisionul păstrat din rambursări.
+        $base = MarketplacePayout::where('event_id', $record->event_id)
+            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed']);
+        $payoutCommission = round((float) (clone $base)->sum('commission_amount') + (float) ($f['kept_commission'] ?? 0), 2);
+        $remainingCommission = max(0, $commission - $payoutCommission);
+
+        // Comision inclus facturat separat: organizatorul îl primește în decont
+        // și îl plătește pe factura de comision.
+        $inv = (clone $base)->whereNotNull('invoiced_commission_amount')->get(['status', 'invoiced_commission_amount']);
+        $invoicedTotal = round((float) $inv->sum('invoiced_commission_amount'), 2);
+        $invoicedPaid = round((float) $inv->where('status', 'completed')->sum('invoiced_commission_amount'), 2);
+        $paid += $invoicedPaid;
+        $pending += $invoicedTotal - $invoicedPaid;
+        $withheld = max(0, round($payoutCommission - $invoicedTotal, 2));
+
+        $m = fn ($v) => static::uiMoney($v);
+
+        $sales = static::uiLine('Vânzări totale', $m($gross))
+            . static::uiLine('Comision total', $m($commission), '', 'muted')
+            . ($refunds > 0.005 ? static::uiLine('Rambursări', '−' . $m($refunds), '', 'minus') : '')
+            . static::uiSubtotal($invoicedTotal > 0.005 ? 'Net organizator' : 'Net total', $m($net + $invoicedTotal));
+
+        $settled = static::uiLine('Plătit', $m($paid), '', 'success')
+            . ($pending > 0.005 ? static::uiLine('În așteptare', $m($pending), '', 'warning') : '')
+            . (($withheld > 0.005 || $invoicedTotal <= 0.005) ? static::uiLine('Comision reținut', $m($withheld), '', 'muted') : '')
+            . ($invoicedTotal > 0.005 ? static::uiLine('Comision facturat separat', $m($invoicedTotal), '', 'muted') : '')
+            . static::uiSubtotal('Total decontat', $m($paid + $pending));
+
+        return new \Illuminate\Support\HtmlString(
+            "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 32px;align-items:start;'>"
+            . static::uiGroup('Vânzări', $sales)
+            . static::uiGroup('Decontat (toate deconturile)', $settled)
+            . "<div style='grid-column:1/-1;'>" . static::uiTotal('Disponibil restant', $m($balance), 'comision rămas: ' . $m($remainingCommission)) . '</div>'
             . '</div>'
         );
     }
