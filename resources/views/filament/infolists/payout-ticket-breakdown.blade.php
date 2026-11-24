@@ -90,158 +90,144 @@
 @endonce
 
 @if(!empty($breakdown))
+@php
+    // Rândurile se calculează întâi, ca să știm ce coloane au conținut
+    // (Reduceri / Extras apar doar când există).
+    $rows = [];
+    foreach ($breakdown as $item) {
+        $ticketTypeId = $item['ticket_type_id'] ?? null;
+        $isPos = $ticketTypeId && isset($posTypeIdsSet[$ticketTypeId]);
+        $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+        $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+        $commPerTicket = (float) ($item['commission_per_ticket'] ?? $item['commission'] ?? 0);
+        $commission = (float) ($item['commission_amount'] ?? ($commPerTicket * $qty));
+        $commissionMode = $item['commission_mode'] ?? $item['commission_label'] ?? '';
+        $isOnTop = in_array($commissionMode, ['added_on_top', 'on_top'], true);
+        // Brutul stocat pe rând (aceeași sursă ca getBreakdownTotals); price × qty doar pe snapshot-uri vechi.
+        $gross = isset($item['gross'])
+            ? (float) $item['gross']
+            : ($price * $qty + ($isOnTop ? $commission : 0));
+        $netTickets = $gross - $commission;
+        $discounts = $hasPerRowDiscount
+            ? (float) ($item['discount'] ?? 0)
+            : (float) ($discountsByType[$ticketTypeId] ?? 0);
+        $extras = (float) ($item['extras'] ?? 0);
+        $netFinal = (float) ($item['net'] ?? ($netTickets - $discounts - $extras));
+        $rowInvoiced = $commissionInvoiced && !$isPos && !$isOnTop;
+        if ($rowInvoiced) {
+            $netTickets += $commission;
+            $netFinal += $commission;
+        }
+
+        $commissionType = $item['commission_type'] ?? null;
+        $commissionRateRaw = $item['commission_rate'] ?? null;
+        $commissionFixedRaw = $item['commission_fixed'] ?? null;
+        $rateLabel = match (true) {
+            $commissionType === 'percentage' && $commissionRateRaw !== null => $commissionRateRaw . '%',
+            $commissionType === 'fixed' && $commissionFixedRaw !== null => number_format((float) $commissionFixedRaw, 2) . ' ' . $currency,
+            $commissionType === 'both' && ($commissionRateRaw !== null || $commissionFixedRaw !== null) => trim(
+                ($commissionRateRaw !== null ? $commissionRateRaw . '%' : '')
+                . ($commissionRateRaw !== null && $commissionFixedRaw !== null ? ' + ' : '')
+                . ($commissionFixedRaw !== null ? number_format((float) $commissionFixedRaw, 2) . ' ' . $currency : '')
+            ),
+            $commissionRateRaw !== null => $commissionRateRaw . '%',
+            default => '',
+        };
+        $modeLabel = match ($commissionMode) {
+            'added_on_top', 'on_top' => 'comision peste preț' . ($rateLabel ? " {$rateLabel}" : ''),
+            'included' => 'comision inclus' . ($rateLabel ? " {$rateLabel}" : ''),
+            default => (string) $commissionMode,
+        };
+
+        $rows[] = compact('isPos', 'price', 'qty', 'commission', 'gross', 'netTickets', 'discounts', 'extras', 'netFinal', 'rowInvoiced', 'modeLabel')
+            + ['name' => $item['ticket_type_name'] ?? $item['name'] ?? 'Tip bilet'];
+
+        // Biletele POS se văd, dar nu intră în totaluri.
+        if (!$isPos) {
+            $totalQty += $qty;
+            $totalGross += $gross;
+            $totalCommission += $commission;
+            $totalNetTickets += $netTickets;
+            $totalDiscounts += $discounts;
+            $totalExtras += $extras;
+            $totalNetFinal += $netFinal;
+        }
+    }
+    $hasDiscounts = collect($rows)->contains(fn ($r) => $r['discounts'] > 0.005);
+    $hasExtras = collect($rows)->contains(fn ($r) => $r['extras'] > 0.005);
+    $showNetTickets = $hasDiscounts || $hasExtras;
+    $money = fn ($v) => number_format((float) $v, 2, ',', '.');
+    $th = 'padding:10px 12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;white-space:nowrap;';
+    $td = 'padding:10px 12px;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;';
+@endphp
 <div class="overflow-x-auto">
-    <table class="w-full text-sm">
+    <table class="w-full" style="border-collapse:collapse;">
         <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-700">
-                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip bilet</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Preț</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Qty</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Total brut</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net bilete</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Discounts</th>
-                @if($hasExtras)
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase" title="Asigurare bilete + suprataxă card cultural alocate proportional">Extras</th>
-                @endif
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net final</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Mod comision</th>
+            <tr style="border-bottom:1px solid rgba(127,127,127,.2);">
+                <th style="{{ $th }}text-align:left;">Tip bilet</th>
+                <th style="{{ $th }}text-align:right;">Bilete</th>
+                <th style="{{ $th }}text-align:right;">Brut</th>
+                <th style="{{ $th }}text-align:right;">Comision</th>
+                @if($showNetTickets)<th style="{{ $th }}text-align:right;">Net bilete</th>@endif
+                @if($hasDiscounts)<th style="{{ $th }}text-align:right;">Reduceri</th>@endif
+                @if($hasExtras)<th style="{{ $th }}text-align:right;" title="Asigurare bilete + suprataxă card cultural alocate proporțional">Extras</th>@endif
+                <th style="{{ $th }}text-align:right;">Net</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-            @foreach($breakdown as $item)
-                @php
-                    $ticketTypeId = $item['ticket_type_id'] ?? null;
-                    $isPos = $ticketTypeId && isset($posTypeIdsSet[$ticketTypeId]);
-                    $name = $item['ticket_type_name'] ?? $item['name'] ?? 'Tip bilet';
-                    $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-                    $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-                    $commPerTicket = (float) ($item['commission_per_ticket'] ?? $item['commission'] ?? 0);
-                    $commission = (float) ($item['commission_amount'] ?? ($commPerTicket * $qty));
-                    $commissionMode = $item['commission_mode'] ?? $item['commission_label'] ?? '';
-                    $isOnTop = in_array($commissionMode, ['added_on_top', 'on_top'], true);
-                    // Total brut afiseaza ce a platit clientul. Preferam
-                    // valoarea gross STOCATA pe rand (single source of truth,
-                    // acelasi precedent ca in MarketplacePayout::getBreakdownTotals()).
-                    // Recomputarea price × qty introduce drift atunci cand `price`
-                    // este o medie ponderata rotunjita — ex: payout 3296 ADULT
-                    // stored gross=9102 vs recompute 28.27 × 322 = 9102.94, ceea ce
-                    // ridica totalul acestui bloc la 23,227.37 in loc de 23,226 real.
-                    // Fallback la vechea formula doar pentru snapshot-uri legacy
-                    // care nu au campul `gross` scris pe rand.
-                    $gross = isset($item['gross'])
-                        ? (float) $item['gross']
-                        : ($price * $qty + ($isOnTop ? $commission : 0));
-                    // Net bilete = ce primeste organizatorul din vanzarea biletelor, inainte de discount/extras.
-                    // included: gross = price*qty (comision in pret) -> net = gross - commission
-                    // added_on_top: gross = price*qty + commission -> net = gross - commission = price*qty
-                    $netTickets = $gross - $commission;
-                    // New snapshot (SalesBreakdownService) carries `discount` per row.
-                    // Legacy snapshot: fall back to record-level allocation by ticket type.
-                    $discounts = $hasPerRowDiscount
-                        ? (float) ($item['discount'] ?? 0)
-                        : (float) ($discountsByType[$ticketTypeId] ?? 0);
-                    // Extras (insurance, cultural-card surcharge) are a deduction on the
-                    // organizer's net just like the discount; legacy snapshots don't track them.
-                    $extras = (float) ($item['extras'] ?? 0);
-                    if ($extras > 0) $hasExtras = true;
-                    $netFinal = (float) ($item['net'] ?? ($netTickets - $discounts - $extras));
-                    $rowInvoiced = $commissionInvoiced && !$isPos && !$isOnTop;
-                    if ($rowInvoiced) {
-                        $netTickets += $commission;
-                        $netFinal += $commission;
-                    }
-                    // Build the parenthesized rate label from commission_type so
-                    // fixed-amount commissions also show their value (was: only %).
-                    $commissionType = $item['commission_type'] ?? null;
-                    $commissionRateRaw = $item['commission_rate'] ?? null;
-                    $commissionFixedRaw = $item['commission_fixed'] ?? null;
-                    $rateLabel = match (true) {
-                        $commissionType === 'percentage' && $commissionRateRaw !== null
-                            => $commissionRateRaw . '%',
-                        $commissionType === 'fixed' && $commissionFixedRaw !== null
-                            => number_format((float) $commissionFixedRaw, 2) . ' ' . $currency,
-                        $commissionType === 'both' && ($commissionRateRaw !== null || $commissionFixedRaw !== null)
-                            => trim(
-                                ($commissionRateRaw !== null ? $commissionRateRaw . '%' : '')
-                                . ($commissionRateRaw !== null && $commissionFixedRaw !== null ? ' + ' : '')
-                                . ($commissionFixedRaw !== null ? number_format((float) $commissionFixedRaw, 2) . ' ' . $currency : '')
-                            ),
-                        // Legacy snapshots without commission_type — fall back to rate-only.
-                        $commissionRateRaw !== null => $commissionRateRaw . '%',
-                        default => '',
-                    };
-                    $commissionLabel = match($commissionMode) {
-                        'added_on_top', 'on_top' => 'Peste preț' . ($rateLabel ? " ({$rateLabel})" : ''),
-                        'included' => 'Inclus' . ($rateLabel ? " ({$rateLabel})" : ''),
-                        default => $commissionMode,
-                    };
-                    // POS rows are shown for transparency but excluded from totals
-                    if (!$isPos) {
-                        $totalQty += $qty;
-                        $totalGross += $gross;
-                        $totalCommission += $commission;
-                        $totalNetTickets += $netTickets;
-                        $totalDiscounts += $discounts;
-                        $totalExtras += $extras;
-                        $totalNetFinal += $netFinal;
-                    }
-                @endphp
-                <tr class="{{ $isPos ? 'bg-gray-100 dark:bg-gray-800' : '' }}">
-                    <td class="py-2 px-3 font-medium text-gray-900 dark:text-white">
-                        @if($isPos)
-                            <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5 -mt-0.5 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" title="Vândut prin aplicație/POS — nu intră în calculul decontului"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
-                        @endif
-                        {{ $name }}
+        <tbody>
+            @foreach($rows as $r)
+                <tr style="border-bottom:1px solid rgba(127,127,127,.1);{{ $r['isPos'] ? 'background:rgba(127,127,127,.06);' : '' }}">
+                    <td style="padding:10px 12px;font-size:13px;">
+                        <div style="font-weight:500;">
+                            {{ $r['name'] }}
+                            @if($r['isPos'])
+                                <span title="Vândut prin aplicație/POS — nu intră în calculul decontului" style="display:inline-block;margin-left:6px;padding:0 6px;border-radius:9999px;background:rgba(127,127,127,.15);font-size:10px;font-weight:600;color:#6b7280;">POS</span>
+                            @endif
+                        </div>
+                        <div style="font-size:11px;color:#9ca3af;margin-top:1px;">
+                            {{ $r['modeLabel'] }}@if($r['isPos']) · nu intră în decont @endif
+                        </div>
                     </td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($price, 2) }}</td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-semibold">{{ $qty }}</td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($gross, 2) }}</td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $rowInvoiced ? '' : '-' }}{{ number_format($commission, 2) }}@if($rowInvoiced)<div class="text-[10px] text-gray-400">facturat separat</div>@endif</td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($netTickets, 2) }}</td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $discounts > 0 ? '-' . number_format($discounts, 2) : '0.00' }}</td>
-                    @if($hasExtras)
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $extras > 0 ? '-' . number_format($extras, 2) : '0.00' }}</td>
-                    @endif
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-900 dark:text-white' }} font-mono font-semibold">{{ number_format($netFinal, 2) }}</td>
-                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400' }} text-xs">{{ $commissionLabel }}</td>
+                    <td style="{{ $td }}">{{ $r['qty'] }} <span style="color:#9ca3af;">× {{ $money($r['price']) }}</span></td>
+                    <td style="{{ $td }}">{{ $money($r['gross']) }}</td>
+                    <td style="{{ $td }}{{ $r['rowInvoiced'] || $r['isPos'] ? 'color:#9ca3af;' : 'color:#dc2626;' }}">
+                        {{ $r['rowInvoiced'] ? '' : '−' }}{{ $money($r['commission']) }}
+                        @if($r['rowInvoiced'])<div style="font-size:10px;">facturat separat</div>@endif
+                    </td>
+                    @if($showNetTickets)<td style="{{ $td }}">{{ $money($r['netTickets']) }}</td>@endif
+                    @if($hasDiscounts)<td style="{{ $td }}color:#dc2626;">{{ $r['discounts'] > 0.005 ? '−' . $money($r['discounts']) : '—' }}</td>@endif
+                    @if($hasExtras)<td style="{{ $td }}color:#dc2626;">{{ $r['extras'] > 0.005 ? '−' . $money($r['extras']) : '—' }}</td>@endif
+                    <td style="{{ $td }}font-weight:600;">{{ $money($r['netFinal']) }}</td>
                 </tr>
             @endforeach
         </tbody>
         <tfoot>
-            <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-semibold">
-                <td class="py-2 px-3 text-gray-900 dark:text-white">
+            <tr style="background:rgba(127,127,127,.06);">
+                <td style="padding:10px 12px;font-size:13px;font-weight:600;">
                     Total
-                    @if(!empty($posTypeIds))
-                        <span class="ml-1 text-[10px] font-normal text-gray-500 dark:text-gray-400">(excl. POS)</span>
-                    @endif
+                    @if(!empty($posTypeIds))<span style="font-size:11px;font-weight:400;color:#9ca3af;"> fără POS</span>@endif
                 </td>
-                <td class="py-2 px-3"></td>
-                <td class="py-2 px-3 text-right text-gray-900 dark:text-white">{{ $totalQty }}</td>
-                <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalGross, 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $commissionInvoiced ? '' : '-' }}{{ number_format($totalCommission, 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalNetTickets, 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $totalDiscounts > 0 ? '-' . number_format($totalDiscounts, 2) : '0.00' }} {{ $currency }}</td>
-                @if($hasExtras)
-                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $totalExtras > 0 ? '-' . number_format($totalExtras, 2) : '0.00' }} {{ $currency }}</td>
-                @endif
-                <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalNetFinal, 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3"></td>
+                <td style="{{ $td }}font-weight:600;">{{ $totalQty }}</td>
+                <td style="{{ $td }}font-weight:600;">{{ $money($totalGross) }}</td>
+                <td style="{{ $td }}font-weight:600;{{ $commissionInvoiced ? 'color:#9ca3af;' : 'color:#dc2626;' }}">{{ $commissionInvoiced ? '' : '−' }}{{ $money($totalCommission) }}</td>
+                @if($showNetTickets)<td style="{{ $td }}font-weight:600;">{{ $money($totalNetTickets) }}</td>@endif
+                @if($hasDiscounts)<td style="{{ $td }}font-weight:600;color:#dc2626;">−{{ $money($totalDiscounts) }}</td>@endif
+                @if($hasExtras)<td style="{{ $td }}font-weight:600;color:#dc2626;">−{{ $money($totalExtras) }}</td>@endif
+                <td style="{{ $td }}font-weight:700;color:#059669;">{{ $money($totalNetFinal) }} {{ $currency }}</td>
             </tr>
         </tfoot>
     </table>
 </div>
 @else
-    <p class="text-sm text-gray-500 dark:text-gray-400">Nu sunt detalii bilete disponibile.</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400" style="padding:16px;">Nu sunt detalii bilete disponibile.</p>
 @endif
 
 @if(!empty($splitRows))
-<div class="overflow-x-auto mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-    <div class="px-3 mb-2 flex items-center gap-2">
-        <x-heroicon-o-tag class="w-4 h-4 text-emerald-500" />
-        <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Defalcare pe nivel de preț</h4>
-        <span class="text-xs text-gray-500">fiecare tip de bilet împărțit pe preț unitar și cod de reducere</span>
-    </div>
+<details style="border-top:1px solid rgba(127,127,127,.2);">
+    <summary style="cursor:pointer;padding:10px 12px;font-size:12px;color:#6b7280;">
+        Defalcare pe nivel de preț <span style="color:#9ca3af;">· fiecare tip de bilet pe preț unitar și cod de reducere</span>
+    </summary>
+    <div class="overflow-x-auto">
     <table class="w-full text-sm">
         <thead>
             <tr class="border-b border-gray-200 dark:border-gray-700">
@@ -318,7 +304,8 @@
             </tr>
         </tfoot>
     </table>
-</div>
+    </div>
+</details>
 @endif
 
 @php

@@ -178,18 +178,15 @@ class PayoutResource extends Resource
                         Section::make('Decont')
                             ->icon('heroicon-o-banknotes')
                             ->schema([
-                                Infolists\Components\TextEntry::make('reference')
-                                    ->label('Referință')
-                                    ->copyable()
-                                    ->icon('heroicon-o-clipboard-document')
-                                    ->iconPosition(IconPosition::After),
-
-                                Infolists\Components\TextEntry::make('decont_series')
-                                    ->label('Serie decont')
-                                    ->placeholder('—')
-                                    ->hintAction(
+                                Infolists\Components\TextEntry::make('decont_overview')
+                                    ->hiddenLabel()
+                                    ->getStateUsing(fn () => '—')
+                                    ->formatStateUsing(fn ($state, $record) => static::renderDecontOverview($record))
+                                    ->html()
+                                    ->columnSpanFull(),
+                                \Filament\Schemas\Components\Actions::make([
                                         \Filament\Actions\Action::make('edit_decont_series_inline')
-                                            ->label('Editează')
+                                            ->label('Editează seria')
                                             ->icon('heroicon-m-pencil-square')
                                             ->color('gray')
                                             ->modalHeading('Editează seria decontului')
@@ -235,63 +232,11 @@ class PayoutResource extends Resource
                                                     ->success()
                                                     ->send();
                                             })
-                                    ),
-
-                                Infolists\Components\TextEntry::make('status')
-                                    ->label('Status')
-                                    ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
-                                        'pending' => 'warning',
-                                        'approved' => 'info',
-                                        'processing' => 'primary',
-                                        'completed' => 'success',
-                                        'rejected' => 'danger',
-                                        'cancelled' => 'gray',
-                                        default => 'gray',
-                                    }),
-
-                                Infolists\Components\TextEntry::make('organizer.name')
-                                    ->label('Organizator')
-                                    ->url(fn ($record) => $record->marketplace_organizer_id
-                                        ? OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
-                                        : null)
-                                    ->color('primary'),
-
-                                Infolists\Components\TextEntry::make('event.title')
-                                    ->label('Eveniment')
-                                    ->placeholder('Decont general')
-                                    ->formatStateUsing(function ($state, $record) {
-                                        $title = is_array($state)
-                                            ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
-                                            : ($state ?? 'Untitled');
-                                        // Append the event's start_date (handles
-                                        // single_day / range / multi_day / recurring)
-                                        // so the operator sees which edition this
-                                        // decont belongs to without leaving the page.
-                                        $start = $record->event?->start_date?->format('d.m.Y');
-                                        $end = $record->event?->end_date?->format('d.m.Y');
-                                        $date = $start
-                                            ? ($end && $end !== $start ? "{$start} – {$end}" : $start)
-                                            : null;
-                                        return $date ? "{$title} ({$date})" : $title;
-                                    })
-                                    ->url(fn ($record) => $record->event_id
-                                        ? EventResource::getUrl('edit', ['record' => $record->event_id])
-                                        : null)
-                                    ->color('primary'),
-
-                                Infolists\Components\TextEntry::make('source')
-                                    ->label('Sursă')
-                                    ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
-                                        'organizer' => 'primary', 'manual' => 'warning', default => 'gray',
-                                    }),
-
-                                Infolists\Components\TextEntry::make('created_at')
-                                    ->label('Creat la')
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
+                                        ->link()
+                                        ->size('sm'),
+                                ]),
                             ])
-                            ->columns(3),
+                            ->columns(1),
 
                         // Ticket breakdown table — the blade injects CSS that zeros padding
                         // on the fi-section-content inside this specific Section (tagged
@@ -325,34 +270,17 @@ class PayoutResource extends Resource
                         // so "Vânzări totale eveniment" (event-level) appeared next
                         // to "Suma brută decont bilete online" (payout-level) and
                         // the contradictory numbers confused operators.
-                        Section::make('Acest decont')
-                            ->icon('heroicon-o-document-text')
-                            ->description(fn ($record) => 'Sumele de mai jos reflectă DOAR biletele incluse în decontul ' . ($record->reference ?? '#' . $record->id))
+                        Section::make('Sume')
+                            ->icon('heroicon-o-calculator')
+                            ->description('Stânga: doar acest decont. Dreapta: tot evenimentul, pentru context.')
                             ->schema([
-                                Infolists\Components\TextEntry::make('this_payout_summary')
+                                Infolists\Components\TextEntry::make('money_overview')
                                     ->hiddenLabel()
                                     ->getStateUsing(fn () => '—')
-                                    ->formatStateUsing(fn ($state, $record) => static::renderPayoutSummary($record))
+                                    ->formatStateUsing(fn ($state, $record) => static::renderMoneyOverview($record))
                                     ->html()
                                     ->columnSpanFull(),
                             ]),
-
-                        // Event-level aggregate view — totals across ALL payouts
-                        // for this event/organizer, plus the remaining balance.
-                        // Kept separate from "Acest decont" so operators don't
-                        // confuse a payout slice with the lifetime event totals.
-                        Section::make('Total eveniment')
-                            ->icon('heroicon-o-chart-bar')
-                            ->description('Sume cumulate pe toate deconturile evenimentului — context, nu cifrele acestui decont.')
-                            ->schema([
-                                Infolists\Components\TextEntry::make('event_totals')
-                                    ->hiddenLabel()
-                                    ->getStateUsing(fn () => '—')
-                                    ->formatStateUsing(fn ($state, $record) => static::renderEventTotals($record))
-                                    ->html()
-                                    ->columnSpanFull(),
-                            ])
-                            ->visible(fn ($record) => (bool) $record->event_id),
 
                         // Payment info (for completed)
                         Section::make('Plată')
@@ -420,15 +348,15 @@ class PayoutResource extends Resource
                         Section::make('Acțiuni')
                             ->icon('heroicon-o-bolt')
                             ->compact()
-                            ->columns(2)
+                            ->description(fn ($record) => in_array($record->status, ['approved', 'processing'], true)
+                                ? 'De transferat: ' . number_format($record->transferAmount(), 2, ',', '.') . ' ' . ($record->currency ?? 'RON')
+                                : null)
+                            ->columns(1)
                             ->schema([
-                                // Each action is in its own Actions wrapper so
-                                // Section::columns(2) places them 2 per row.
-                                // Visibility on the inner action hides the
-                                // wrapper too (Actions::make returns hidden when
-                                // all its children are hidden), so empty rows
-                                // collapse cleanly when the status doesn't
-                                // allow approve/process/complete/reject.
+                                // Sus pasul principal (Aprobă / Finalizează), apoi Respinge,
+                                // restul într-un singur meniu „Alte acțiuni”. „În procesare” nu
+                                // mai apare: Finalizează merge direct din Aprobat, iar statusul
+                                // rămâne valid pentru deconturile vechi.
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('approve_payout')
                                         ->label('Aprobă')
@@ -439,20 +367,6 @@ class PayoutResource extends Resource
                                         ->action(function ($record, $livewire) {
                                             $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
                                             $record->approve($admin->id);
-                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
-                                        }),
-                                ])->fullWidth(),
-
-                                \Filament\Schemas\Components\Actions::make([
-                                    \Filament\Actions\Action::make('process_payout')
-                                        ->label('În procesare')
-                                        ->icon('heroicon-o-arrow-path')
-                                        ->color('info')
-                                        ->requiresConfirmation()
-                                        ->visible(fn ($record) => $record->canBeProcessed())
-                                        ->action(function ($record, $livewire) {
-                                            $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
-                                            $record->markAsProcessing($admin->id);
                                             $livewire->redirect(static::getUrl('view', ['record' => $record]));
                                         }),
                                 ])->fullWidth(),
@@ -504,6 +418,7 @@ class PayoutResource extends Resource
                                         ->label('Respinge')
                                         ->icon('heroicon-o-x-circle')
                                         ->color('danger')
+                                        ->outlined()
                                         ->visible(fn ($record) => $record->canBeRejected())
                                         ->form([
                                             \Filament\Forms\Components\Textarea::make('reason')
@@ -537,10 +452,8 @@ class PayoutResource extends Resource
                                         }),
                                 ])->fullWidth(),
 
-                                // Notă admin and Șterge share row 3 — both
-                                // always visible regardless of payout status,
-                                // so they pair cleanly in the 2-column grid.
                                 \Filament\Schemas\Components\Actions::make([
+                                    \Filament\Actions\ActionGroup::make([
                                     \Filament\Actions\Action::make('add_admin_note')
                                         ->label('Notă admin')
                                         ->icon('heroicon-o-pencil-square')
@@ -555,9 +468,6 @@ class PayoutResource extends Resource
                                             $record->update(['admin_notes' => $data['admin_notes']]);
                                             $livewire->refreshFormData(['admin_notes']);
                                         }),
-                                ])->fullWidth(),
-
-                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('edit_decont_mentions')
                                         ->label('Mențiuni decont')
                                         ->icon('heroicon-o-chat-bubble-bottom-center-text')
@@ -596,9 +506,6 @@ class PayoutResource extends Resource
                                                 ->send();
                                             $livewire->redirect(static::getUrl('view', ['record' => $record]));
                                         }),
-                                ])->fullWidth(),
-
-                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('set_net_override')
                                         ->label('Ajustare manuală net')
                                         ->icon('heroicon-o-adjustments-horizontal')
@@ -631,9 +538,6 @@ class PayoutResource extends Resource
                                                 ->send();
                                             $livewire->refreshFormData(['net_override', 'admin_notes']);
                                         }),
-                                ])->fullWidth(),
-
-                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('delete_payout')
                                         ->label('Șterge decont')
                                         ->icon('heroicon-o-trash')
@@ -651,19 +555,12 @@ class PayoutResource extends Resource
                                                 ->send();
                                             $livewire->redirect(static::getUrl('index'));
                                         }),
+                                    ])
+                                        ->label('Alte acțiuni')
+                                        ->icon('heroicon-m-ellipsis-horizontal')
+                                        ->color('gray')
+                                        ->button(),
                                 ])->fullWidth(),
-                            ]),
-
-                        // Payout method
-                        Section::make('Cont bancar')
-                            ->icon('heroicon-o-building-library')
-                            ->compact()
-                            ->schema([
-                                Infolists\Components\TextEntry::make('bank_account_view')
-                                    ->hiddenLabel()
-                                    ->getStateUsing(fn () => '—')
-                                    ->formatStateUsing(fn ($state, $record) => static::renderBankAccount($record))
-                                    ->html(),
                             ]),
 
                         // Event decont context
@@ -1199,27 +1096,6 @@ class PayoutResource extends Resource
         return number_format((float) $v, 2, ',', '.') . ' ' . $cur;
     }
 
-    /** Cont bancar */
-    public static function renderBankAccount(MarketplacePayout $record): \Illuminate\Support\HtmlString
-    {
-        $m = $record->payout_method ?? [];
-        $copy = function (?string $v) {
-            if (! $v) {
-                return '—';
-            }
-            $js = e(json_encode($v));
-
-            return e($v) . " <button type='button' title='Copiază' onclick=\"navigator.clipboard.writeText({$js});this.textContent='copiat';setTimeout(()=>this.textContent='copiază',1200)\" style='margin-left:6px;font-size:11px;color:#2563eb;'>copiază</button>";
-        };
-
-        $body = static::uiLine('Bancă', e($m['bank_name'] ?? '—'))
-            . static::uiLine('Titular', $copy($m['account_holder'] ?? null))
-            . "<div style='padding:5px 0;'><div style='font-size:13px;'>IBAN</div>"
-            . "<div style='font-size:13px;font-family:ui-monospace,monospace;margin-top:2px;word-break:break-all;'>" . $copy($m['iban'] ?? null) . '</div></div>';
-
-        return static::uiWrap($body);
-    }
-
     /** Context eveniment: toate deconturile evenimentului + soldul rămas */
     public static function renderEventContext(MarketplacePayout $record): \Illuminate\Support\HtmlString
     {
@@ -1252,17 +1128,9 @@ class PayoutResource extends Resource
             );
         }
 
-        $balance = 0.0;
-        if ($record->organizer && ($event = \App\Models\Event::find($record->event_id))) {
-            $balance = \App\Filament\Marketplace\Resources\PayoutResource\Pages\ListPayouts::calculateEventBalance($event);
-        }
-
         $title = $payouts->count() > 0 ? "Deconturi pe eveniment ({$nr} din {$payouts->count()})" : 'Deconturi pe eveniment';
 
-        return static::uiWrap(
-            static::uiGroup($title, $rows ?: static::uiLine('—', '')),
-            static::uiTotal('Sold disponibil eveniment', static::uiMoney($balance), 'nedecontat încă')
-        );
+        return static::uiWrap(static::uiGroup($title, $rows ?: static::uiLine('—', '')));
     }
 
     /** Cronologie */
@@ -1319,8 +1187,111 @@ class PayoutResource extends Resource
         return static::uiWrap($timeline, $period);
     }
 
-    /** Total eveniment: sume cumulate pe toate deconturile evenimentului */
-    public static function renderEventTotals(MarketplacePayout $record): \Illuminate\Support\HtmlString|string
+    public static function statusChip(string $status): string
+    {
+        $color = ['pending' => '#d97706', 'approved' => '#2563eb', 'processing' => '#7c3aed', 'completed' => '#059669', 'rejected' => '#dc2626', 'cancelled' => '#6b7280'][$status] ?? '#6b7280';
+        $label = ['pending' => 'În așteptare', 'approved' => 'Aprobat', 'processing' => 'În procesare', 'completed' => 'Finalizat', 'rejected' => 'Respins', 'cancelled' => 'Anulat'][$status] ?? e($status);
+
+        return static::uiChip($label, $color);
+    }
+
+    protected static function copyButton(string $value): string
+    {
+        $js = e(json_encode($value));
+
+        return " <button type='button' title='Copiază' onclick=\"navigator.clipboard.writeText({$js});this.textContent='copiat';setTimeout(()=>this.textContent='copiază',1200)\" style='margin-left:6px;font-size:11px;color:#2563eb;'>copiază</button>";
+    }
+
+    /** Secțiunea Decont: identitatea decontului + contul bancar. */
+    public static function renderDecontOverview(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $link = fn (string $text, ?string $url) => $url
+            ? "<a href='" . e($url) . "' style='color:#2563eb;font-weight:500;'>{$text}</a>" : $text;
+
+        $series = $record->decont_series
+            ? "<span style='font-weight:600;'>" . e($record->decont_series) . '</span>'
+            : "<span style='color:#9ca3af;'>fără serie</span>";
+        $ref = $record->reference ? e($record->reference) . static::copyButton($record->reference) : '—';
+
+        $orgName = $record->organizer?->name;
+        $org = $orgName
+            ? $link(e($orgName), $record->marketplace_organizer_id ? OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id]) : null)
+            : '—';
+
+        $eventHtml = 'Decont general';
+        if ($record->event) {
+            $t = $record->event->title;
+            $title = is_array($t) ? ($t['ro'] ?? $t['en'] ?? (reset($t) ?: 'Eveniment')) : ($t ?: 'Eveniment');
+            $start = $record->event->start_date?->format('d.m.Y');
+            $end = $record->event->end_date?->format('d.m.Y');
+            $date = $start ? ($end && $end !== $start ? "{$start} – {$end}" : $start) : null;
+            $eventHtml = $link(e($title), EventResource::getUrl('edit', ['record' => $record->event_id]))
+                . ($date ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>" . e($date) . '</div>' : '');
+        }
+
+        $created = MarketplaceTz::fmt($record->created_at, 'd.m.Y H:i', null, fallback: '—');
+        $source = match ($record->source) {
+            'organizer' => 'cerut de organizator',
+            'manual', 'automated' => 'creat de admin',
+            default => null,
+        };
+
+        $row = fn (string $label, string $value) => "<div style='display:grid;grid-template-columns:96px 1fr;gap:12px;padding:5px 0;font-size:13px;'>"
+            . "<div style='color:#9ca3af;'>{$label}</div><div style='min-width:0;overflow-wrap:anywhere;'>{$value}</div></div>";
+
+        $decont = $row('Serie', $series . ' &nbsp;' . static::statusChip((string) $record->status))
+            . $row('Referință', $ref)
+            . $row('Organizator', $org)
+            . $row('Eveniment', $eventHtml)
+            . $row('Creat', e($created) . ($source ? " <span style='color:#9ca3af;'>· {$source}</span>" : ''));
+
+        $m = $record->payout_method ?? [];
+        $iban = ! empty($m['iban'])
+            ? "<span style='font-family:ui-monospace,monospace;'>" . e($m['iban']) . '</span>' . static::copyButton($m['iban'])
+            : "<span style='color:#9ca3af;'>lipsește</span>";
+        $holder = ! empty($m['account_holder']) ? e($m['account_holder']) . static::copyButton($m['account_holder']) : '—';
+        $bank = $row('Bancă', e($m['bank_name'] ?? '—'))
+            . $row('Titular', $holder)
+            . $row('IBAN', $iban);
+
+        return new \Illuminate\Support\HtmlString(
+            "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px 40px;'>"
+            . static::uiGroup('Decont', $decont)
+            . static::uiGroup('Cont bancar', $bank)
+            . '</div>'
+        );
+    }
+
+    /**
+     * Sume: stânga doar acest decont (calculul complet), dreapta tot evenimentul
+     * pentru context. Cele două nu se amestecă.
+     */
+    public static function renderMoneyOverview(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $label = e($record->decont_series ?: ($record->reference ?: '#' . $record->id));
+        $left = "<div style='min-width:0;'>"
+            . "<div style='font-size:12px;font-weight:600;margin-bottom:10px;'>Acest decont <span style='font-weight:400;color:#9ca3af;'>· {$label}</span></div>"
+            . static::renderPayoutSummary($record)->toHtml()
+            . '</div>';
+
+        $right = '';
+        $event = static::eventTotalsBody($record);
+        if ($event !== '') {
+            $right = "<div style='min-width:0;padding:14px 16px;border-radius:10px;background:rgba(127,127,127,.06);border:1px solid rgba(127,127,127,.15);'>"
+                . "<div style='font-size:12px;font-weight:600;margin-bottom:2px;'>Tot evenimentul</div>"
+                . "<div style='font-size:11px;color:#9ca3af;margin-bottom:10px;'>toate deconturile evenimentului, pentru context</div>"
+                . $event
+                . '</div>';
+        }
+
+        return new \Illuminate\Support\HtmlString(
+            "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px 32px;align-items:start;'>"
+            . $left . $right . '</div>'
+        );
+    }
+
+    /** Sumele cumulate pe eveniment (o singură coloană). */
+    protected static function eventTotalsBody(MarketplacePayout $record): string
     {
         if (! $record->event_id) {
             return '';
@@ -1354,6 +1325,7 @@ class PayoutResource extends Resource
         $paid += $invoicedPaid;
         $pending += $invoicedTotal - $invoicedPaid;
         $withheld = max(0, round($payoutCommission - $invoicedTotal, 2));
+        $count = (clone $base)->count();
 
         $m = fn ($v) => static::uiMoney($v);
 
@@ -1363,17 +1335,15 @@ class PayoutResource extends Resource
             . static::uiSubtotal($invoicedTotal > 0.005 ? 'Net organizator' : 'Net total', $m($net + $invoicedTotal));
 
         $settled = static::uiLine('Plătit', $m($paid), '', 'success')
-            . ($pending > 0.005 ? static::uiLine('În așteptare', $m($pending), '', 'warning') : '')
+            . ($pending > 0.005 ? static::uiLine('În așteptare', $m($pending), 'include acest decont, dacă nu e plătit', 'warning') : '')
             . (($withheld > 0.005 || $invoicedTotal <= 0.005) ? static::uiLine('Comision reținut', $m($withheld), '', 'muted') : '')
             . ($invoicedTotal > 0.005 ? static::uiLine('Comision facturat separat', $m($invoicedTotal), '', 'muted') : '')
             . static::uiSubtotal('Total decontat', $m($paid + $pending));
 
-        return new \Illuminate\Support\HtmlString(
-            "<div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 32px;align-items:start;'>"
-            . static::uiGroup('Vânzări', $sales)
-            . static::uiGroup('Decontat (toate deconturile)', $settled)
-            . "<div style='grid-column:1/-1;'>" . static::uiTotal('Disponibil restant', $m($balance), 'comision rămas: ' . $m($remainingCommission)) . '</div>'
-            . '</div>'
-        );
+        return static::uiWrap(
+            static::uiGroup('Vânzări', $sales),
+            static::uiGroup('Decontat · ' . $count . ($count === 1 ? ' decont' : ' deconturi'), $settled),
+            static::uiTotal('Rămas de decontat', $m($balance), 'comision rămas: ' . $m($remainingCommission), 'neutral')
+        )->toHtml();
     }
 }
