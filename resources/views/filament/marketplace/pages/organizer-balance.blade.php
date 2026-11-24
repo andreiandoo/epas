@@ -292,14 +292,13 @@
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Eveniment</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumă</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință plată</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creat</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finalizat</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acțiuni</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:16rem">Eveniment</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumă</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință plată</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creat</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finalizat</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acțiuni</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -325,7 +324,7 @@
                                 }
                             @endphp
                             <tr wire:key="payout-row-{{ $payout->id }}">
-                                <td class="px-6 py-3 text-sm">
+                                <td class="px-4 py-3 text-sm">
                                     @if($ev)
                                         <a href="{{ url('/marketplace/events/' . $ev->id . '/edit') }}" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
                                             {{ $evTitle ?? ('Eveniment #' . $ev->id) }}
@@ -339,7 +338,7 @@
                                         <span class="text-gray-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-3 text-sm font-mono whitespace-nowrap">
+                                <td class="px-4 py-3 text-sm font-mono whitespace-nowrap">
                                     {{-- Seria AmBilet întâi, cu link; referința internă dedesubt. --}}
                                     @if($payout->decont_series)
                                         <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-base font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">{{ $payout->decont_series }}</a>
@@ -349,19 +348,6 @@
                                     @else
                                         <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">{{ $payout->reference ?: ('#' . $payout->id) }}</a>
                                     @endif
-                                </td>
-                                <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
-                                    @php
-                                        // Comision inclus facturat separat: organizatorul primește brutul.
-                                        $shownAmount = (float) $payout->amount + (float) ($payout->invoiced_commission_amount ?? 0);
-                                    @endphp
-                                    {{ number_format($shownAmount, 2, ',', '.') }} {{ $payout->currency ?? 'RON' }}
-                                    @if((float) ($payout->advance_covered ?? 0) > 0)
-                                        <div class="text-xs font-normal text-amber-600 dark:text-amber-400 mt-0.5">din avans: −{{ number_format((float) $payout->advance_covered, 2, ',', '.') }}</div>
-                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400">de plată: {{ number_format(max(0, $shownAmount - (float) $payout->advance_covered), 2, ',', '.') }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-3 text-center">
                                     @php
                                         $statusColors = [
                                             'pending' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
@@ -373,24 +359,35 @@
                                         ];
                                         $color = $statusColors[$payout->status] ?? $statusColors['cancelled'];
                                     @endphp
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $color }}">
+                                    <div class="mt-1"><span class="inline-block px-2 py-0.5 text-xs font-sans font-semibold rounded-full {{ $color }}">
                                         {{ ['pending' => 'În așteptare', 'approved' => 'Aprobat', 'processing' => 'În procesare', 'completed' => 'Finalizat', 'rejected' => 'Respins', 'cancelled' => 'Anulat'][$payout->status] ?? ucfirst($payout->status) }}
-                                    </span>
+                                    </span></div>
                                 </td>
-                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                <td class="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                                    @php
+                                        // Comision inclus facturat separat: organizatorul primește brutul.
+                                        $shownAmount = (float) $payout->amount + (float) ($payout->invoiced_commission_amount ?? 0);
+                                    @endphp
+                                    {{ number_format($shownAmount, 2, ',', '.') }} {{ $payout->currency ?? 'RON' }}
+                                    @if((float) ($payout->advance_covered ?? 0) > 0)
+                                        <div class="text-xs font-normal text-amber-600 dark:text-amber-400 mt-0.5">din avans: −{{ number_format((float) $payout->advance_covered, 2, ',', '.') }}</div>
+                                        <div class="text-xs font-normal text-gray-500 dark:text-gray-400">de plată: {{ number_format(max(0, $shownAmount - (float) $payout->advance_covered), 2, ',', '.') }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
                                     {{ $payout->payment_reference ?? '-' }}
                                 </td>
-                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                    {{ $payout->created_at?->format('d.m.Y') }}
+                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                    <span class="whitespace-nowrap">{{ $payout->created_at?->format('d.m.Y') }}</span>
                                 </td>
-                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                    {{ $payout->completed_at?->format('d.m.Y') ?? '-' }}
+                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
+                                    <span class="whitespace-nowrap">{{ $payout->completed_at?->format('d.m.Y') ?? '-' }}</span>
                                 </td>
-                                <td class="px-6 py-3 text-sm text-right whitespace-nowrap">
+                                <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
                                     @if($payout->canBeCompleted())
                                         {{-- Finalizare rapidă: referința e opțională, Enter sau butonul
                                              finalizează, rândul se actualizează pe loc. --}}
-                                        <div style="display:inline-flex;align-items:center;gap:.5rem" data-quick-row="{{ $payout->id }}">
+                                        <div style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:.375rem" data-quick-row="{{ $payout->id }}">
                                             <input type="text"
                                                    wire:model="payRefs.{{ $payout->id }}"
                                                    wire:keydown.enter.prevent="quickComplete({{ $payout->id }})"
@@ -428,7 +425,7 @@
     {{-- După finalizarea rapidă, focusul trece pe referința următorului decont
          de finalizat, fără să se miște pagina. --}}
     <style>
-        .ep-quick-ref { width: 12rem; padding: .25rem .5rem; font-size: .75rem; border-radius: .5rem; border: 1px solid rgba(107,114,128,.4); background: #fff; color: #111827; }
+        .ep-quick-ref { width: 11rem; padding: .25rem .5rem; font-size: .75rem; border-radius: .5rem; border: 1px solid rgba(107,114,128,.4); background: #fff; color: #111827; }
         .ep-quick-ref:focus { outline: 2px solid rgba(37,99,235,.5); outline-offset: 0; border-color: rgb(37,99,235); }
         .dark .ep-quick-ref { background: rgba(255,255,255,.05); color: #f9fafb; border-color: rgba(255,255,255,.2); }
         .ep-quick-btn { display: inline-flex; align-items: center; padding: .25rem .65rem; font-size: .75rem; font-weight: 600; border-radius: .5rem; background: #16a34a; color: #fff; }

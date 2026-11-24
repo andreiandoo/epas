@@ -329,231 +329,13 @@ class PayoutResource extends Resource
                             ->icon('heroicon-o-document-text')
                             ->description(fn ($record) => 'Sumele de mai jos reflectă DOAR biletele incluse în decontul ' . ($record->reference ?? '#' . $record->id))
                             ->schema([
-                                // Header cards: Brut / Comision / (Discount+Extras) /
-                                // Refund / Net for this payout. Refund card is
-                                // only included when refund_amount > 0 to keep
-                                // the layout compact for the common case.
-                                Infolists\Components\TextEntry::make('this_payout_header')
-                                    ->label('')
+                                Infolists\Components\TextEntry::make('this_payout_summary')
+                                    ->hiddenLabel()
                                     ->getStateUsing(fn () => '—')
-                                    ->formatStateUsing(function ($state, $record) {
-                                        $totals = $record->getBreakdownTotals();
-                                        $brut = (float) ($totals['online']['gross'] + $totals['pos']['gross']);
-                                        $com = (float) ($totals['online']['commission'] + $totals['pos']['commission']);
-                                        $disc = (float) ($totals['online']['discount'] + $totals['pos']['discount']);
-                                        $extras = (float) ($totals['online']['extras'] + $totals['pos']['extras']);
-
-                                        // Refund split: deductible items (commission_refunded=true)
-                                        // come out of the organizer's slice; informational items
-                                        // (commission_refunded=false) are tracked for reporting but
-                                        // the marketplace covers them out of its commission pool.
-                                        // final_net_amount accessor already subtracts the deductible
-                                        // part, so we don't double-deduct here.
-                                        $deductibleRefund = (float) $record->deductible_refund_amount;
-                                        $informationalRefund = (float) $record->informational_refund_amount;
-                                        $finalNet = (float) $record->final_net_amount;
-
-                                        // Mode-conditional labelling: for included-mode payouts,
-                                        // final_net_amount subtracts BOTH refund kinds (see
-                                        // MarketplacePayout::getFinalNetAmountAttribute). The
-                                        // informational card's "nu scad din net" note is only
-                                        // correct for on-top mode.
-                                        $isIncludedMode = ($record->commission_mode ?? 'included') !== 'added_on_top';
-
-                                        $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
-                                        // Comision inclus facturat separat: nu se scade din plată.
-                                        $invoicedCom = $record->invoicedCommission();
-                                        $comDisplay = $invoicedCom > 0.005 ? $fmt($com) : '-' . $fmt($com);
-                                        $comNote = '';
-                                        if ($invoicedCom > 0.005) {
-                                            $inv = $record->commissionInvoice();
-                                            $comNote = "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu se reține, se facturează"
-                                                . ($inv ? ': ' . e($inv->number) . ' = ' . $fmt((float) $inv->amount) . ' cu TVA' : '')
-                                                . '</div>';
-                                        }
-                                        $hasDeductible = $deductibleRefund > 0.01;
-                                        $hasInformational = $informationalRefund > 0.01;
-                                        $extraCards = ($hasDeductible ? 1 : 0) + ($hasInformational ? 1 : 0);
-                                        $cols = 4 + $extraCards;
-
-                                        $deductibleCard = $hasDeductible
-                                            ? "<div style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff5f5;'>"
-                                                . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări deductibile</div>"
-                                                . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($deductibleRefund)}</div>"
-                                                . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>" . ($record->refundsAlreadyExcludedFromNet() ? 'bilete deja excluse din net' : ($record->usesAutoRefunds() ? 'plătite într-un decont anterior, scad din net' : 'scad din net')) . "</div>"
-                                                . "</div>"
-                                            : '';
-
-                                        // Informational card semantic differs by commission mode.
-                                        // On-top: marketplace absorbs the loss, organizer stays whole
-                                        //         → "nu scad din net", dashed gray card.
-                                        // Included: refund is money that flowed out through the
-                                        //           processor and the organizer sees it on the decont
-                                        //           → "scad din net", solid red card matching the
-                                        //           deductible one.
-                                        $informationalCard = '';
-                                        if ($hasInformational) {
-                                            if ($record->usesAutoRefunds()) {
-                                                $informationalCard = "<div style='padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;'>"
-                                                    . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
-                                                    . "<div style='font-size:16px;font-weight:700;color:#6b7280;'>{$fmt($informationalRefund)}</div>"
-                                                    . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>rambursate înainte de decont, nu scad din net</div>"
-                                                    . "</div>";
-                                            } elseif ($isIncludedMode) {
-                                                $informationalCard = "<div style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff5f5;'>"
-                                                    . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
-                                                    . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($informationalRefund)}</div>"
-                                                    . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>scad din net</div>"
-                                                    . "</div>";
-                                            } else {
-                                                $informationalCard = "<div style='padding:12px;border:1px dashed #d1d5db;border-radius:8px;background:#fafafa;'>"
-                                                    . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări raportate</div>"
-                                                    . "<div style='font-size:16px;font-weight:700;color:#6b7280;'>{$fmt($informationalRefund)}</div>"
-                                                    . "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu scad din net</div>"
-                                                    . "</div>";
-                                            }
-                                        }
-
-                                        return new \Illuminate\Support\HtmlString("
-                                        <div style='display:grid; grid-template-columns:repeat({$cols},1fr); gap:8px; margin-bottom:16px;'>
-                                            <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;'>
-                                                <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Brut</div>
-                                                <div style='font-size:16px;font-weight:700;color:#1a1a2e;'>{$fmt($brut)}</div>
-                                            </div>
-                                            <div style='padding:12px;border:1px solid #fee2e2;border-radius:8px;background:#fef2f2;'>
-                                                <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Comision</div>
-                                                <div style='font-size:16px;font-weight:700;color:#b91c1c;'>{$comDisplay}</div>
-                                                {$comNote}
-                                            </div>
-                                            <div style='padding:12px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;'>
-                                                <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Discount + Extras</div>
-                                                <div style='font-size:16px;font-weight:700;color:#92400e;'>-{$fmt($disc + $extras)}</div>
-                                            </div>
-                                            {$deductibleCard}
-                                            {$informationalCard}
-                                            <div style='padding:12px;border:1px solid #059669;border-radius:8px;background:#f0fdf4;'>
-                                                <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Net de plată</div>
-                                                <div style='font-size:16px;font-weight:700;color:#059669;'>{$fmt($finalNet)}</div>
-                                            </div>
-                                        </div>
-                                        ");
-                                    })
+                                    ->formatStateUsing(fn ($state, $record) => static::renderPayoutSummary($record))
                                     ->html()
                                     ->columnSpanFull(),
-
-                                // 2. Ce s-a cerut în acest decont — split online vs app/POS
-                                Infolists\Components\TextEntry::make('online_gross')
-                                    ->label('Suma brută decont bilete online')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['gross'])
-                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON'),
-
-                                Infolists\Components\TextEntry::make('online_commission')
-                                    ->label('Comision bilete online')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['commission'])
-                                    ->formatStateUsing(fn ($state, $record) => $record->invoicedCommission() > 0.005
-                                        ? number_format((float) $state, 2) . ' RON (nu se reține, se facturează separat)'
-                                        : '-' . number_format((float) $state, 2) . ' RON')
-                                    ->color(fn ($record) => $record->invoicedCommission() > 0.005 ? 'gray' : 'danger'),
-
-                                Infolists\Components\TextEntry::make('online_discount')
-                                    ->label('Discounts bilete online')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['discount'])
-                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
-                                    ->color('danger')
-                                    ->visible(fn ($record) => $record->getBreakdownTotals()['online']['discount'] > 0),
-
-                                Infolists\Components\TextEntry::make('online_extras')
-                                    ->label('Extras bilete online (asigurări, suprataxe)')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['extras'])
-                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
-                                    ->color('danger')
-                                    ->visible(fn ($record) => $record->getBreakdownTotals()['online']['extras'] > 0),
-
-                                Infolists\Components\TextEntry::make('online_net')
-                                    ->label('Sumă netă bilete online')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['net'] + $record->invoicedCommission())
-                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
-                                    ->weight('bold')
-                                    ->size('lg')
-                                    ->color('success'),
-
-                                Infolists\Components\TextEntry::make('invoiced_commission')
-                                    ->label('Factura de comision către organizator')
-                                    ->state(function ($record) {
-                                        $inv = $record->commissionInvoice();
-                                        if (! $inv) {
-                                            return 'negenerată: comision ' . number_format($record->invoicedCommission(), 2) . ' RON + TVA';
-                                        }
-
-                                        return $inv->number . ': ' . number_format((float) $inv->subtotal, 2) . ' + TVA '
-                                            . number_format((float) $inv->vat_amount, 2) . ' = ' . number_format((float) $inv->amount, 2) . ' RON';
-                                    })
-                                    ->helperText('Comisionul nu se reține din decont; organizatorul plătește factura.')
-                                    ->visible(fn ($record) => $record->invoicedCommission() > 0.005),
-
-                                Infolists\Components\TextEntry::make('pos_gross')
-                                    ->label('Suma brută decont bilete aplicație')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['gross'])
-                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
-                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['gross'] > 0),
-
-                                Infolists\Components\TextEntry::make('pos_commission')
-                                    ->label('Comision bilete aplicație')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['commission'])
-                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
-                                    ->color('danger')
-                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['commission'] > 0),
-
-                                Infolists\Components\TextEntry::make('pos_discount')
-                                    ->label('Discounts bilete aplicație')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['discount'])
-                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
-                                    ->color('danger')
-                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['discount'] > 0),
-
-                                Infolists\Components\TextEntry::make('pos_net')
-                                    ->label('Sumă netă bilete aplicație')
-                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['net'])
-                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
-                                    ->weight('bold')
-                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['net'] != 0),
-
-                                Infolists\Components\TextEntry::make('fees_amount')
-                                    ->label('Taxe')
-                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
-                                    ->color('danger')
-                                    ->visible(fn ($record) => (float) $record->fees_amount > 0),
-
-                                Infolists\Components\TextEntry::make('adjustments_amount')
-                                    ->label('Ajustări')
-                                    ->formatStateUsing(fn ($state, $record) => ($state >= 0 ? '+' : '') . number_format((float) $state, 2) . ' RON' . ($record->adjustments_note ? " ({$record->adjustments_note})" : ''))
-                                    ->visible(fn ($record) => (float) $record->adjustments_amount != 0),
-
-                                Infolists\Components\TextEntry::make('commission_mode')
-                                    ->label('Mod comision')
-                                    ->badge()
-                                    ->formatStateUsing(fn ($state) => match ($state) {
-                                        'included' => 'Inclus în preț',
-                                        'added_on_top' => 'Adăugat peste preț',
-                                        default => 'Nesetat (decont vechi)',
-                                    })
-                                    ->color(fn ($state) => match ($state) {
-                                        'included' => 'success',
-                                        'added_on_top' => 'warning',
-                                        default => 'gray',
-                                    }),
-
-                                Infolists\Components\TextEntry::make('invoice_recipient_type')
-                                    ->label('Destinatar factură')
-                                    ->badge()
-                                    ->formatStateUsing(fn ($state) => match ($state) {
-                                        'organizer' => 'Organizator',
-                                        'general_client' => 'Client general',
-                                        default => '—',
-                                    })
-                                    ->color(fn ($state) => $state === 'general_client' ? 'warning' : 'info'),
-                            ])
-                            ->columns(4),
+                            ]),
 
                         // Event-level aggregate view — totals across ALL payouts
                         // for this event/organizer, plus the remaining balance.
@@ -596,13 +378,34 @@ class PayoutResource extends Resource
                                         $paidCommission = round($paidCommission, 2);
                                         $remainingCommission = max(0, $commission - $paidCommission);
 
+                                        // Comision inclus facturat separat: nu s-a reținut, organizatorul îl primește
+                                        // în decont și îl plătește pe factura de comision.
+                                        $invoicedRows = MarketplacePayout::where('event_id', $record->event_id)
+                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+                                            ->whereNotNull('invoiced_commission_amount')
+                                            ->get(['status', 'invoiced_commission_amount']);
+                                        $invoicedPaid = round((float) $invoicedRows->where('status', 'completed')->sum('invoiced_commission_amount'), 2);
+                                        $invoicedTotal = round((float) $invoicedRows->sum('invoiced_commission_amount'), 2);
+                                        $invoicedPending = round($invoicedTotal - $invoicedPaid, 2);
+                                        $paid += $invoicedPaid;
+                                        $pending += $invoicedPending;
+                                        $withheldCommission = max(0, round($paidCommission - $invoicedTotal, 2));
+                                        $netLine = $invoicedTotal > 0.005
+                                            ? "<div style='font-size:11px;color:#666;'>Net organizator: {$fmt($net + $invoicedTotal)}</div>"
+                                            : "<div style='font-size:11px;color:#666;'>Net total: {$fmt($net)}</div>";
+                                        $commissionLines = ($withheldCommission > 0.005 || $invoicedTotal <= 0.005
+                                                ? "<div style='font-size:11px;color:#666;'>Comision reținut: {$fmt($withheldCommission)}</div>" : '')
+                                            . ($invoicedTotal > 0.005
+                                                ? "<div style='font-size:11px;color:#666;'>Comision facturat separat: {$fmt($invoicedTotal)}</div>" : '');
+
                                         return new \Illuminate\Support\HtmlString("
                                         <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;'>
                                             <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;'>
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Vânzări totale eveniment</div>
                                                 <div style='font-size:16px;font-weight:700;color:#1a1a2e;'>{$fmt($gross)}</div>
                                                 <div style='font-size:11px;color:#666;margin-top:2px;'>Comision total: {$fmt($commission)}</div>
-                                                <div style='font-size:11px;color:#666;'>Net total: {$fmt($net)}</div>
+                                                {$netLine}
                                                 " . ($refunds > 0 ? "<div style='font-size:11px;color:#dc2626;'>Returnări: -{$fmt($refunds)}</div>" : "") . "
                                             </div>
                                             <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fef3c7;'>
@@ -610,7 +413,7 @@ class PayoutResource extends Resource
                                                 <div style='font-size:16px;font-weight:700;color:#92400e;'>{$fmt($paid + $pending)}</div>
                                                 <div style='font-size:11px;color:#666;margin-top:2px;'>Plătit: {$fmt($paid)}</div>
                                                 " . ($pending > 0 ? "<div style='font-size:11px;color:#d97706;'>În așteptare: {$fmt($pending)}</div>" : "") . "
-                                                <div style='font-size:11px;color:#666;'>Comision încasat: {$fmt($paidCommission)}</div>
+                                                {$commissionLines}
                                             </div>
                                             <div style='padding:12px;border:1px solid #059669;border-radius:8px;background:#f0fdf4;'>
                                                 <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Disponibil restant</div>
@@ -1460,5 +1263,128 @@ class PayoutResource extends Resource
                 ->danger()
                 ->send();
         }
+    }
+
+    /**
+     * „Acest decont”: un singur calcul citit de sus în jos — vânzări, ce se
+     * scade, suma de plată. Suma finală e final_net_amount (aceeași ca PDF-ul).
+     */
+    public static function renderPayoutSummary(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $t = $record->getBreakdownTotals();
+        $cur = ' ' . ($record->currency ?? 'RON');
+        $fmt = fn ($v) => number_format((float) $v, 2, ',', '.') . $cur;
+        $neg = fn ($v) => '−' . $fmt($v);
+        $invoiced = $record->invoicedCommission() > 0.005;
+        $isOnTop = ($record->commission_mode ?? 'included') === 'added_on_top';
+
+        $line = function (string $label, string $value, string $note = '', string $tone = '') {
+            $color = match ($tone) {
+                'minus' => '#dc2626',
+                'muted' => '#9ca3af',
+                default => 'inherit',
+            };
+
+            return "<div style='display:flex;justify-content:space-between;gap:16px;padding:6px 0;'>"
+                . "<div><div style='font-size:13px;'>{$label}</div>"
+                . ($note !== '' ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>{$note}</div>" : '')
+                . "</div><div style='font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;color:{$color};'>{$value}</div></div>";
+        };
+        $group = fn (string $title, string $body) => $body === '' ? '' :
+            "<div style='padding:10px 0;border-top:1px solid rgba(127,127,127,.2);'>"
+            . "<div style='font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;'>{$title}</div>{$body}</div>";
+        $subtotal = fn (string $label, $v) => "<div style='display:flex;justify-content:space-between;gap:16px;padding:6px 0 0;margin-top:2px;border-top:1px dashed rgba(127,127,127,.25);font-weight:600;font-size:13px;'><div>{$label}</div><div style='font-variant-numeric:tabular-nums;white-space:nowrap;'>{$fmt($v)}</div></div>";
+
+        // Bilete online
+        $o = $t['online'];
+        $online = '';
+        if ($o['gross'] > 0.005 || $o['commission'] > 0.005) {
+            $online .= $line('Vânzări (ce au plătit clienții)', $fmt($o['gross']));
+            if ($o['commission'] > 0.005) {
+                if ($invoiced) {
+                    $inv = $record->commissionInvoice();
+                    $note = $inv
+                        ? 'nu se reține; se facturează separat: ' . e($inv->number) . ' = ' . $fmt($inv->amount) . ' cu TVA'
+                        : 'nu se reține; se facturează separat (factura nu e generată încă)';
+                    $online .= $line('Comision inclus în preț', $fmt($o['commission']), $note, 'muted');
+                } else {
+                    $online .= $line($isOnTop ? 'Comision adăugat peste preț' : 'Comision', $neg($o['commission']), '', 'minus');
+                }
+            }
+            if ($o['discount'] > 0.005) {
+                $online .= $line('Reduceri', $neg($o['discount']), '', 'minus');
+            }
+            if ($o['extras'] > 0.005) {
+                $online .= $line('Extras', $neg($o['extras']), 'asigurări bilete, suprataxe', 'minus');
+            }
+            $online .= $subtotal('Net bilete online', $o['net'] + ($invoiced ? $record->invoicedCommission() : 0));
+        }
+
+        // Bilete vândute prin aplicație
+        $p = $t['pos'];
+        $pos = '';
+        if ($p['gross'] > 0.005) {
+            $pos .= $line('Vânzări', $fmt($p['gross']));
+            if ($p['commission'] > 0.005) {
+                $pos .= $line('Comision', $neg($p['commission']), '', 'minus');
+            }
+            if ($p['discount'] > 0.005) {
+                $pos .= $line('Reduceri', $neg($p['discount']), '', 'minus');
+            }
+            $pos .= $subtotal('Net bilete aplicație', $p['net']);
+        }
+
+        // Ce se mai scade / adaugă
+        $other = '';
+        $deductible = (float) $record->deductible_refund_amount;
+        $informational = (float) $record->informational_refund_amount;
+        if ($deductible > 0.005) {
+            $note = $record->refundsAlreadyExcludedFromNet() ? 'biletele sunt deja scoase din net'
+                : ($record->usesAutoRefunds() ? 'bilete plătite într-un decont anterior' : '');
+            $other .= $line('Rambursări', $neg($deductible), $note, 'minus');
+        }
+        if ($informational > 0.005) {
+            if ($record->usesAutoRefunds() || $isOnTop) {
+                $other .= $line('Rambursări raportate', $fmt($informational), 'informativ, nu se scad', 'muted');
+            } else {
+                $other .= $line('Rambursări', $neg($informational), '', 'minus');
+            }
+        }
+        $advance = (float) (($record->payout_method['advance_amount'] ?? null) ?? 0);
+        if ($advance > 0.005) {
+            $other .= $line('Avans dedus', $neg($advance), '', 'minus');
+        }
+        if ((float) $record->fees_amount > 0.005) {
+            $other .= $line('Taxe', $neg($record->fees_amount), '', 'minus');
+        }
+        if (abs((float) $record->adjustments_amount) > 0.005) {
+            $adj = (float) $record->adjustments_amount;
+            $other .= $line('Ajustări', ($adj >= 0 ? '+' : '−') . $fmt(abs($adj)), e((string) $record->adjustments_note), $adj >= 0 ? '' : 'minus');
+        }
+
+        $final = (float) $record->final_net_amount;
+        $modeLabel = match ($record->commission_mode) {
+            'included' => 'comision inclus în preț',
+            'added_on_top' => 'comision adăugat peste preț',
+            default => 'mod comision nesetat',
+        };
+        $recipient = match ($record->invoice_recipient_type) {
+            'organizer' => 'factura pe organizator',
+            'general_client' => 'factura pe client general',
+            default => null,
+        };
+        $meta = e(implode(' · ', array_filter([$modeLabel, $recipient])));
+
+        return new \Illuminate\Support\HtmlString(
+            "<div style='max-width:640px;'>"
+            . $group('Bilete online', $online)
+            . $group('Bilete vândute prin aplicație', $pos)
+            . $group('Alte sume', $other)
+            . "<div style='display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-top:4px;padding:12px 14px;border-radius:8px;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.35);'>"
+            . "<div><div style='font-size:13px;font-weight:600;color:#059669;'>De plată organizatorului</div>"
+            . "<div style='font-size:11px;color:#9ca3af;margin-top:2px;'>{$meta}</div></div>"
+            . "<div style='font-size:20px;font-weight:700;color:#059669;font-variant-numeric:tabular-nums;white-space:nowrap;'>{$fmt($final)}</div></div>"
+            . '</div>'
+        );
     }
 }
