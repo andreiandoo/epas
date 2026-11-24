@@ -6605,15 +6605,30 @@ class EventResource extends Resource
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
-                    ->requiresConfirmation()
-                    ->modalHeading('Aprobă modificările în așteptare')
-                    ->modalDescription(fn (Event $record) => new \Illuminate\Support\HtmlString(
-                        'Se vor aplica pe evenimentul LIVE câmpurile modificate de organizator:<br><br><code style="white-space:pre-wrap;font-size:11px;">'
-                        . e(json_encode($record->pending_changes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
-                        . '</code>'
-                    ))
-                    ->action(function (Event $record) {
-                        app(\App\Services\Marketplace\EventLiveEditService::class)->approvePending($record);
+                    ->modalHeading('Modificări trimise de organizator')
+                    ->modalDescription('Doar câmpurile schimbate de organizator. La aprobare se aplică pe evenimentul live numai acestea.')
+                    ->modalWidth(\Filament\Support\Enums\Width::SixExtraLarge)
+                    ->stickyModalHeader()
+                    ->stickyModalFooter()
+                    ->modalContent(fn (Event $record) => view('filament.marketplace.events.pending-changes-diff', [
+                        'event' => $record,
+                        'diff' => app(\App\Services\Marketplace\EventLiveEditService::class)->diffPending($record),
+                    ]))
+                    ->modalSubmitActionLabel('Aprobă și publică')
+                    ->modalCancelActionLabel('Anulează')
+                    ->extraModalFooterActions(fn (Action $action) => [
+                        $action->makeModalSubmitAction('rejectFromDiff', arguments: ['reject' => true])
+                            ->label('Respinge')
+                            ->color('danger'),
+                    ])
+                    ->action(function (Event $record, array $arguments) {
+                        $svc = app(\App\Services\Marketplace\EventLiveEditService::class);
+                        if ($arguments['reject'] ?? false) {
+                            $svc->rejectPending($record);
+                            \Filament\Notifications\Notification::make()->title('Modificările au fost respinse.')->send();
+                            return;
+                        }
+                        $svc->approvePending($record);
                         \Filament\Notifications\Notification::make()->success()->title('Modificările au fost publicate.')->send();
                     }),
                 Action::make('rejectPendingChanges')
@@ -6621,7 +6636,17 @@ class EventResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
-                    ->requiresConfirmation()
+                    ->modalHeading('Respinge modificările organizatorului')
+                    ->modalDescription('Evenimentul live rămâne neschimbat. Acestea sunt modificările care se renunță.')
+                    ->modalWidth(\Filament\Support\Enums\Width::SixExtraLarge)
+                    ->stickyModalHeader()
+                    ->stickyModalFooter()
+                    ->modalContent(fn (Event $record) => view('filament.marketplace.events.pending-changes-diff', [
+                        'event' => $record,
+                        'diff' => app(\App\Services\Marketplace\EventLiveEditService::class)->diffPending($record),
+                    ]))
+                    ->modalSubmitActionLabel('Respinge')
+                    ->modalCancelActionLabel('Anulează')
                     ->action(function (Event $record) {
                         app(\App\Services\Marketplace\EventLiveEditService::class)->rejectPending($record);
                         \Filament\Notifications\Notification::make()->title('Modificările au fost respinse.')->send();
