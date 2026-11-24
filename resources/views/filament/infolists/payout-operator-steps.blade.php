@@ -1,47 +1,55 @@
 @php
     /**
-     * Operator checklist for a payout. Steps come from
-     * MarketplacePayout::getOperatorSteps() (approve → decont → factură →
-     * factură POS). Only the PENDING steps are rendered, in order, so each one
-     * disappears as the operator completes it; the whole section hides when
-     * none remain. The POS step is present only when the period has POS
-     * commission to bill.
+     * Pașii operatorului pentru un decont (MarketplacePayout::getOperatorSteps():
+     * aprobă → decont → factură → factură POS). Se văd toți, în ordine: cei
+     * făcuți bifați, următorul evidențiat cu explicația lui dedesubt. Secțiunea
+     * dispare când nu mai rămâne nimic de făcut.
      */
     $record = $getRecord();
-    $steps = $record->getOperatorSteps();
+    $steps = array_values($record->getOperatorSteps());
     $total = count($steps);
-    $pending = array_values(array_filter($steps, fn ($s) => empty($s['done'])));
-    $doneCount = $total - count($pending);
+    $doneCount = count(array_filter($steps, fn ($s) => !empty($s['done'])));
+    $nextIndex = null;
+    foreach ($steps as $i => $s) {
+        if (empty($s['done'])) { $nextIndex = $i; break; }
+    }
+    $next = $nextIndex !== null ? $steps[$nextIndex] : null;
 @endphp
 
-@if(count($pending) > 0)
-    <div class="space-y-2">
-        <p class="text-xs text-gray-500 dark:text-gray-400">
-            {{ $doneCount }} din {{ $total }} {{ $total === 1 ? 'pas finalizat' : 'pași finalizați' }} — urmează:
-        </p>
-        <ol class="space-y-1.5">
-            @foreach($pending as $i => $step)
-                <li class="flex items-start gap-3 p-2.5 rounded-lg border {{ $i === 0 ? 'border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800' }}">
-                    <span class="flex items-center justify-center w-6 h-6 mt-0.5 rounded-full text-xs font-bold shrink-0 {{ $i === 0 ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
-                        {{ $doneCount + $i + 1 }}
-                    </span>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium {{ $i === 0 ? 'text-primary-800 dark:text-primary-200' : 'text-gray-700 dark:text-gray-300' }}">
-                                {{ $step['label'] }}
-                            </span>
-                            @if($i === 0)
-                                <span class="ml-auto text-[10px] font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400 shrink-0">Următorul pas</span>
-                            @endif
-                        </div>
-                        @if(!empty($step['hint']))
-                            <div class="mt-1 text-[11px] leading-tight text-gray-600 dark:text-gray-400">
-                                {{ $step['hint'] }}
-                            </div>
+@if($next)
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;">
+            @foreach($steps as $i => $step)
+                @php
+                    $isDone = !empty($step['done']);
+                    $isNext = $i === $nextIndex;
+                    $dotBg = $isDone ? '#059669' : ($isNext ? '#2563eb' : 'rgba(127,127,127,.18)');
+                    $dotFg = ($isDone || $isNext) ? '#fff' : '#6b7280';
+                @endphp
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:{{ $dotBg }};color:{{ $dotFg }};font-size:11px;font-weight:700;flex-shrink:0;">
+                        @if($isDone)
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        @else
+                            {{ $i + 1 }}
                         @endif
-                    </div>
-                </li>
+                    </span>
+                    <span style="font-size:13px;{{ $isNext ? 'font-weight:600;' : '' }}{{ $isDone ? 'color:#9ca3af;text-decoration:line-through;' : '' }}">{{ $step['label'] }}</span>
+                </div>
+                @if($i < $total - 1)
+                    <span style="width:20px;height:1px;background:rgba(127,127,127,.3);"></span>
+                @endif
             @endforeach
-        </ol>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.25);">
+            <div style="min-width:0;">
+                <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#2563eb;">Următorul pas · {{ $doneCount }} din {{ $total }} făcuți</div>
+                <div style="font-size:13px;font-weight:600;margin-top:2px;">{{ $next['label'] }}</div>
+                @if(!empty($next['hint']))
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px;">{{ $next['hint'] }}</div>
+                @endif
+            </div>
+        </div>
     </div>
 @endif

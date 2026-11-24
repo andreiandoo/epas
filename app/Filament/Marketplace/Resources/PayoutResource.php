@@ -282,26 +282,6 @@ class PayoutResource extends Resource
                                     ->columnSpanFull(),
                             ]),
 
-                        // Payment info (for completed)
-                        Section::make('Plată')
-                            ->icon('heroicon-o-credit-card')
-                            ->schema([
-                                Infolists\Components\TextEntry::make('payment_reference')
-                                    ->label('Referință plată')
-                                    ->copyable(),
-                                Infolists\Components\TextEntry::make('payment_method')
-                                    ->label('Metodă plată'),
-                                Infolists\Components\TextEntry::make('completed_at')
-                                    ->label('Finalizat la')
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
-                                Infolists\Components\TextEntry::make('payment_notes')
-                                    ->label('Note plată')
-                                    ->columnSpanFull()
-                                    ->visible(fn ($record) => !empty($record->payment_notes)),
-                            ])
-                            ->columns(3)
-                            ->visible(fn ($record) => $record->payment_reference),
-
                         // Rejection details
                         Section::make('Respingere')
                             ->icon('heroicon-o-x-circle')
@@ -957,7 +937,7 @@ class PayoutResource extends Resource
                 if ($invoiced) {
                     $inv = $record->commissionInvoice();
                     $note = $inv
-                        ? 'nu se reține; se facturează separat: ' . e($inv->number) . ' = ' . $fmt($inv->amount) . ' cu TVA'
+                        ? 'nu se reține; se facturează separat: <a href="' . e(\App\Filament\Marketplace\Resources\OrganizerInvoiceResource::getUrl('edit', ['record' => $inv])) . '" style="color:#2563eb;font-weight:500;">' . e($inv->number) . '</a> = ' . $fmt($inv->amount) . ' cu TVA'
                         : 'nu se reține; se facturează separat (factura nu e generată încă)';
                     $online .= $line('Comision inclus în preț', $fmt($o['commission']), $note, 'muted');
                 } else {
@@ -1032,7 +1012,7 @@ class PayoutResource extends Resource
             $group('Bilete online', $online),
             $group('Bilete vândute prin aplicație', $pos),
             $group('Alte sume', $other),
-            static::uiTotal('De plată organizatorului', $fmt($final), $meta)
+            static::paymentTotal($record, $fmt($final), $meta)
         );
     }
 
@@ -1109,8 +1089,6 @@ class PayoutResource extends Resource
             ->orderBy('created_at')
             ->get(['id', 'reference', 'decont_series', 'amount', 'invoiced_commission_amount', 'status', 'created_at', 'marketplace_client_id']);
 
-        $statusColor = ['pending' => '#d97706', 'approved' => '#2563eb', 'processing' => '#7c3aed', 'completed' => '#059669'];
-        $statusLabel = ['pending' => 'În așteptare', 'approved' => 'Aprobat', 'processing' => 'Procesare', 'completed' => 'Finalizat'];
 
         $rows = '';
         $nr = 0;
@@ -1128,7 +1106,7 @@ class PayoutResource extends Resource
             $rows .= static::uiLine(
                 $title,
                 static::uiMoney($amount),
-                e($date) . ' &nbsp;' . static::uiChip($statusLabel[$p->status] ?? e($p->status), $statusColor[$p->status] ?? '#6b7280')
+                e($date) . ' &nbsp;' . static::statusChip((string) $p->status)
             );
         }
 
@@ -1187,7 +1165,7 @@ class PayoutResource extends Resource
         $color = ['pending' => '#d97706', 'approved' => '#2563eb', 'processing' => '#7c3aed', 'completed' => '#059669', 'rejected' => '#dc2626', 'cancelled' => '#6b7280'][$status] ?? '#6b7280';
         $label = ['pending' => 'În așteptare', 'approved' => 'Aprobat', 'processing' => 'În procesare', 'completed' => 'Finalizat', 'rejected' => 'Respins', 'cancelled' => 'Anulat'][$status] ?? e($status);
 
-        return static::uiChip($label, $color);
+        return "<span style='display:inline-block;padding:1px 8px;border-radius:9999px;background:{$color};color:#fff;font-size:11px;font-weight:600;white-space:nowrap;'>{$label}</span>";
     }
 
     /** Culoarea iconițelor care declanșează acțiuni (să iasă în evidență). */
@@ -1408,5 +1386,35 @@ class PayoutResource extends Resource
             $block('Admin', $record->admin_notes, 'doar intern'),
             $block('Mențiuni decont', $record->decont_mentions, 'apar în PDF')
         );
+    }
+
+    /**
+     * Caseta finală din Sume: „De plată” până la plată, apoi „Plătit” cu data,
+     * referința transferului, metoda și notele plății.
+     */
+    protected static function paymentTotal(MarketplacePayout $record, string $amount, string $meta): string
+    {
+        $paid = $record->status === 'completed';
+        if (! $paid && ! $record->payment_reference) {
+            return static::uiTotal('De plată organizatorului', $amount, $meta);
+        }
+
+        $parts = [];
+        if ($record->completed_at) {
+            $parts[] = e(MarketplaceTz::fmt($record->completed_at, 'd.m.Y H:i', null));
+        }
+        if ($record->payment_reference) {
+            $parts[] = 'ref. ' . e($record->payment_reference) . static::copyButton($record->payment_reference);
+        }
+        if ($record->payment_method) {
+            $parts[] = e($record->payment_method);
+        }
+        $note = implode(' · ', $parts);
+        if (trim((string) $record->payment_notes) !== '') {
+            $note .= "<div style='margin-top:4px;white-space:pre-line;'>" . e($record->payment_notes) . '</div>';
+        }
+        $note .= "<div style='margin-top:2px;'>{$meta}</div>";
+
+        return static::uiTotal($paid ? 'Plătit organizatorului' : 'De plată organizatorului', $amount, $note);
     }
 }
