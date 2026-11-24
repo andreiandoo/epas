@@ -153,9 +153,10 @@
             $totalNetFinal += $netFinal;
         }
     }
-    $hasDiscounts = collect($rows)->contains(fn ($r) => $r['discounts'] > 0.005);
+    // Reduceri și Net bilete apar mereu (ca înainte); Extras doar când există.
+    $hasDiscounts = true;
     $hasExtras = collect($rows)->contains(fn ($r) => $r['extras'] > 0.005);
-    $showNetTickets = $hasDiscounts || $hasExtras;
+    $showNetTickets = true;
     $money = fn ($v) => number_format((float) $v, 2, ',', '.');
     $th = 'padding:10px 12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;white-space:nowrap;';
     $td = 'padding:10px 12px;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;';
@@ -195,7 +196,7 @@
                         @if($r['rowInvoiced'])<div style="font-size:10px;">facturat separat</div>@endif
                     </td>
                     @if($showNetTickets)<td style="{{ $td }}">{{ $money($r['netTickets']) }}</td>@endif
-                    @if($hasDiscounts)<td style="{{ $td }}color:#dc2626;">{{ $r['discounts'] > 0.005 ? '−' . $money($r['discounts']) : '—' }}</td>@endif
+                    @if($hasDiscounts)<td style="{{ $td }}{{ $r['discounts'] > 0.005 ? 'color:#dc2626;' : 'color:#9ca3af;' }}">{{ $r['discounts'] > 0.005 ? '−' . $money($r['discounts']) : '0,00' }}</td>@endif
                     @if($hasExtras)<td style="{{ $td }}color:#dc2626;">{{ $r['extras'] > 0.005 ? '−' . $money($r['extras']) : '—' }}</td>@endif
                     <td style="{{ $td }}font-weight:600;">{{ $money($r['netFinal']) }}</td>
                 </tr>
@@ -211,7 +212,7 @@
                 <td style="{{ $td }}font-weight:600;">{{ $money($totalGross) }}</td>
                 <td style="{{ $td }}font-weight:600;{{ $commissionInvoiced ? 'color:#9ca3af;' : 'color:#dc2626;' }}">{{ $commissionInvoiced ? '' : '−' }}{{ $money($totalCommission) }}</td>
                 @if($showNetTickets)<td style="{{ $td }}font-weight:600;">{{ $money($totalNetTickets) }}</td>@endif
-                @if($hasDiscounts)<td style="{{ $td }}font-weight:600;color:#dc2626;">−{{ $money($totalDiscounts) }}</td>@endif
+                @if($hasDiscounts)<td style="{{ $td }}font-weight:600;{{ $totalDiscounts > 0.005 ? 'color:#dc2626;' : 'color:#9ca3af;' }}">{{ $totalDiscounts > 0.005 ? '−' : '' }}{{ $money($totalDiscounts) }}</td>@endif
                 @if($hasExtras)<td style="{{ $td }}font-weight:600;color:#dc2626;">−{{ $money($totalExtras) }}</td>@endif
                 <td style="{{ $td }}font-weight:700;color:#059669;">{{ $money($totalNetFinal) }} {{ $currency }}</td>
             </tr>

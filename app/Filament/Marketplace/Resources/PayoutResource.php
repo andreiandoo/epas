@@ -234,7 +234,7 @@ class PayoutResource extends Resource
                                             })
                                         ->link()
                                         ->size('sm'),
-                                ]),
+                                ])->extraAttributes(['data-ep-edit-series' => '1', 'style' => 'display:none']),
                             ])
                             ->columns(1),
 
@@ -317,25 +317,6 @@ class PayoutResource extends Resource
                             ])
                             ->columns(2)
                             ->visible(fn ($record) => $record->status === 'rejected'),
-
-                        // Notes
-                        Section::make('Note')
-                            ->schema([
-                                Infolists\Components\TextEntry::make('organizer_notes')
-                                    ->label('Note organizator')
-                                    ->placeholder('—')
-                                    ->columnSpanFull(),
-                                Infolists\Components\TextEntry::make('admin_notes')
-                                    ->label('Note admin')
-                                    ->placeholder('—')
-                                    ->columnSpanFull(),
-                                Infolists\Components\TextEntry::make('decont_mentions')
-                                    ->label('Mențiuni decont (apar în PDF)')
-                                    ->placeholder('—')
-                                    ->columnSpanFull(),
-                            ])
-                            ->collapsible()
-                            ->collapsed(fn ($record) => empty($record->organizer_notes) && empty($record->admin_notes) && empty($record->decont_mentions)),
                     ]),
 
                     // RIGHT: Sidebar (1/3)
@@ -345,6 +326,29 @@ class PayoutResource extends Resource
                         // the operator's main controls live alongside the payout
                         // context instead of getting buried under the document
                         // generation buttons up top.
+                        Section::make(function ($record) {
+                            $n = count(array_filter([$record->organizer_notes, $record->admin_notes, $record->decont_mentions], fn ($v) => trim((string) $v) !== ''));
+
+                            return $n > 0 ? "Note ({$n})" : 'Note';
+                        })
+                            ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                            ->iconColor(fn ($record) => (trim((string) $record->organizer_notes) . trim((string) $record->admin_notes) . trim((string) $record->decont_mentions)) !== '' ? 'warning' : 'gray')
+                            ->description(function ($record) {
+                                $n = count(array_filter([$record->organizer_notes, $record->admin_notes, $record->decont_mentions], fn ($v) => trim((string) $v) !== ''));
+
+                                return $n > 0 ? ($n === 1 ? '1 notă completată' : "{$n} note completate") : 'nicio notă';
+                            })
+                            ->compact()
+                            ->collapsible()
+                            ->collapsed()
+                            ->schema([
+                                Infolists\Components\TextEntry::make('notes_view')
+                                    ->hiddenLabel()
+                                    ->getStateUsing(fn () => '—')
+                                    ->formatStateUsing(fn ($state, $record) => static::renderNotes($record))
+                                    ->html(),
+                            ]),
+
                         Section::make('Acțiuni')
                             ->icon('heroicon-o-bolt')
                             ->compact()
@@ -1139,29 +1143,20 @@ class PayoutResource extends Resource
         $tz = MarketplaceTz::tz();
         $dt = fn ($d) => $d ? e($d->copy()->timezone($tz)->format('d.m.Y H:i')) : null;
 
-        $createdAt = (in_array($record->source, ['manual', 'automated'], true) && $record->approved_at)
-            ? $record->approved_at : $record->created_at;
+        $createdAt = static::createdMoment($record);
+        $creator = static::creatorText($record);
 
-        if ($record->approvedByUser) {
-            $by = $record->approvedByUser->name;
-        } elseif ($record->source === 'organizer' && $record->organizer) {
-            $by = $record->organizer->name;
-        } elseif ($record->source === 'automated' && $record->approved_by === null && $record->created_at && $record->created_at < '2026-05-05') {
-            $by = 'Admin (legacy)';
-        } elseif ($record->source === 'automated') {
-            $by = 'Sistem (cron)';
-        } else {
-            $by = null;
+        // Deconturile admin se aprobă chiar la creare; cele cerute de organizator le aprobă un admin.
+        $approvedNote = '';
+        if ($record->approved_at) {
+            $approvedNote = $record->source === 'organizer'
+                ? ($record->approvedByUser ? 'de ' . e($record->approvedByUser->name) . ' (admin)' : '')
+                : 'automat, la creare';
         }
-        $type = match ($record->source) {
-            'organizer' => 'solicitat de organizator',
-            'manual', 'automated' => 'creat de admin',
-            default => null,
-        };
 
         $steps = [
-            ['Creat', $dt($createdAt), e(implode(' · ', array_filter([$by, $type])))],
-            ['Aprobat', $dt($record->approved_at), ''],
+            ['Creat', $dt($createdAt), $creator ? 'de ' . e($creator) : ''],
+            ['Aprobat', $dt($record->approved_at), $approvedNote],
             ['Procesat', $dt($record->processed_at), ''],
             ['Finalizat', $dt($record->completed_at), ''],
         ];
@@ -1195,11 +1190,53 @@ class PayoutResource extends Resource
         return static::uiChip($label, $color);
     }
 
+    /** Culoarea iconițelor care declanșează acțiuni (să iasă în evidență). */
+    public const ACTION_ICON_COLOR = '#d97706';
+
+    protected static function iconSvg(string $path, int $size = 16): string
+    {
+        return "<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.8' stroke='currentColor' width='{$size}' height='{$size}' style='display:block;'><path stroke-linecap='round' stroke-linejoin='round' d='{$path}'/></svg>";
+    }
+
     protected static function copyButton(string $value): string
     {
         $js = e(json_encode($value));
+        $copy = static::iconSvg('M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75', 15);
+        $check = e(json_encode(static::iconSvg('m4.5 12.75 6 6 9-13.5', 15)));
+        $color = static::ACTION_ICON_COLOR;
 
-        return " <button type='button' title='Copiază' onclick=\"navigator.clipboard.writeText({$js});this.textContent='copiat';setTimeout(()=>this.textContent='copiază',1200)\" style='margin-left:6px;font-size:11px;color:#2563eb;'>copiază</button>";
+        return " <button type='button' title='Copiază' aria-label='Copiază'"
+            . " onclick=\"navigator.clipboard.writeText({$js});const o=this.innerHTML;this.innerHTML={$check};setTimeout(()=>this.innerHTML=o,1200)\""
+            . " style='display:inline-flex;vertical-align:-3px;margin-left:6px;color:{$color};cursor:pointer;'>{$copy}</button>";
+    }
+
+    /**
+     * Cine a creat decontul, la fel peste tot: „Cati (admin)” sau
+     * „Nume organizator (organizator)”. Aprobarea e alt pas, cu omul ei.
+     */
+    public static function creatorText(MarketplacePayout $record): ?string
+    {
+        if ($record->source === 'organizer') {
+            return $record->organizer ? $record->organizer->name . ' (organizator)' : 'organizator';
+        }
+        if ($record->approvedByUser) {
+            return $record->approvedByUser->name . ' (admin)';
+        }
+        if ($record->source === 'automated' && $record->created_at && $record->created_at < '2026-05-05') {
+            return 'un admin (nume neînregistrat)';
+        }
+        if ($record->source === 'automated') {
+            return 'automat (sistem)';
+        }
+
+        return null;
+    }
+
+    /** Momentul real al creării (created_at poate fi antedatat la deconturile admin). */
+    public static function createdMoment(MarketplacePayout $record)
+    {
+        return (in_array($record->source, ['manual', 'automated'], true) && $record->approved_at)
+            ? $record->approved_at : $record->created_at;
     }
 
     /** Secțiunea Decont: identitatea decontului + contul bancar. */
@@ -1229,21 +1266,28 @@ class PayoutResource extends Resource
                 . ($date ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>" . e($date) . '</div>' : '');
         }
 
-        $created = MarketplaceTz::fmt($record->created_at, 'd.m.Y H:i', null, fallback: '—');
-        $source = match ($record->source) {
-            'organizer' => 'cerut de organizator',
-            'manual', 'automated' => 'creat de admin',
-            default => null,
-        };
+        $moment = static::createdMoment($record);
+        $created = MarketplaceTz::fmt($moment, 'd.m.Y H:i', null, fallback: '—');
+        $creator = static::creatorText($record);
+        // Decont antedatat: data de pe document diferă de ziua creării.
+        $docDate = ($record->created_at && $moment && $record->created_at->format('Y-m-d') !== $moment->format('Y-m-d'))
+            ? $record->created_at->format('d.m.Y') : null;
+
+        $color = static::ACTION_ICON_COLOR;
+        $pencil = static::iconSvg('m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10', 15);
+        $editSeries = "<button type='button' title='Editează seria' aria-label='Editează seria'"
+            . " onclick=\"document.querySelector('[data-ep-edit-series] button')?.click()\""
+            . " style='display:inline-flex;vertical-align:-3px;margin-right:6px;color:{$color};cursor:pointer;'>{$pencil}</button>";
 
         $row = fn (string $label, string $value) => "<div style='display:grid;grid-template-columns:96px 1fr;gap:12px;padding:5px 0;font-size:13px;'>"
             . "<div style='color:#9ca3af;'>{$label}</div><div style='min-width:0;overflow-wrap:anywhere;'>{$value}</div></div>";
 
-        $decont = $row('Serie', $series . ' &nbsp;' . static::statusChip((string) $record->status))
+        $decont = $row('Serie', $editSeries . $series . ' &nbsp;' . static::statusChip((string) $record->status))
             . $row('Referință', $ref)
             . $row('Organizator', $org)
             . $row('Eveniment', $eventHtml)
-            . $row('Creat', e($created) . ($source ? " <span style='color:#9ca3af;'>· {$source}</span>" : ''));
+            . $row('Creat', e($created) . ($creator ? " <span style='color:#9ca3af;'>· de " . e($creator) . '</span>' : '')
+                . ($docDate ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>data pe document: {$docDate}</div>" : ''));
 
         $m = $record->payout_method ?? [];
         $iban = ! empty($m['iban'])
@@ -1345,5 +1389,24 @@ class PayoutResource extends Resource
             static::uiGroup('Decontat · ' . $count . ($count === 1 ? ' decont' : ' deconturi'), $settled),
             static::uiTotal('Rămas de decontat', $m($balance), 'comision rămas: ' . $m($remainingCommission), 'neutral')
         )->toHtml();
+    }
+
+    /** Note: organizator, admin, mențiuni pe PDF. */
+    public static function renderNotes(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $block = function (string $title, ?string $text, string $hint = '') {
+            $text = trim((string) $text);
+            $body = $text !== ''
+                ? "<div style='font-size:13px;white-space:pre-line;overflow-wrap:anywhere;'>" . e($text) . '</div>'
+                : "<div style='font-size:13px;color:#9ca3af;'>—</div>";
+
+            return static::uiGroup($title . ($hint !== '' ? " <span style='text-transform:none;letter-spacing:0;font-weight:400;'>· {$hint}</span>" : ''), $body);
+        };
+
+        return static::uiWrap(
+            $block('Organizator', $record->organizer_notes),
+            $block('Admin', $record->admin_notes, 'doar intern'),
+            $block('Mențiuni decont', $record->decont_mentions, 'apar în PDF')
+        );
     }
 }
