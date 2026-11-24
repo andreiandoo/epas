@@ -273,9 +273,15 @@ class OrganizerBalance extends Page
                 $cur = ' ' . ($p->currency ?? 'RON');
                 $covered = $p->advanceCoveredAmount();
                 $text = 'Sumă decont: ' . number_format((float) $p->amount, 2, ',', '.') . $cur . '.';
+                $invoiced = $p->invoicedCommission();
                 if ($covered > 0) {
-                    $text .= ' Compensat din avans: ' . number_format($covered, 2, ',', '.') . $cur
-                        . '. Rest de plată: ' . number_format($p->cashAmount(), 2, ',', '.') . $cur . '.';
+                    $text .= ' Compensat din avans: ' . number_format($covered, 2, ',', '.') . $cur . '.';
+                }
+                if ($invoiced > 0.005) {
+                    $text .= ' Comision inclus nereținut (pe factura organizator): +' . number_format($invoiced, 2, ',', '.') . $cur . '.';
+                }
+                if ($covered > 0 || $invoiced > 0.005) {
+                    $text .= ' De transferat: ' . number_format($p->transferAmount(), 2, ',', '.') . $cur . '.';
                 }
 
                 return $text . ' Organizatorul primește notificare că plata a fost efectuată.';
@@ -284,7 +290,7 @@ class OrganizerBalance extends Page
                 $p = $this->findPayout($arguments['payout'] ?? null);
 
                 // Decont acoperit integral din avans: nu există transfer bancar.
-                return ($p && $p->advanceCoveredAmount() > 0 && $p->cashAmount() <= 0.004)
+                return ($p && $p->advanceCoveredAmount() > 0 && $p->transferAmount() <= 0.004)
                     ? ['payment_reference' => 'Compensat integral din avans']
                     : [];
             })

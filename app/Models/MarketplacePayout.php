@@ -209,6 +209,7 @@ class MarketplacePayout extends Model
         'fees_amount',
         'adjustments_amount',
         'net_override',
+        'invoiced_commission_amount',
         'decont_mentions',
         'adjustments_note',
         'status',
@@ -925,6 +926,7 @@ class MarketplacePayout extends Model
         'fees_amount' => 'decimal:2',
         'adjustments_amount' => 'decimal:2',
         'net_override' => 'decimal:2',
+        'invoiced_commission_amount' => 'decimal:2',
         'period_start' => 'date',
         'period_end' => 'date',
         'payout_method' => 'array',
@@ -979,6 +981,13 @@ class MarketplacePayout extends Model
         // — behaviour for all other payouts is completely unchanged.
         if ($this->net_override !== null) {
             $this->finalNetAmountCache = round((float) $this->net_override, 2);
+            return $this->finalNetAmountCache;
+        }
+
+        // Comision inclus facturat separat: de plată = netul salvat + comisionul
+        // nereținut. Același număr ca transferul și PDF-ul (E), cu reducerile scăzute.
+        if ($this->invoiced_commission_amount !== null) {
+            $this->finalNetAmountCache = round(max(0.0, (float) $this->amount + $this->invoicedCommission()), 2);
             return $this->finalNetAmountCache;
         }
 
@@ -2459,6 +2468,7 @@ class MarketplacePayout extends Model
 
         // Period/breakdown may have shifted — drop the POS memo.
         $this->posCommissionCache = null;
+        $this->refreshInvoicedCommission();
 
         return [
             'ok' => true,
@@ -2702,6 +2712,68 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Comisionul inclus care nu se reține din acest decont (se facturează
+     * separat organizatorului). 0 pe deconturile vechi, unde a fost reținut.
+     */
+    public function invoicedCommission(): float
+    {
+        return round((float) ($this->invoiced_commission_amount ?? 0), 2);
+    }
+
+    /**
+     * Ce primește organizatorul prin transfer: restul de plată (după avans)
+     * plus comisionul inclus facturat separat. `amount` rămâne netul din sold.
+     */
+    public function transferAmount(): float
+    {
+        return round($this->cashAmount() + $this->invoicedCommission(), 2);
+    }
+
+    /**
+     * Comisionul inclus de pe rândurile online din breakdown: tipurile cu
+     * comision peste preț și cele POS nu intră (POS se facturează oricum,
+     * banii n-au trecut prin noi). Deconturile cu net_override, avansurile și
+     * cele fără eveniment rămân pe vechiul model.
+     */
+    public function computeInvoicedCommission(?array $rows = null): float
+    {
+        if ($this->isAdvance() || !$this->event_id || $this->net_override !== null) {
+            return 0.0;
+        }
+
+        $rows ??= $this->ticket_breakdown ?? [];
+        $posSet = array_flip($this->getPosTicketTypeIds());
+        $sum = 0.0;
+        foreach ($rows as $row) {
+            $ttId = (int) ($row['ticket_type_id'] ?? 0);
+            if ($ttId && isset($posSet[$ttId])) {
+                continue;
+            }
+            if (in_array($row['commission_mode'] ?? $this->commission_mode, ['added_on_top', 'on_top'], true)) {
+                continue;
+            }
+            $qty = (int) ($row['quantity'] ?? $row['qty'] ?? $row['tickets'] ?? 0);
+            $sum += isset($row['commission_amount'])
+                ? (float) $row['commission_amount']
+                : $qty * (float) ($row['commission_per_ticket'] ?? 0);
+        }
+
+        return round(max(0, $sum), 2);
+    }
+
+    /**
+     * Recalculează comisionul facturat separat după ce s-a schimbat breakdown-ul.
+     * Atinge doar deconturile pe modelul nou (coloana completată).
+     */
+    public function refreshInvoicedCommission(): void
+    {
+        if ($this->invoiced_commission_amount === null || $this->status === 'completed') {
+            return;
+        }
+        $this->forceFill(['invoiced_commission_amount' => $this->computeInvoicedCommission()])->saveQuietly();
+    }
+
+    /**
      * Acoperă decontul din avansurile organizatorului, cel mai vechi primul.
      * Doar deconturile pe eveniment se compensează (plățile fără eveniment
      * sunt ele însele avansuri / plăți la nivel de organizator). Idempotent:
@@ -2905,6 +2977,11 @@ class MarketplacePayout extends Model
         if ($advanceCovered > 0) {
             $description .= ' — ' . number_format($advanceCovered, 2, ',', '.') . ' ' . ($this->currency ?? 'RON') . ' compensat din avans';
         }
+        $invoicedCommission = $this->invoicedCommission();
+        if ($invoicedCommission > 0.005) {
+            $description .= ' — transferat ' . number_format($this->transferAmount(), 2, ',', '.') . ' ' . ($this->currency ?? 'RON')
+                . ', inclusiv comisionul de ' . number_format($invoicedCommission, 2, ',', '.') . ' facturat separat';
+        }
 
         // Record transaction
         MarketplaceTransaction::create([
@@ -2920,6 +2997,8 @@ class MarketplacePayout extends Model
                 'payment_reference' => $paymentReference,
                 'payment_notes' => $paymentNotes,
                 'advance_covered' => $advanceCovered,
+                'invoiced_commission' => $invoicedCommission,
+                'transfer_amount' => $this->transferAmount(),
                 'is_advance' => $this->isAdvance(),
             ],
         ]);

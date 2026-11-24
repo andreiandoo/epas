@@ -49,7 +49,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
      */
     public function marketplaceTemplateData(object $notifiable): array
     {
-        $amount = number_format((float) $this->payout->amount, 2, ',', '.') . ' ' . ($this->payout->currency ?? 'EUR');
+        $amount = number_format($this->payAmount(), 2, ',', '.') . ' ' . ($this->payout->currency ?? 'EUR');
         $period = '';
         if ($this->payout->period_start && $this->payout->period_end) {
             $period = $this->payout->period_start->format('d M Y') . ' — ' . $this->payout->period_end->format('d M Y');
@@ -84,7 +84,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line("Your payout request has been submitted successfully.")
             ->line("**Reference:** {$this->payout->reference}")
-            ->line("**Amount:** {$this->payout->amount} {$this->payout->currency}")
+            ->line("**Amount:** {$this->payAmount()} {$this->payout->currency}")
             ->line("**Period:** {$this->payout->period_start->format('d M Y')} - {$this->payout->period_end->format('d M Y')}")
             ->line("We will review your request and process it as soon as possible.")
             ->line("You will receive a notification when your payout is approved or if we need additional information.");
@@ -97,7 +97,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line("Great news! Your payout request has been approved.")
             ->line("**Reference:** {$this->payout->reference}")
-            ->line("**Amount:** {$this->payout->amount} {$this->payout->currency}")
+            ->line("**Amount:** {$this->payAmount()} {$this->payout->currency}")
             ->line("Your payment will be processed shortly. You will receive another notification when the transfer is complete.");
     }
 
@@ -108,7 +108,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line("Your payout is now being processed.")
             ->line("**Reference:** {$this->payout->reference}")
-            ->line("**Amount:** {$this->payout->amount} {$this->payout->currency}")
+            ->line("**Amount:** {$this->payAmount()} {$this->payout->currency}")
             ->line("The transfer has been initiated. Please allow 1-3 business days for the funds to appear in your account.");
     }
 
@@ -119,7 +119,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line("Your payout has been completed successfully!")
             ->line("**Reference:** {$this->payout->reference}")
-            ->line("**Amount:** {$this->payout->amount} {$this->payout->currency}");
+            ->line("**Amount:** {$this->payAmount()} {$this->payout->currency}");
 
         if ($this->payout->payment_reference) {
             $mail->line("**Payment Reference:** {$this->payout->payment_reference}");
@@ -135,7 +135,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line("Unfortunately, your payout request has been rejected.")
             ->line("**Reference:** {$this->payout->reference}")
-            ->line("**Amount:** {$this->payout->amount} {$this->payout->currency}")
+            ->line("**Amount:** {$this->payAmount()} {$this->payout->currency}")
             ->line("**Reason:** {$this->payout->rejection_reason}")
             ->line("The requested amount has been returned to your available balance. If you have questions, please contact support.");
     }
@@ -155,7 +155,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
         $data = [
             'payout_id' => $this->payout->id,
             'reference' => $this->payout->reference,
-            'amount' => $this->payout->amount,
+            'amount' => $this->payAmount(),
             'currency' => $this->payout->currency,
             'status' => $this->payout->status,
             'action' => $this->action,
@@ -184,7 +184,7 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
 
     protected function getNotificationMessage(): string
     {
-        $amount = number_format($this->payout->amount, 2) . ' ' . $this->payout->currency;
+        $amount = number_format($this->payAmount(), 2) . ' ' . $this->payout->currency;
 
         return match ($this->action) {
             'submitted' => "Cererea de plată {$this->payout->reference} în valoare de {$amount} a fost înregistrată.",
@@ -194,5 +194,14 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
             'rejected' => "Cererea de plată {$this->payout->reference} în valoare de {$amount} a fost respinsă.",
             default => "Actualizare pentru plata {$this->payout->reference}.",
         };
+    }
+
+    /**
+     * Suma comunicată organizatorului: decontul plus comisionul inclus
+     * nereținut (facturat separat), adică ce primește în cont.
+     */
+    protected function payAmount(): float
+    {
+        return round((float) $this->payout->amount + $this->payout->invoicedCommission(), 2);
     }
 }

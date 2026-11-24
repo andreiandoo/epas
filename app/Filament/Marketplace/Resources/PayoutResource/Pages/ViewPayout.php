@@ -547,6 +547,7 @@ class ViewPayout extends ViewRecord
                         // payout to claim); refunds added are claimed by
                         // this one.
                         $this->record->syncIncludedRefunds($includedRefundIds);
+                        $this->record->refreshInvoicedCommission();
 
                         // Adjust the organizer's reserved (pending) balance so
                         // available_balance reflects the corrected request.

@@ -984,6 +984,12 @@ class ListPayouts extends ListRecords
                     $payout->saveQuietly();
                 }
 
+                // Comision inclus: nu se reține, organizatorul primește brutul și
+                // comisionul i se facturează separat (factura organizator).
+                if ($commissionMode !== 'added_on_top' && !empty($ticketBreakdown)) {
+                    $payout->forceFill(['invoiced_commission_amount' => $payout->computeInvoicedCommission()])->saveQuietly();
+                }
+
                 // Link refunds to this payout AFTER it's created so the FK
                 // points at a real id. syncIncludedRefunds also recomputes
                 // refund_amount from the actual linked rows (defensive — in

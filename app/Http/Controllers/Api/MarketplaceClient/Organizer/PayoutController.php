@@ -129,6 +129,9 @@ class PayoutController extends BaseController
                 'amount' => round(max(0, (float) $payout->amount - $advanceCovered), 2),
                 'decont_amount' => (float) $payout->amount,
                 'advance_covered' => $advanceCovered,
+                // Comision inclus nereținut (facturat separat): se transferă în plus.
+                'invoiced_commission' => $payout->invoicedCommission(),
+                'transfer_amount' => round(max(0, (float) $payout->amount - $advanceCovered) + $payout->invoicedCommission(), 2),
                 'is_advance' => $payout->isAdvance(),
                 'status' => $payout->status,
                 'event_id' => $payout->event_id,
@@ -801,6 +804,8 @@ class PayoutController extends BaseController
             'completed_at' => $payout->completed_at?->toIso8601String(),
             'is_advance' => $payout->isAdvance(),
             'advance_covered' => $payout->advanceCoveredAmount(),
+            'invoiced_commission' => $payout->invoicedCommission(),
+            'transfer_amount' => $payout->transferAmount(),
         ];
 
         // Include rejection reason for rejected payouts

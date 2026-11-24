@@ -2697,6 +2697,17 @@ class MarketplaceTaxTemplate extends Model
                 $variables['payout_commission_amount'] = number_format(0, 2);
             }
 
+            // Comision inclus facturat separat: E = netul salvat + comisionul nereținut
+            // − avans (= transferul), A reconstruit ca E + B + C, ca formula să se închidă.
+            if ($isIncluded && $payout->net_override === null && $payout->invoiced_commission_amount !== null) {
+                $eAmount = max(0.0, (float) $payout->amount + $payout->invoicedCommission() - $advanceDeduction);
+                $variables['payout_amount'] = number_format($eAmount, 2);
+                $variables['payout_gross_amount'] = number_format(
+                    $eAmount + $refundDeduction + $advanceDeduction + $refundPaidBefore,
+                    2
+                );
+            }
+
             // 1b + tuple merge: for BOTH commission modes, fold refunded
             // tickets into total_tickets_sold + tickets_breakdown_label so
             // 1b matches 1a's "sold-including-refunded" total. On on_top

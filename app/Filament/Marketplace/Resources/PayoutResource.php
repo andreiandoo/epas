@@ -361,6 +361,12 @@ class PayoutResource extends Resource
                                         $isIncludedMode = ($record->commission_mode ?? 'included') !== 'added_on_top';
 
                                         $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
+                                        // Comision inclus facturat separat: nu se scade din plată.
+                                        $invoicedCom = $record->invoicedCommission();
+                                        $comDisplay = $invoicedCom > 0.005 ? $fmt($com) : '-' . $fmt($com);
+                                        $comNote = $invoicedCom > 0.005
+                                            ? "<div style='font-size:9px;color:#9ca3af;margin-top:2px;'>nu se reține: " . $fmt($invoicedCom) . " pe factura organizator</div>"
+                                            : '';
                                         $hasDeductible = $deductibleRefund > 0.01;
                                         $hasInformational = $informationalRefund > 0.01;
                                         $extraCards = ($hasDeductible ? 1 : 0) + ($hasInformational ? 1 : 0);
@@ -412,7 +418,8 @@ class PayoutResource extends Resource
                                             </div>
                                             <div style='padding:12px;border:1px solid #fee2e2;border-radius:8px;background:#fef2f2;'>
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Comision</div>
-                                                <div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($com)}</div>
+                                                <div style='font-size:16px;font-weight:700;color:#b91c1c;'>{$comDisplay}</div>
+                                                {$comNote}
                                             </div>
                                             <div style='padding:12px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;'>
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Discount + Extras</div>
@@ -463,6 +470,13 @@ class PayoutResource extends Resource
                                     ->weight('bold')
                                     ->size('lg')
                                     ->color('success'),
+
+                                Infolists\Components\TextEntry::make('invoiced_commission')
+                                    ->label('Comision inclus, facturat separat (nu se reține)')
+                                    ->state(fn ($record) => $record->invoicedCommission())
+                                    ->formatStateUsing(fn ($state) => '+' . number_format((float) $state, 2) . ' RON')
+                                    ->helperText('Organizatorul primește și această sumă; comisionul îl plătește pe factura organizator.')
+                                    ->visible(fn ($record) => $record->invoicedCommission() > 0.005),
 
                                 Infolists\Components\TextEntry::make('pos_gross')
                                     ->label('Suma brută decont bilete aplicație')
@@ -710,16 +724,22 @@ class PayoutResource extends Resource
                                         // Decont acoperit (parțial) dintr-un avans: se transferă doar restul.
                                         ->modalDescription(function ($record) {
                                             $covered = $record->advanceCoveredAmount();
-                                            if ($covered <= 0) {
+                                            $invoiced = $record->invoicedCommission();
+                                            if ($covered <= 0 && $invoiced <= 0.005) {
                                                 return null;
                                             }
                                             $cur = ' ' . ($record->currency ?? 'RON');
+                                            $text = 'Sumă decont: ' . number_format((float) $record->amount, 2, ',', '.') . $cur . '.';
+                                            if ($covered > 0) {
+                                                $text .= ' Compensat din avans: ' . number_format($covered, 2, ',', '.') . $cur . '.';
+                                            }
+                                            if ($invoiced > 0.005) {
+                                                $text .= ' Comision inclus nereținut (pe factura organizator): +' . number_format($invoiced, 2, ',', '.') . $cur . '.';
+                                            }
 
-                                            return 'Sumă decont: ' . number_format((float) $record->amount, 2, ',', '.') . $cur
-                                                . '. Compensat din avans: ' . number_format($covered, 2, ',', '.') . $cur
-                                                . '. Rest de plată: ' . number_format($record->cashAmount(), 2, ',', '.') . $cur . '.';
+                                            return $text . ' De transferat: ' . number_format($record->transferAmount(), 2, ',', '.') . $cur . '.';
                                         })
-                                        ->fillForm(fn ($record) => ($record->advanceCoveredAmount() > 0 && $record->cashAmount() <= 0.004)
+                                        ->fillForm(fn ($record) => ($record->advanceCoveredAmount() > 0 && $record->transferAmount() <= 0.004)
                                             ? ['payment_reference' => 'Compensat integral din avans']
                                             : [])
                                         ->form([
