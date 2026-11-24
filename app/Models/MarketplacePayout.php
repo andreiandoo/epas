@@ -2944,6 +2944,40 @@ class MarketplacePayout extends Model
             'approved_by' => $userId,
             'approved_at' => now(),
         ]);
+
+        // Cererile organizatorului trec la aprobare pe comisionul facturat separat
+        // (dacă nu au trecut deja la creare).
+        $this->adoptInvoicedCommission();
+    }
+
+    /**
+     * Comision inclus facturat separat pentru un decont încă pe modelul vechi:
+     * organizatorul primește și comisionul, care i se facturează. Doar când
+     * suma decontului acoperă exact biletele online din snapshot; o cerere
+     * parțială (altă sumă decât biletele) rămâne cu comisionul reținut.
+     * Excluderile (avans, fără eveniment, net manual, leisure, POS, peste preț)
+     * sunt în computeInvoicedCommission().
+     */
+    public function adoptInvoicedCommission(): void
+    {
+        if ($this->invoiced_commission_amount !== null
+            || empty($this->ticket_breakdown)
+            || ($this->commission_mode ?? 'included') === 'added_on_top'
+            || in_array($this->status, ['completed', 'rejected', 'cancelled'], true)) {
+            return;
+        }
+
+        $commission = $this->computeInvoicedCommission();
+        if ($commission <= 0.005) {
+            return;
+        }
+
+        $onlineNet = (float) ($this->getBreakdownTotals()['online']['net'] ?? 0);
+        if (abs((float) $this->amount - $onlineNet) > 0.05) {
+            return;
+        }
+
+        $this->forceFill(['invoiced_commission_amount' => $commission])->saveQuietly();
     }
 
     /**

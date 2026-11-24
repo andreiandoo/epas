@@ -646,6 +646,10 @@ class PayoutController extends BaseController
                 'commission_mode' => $commissionMode,
             ]);
 
+            // Comision inclus: nu se reține, se facturează separat (cererea pe tot
+            // evenimentul; o sumă parțială rămâne cu comisionul reținut).
+            $payout->adoptInvoicedCommission();
+
             // Reserve the balance
             $organizer->reserveBalanceForPayout($requestedAmount);
 

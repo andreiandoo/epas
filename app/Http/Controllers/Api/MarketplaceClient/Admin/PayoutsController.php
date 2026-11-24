@@ -221,6 +221,9 @@ class PayoutsController extends BaseController
             'admin_notes' => $validated['admin_notes'] ?? $payout->admin_notes,
         ]);
 
+        // Comision inclus facturat separat (ca la aprobarea din panou).
+        $payout->adoptInvoicedCommission();
+
         Log::channel('marketplace')->info('Payout approved', [
             'payout_id' => $payout->id,
             'admin_id' => $admin->id,
