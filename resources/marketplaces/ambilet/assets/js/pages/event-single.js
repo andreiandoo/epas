@@ -792,7 +792,9 @@ const EventPage = {
                     // "Bilet gratuit cu cod": only set on the free type a flyer
                     // code unlocks (false / [] for every regular ticket type).
                     is_free_with_code: tt.is_free_with_code === true,
-                    free_trigger_ticket_type_ids: Array.isArray(tt.free_trigger_ticket_type_ids) ? tt.free_trigger_ticket_type_ids : []
+                    free_trigger_ticket_type_ids: Array.isArray(tt.free_trigger_ticket_type_ids) ? tt.free_trigger_ticket_type_ids : [],
+                    // "Cumperi X primești Y gratis" ({buy, get, label} or null)
+                    offer: (tt.offer && tt.offer.buy > 0 && tt.offer.get > 0) ? tt.offer : null
                 };
             }),
             seating_layout: apiData.seating_layout || null,
@@ -2777,6 +2779,20 @@ const EventPage = {
                 '</ul>';
             }
 
+            // "Cumperi X primești Y gratis" note on the card
+            var offerNoteHtml = '';
+            if (tt.offer && !isSoldOut) {
+                var offerBuy = Number(tt.offer.buy), offerGet = Number(tt.offer.get);
+                offerNoteHtml = '<p class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary">' +
+                        (typeof ambIcon === 'function' ? ambIcon('gift', 'w-3.5 h-3.5') : '') +
+                        'Ofertă: cumperi ' + offerBuy + ', primești ' + offerGet + ' gratis' +
+                    '</p>' +
+                    '<p class="text-xs text-muted">' + (hasSeating
+                        ? 'Alege ' + (offerBuy + offerGet) + ' locuri pe hartă: ' + (offerGet === 1 ? 'ultimul e gratuit' : 'ultimele ' + offerGet + ' sunt gratuite') + '.'
+                        : 'Biletele gratuite se adaugă automat la comandă, ca invitații.') +
+                    '</p>';
+            }
+
             return {group: tt.ticket_group || null, html: '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
                 '<div class="flex items-center justify-between align-stretch">' +
                     '<div class="relative tooltip-trigger">' +
@@ -2785,6 +2801,7 @@ const EventPage = {
                         '</h3>' +
                         '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
                         perksHtml +
+                        offerNoteHtml +
                         availabilityHtml +
                         ((isSoldOut || isFreeWithCode) ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
@@ -3007,20 +3024,40 @@ const EventPage = {
                     ticketCommission = ticketComm.amount;
                 }
 
-                baseSubtotal += qty * ticketBasePrice;
-                totalCommission += qty * ticketCommission;
+                // "Cumperi X primești Y gratis": same split as the cart/checkout.
+                var offerLine = {
+                    quantity: qty,
+                    ticketType: { name: tt.name, offer: tt.offer || null },
+                    seat_uids: (self.selectedSeats[ticketId] || []).map(function(s) { return s.seat_uid; })
+                };
+                var hasCartHelpers = typeof AmbiletCart !== 'undefined' && AmbiletCart.paidQuantity;
+                var paidQty = (tt.offer && hasCartHelpers) ? AmbiletCart.paidQuantity(offerLine) : qty;
+                var freeQty = (tt.offer && hasCartHelpers) ? AmbiletCart.freeQuantity(offerLine) : 0;
+
+                baseSubtotal += paidQty * ticketBasePrice;
+                totalCommission += paidQty * ticketCommission;
                 if (typeof AmbiletCart !== 'undefined' && AmbiletCart.lineCommissionVat) {
-                    totalCommissionVat += AmbiletCart.lineCommissionVat(qty * ticketCommission);
+                    totalCommissionVat += AmbiletCart.lineCommissionVat(paidQty * ticketCommission);
                 }
 
                 ticketBreakdown.push({
                     name: tt.name,
                     isFreeWithCode: !!tt.is_free_with_code,
-                    qty: qty,
+                    qty: paidQty,
                     basePrice: ticketBasePrice,
-                    lineTotal: qty * ticketBasePrice,
+                    lineTotal: paidQty * ticketBasePrice,
                     commission: ticketComm
                 });
+                if (freeQty > 0) {
+                    ticketBreakdown.push({
+                        name: AmbiletCart.offerFreeLabel(offerLine),
+                        isFreeWithCode: true,
+                        qty: freeQty,
+                        basePrice: 0,
+                        lineTotal: 0,
+                        commission: null
+                    });
+                }
             }
         }
 
@@ -3318,6 +3355,9 @@ const EventPage = {
                     };
                     if (tt.is_free_with_code) {
                         ticketTypeData.is_free_with_code = true;
+                    }
+                    if (tt.offer) {
+                        ticketTypeData.offer = tt.offer;
                     }
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty, null, { replace: true });
                     addedAny = true;
@@ -6378,7 +6418,8 @@ const EventPage = {
                                 commission: ticketTypeData.commission || null,
                                 commission_floor: Number(ticketTypeData.commission_floor) || 0,
                                 is_refundable: ticketTypeData.is_refundable || false,
-                                ...(tt.is_free_with_code ? { is_free_with_code: true } : {})
+                                ...(tt.is_free_with_code ? { is_free_with_code: true } : {}),
+                                ...(tt.offer ? { offer: tt.offer } : {})
                             },
                             quantity: seats.length,
                             seats: seats,
@@ -6466,7 +6507,8 @@ const EventPage = {
                         commission: ticketTypeData.commission || null,
                         commission_floor: Number(ticketTypeData.commission_floor) || 0,
                         is_refundable: ticketTypeData.is_refundable || false,
-                        ...(tt.is_free_with_code ? { is_free_with_code: true } : {})
+                        ...(tt.is_free_with_code ? { is_free_with_code: true } : {}),
+                        ...(tt.offer ? { offer: tt.offer } : {})
                     },
                     quantity: seats.length,
                     seats: seats,

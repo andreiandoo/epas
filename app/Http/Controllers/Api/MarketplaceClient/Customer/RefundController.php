@@ -148,9 +148,19 @@ class RefundController extends BaseController
 
         // Associate specific tickets if provided
         if (!empty($validated['ticket_ids'])) {
+            // A "Cumperi X primești Y" offer is refunded only as a whole group.
+            $picked = $order->tickets()->whereIn('id', $validated['ticket_ids'])->get();
+            $withOffers = app(\App\Services\PaymentRefundService::class)->withWholeOffers($order, $picked);
             $order->tickets()
-                ->whereIn('id', $validated['ticket_ids'])
+                ->whereIn('id', $withOffers->pluck('id')->all())
                 ->update(['refund_request_id' => $refundRequest->id]);
+            if ($withOffers->count() > $picked->count()) {
+                $refundRequest->update([
+                    'admin_notes' => 'Cererea atinge o ofertă „Cumperi X primești Y”: au fost adăugate automat celelalte '
+                        . ($withOffers->count() - $picked->count())
+                        . ' bilete din ofertă (se rambursează doar oferta întreagă). Verifică suma cerută.',
+                ]);
+            }
         }
 
         // Send notifications to customer and marketplace admins

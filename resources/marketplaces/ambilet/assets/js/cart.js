@@ -160,7 +160,9 @@ const AmbiletCart = {
                     requires_vehicle_info: ticketTypeData.requires_vehicle_info || false,
                     // Free companion ticket unlocked by a flyer code — stamped
                     // only on those lines so every other item keeps its shape.
-                    ...(ticketTypeData.is_free_with_code ? { is_free_with_code: true } : {})
+                    ...(ticketTypeData.is_free_with_code ? { is_free_with_code: true } : {}),
+                    // "Cumperi X primești Y gratis" rule from the event API
+                    ...(ticketTypeData.offer ? { offer: ticketTypeData.offer } : {})
                 },
                 quantity,
                 meta: meta || null,
@@ -301,8 +303,59 @@ const AmbiletCart = {
     getSubtotal() {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
-            return total + (item.ticketType.price * item.quantity);
+            return total + (item.ticketType.price * this.paidQuantity(item));
         }, 0);
+    },
+
+    // ==================== "CUMPERI X PRIMEȘTI Y GRATIS" ====================
+    // Mirrors the checkout (BuyXGetYOffer on the server, which stays the
+    // authority). Seated lines hold every seat the customer picked: inside
+    // each group of X+Y seats the first X are paid, the last Y free. Other
+    // lines hold the paid quantity; the free tickets come on top. The free
+    // ones are issued as "Invitatie", 0 lei, no commission, no promo code.
+
+    offerOf(item) {
+        const o = item && item.ticketType && item.ticketType.offer;
+        return (o && Number(o.buy) > 0 && Number(o.get) > 0) ? o : null;
+    },
+
+    _isSeatedItem(item) {
+        return Array.isArray(item.seat_uids) && item.seat_uids.length > 0;
+    },
+
+    /** Tickets the customer pays for on this line. */
+    paidQuantity(item) {
+        const qty = Number(item && item.quantity) || 0;
+        const o = this.offerOf(item);
+        if (!o || !this._isSeatedItem(item)) return qty;
+        const buy = Number(o.buy);
+        const size = buy + Number(o.get);
+        let paid = 0;
+        for (let i = 0; i < qty; i++) {
+            if (i % size < buy) paid++;
+        }
+        return paid;
+    },
+
+    /** Free "Invitatie" tickets this line earns. */
+    freeQuantity(item) {
+        const o = this.offerOf(item);
+        if (!o) return 0;
+        const qty = Number(item.quantity) || 0;
+        if (this._isSeatedItem(item)) return qty - this.paidQuantity(item);
+        return Math.floor(qty / Number(o.buy)) * Number(o.get);
+    },
+
+    /** "Invitatie – ofertă 2+1 Presale" */
+    offerFreeLabel(item) {
+        const o = this.offerOf(item);
+        if (!o) return '';
+        return 'Invitatie – ofertă ' + o.buy + '+' + o.get + ' ' + (item.ticketType.name || '');
+    },
+
+    /** Lines a promo code may apply to (never an offer line). */
+    _promoItems(cart) {
+        return cart.items.filter(item => !this.offerOf(item));
     },
 
     /**
@@ -312,7 +365,7 @@ const AmbiletCart = {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
             if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
-                return total + ((item.ticketType.originalPrice - item.ticketType.price) * item.quantity);
+                return total + ((item.ticketType.originalPrice - item.ticketType.price) * this.paidQuantity(item));
             }
             return total;
         }, 0);
@@ -329,7 +382,7 @@ const AmbiletCart = {
 
         cart.items.forEach(item => {
             if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
-                totalSavings += (item.ticketType.originalPrice - item.ticketType.price) * item.quantity;
+                totalSavings += (item.ticketType.originalPrice - item.ticketType.price) * this.paidQuantity(item);
                 ticketNames.push(item.ticketType.name);
             }
         });
@@ -447,7 +500,7 @@ const AmbiletCart = {
         const cart = this.getCart();
         return cart.items.reduce((total, item) => {
             const commission = this.calculateItemCommission(item);
-            return total + (commission.amount * item.quantity);
+            return total + (commission.amount * this.paidQuantity(item));
         }, 0);
     },
 
@@ -464,8 +517,8 @@ const AmbiletCart = {
                 eventTitle: item.event.title,
                 basePrice: item.ticketType.price,
                 commission: commission,
-                quantity: item.quantity,
-                totalCommission: commission.amount * item.quantity
+                quantity: this.paidQuantity(item),
+                totalCommission: commission.amount * this.paidQuantity(item)
             };
         });
     },
@@ -494,14 +547,20 @@ const AmbiletCart = {
             return { success: false, message: 'Coșul este gol' };
         }
 
+        // Offer lines ("Cumperi X primești Y") never take a promo code.
+        const promoLines = this._promoItems(cart);
+        if (promoLines.length === 0) {
+            return { success: false, message: 'Codurile promoționale nu se aplică biletelor din oferte „Cumperi X primești Y gratis”.' };
+        }
+
         try {
             // Get first event ID for validation (simplified)
-            const eventId = cart.items[0].eventId;
-            const subtotal = this.getSubtotal();
-            const ticketCount = this.getItemCount();
+            const eventId = promoLines[0].eventId;
+            const subtotal = promoLines.reduce((t, item) => t + (item.ticketType?.price || 0) * item.quantity, 0);
+            const ticketCount = promoLines.reduce((t, item) => t + item.quantity, 0);
 
             // Build cart items with ticket_type_id for ticket-type-specific discounts
-            const items = cart.items.map(item => ({
+            const items = promoLines.map(item => ({
                 event_id: item.eventId,
                 ticket_type_id: item.ticketTypeId,
                 quantity: item.quantity,
@@ -578,11 +637,21 @@ const AmbiletCart = {
             return { updated: false, removed: false };
         }
 
+        const promoLines = this._promoItems(cart);
+        if (promoLines.length === 0) {
+            // Only offer lines left — a promo code never applies to them.
+            localStorage.removeItem(this.PROMO_KEY);
+            window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                detail: { promo: null }
+            }));
+            return { updated: false, removed: true, reason: 'offer_only' };
+        }
+
         try {
-            const eventId = cart.items[0].eventId;
-            const subtotal = this.getSubtotal();
-            const ticketCount = this.getItemCount();
-            const items = cart.items.map(item => ({
+            const eventId = promoLines[0].eventId;
+            const subtotal = promoLines.reduce((t, item) => t + (item.ticketType?.price || 0) * item.quantity, 0);
+            const ticketCount = promoLines.reduce((t, item) => t + item.quantity, 0);
+            const items = promoLines.map(item => ({
                 event_id: item.eventId,
                 ticket_type_id: item.ticketTypeId,
                 quantity: item.quantity,

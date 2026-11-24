@@ -66,7 +66,7 @@ const CartPage = {
                 const firstEventId = items[0]?.eventId || items[0]?.event?.id || null;
                 if (!items.length || !firstEventId) return;
                 const totalValue = items.reduce(
-                    (sum, item) => sum + ((item.ticketType?.price || 0) * (item.quantity || 0)),
+                    (sum, item) => sum + ((item.ticketType?.price || 0) * AmbiletCart.paidQuantity(item)),
                     0
                 );
                 EPASTracking.trackViewCart(firstEventId, totalValue, 'RON', {
@@ -288,6 +288,30 @@ const CartPage = {
         const hasSeats = seats.length > 0 || (item.seat_uids && item.seat_uids.length > 0);
         const eventSlug = item.event?.slug || '';
 
+        // "Cumperi X primești Y gratis": the line price covers the paid tickets
+        // only; the free ones are issued as "Invitatie", 0 lei.
+        const offer = AmbiletCart.offerOf(item);
+        const paidQty = AmbiletCart.paidQuantity(item);
+        const freeQty = AmbiletCart.freeQuantity(item);
+        let offerHtml = '';
+        if (offer) {
+            const buy = Number(offer.buy), get = Number(offer.get), size = buy + get;
+            let hint = '';
+            if (hasSeats) {
+                const rem = quantity % size;
+                if (rem >= buy && rem < size) {
+                    const left = size - rem;
+                    hint = 'Mai alege ' + left + (left === 1 ? ' loc' : ' locuri') + ' pe hartă — ' + (left === 1 ? 'e gratuit' : 'sunt gratuite') + '.';
+                }
+            } else if (quantity % buy !== 0) {
+                const more = buy - (quantity % buy);
+                hint = 'Adaugă încă ' + more + (more === 1 ? ' bilet' : ' bilete') + ' și primești ' + get + ' gratis.';
+            }
+            offerHtml = '<p class="mt-0.5 text-xs font-semibold text-primary">Ofertă ' + offer.label + ': cumperi ' + buy + ', primești ' + get + ' gratis</p>' +
+                (freeQty > 0 ? '<p class="mt-0.5 text-xs text-emerald-700 font-medium inline-flex items-center gap-1">' + ambIcon('gift', 'w-3.5 h-3.5') + ' +' + freeQty + ' × ' + AmbiletCart.offerFreeLabel(item) + ' <span class="text-muted font-normal">(gratuit)</span></p>' : '') +
+                (hint ? '<p class="mt-0.5 text-xs text-muted">' + hint + '</p>' : '');
+        }
+
         // Get per-ticket commission or fall back to event-level
         const commission = AmbiletCart.calculateItemCommission(item);
         const commissionMode = commission.mode || 'included';
@@ -362,7 +386,7 @@ const CartPage = {
                                 '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
                             '</div>' +
                             (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
-                            guideBonusHtml + freeNoteHtml +
+                            guideBonusHtml + freeNoteHtml + offerHtml +
                             (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
                             '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
                         '</div>' +
@@ -388,8 +412,8 @@ const CartPage = {
                             '</button>' +
                         '</div>') +
                         '<div class="flex-none text-right">' +
-                            (hasDiscount ? '<div class="text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
-                            '<div class="font-bold text-primary">' + (isFreeWithCode ? 'Gratuit' : AmbiletUtils.formatCurrency(price * quantity)) + '</div>' +
+                            (hasDiscount ? '<div class="text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * paidQty) + '</div>' : '') +
+                            '<div class="font-bold text-primary">' + (isFreeWithCode ? 'Gratuit' : AmbiletUtils.formatCurrency(price * paidQty)) + '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -404,14 +428,14 @@ const CartPage = {
                         '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
                     '</div>' +
                     (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
-                    guideBonusHtml + freeNoteHtml +
+                    guideBonusHtml + freeNoteHtml + offerHtml +
                     (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
                     '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
                 '</div>' +
                 '<div class="flex-none text-right">' +
                     '<div class="flex items-center gap-2">' +
-                        (hasDiscount ? '<div class="text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
-                        '<div class="font-bold text-primary">' + (isFreeWithCode ? 'Gratuit' : AmbiletUtils.formatCurrency(price * quantity)) + '</div>' +
+                        (hasDiscount ? '<div class="text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * paidQty) + '</div>' : '') +
+                        '<div class="font-bold text-primary">' + (isFreeWithCode ? 'Gratuit' : AmbiletUtils.formatCurrency(price * paidQty)) + '</div>' +
                     '</div>' +
                     (hasSeats ?
                     '<div class="flex items-center gap-2 ml-auto">' +
@@ -568,19 +592,22 @@ const CartPage = {
                 hasAddedOnTopCommission = true;
             }
 
-            const lineTotal = price * quantity;
-            const commissionTotal = itemCommission * quantity;
+            // Offer lines: pay for the paid tickets only; the free ones get their own 0-lei row.
+            const paidQty = AmbiletCart.paidQuantity(item);
+            const freeQty = AmbiletCart.freeQuantity(item);
+            const lineTotal = price * paidQty;
+            const commissionTotal = itemCommission * paidQty;
 
             baseSubtotal += lineTotal;
             totalCommission += commissionTotal;
             totalCommissionVat += AmbiletCart.lineCommissionVat(commissionTotal);
-            totalItems += quantity;
+            totalItems += paidQty + freeQty;
             eventGroups[eventId].subtotal += lineTotal;
             eventGroups[eventId].commission += commissionTotal;
 
             eventGroups[eventId].tickets.push({
                 name: ticketName,
-                qty: quantity,
+                qty: paidQty,
                 basePrice: price,
                 lineTotal: lineTotal,
                 commission: commission,
@@ -589,10 +616,23 @@ const CartPage = {
                 hasDiscount: originalPrice && originalPrice > price,
                 originalPrice: originalPrice
             });
+            if (freeQty > 0) {
+                eventGroups[eventId].tickets.push({
+                    name: AmbiletCart.offerFreeLabel(item),
+                    qty: freeQty,
+                    basePrice: 0,
+                    lineTotal: 0,
+                    commission: { amount: 0, rate: 0, fixed: 0, mode: 'included', type: 'percentage' },
+                    commissionTotal: 0,
+                    isFreeWithCode: true,
+                    hasDiscount: false,
+                    originalPrice: 0
+                });
+            }
 
             // Calculate savings for discounted items
             if (originalPrice && originalPrice > price) {
-                const itemSavings = (originalPrice - price) * quantity;
+                const itemSavings = (originalPrice - price) * paidQty;
                 savings += itemSavings;
                 savingsTickets.push(ticketName);
             }

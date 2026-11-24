@@ -490,6 +490,9 @@ class ViewOrder extends ViewRecord
         $schema[] = Forms\Components\CheckboxList::make('ticket_ids')
             ->label('Selectează biletele de rambursat')
             ->options($ticketOptions)
+            ->helperText($order->tickets()->get(['id', 'meta'])->contains(fn ($t) => \App\Services\Marketplace\BuyXGetYOffer::offerGroup($t) !== null)
+                ? 'Comanda conține o ofertă „Cumperi X primești Y”: oferta se rambursează doar întreagă. Dacă bifezi un bilet din ofertă, celelalte bilete ale ei (inclusiv Invitatia) se adaugă automat.'
+                : null)
             ->visible(fn (Get $get) => $get('refund_type') === 'partial')
             ->required(fn (Get $get) => $get('refund_type') === 'partial')
             ->live();

@@ -479,6 +479,26 @@
         return { amount: basePrice * (eventRate / 100), rate: eventRate, fixed: 0, mode: eventMode, type: 'percentage' };
     }
 
+    // "Cumperi X primești Y gratis" (same rule as AmbiletCart.paidQuantity /
+    // freeQuantity): seated lines hold every seat, the last Y of each X+Y
+    // group are free; other lines hold the paid quantity, free ones on top.
+    function offerPaidQty(item) {
+        var qty = item.quantity || 1;
+        var o = item.ticketType && item.ticketType.offer;
+        var seated = item.seat_uids && item.seat_uids.length > 0;
+        if (!o || !(o.buy > 0) || !(o.get > 0) || !seated) return qty;
+        var size = Number(o.buy) + Number(o.get), paid = 0;
+        for (var i = 0; i < qty; i++) { if (i % size < Number(o.buy)) paid++; }
+        return paid;
+    }
+    function offerFreeQty(item) {
+        var o = item.ticketType && item.ticketType.offer;
+        if (!o || !(o.buy > 0) || !(o.get > 0)) return 0;
+        var qty = item.quantity || 1;
+        if (item.seat_uids && item.seat_uids.length > 0) return qty - offerPaidQty(item);
+        return Math.floor(qty / Number(o.buy)) * Number(o.get);
+    }
+
     function updateCartUI() {
         var cart = getCart();
         var items = cart.items || [];
@@ -490,7 +510,7 @@
 
         items.forEach(function(item) {
             var price = item.ticketType ? item.ticketType.price : (item.price || 0);
-            var qty = item.quantity || 1;
+            var qty = offerPaidQty(item);
             baseSubtotal += price * qty;
             var commission = calculateItemCommission(item);
             if (commission.mode === 'added_on_top') {
@@ -640,8 +660,11 @@
                         (locationText ? '<p class="text-xs text-gray-400 truncate">' + escapeHtml(locationText) + '</p>' : '') +
                         '<div class="flex items-center justify-between mt-2">' +
                             '<div class="flex items-center gap-2">' + qtyHtml + '</div>' +
-                            '<span class="font-bold text-primary">' + ((item.ticketType && item.ticketType.is_free_with_code) ? 'Gratuit' : ((displayPrice * quantity).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei')) + '</span>' +
+                            '<span class="font-bold text-primary">' + ((item.ticketType && item.ticketType.is_free_with_code) ? 'Gratuit' : ((displayPrice * offerPaidQty(item)).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei')) + '</span>' +
                         '</div>' +
+                        (offerFreeQty(item) > 0
+                            ? '<p class="mt-1 text-xs font-medium text-emerald-700">+' + offerFreeQty(item) + ' × ' + escapeHtml('Invitatie – ofertă ' + item.ticketType.offer.buy + '+' + item.ticketType.offer.get + ' ' + ticketName) + ' (gratuit)</p>'
+                            : '') +
                     '</div>' +
                     '<button type="button" class="self-start p-1 text-gray-400 transition-colors hover:text-red-500 cart-remove-btn" data-index="' + index + '" aria-label="Șterge"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>' +
                 '</div>' +

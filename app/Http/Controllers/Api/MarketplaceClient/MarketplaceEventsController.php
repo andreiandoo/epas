@@ -1087,7 +1087,7 @@ class MarketplaceEventsController extends BaseController
             // "Bilet gratuit cu cod" — see $freeCodeTypes above.
             'has_free_code_tickets' => $freeCodeTypes->contains(fn ($tt) => $tt->isFreeCodeActive()),
             'free_code' => $freeCodeInfo,
-            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && (!$tt->isFreeWithCode() || $unlockedFreeIds->contains($tt->id)))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate, $event, $organizerFloor) {
+            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false) && !$tt->isTestPos() && (!$tt->isFreeWithCode() || $unlockedFreeIds->contains($tt->id)))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate, $event, $organizerFloor, $client) {
                 // Debug: log ticket type color and seating row data
                 \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
                     . ' | color=' . var_export($tt->color, true)
@@ -1205,6 +1205,19 @@ class MarketplaceEventsController extends BaseController
                     'daily_capacity' => $tt->daily_capacity,
                     'is_parking' => (bool) ($tt->is_parking ?? false),
                     'requires_vehicle_info' => (bool) ($tt->requires_vehicle_info ?? false),
+                    // "Cumperi X primești Y gratis" (null = no offer). The free
+                    // tickets are issued as "Invitatie", 0 lei, by the checkout.
+                    'offer' => (function () use ($tt, $client) {
+                        $rule = \App\Services\Marketplace\BuyXGetYOffer::enabledFor($client)
+                            ? \App\Services\Marketplace\BuyXGetYOffer::ruleFor($tt)
+                            : null;
+                        return $rule ? [
+                            'type' => 'buy_x_get_y',
+                            'buy' => $rule['buy'],
+                            'get' => $rule['get'],
+                            'label' => \App\Services\Marketplace\BuyXGetYOffer::label($rule),
+                        ] : null;
+                    })(),
                 ];
             })->values(),
             'enable_ticket_groups' => (bool) $event->enable_ticket_groups,

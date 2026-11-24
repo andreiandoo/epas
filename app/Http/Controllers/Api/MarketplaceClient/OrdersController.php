@@ -1250,7 +1250,7 @@ class OrdersController extends BaseController
                         'id' => $ticket->id,
                         'barcode' => $ticket->barcode,
                         'code' => $ticket->code,
-                        'ticket_type' => $ticket->ticketType?->name,
+                        'ticket_type' => \App\Services\Marketplace\BuyXGetYOffer::displayName($ticket, $ticket->ticketType?->name),
                         'checked_in_at' => $now->toIso8601String(),
                     ];
                 }
@@ -1279,7 +1279,7 @@ class OrdersController extends BaseController
         // Build ticket list HTML
         $ticketRows = '';
         foreach ($order->tickets as $ticket) {
-            $typeName = $ticket->ticketType?->name ?? 'Bilet';
+            $typeName = \App\Services\Marketplace\BuyXGetYOffer::displayName($ticket, $ticket->ticketType?->name ?? 'Bilet');
             $code = $ticket->code;
             $series = $ticket->meta['ticket_series'] ?? '';
             $seriesCell = $series ? "<br><span style='font-size:11px;color:#666;'>Serie: {$series}</span>" : '';

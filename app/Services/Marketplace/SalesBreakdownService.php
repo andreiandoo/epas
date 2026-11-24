@@ -1131,6 +1131,12 @@ class SalesBreakdownService
      */
     public function chargedZeroPriceCommissionPerTicket(?Order $order, \App\Models\TicketType $tt): float
     {
+        // Invitations (offer "Cumperi X primești Y" included) only take a line
+        // that is really theirs: in an order mixing events the "single 0-lei
+        // line" fallback below would hand them another event's commission.
+        $ttMeta = is_array($tt->meta ?? null) ? $tt->meta : [];
+        $isInvitationType = $tt->name === 'Invitatie' || !empty($ttMeta['is_invitation']);
+
         $details = is_array($order?->meta['commission_details'] ?? null) ? $order->meta['commission_details'] : [];
         $lines = array_values(array_filter($details, fn ($d) => is_array($d)
             && (float) ($d['unit_price'] ?? 0) <= 0
@@ -1143,7 +1149,7 @@ class SalesBreakdownService
         $plainName = fn ($n) => is_array($n) ? (string) ($n['ro'] ?? $n['en'] ?? (reset($n) ?: '')) : (string) $n;
         $ttName = mb_strtolower(trim($plainName($tt->name)));
         $matched = array_values(array_filter($lines, fn ($d) => mb_strtolower(trim($plainName($d['ticket_type'] ?? ''))) === $ttName));
-        $line = count($matched) === 1 ? $matched[0] : (count($lines) === 1 ? $lines[0] : null);
+        $line = count($matched) === 1 ? $matched[0] : ((count($lines) === 1 && !$isInvitationType) ? $lines[0] : null);
         if (!$line) {
             return 0.0;
         }

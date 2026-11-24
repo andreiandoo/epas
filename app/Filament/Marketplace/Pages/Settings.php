@@ -60,6 +60,7 @@ class Settings extends Page
                 'vat_payer_since' => data_get($settings, 'tax.vat_payer_since'),
                 'company_invoicing_enabled' => (bool) data_get($settings, 'company_invoicing.enabled', false),
                 'service_order_invoicing_enabled' => (bool) data_get($settings, 'service_order_invoicing.enabled', false),
+                'bulk_offers_enabled' => (bool) data_get($settings, 'bulk_offers.enabled', false),
                 'tax_display_mode' => $marketplace->tax_display_mode ?? 'included',
                 'fixed_commission' => $marketplace->fixed_commission,
                 'address' => $marketplace->address,
@@ -357,6 +358,12 @@ class Settings extends Page
                                         Forms\Components\Toggle::make('company_invoicing_enabled')
                                             ->label('Facturare pe persoană juridică')
                                             ->helperText('Clientul poate cere factură pe firmă (CUI verificat la ANAF) în checkout, în cont sau prin operator. Platforma emite automat în contabilitate factura pentru comision + TVA și servicii; organizatorul primește cererea pentru factura biletelor.')
+                                            ->onColor('success')
+                                            ->offColor('gray'),
+
+                                        Forms\Components\Toggle::make('bulk_offers_enabled')
+                                            ->label('Oferte „Cumperi X primești Y gratis”')
+                                            ->helperText('Aplică la checkout regula setată pe tipul de bilet (Bilete → Reduceri la cantitate). Biletele gratuite se emit ca „Invitatie”, cu 0 lei, fără comision și fără coduri promo pe ofertă; rambursarea se face doar pe toată oferta.')
                                             ->onColor('success')
                                             ->offColor('gray'),
 
@@ -1363,6 +1370,9 @@ class Settings extends Page
             $settings['company_invoicing'] = array_merge($settings['company_invoicing'] ?? [], [
                 'enabled' => (bool) $data['company_invoicing_enabled'],
             ]);
+        }
+        if (array_key_exists('bulk_offers_enabled', $data)) {
+            $settings['bulk_offers'] = ['enabled' => (bool) $data['bulk_offers_enabled']];
         }
         if (array_key_exists('service_order_invoicing_enabled', $data)) {
             $settings['service_order_invoicing'] = ['enabled' => (bool) $data['service_order_invoicing_enabled']];

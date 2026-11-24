@@ -6,43 +6,47 @@ tab: bilete
 applies_to: toate
 covers: ["Reduceri la cantitate"]
 fields: [bulk_discounts, rule_type, buy_qty, get_qty, min_qty, percent_off, amount_off, bundle_total_price]
-updated: 2026-09-24
+updated: 2026-11-24
 ---
 
-Secțiunea permite reguli de tipul „cumperi 3, primești 1 gratis” sau „de la 5 bilete, 10% reducere”.
+Secțiunea permite oferte de tipul „cumperi 2, primești 1 gratis”.
 
-> ⚠️ **Regulile nu au efect pe ambilet.ro.** Se salvează, dar nu apar pe pagina evenimentului, nu schimbă prețul la plată și nu apar în comenzi sau rapoarte. Secțiunea e folosită deocamdată doar de site-urile care funcționează pe platformă separat. Nu promite unui organizator astfel de oferte până nu se activează.
+> **Funcționează doar „Cumperi X primești Y gratis”**, și doar dacă marketplace-ul are pornit **Setări → Oferte „Cumperi X primești Y gratis”**. Celelalte tipuri apar în listă cu „(în curând)” și nu se pot alege încă.
 
 ## Tipurile de reguli {#bilete-cantitate-reguli}
 
-| Tip regulă | Câmpuri | Ce ar însemna |
+| Tip regulă | Câmpuri | Stare |
 |---|---|---|
-| **Cumperi X primești Y gratis** | Cumperi, Primești gratis | La fiecare X bilete cumpărate, Y sunt gratuite. |
-| **Cumperi X bilete → % reducere** | Cantitate min, % reducere | De la un număr de bilete în sus, procent de reducere pe toate. |
-| **Reducere pe bilet (min cantitate)** | Cantitate min, Reducere/bilet | De la un număr de bilete în sus, o sumă fixă mai puțin pe fiecare bilet. |
-| **Preț pachet (X bilete la preț total)** | Cantitate min, Preț total pachet | Un număr de bilete la un preț total. |
+| **Cumperi X primești Y gratis** | Cumperi, Primești gratis | Activ |
+| **Cumperi X bilete → % reducere** | Cantitate min, % reducere | În curând |
+| **Reducere pe bilet (min cantitate)** | Cantitate min, Reducere/bilet | În curând |
+| **Preț pachet (X bilete la preț total)** | Cantitate min, Preț total pachet | În curând |
 
-## Ce poți face între timp {#bilete-cantitate-alternative}
+## Cum funcționează „Cumperi X primești Y gratis” {#bilete-cantitate-xy}
 
-- **Ofertă de grup:** creează un tip de bilet separat, de exemplu „Pachet 4 persoane”, cu prețul per bilet mai mic, cu **Min bilete/comandă** = 4 și **Multiplicator** = 4. Clientul nu poate cumpăra mai puțin de 4 bilete de acest tip, iar biletele rămân individuale (fiecare persoană are biletul ei).
-- **Reducere pentru toată lumea:** folosește secțiunea **Reducere**, cu preț promoțional și interval.
-- **Reducere pentru un public anume:** folosește un cod de reducere (butonul **Coduri reducere** din bara de sus).
+Exemplu: tipul **Presale**, regula Cumperi 2, Primești gratis 1.
+
+- Clientul plătește 2 bilete **Presale** la prețul întreg și primește în aceeași comandă 1 bilet gratuit.
+- Biletul gratuit se emite pe tipul **Invitatie** al evenimentului, cu 0 lei. Pe bilet și în email apare „Invitatie – ofertă 2+1 Presale”.
+- Biletul gratuit nu are comision (nici minimul organizatorului), nu are asigurare și **nu intră în documentele fiscale** (avizare, impozite, declarații), la fel ca orice invitație. Biletele Presale se declară normal.
+- **Fără hartă de locuri:** clientul alege câte bilete plătește, iar biletele gratuite se adaugă automat (2 → +1, 4 → +2).
+- **Cu hartă de locuri:** clientul alege pe hartă toate locurile. În fiecare grupă de 3 locuri, primele 2 se plătesc, al treilea e gratuit.
+- **Coduri de reducere:** nu se aplică pe biletele din ofertă. Se aplică normal pe celelalte bilete din coș, inclusiv la alte evenimente.
+- **Stoc:** biletele gratuite nu scad din stocul Presale, dar intră în capacitatea totală a evenimentului, dacă e setată. Cu stoc Presale 100 și oferta 2+1 pot intra până la 150 de persoane, deci ajustează stocul sau capacitatea totală.
+- **Rambursare:** oferta se rambursează doar întreagă. Dacă se cere rambursarea unui bilet din ofertă, celelalte bilete ale ei (inclusiv invitația) se adaugă automat la rambursare.
 
 ## Scenarii {#bilete-cantitate-scenarii}
 
 <details>
 <summary>Organizatorul vrea „Cumperi 3, plătești 2”.</summary>
 
-Nu se poate configura funcțional acum. Variante apropiate:
-
-- un tip de bilet „Pachet 3 bilete” la prețul a două bilete, cu **Min bilete/comandă** = 3 și **Multiplicator** = 3;
-- un cod de reducere cu procentul echivalent (aproximativ 33%), dat celor care cumpără 3 bilete.
+Setează regula Cumperi 2, Primești gratis 1. Clientul plătește 2 și primește 3 bilete.
 
 </details>
 
 <details>
-<summary>Am completat deja reguli aici. Trebuie să le șterg?</summary>
+<summary>Am pus regula, dar pe site nu apare oferta.</summary>
 
-Nu e obligatoriu, pentru că nu fac nimic. Dar e mai curat să le ștergi, ca să nu creadă alt coleg că oferta e activă.
+Verifică să fie pornit **Setări → Oferte „Cumperi X primești Y gratis”** și ca tipul de bilet să aibă preț mai mare de 0. Pagina evenimentului de pe site poate păstra datele vechi până la 30 de minute.
 
 </details>

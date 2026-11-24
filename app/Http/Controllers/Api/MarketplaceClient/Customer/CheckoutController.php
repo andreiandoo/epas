@@ -18,6 +18,7 @@ use App\Models\TicketType;
 use App\Models\Activity;
 use App\Models\ActivityBooking;
 use App\Services\Marketplace\AccountPasswordSync;
+use App\Services\Marketplace\BuyXGetYOffer;
 use App\Services\Seating\SeatHoldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -241,6 +242,12 @@ class CheckoutController extends BaseController
             );
         }
 
+        // "Cumperi X primești Y gratis": split each offer line into its paid
+        // line and a free "Invitatie" line before any stock / seat check.
+        if (BuyXGetYOffer::enabledFor($client)) {
+            $cartItems = $this->applyBuyXGetYOffers($cartItems);
+        }
+
         // Validate cart items are still available
         $validationErrors = $this->validateCartItemsForCheckout($cartItems, $isTestOrder);
 
@@ -291,7 +298,10 @@ class CheckoutController extends BaseController
 
         // Calculate per-ticket insurance amount
         if ($hasInsurance && $insuranceAmount > 0) {
-            $totalTicketCount = collect($cartItems)->sum(fn($item) => (int) ($item['quantity'] ?? 1));
+            // Free offer tickets carry no insurance.
+            $totalTicketCount = collect($cartItems)
+                ->reject(fn ($item) => ($item['offer']['role'] ?? null) === 'free')
+                ->sum(fn($item) => (int) ($item['quantity'] ?? 1));
             $insurancePerTicket = $totalTicketCount > 0 ? round($insuranceAmount / $totalTicketCount, 2) : 0;
         }
 
@@ -467,6 +477,11 @@ class CheckoutController extends BaseController
 
                             // Check low stock alert
                             $this->checkLowStockAlert($ticketType);
+                        } elseif (($item['offer']['role'] ?? null) === 'free') {
+                            // Offer invitations: the "Invitatie" type has no cap,
+                            // but they count in the event pool (general_quota,
+                            // checked above) like any issued invitation.
+                            TicketType::where('id', $ticketType->id)->increment('quota_sold', $quantity);
                         } else {
                             // quota_total NULL / negative = unlimited. No
                             // counter to increment — just let it through.
@@ -528,6 +543,11 @@ class CheckoutController extends BaseController
                     $unitPrice = (float) ($item['price'] ?? 0);
                 }
 
+                $isFreeOfferItem = ($item['offer']['role'] ?? null) === 'free';
+                if ($isFreeOfferItem) {
+                    $unitPrice = 0.0;
+                }
+
                 $itemTotal = $unitPrice * $quantity;
                 $subtotal += $itemTotal;
 
@@ -581,6 +601,10 @@ class CheckoutController extends BaseController
                     if ($itemCommission < $minTotal) {
                         $itemCommission = $minTotal;
                     }
+                }
+                // Offer invitations never carry commission, floor included.
+                if ($isFreeOfferItem) {
+                    $itemCommission = 0.0;
                 }
                 $totalCommission += $itemCommission;
 
@@ -657,6 +681,7 @@ class CheckoutController extends BaseController
                     'event_seating_id' => $item['event_seating_id'] ?? null,
                     'visit_date' => $item['visit_date'] ?? null,
                     'vehicle_info' => $item['vehicle_info'] ?? null,
+                    'offer' => $item['offer'] ?? null,
                 ];
 
                 // Collect seated items for order meta
@@ -834,12 +859,15 @@ class CheckoutController extends BaseController
             if ($promoCodeInput) {
                 $promoCodeInput = strtoupper(trim($promoCodeInput));
 
-                // Build cart data for validation
+                // Build cart data for validation. Lines of a "Cumperi X primești
+                // Y" offer are left out: the offer is already the discount, a
+                // promo code never stacks on it.
+                $promoItems = collect($processedItems)->filter(fn ($pi) => empty($pi['offer']));
                 $promoCartData = [
                     'event_id' => $primaryEvent?->id ?? $primaryMarketplaceEvent?->id,
-                    'total' => $subtotal,
-                    'ticket_count' => collect($processedItems)->sum('quantity'),
-                    'items' => collect($processedItems)->map(fn ($pi) => [
+                    'total' => round((float) $promoItems->sum('total'), 2),
+                    'ticket_count' => $promoItems->sum('quantity'),
+                    'items' => $promoItems->values()->map(fn ($pi) => [
                         'event_id' => $pi['event']?->id ?? $pi['marketplace_event']?->id,
                         // CouponCodes use TicketType IDs, organizer promos use MarketplaceTicketType IDs
                         'ticket_type_id' => $pi['ticket_type']?->id ?? $pi['marketplace_ticket_type']?->id,
@@ -949,7 +977,7 @@ class CheckoutController extends BaseController
                                 $discountBase += (float) ($item['total'] ?? 0);
                             }
                         } else {
-                            $discountBase = $subtotal;
+                            $discountBase = (float) $promoCartData['total'];
                         }
 
                         if ($discountBase > 0) {
@@ -996,6 +1024,20 @@ class CheckoutController extends BaseController
                 // items eligible so the discount spreads over the whole
                 // cart (matches previous behavior).
                 $eligibleItemIndices = array_keys($processedItems);
+            }
+
+            // Offer lines never take a share of the promo code.
+            if (is_array($eligibleItemIndices)) {
+                $beforeOfferFilter = count($eligibleItemIndices);
+                $eligibleItemIndices = array_values(array_filter(
+                    $eligibleItemIndices,
+                    fn ($idx) => empty($processedItems[$idx]['offer'])
+                ));
+                // The code only matched offer lines: nothing left to discount.
+                if ($beforeOfferFilter > 0 && empty($eligibleItemIndices) && $discount > 0) {
+                    $discount = 0;
+                    $promoCode = null;
+                }
             }
 
             // Allocate the order-level discount across line items.
@@ -1258,6 +1300,12 @@ class CheckoutController extends BaseController
                     $itemName = 'Bilet';
                 }
 
+                $itemOffer = is_array($item['offer'] ?? null) ? $item['offer'] : null;
+                $isFreeOfferItem = ($itemOffer['role'] ?? null) === 'free';
+                if ($isFreeOfferItem && !empty($itemOffer['label'])) {
+                    $itemName = $itemOffer['label'];
+                }
+
                 $orderItem = $order->items()->create([
                     'ticket_type_id' => $tt->id ?? $mtt->id ?? null,
                     'performance_id' => $item['performance_id'] ?? null,
@@ -1265,9 +1313,10 @@ class CheckoutController extends BaseController
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
                     'total' => $item['total'],
-                    'meta' => [
+                    'meta' => array_filter([
                         'event_id' => $event?->id ?? $marketplaceEvent?->id,
-                    ],
+                        'offer' => $itemOffer ? \Illuminate\Support\Arr::except($itemOffer, ['label']) : null,
+                    ], fn ($v) => $v !== null),
                 ]);
 
                 for ($i = 0; $i < $item['quantity']; $i++) {
@@ -1312,7 +1361,16 @@ class CheckoutController extends BaseController
                     }
 
                     $ticketMeta = $seatMeta ?? [];
-                    if ($hasInsurance && $insurancePerTicket > 0) {
+                    // "Cumperi X primești Y": both sides of the group carry it, so a
+                    // refund can take the whole offer back together.
+                    if ($itemOffer) {
+                        $ticketMeta['offer'] = \Illuminate\Support\Arr::except($itemOffer, ['label']);
+                        if ($isFreeOfferItem) {
+                            $ticketMeta['is_invitation'] = true;
+                            $ticketMeta['label_override'] = $itemOffer['label'] ?? $itemName;
+                        }
+                    }
+                    if ($hasInsurance && $insurancePerTicket > 0 && !$isFreeOfferItem) {
                         $ticketMeta['has_insurance'] = true;
                         $ticketMeta['insurance_amount'] = $insurancePerTicket;
                     }
@@ -2163,6 +2221,10 @@ class CheckoutController extends BaseController
         // ticket type's own event (guards against id collisions).
         $qtyByType = [];
         foreach ($cartItems as $ci) {
+            // Tickets of a "Cumperi X primești Y" offer don't unlock free-with-code ones.
+            if (!empty($ci['offer'])) {
+                continue;
+            }
             $tt = $types->get((int) ($ci['ticket_type_id'] ?? 0));
             if ($tt && (int) $tt->event_id === (int) ($ci['event_id'] ?? 0)) {
                 $qtyByType[$tt->id] = ($qtyByType[$tt->id] ?? 0) + (int) ($ci['quantity'] ?? 1);
@@ -2634,6 +2696,102 @@ class CheckoutController extends BaseController
      * + 'service_category=package' + 'package_outputs' snapshot pentru raportare.
      * Consistent cu POS flow (LeisureController::posSale meta la line 1286-1293).
      */
+    /**
+     * "Cumperi X primești Y gratis". Each cart line whose ticket type has the
+     * rule becomes the paid line plus a free line on the event's "Invitatie"
+     * type, both tagged with the same offer group.
+     *
+     *  - seated: the customer picked every seat; inside each group of X+Y seats
+     *    the first X are paid and the last Y free;
+     *  - not seated: quantity is what the customer pays for, the free tickets
+     *    are added on top.
+     */
+    protected function applyBuyXGetYOffers(array $cartItems): array
+    {
+        $out = [];
+        foreach ($cartItems as $item) {
+            $item = (array) $item;
+            $ttId = (int) ($item['ticket_type_id'] ?? 0);
+            $eventId = (int) ($item['event_id'] ?? 0);
+            $tt = ($ttId && $eventId)
+                ? TicketType::with('event')->where('id', $ttId)->where('event_id', $eventId)->first()
+                : null;
+            $rule = BuyXGetYOffer::ruleFor($tt);
+            if (!$rule || !$tt->event) {
+                $out[] = $item;
+                continue;
+            }
+
+            $seatUids = array_values(array_filter((array) ($item['seat_uids'] ?? [])));
+            $seats = is_array($item['seats'] ?? null) ? $item['seats'] : [];
+            $pickSeats = fn (array $uids) => array_values(array_filter(
+                $seats,
+                fn ($s) => in_array($s['seat_uid'] ?? null, $uids, true)
+            ));
+
+            if (!empty($seatUids)) {
+                [$paidIdx, $freeIdx] = BuyXGetYOffer::splitSeats($rule, count($seatUids));
+                $paidSeatUids = array_map(fn ($i) => $seatUids[$i], $paidIdx);
+                $freeSeatUids = array_map(fn ($i) => $seatUids[$i], $freeIdx);
+                $paidQty = count($paidSeatUids);
+                $freeQty = count($freeSeatUids);
+            } else {
+                $paidSeatUids = $freeSeatUids = [];
+                $paidQty = max(1, (int) ($item['quantity'] ?? 1));
+                $freeQty = BuyXGetYOffer::freeFor($rule, $paidQty);
+            }
+
+            $paidName = $this->ticketTypeDisplayName($tt);
+            $offer = [
+                'rule' => 'buy_x_get_y',
+                'buy' => $rule['buy'],
+                'get' => $rule['get'],
+                'group' => 'o' . count($out) . '-' . Str::lower(Str::random(8)),
+                'ticket_type_id' => $tt->id,
+                'ticket_type_name' => $paidName,
+            ];
+
+            $paid = $item;
+            $paid['quantity'] = $paidQty;
+            if (!empty($seatUids)) {
+                $paid['seat_uids'] = $paidSeatUids;
+                $paid['seats'] = $pickSeats($paidSeatUids);
+            }
+            // A line too short for the offer still counts as paid, no group.
+            if ($freeQty > 0) {
+                $paid['offer'] = $offer + ['role' => 'paid'];
+            }
+            $out[] = $paid;
+
+            if ($freeQty > 0) {
+                $invitation = BuyXGetYOffer::invitationTicketType($tt->event);
+                $free = [
+                    'event_id' => $item['event_id'],
+                    'ticket_type_id' => $invitation->id,
+                    'performance_id' => $item['performance_id'] ?? null,
+                    'quantity' => $freeQty,
+                    'price' => 0,
+                    'ticket_type_name' => 'Invitatie',
+                    'visit_date' => $item['visit_date'] ?? null,
+                    'vehicle_info' => null,
+                    'meta' => null,
+                    'offer' => $offer + [
+                        'role' => 'free',
+                        'label' => BuyXGetYOffer::freeTicketLabel($rule, $paidName),
+                    ],
+                ];
+                if (!empty($freeSeatUids)) {
+                    $free['seat_uids'] = $freeSeatUids;
+                    $free['event_seating_id'] = $item['event_seating_id'] ?? null;
+                    $free['seats'] = $pickSeats($freeSeatUids);
+                }
+                $out[] = $free;
+            }
+        }
+
+        return $out;
+    }
+
     protected function buildTicketMeta(array $ticketMeta, bool $isPackage, array $packageOutputs, $tt): ?array
     {
         if ($isPackage) {

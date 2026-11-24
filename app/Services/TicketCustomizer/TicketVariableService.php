@@ -1059,7 +1059,11 @@ class TicketVariableService
             ],
             'date' => $dateBlock,
             'ticket' => [
-                'type' => $this->localizedTicketTypeName($ticketType, $effectiveLocale)
+                // Offer invitations print "Invitatie – ofertă 2+1 Presale".
+                'type' => ((($meta['offer']['role'] ?? null) === 'free' && !empty($meta['label_override']))
+                    ? (string) $meta['label_override']
+                    : null)
+                    ?? $this->localizedTicketTypeName($ticketType, $effectiveLocale)
                     ?? ($ticket->marketplaceTicketType?->name ?? ''),
                 'price' => number_format($ticketPrice, 2) . ' ' . $currency,
                 // Seat placement variables include their Romanian label in the

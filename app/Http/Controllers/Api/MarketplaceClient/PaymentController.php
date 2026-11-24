@@ -877,6 +877,8 @@ class PaymentController extends BaseController
                 $attendeeName = $ticket->attendee_name ?? $customerName;
                 $ttName = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? '';
                 $ticketTypeName = is_array($ttName) ? ($ttName['ro'] ?? $ttName['en'] ?? reset($ttName) ?: '') : ($ttName ?: 'Bilet');
+                // Offer invitation: "Invitatie – ofertă 2+1 Presale"
+                $ticketTypeName = \App\Services\Marketplace\BuyXGetYOffer::displayName($ticket, $ticketTypeName);
                 $ticketPrice = number_format($ticket->price ?? 0, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
                 $seatDetails = $ticket->getSeatDetails();
                 $ticketSeries = $ticket->meta['ticket_series'] ?? null;

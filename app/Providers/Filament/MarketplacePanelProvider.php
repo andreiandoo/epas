@@ -1000,8 +1000,17 @@ class MarketplacePanelProvider extends PanelProvider
                     // Detect form submissions (save, delete, etc.) — don't block their scroll
                     const calls = commit?.calls || [];
                     if (calls.length > 0) {
-                        const methodNames = calls.map(c => c.method || '');
-                        if (methodNames.some(m => m === 'save' || m === 'create' || m === 'delete' || m.startsWith('mount'))) {
+                        // Actions on a form field (repeater add/delete/move/clone) run
+                        // through mountAction too, but they edit the form in place — keep
+                        // scroll and collapse state for them.
+                        const isSubmitCall = (c) => {
+                            const m = c.method || '';
+                            if (m === 'save' || m === 'create' || m === 'delete') return true;
+                            if (!m.startsWith('mount')) return false;
+                            const ctx = (c.params || [])[2];
+                            return !(ctx && typeof ctx === 'object' && ctx.schemaComponent);
+                        };
+                        if (calls.some(isSubmitCall)) {
                             isFormSubmit = true;
                         }
                     }

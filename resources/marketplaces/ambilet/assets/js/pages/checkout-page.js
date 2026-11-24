@@ -27,7 +27,7 @@ const CheckoutPage = {
         try {
             if (window.EPASTracking && typeof EPASTracking.trackBeginCheckout === 'function') {
                 const totalValue = this.items.reduce(
-                    (sum, item) => sum + ((item.ticketType?.price || 0) * (item.quantity || 0)),
+                    (sum, item) => sum + ((item.ticketType?.price || 0) * AmbiletCart.paidQuantity(item)),
                     0
                 );
                 const firstEventId = this.items[0]?.eventId || null;
@@ -262,7 +262,7 @@ const CheckoutPage = {
         const refundableItems = this.insurance._refundableItems || [];
 
         // Calculate applicable tickets count (only refundable)
-        const applicableTickets = refundableItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        const applicableTickets = refundableItems.reduce((sum, item) => sum + (AmbiletCart.paidQuantity(item) || 1), 0);
 
         const insuranceAmount = this.calculateInsuranceAmount();
 
@@ -359,13 +359,13 @@ const CheckoutPage = {
         if (applicableItems.length === 0) return 0;
 
         // Calculate total number of applicable tickets
-        const applicableTickets = applicableItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        const applicableTickets = applicableItems.reduce((sum, item) => sum + (AmbiletCart.paidQuantity(item) || 1), 0);
 
         if (this.insurance.price_type === 'percentage') {
             // Calculate based on subtotal of applicable items only
             const subtotal = applicableItems.reduce((sum, item) => {
                 const price = item.ticketType?.price || item.price || 0;
-                return sum + (price * (item.quantity || 1));
+                return sum + (price * (AmbiletCart.paidQuantity(item) || 1));
             }, 0);
             return Math.round(subtotal * (this.insurance.price_percentage / 100) * 100) / 100;
         }
@@ -578,13 +578,18 @@ const CheckoutPage = {
         let ticketNum = 0;
 
         this.items.forEach((item, itemIndex) => {
-            const qty = item.quantity || 1;
+            // Offer lines also issue the free "Invitatie" tickets (same order
+            // as the server: paid first, then free).
+            const paidQty = AmbiletCart.paidQuantity(item);
+            const qty = (paidQty + AmbiletCart.freeQuantity(item)) || 1;
             for (let i = 0; i < qty; i++) {
                 ticketNum++;
                 // Handle both AmbiletCart format and legacy format
                 const price = item.ticketType?.price || item.price || 0;
                 const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
-                const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
+                const ticketTypeName = i >= paidQty && AmbiletCart.offerOf(item)
+                    ? AmbiletCart.offerFreeLabel(item)
+                    : (item.ticketType?.name || item.ticket_type_name || 'Bilet');
                 const eventTitle = item.event?.title || item.event_title || 'Eveniment';
                 const hasDiscount = originalPrice && originalPrice > price;
                 const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
@@ -680,25 +685,40 @@ const CheckoutPage = {
                 hasAddedOnTopCommission = true;
             }
 
-            const itemTotal = price * qty;
-            const commissionTotal = itemCommission * qty;
+            // "Cumperi X primești Y gratis": only the paid tickets cost money.
+            const paidQty = AmbiletCart.paidQuantity(item);
+            const freeQty = AmbiletCart.freeQuantity(item);
+            const itemTotal = price * paidQty;
+            const commissionTotal = itemCommission * paidQty;
 
             baseSubtotal += itemTotal;
             totalCommission += commissionTotal;
             // VAT per cart line, as the server rounds it (per ticket type)
             totalCommissionVat += this.vatOn(Math.round(commissionTotal * 100) / 100);
-            totalQty += qty;
+            totalQty += paidQty + freeQty;
             eventGroups[eventId].subtotal += itemTotal;
             eventGroups[eventId].commission += commissionTotal;
 
             const hasDiscount = originalPrice && originalPrice > price;
             if (hasDiscount) {
-                savings += (originalPrice - price) * qty;
+                savings += (originalPrice - price) * paidQty;
+            }
+
+            if (freeQty > 0) {
+                eventGroups[eventId].tickets.push({
+                    name: AmbiletCart.offerFreeLabel(item),
+                    qty: freeQty,
+                    price: 0,
+                    lineTotal: 0,
+                    isFreeWithCode: true,
+                    hasDiscount: false,
+                    originalPrice: 0,
+                });
             }
 
             eventGroups[eventId].tickets.push({
                 name: ticketTypeName,
-                qty: qty,
+                qty: paidQty,
                 price: price,
                 lineTotal: itemTotal,
                 isFreeWithCode: !!item.ticketType?.is_free_with_code,
@@ -949,7 +969,8 @@ const CheckoutPage = {
         // Count total tickets
         let ticketIndex = 0;
         this.items.forEach((item, itemIndex) => {
-            const qty = item.quantity || 1;
+            // Must match renderBeneficiaries(): offer lines carry the free tickets too.
+            const qty = (AmbiletCart.paidQuantity(item) + AmbiletCart.freeQuantity(item)) || 1;
             for (let i = 0; i < qty; i++) {
                 if (useDifferentBeneficiaries) {
                     // Get values from beneficiary form
@@ -1030,7 +1051,7 @@ const CheckoutPage = {
                 if (customer.phone) identity.customer_phone = customer.phone.substring(0, 50);
                 EPASTracking.trackAddPaymentInfo(
                     firstEventId,
-                    this.items.reduce((sum, item) => sum + ((item.ticketType?.price || 0) * (item.quantity || 0)), 0),
+                    this.items.reduce((sum, item) => sum + ((item.ticketType?.price || 0) * AmbiletCart.paidQuantity(item)), 0),
                     'RON',
                     { num_items: this.items.reduce((s, i) => s + (i.quantity || 0), 0), ...identity }
                 );

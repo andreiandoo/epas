@@ -446,7 +446,7 @@ class AccountController extends BaseController
         })->map(function ($tickets, $typeId) use ($eventData) {
             $first = $tickets->first();
             $ticketType = $first->marketplaceTicketType ?? $first->ticketType;
-            $typeName = $ticketType?->name ?? 'Bilet';
+            $typeName = \App\Services\Marketplace\BuyXGetYOffer::displayName($first, $ticketType?->name ?? 'Bilet');
             $price = (float) ($first->price ?? $ticketType?->price ?? 0);
             // Multi-event orders: each ticket type names its own event
             $typeEvent = $first->marketplaceTicketType ? null : $first->ticketType?->event;
@@ -549,7 +549,7 @@ class AccountController extends BaseController
                         'id' => $ticket->id,
                         'code' => $ticket->code,
                         'barcode' => $ticket->barcode,
-                        'type' => $ticketType?->name,
+                        'type' => \App\Services\Marketplace\BuyXGetYOffer::displayName($ticket, $ticketType?->name),
                         'price' => (float) ($ticketType?->price ?? $ticket->price ?? 0),
                         'status' => $ticket->status,
                         'attendee_name' => $ticket->attendee_name,
@@ -774,7 +774,7 @@ class AccountController extends BaseController
             'ticket' => [
                 'id' => $ticket->id,
                 'code' => $ticket->barcode,
-                'type' => $ticket->marketplaceTicketType?->name ?? $this->resolveTranslatable($ticket->ticketType?->name) ?? 'Standard',
+                'type' => \App\Services\Marketplace\BuyXGetYOffer::displayName($ticket, $ticket->marketplaceTicketType?->name ?? $this->resolveTranslatable($ticket->ticketType?->name) ?? 'Standard'),
                 'type_description' => $ticket->marketplaceTicketType?->description ?? $this->resolveTranslatable($ticket->ticketType?->description) ?? '',
                 'price' => number_format((float) ($ticket->marketplaceTicketType?->price ?? $ticket->price ?? 0), 2, ',', '.') . ' RON',
                 'status' => $ticket->status,
@@ -938,7 +938,7 @@ class AccountController extends BaseController
                     return [
                         'id' => $ticket->id,
                         'code' => $ticket->barcode,
-                        'type' => $ticket->ticketType?->name ?? 'Standard',
+                        'type' => \App\Services\Marketplace\BuyXGetYOffer::displayName($ticket, $ticket->ticketType?->name ?? 'Standard'),
                         'status' => $ticket->status,
                         'order_number' => $order->order_number,
                         'checked_in' => $ticket->checked_in_at !== null,

@@ -7,6 +7,7 @@ use App\Models\MarketplaceRefundRequest;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use App\Services\Marketplace\BuyXGetYOffer;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -182,6 +183,26 @@ class PaymentRefundService
     }
 
     /**
+     * "Cumperi X primești Y gratis" is refunded only as a whole: $tickets plus
+     * every other ticket (paid and Invitatie) of each offer group it touches.
+     */
+    public function withWholeOffers(Order $order, $tickets)
+    {
+        $groups = $tickets->map(fn (Ticket $t) => BuyXGetYOffer::offerGroup($t))->filter()->unique()->values();
+        if ($groups->isEmpty()) {
+            return $tickets;
+        }
+
+        $extra = $order->tickets()
+            ->whereNotIn('id', $tickets->pluck('id')->all())
+            ->get()
+            ->filter(fn (Ticket $t) => $groups->contains(BuyXGetYOffer::offerGroup($t)))
+            ->reject(fn (Ticket $t) => $t->is_cancelled || $t->isRefunded());
+
+        return $extra->isEmpty() ? $tickets : $tickets->concat($extra)->values();
+    }
+
+    /**
      * $tickets plus the order's free-with-code tickets when $tickets takes the
      * order's last paid ticket; otherwise $tickets unchanged.
      */
@@ -243,6 +264,12 @@ class PaymentRefundService
         // the order's free tickets join it (0 lei) so their seats and stock go
         // back through the very same full/partial release below.
         $tickets = $this->withOrphanedFreeTickets($order, $tickets);
+        // A "Cumperi X primești Y" offer goes back only as a whole group.
+        $tickets = $this->withWholeOffers($order, $tickets);
+        $alreadyRefunded = $tickets->filter(fn (Ticket $t) => $t->isRefunded());
+        if ($alreadyRefunded->isNotEmpty()) {
+            return new RefundResult(success: false, error: 'Unele bilete din ofertă sunt deja rambursate: ' . $alreadyRefunded->pluck('code')->implode(', '));
+        }
         $ticketIds = $tickets->pluck('id')->all();
 
         // Calculate amounts per ticket using stored order values
@@ -250,6 +277,11 @@ class PaymentRefundService
         $orderDiscount = (float) ($order->discount_amount ?? 0);
         $orderCommission = (float) ($order->commission_amount ?? 0);
         $discountRatio = ($orderSubtotal > 0 && $orderDiscount > 0) ? ($orderDiscount / $orderSubtotal) : 0;
+        // Orders with an offer: the promo code skipped the offer lines, so each
+        // ticket's own share (meta.discount_amount, written at checkout) is the
+        // truth — the order-wide ratio would take promo money off offer tickets.
+        $usePerTicketDiscount = $order->tickets()->get(['id', 'meta'])
+            ->contains(fn (Ticket $t) => BuyXGetYOffer::offerGroup($t) !== null);
 
         // Build per-ticket-type commission map from stored order data
         $commissionDetails = $order->meta['commission_details'] ?? [];
@@ -273,7 +305,10 @@ class PaymentRefundService
 
         foreach ($tickets as $ticket) {
             $originalPrice = (float) ($ticket->price ?? 0);
-            $ticketDiscount = round($originalPrice * $discountRatio, 2);
+            $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
+            $ticketDiscount = ($usePerTicketDiscount && array_key_exists('discount_amount', $ticketMeta))
+                ? round((float) $ticketMeta['discount_amount'], 2)
+                : round($originalPrice * $discountRatio, 2);
             $grossAfterDiscount = round($originalPrice - $ticketDiscount, 2);
             // Get exact commission from stored commission_details per ticket type
             $typeName = $ticket->ticketType?->name ?? '';
