@@ -14,6 +14,26 @@
         if (empty($s['done'])) { $nextIndex = $i; break; }
     }
     $next = $nextIndex !== null ? $steps[$nextIndex] : null;
+
+    // Butonul pasului: aceeași acțiune ca în pagină (header / Acțiuni).
+    $nextAction = null;
+    if ($next) {
+        $actionName = [
+            'approve' => 'approvePayoutStep',
+            'generate_decont' => 'generate_decont',
+            'generate_invoice' => 'generate_invoice',
+            'generate_invoice_organizer' => 'generate_invoice_organizer',
+        ][$next['key'] ?? ''] ?? null;
+        $lw = $getLivewire();
+        if ($actionName && is_object($lw) && method_exists($lw, 'getAction')) {
+            try {
+                $candidate = $lw->getAction($actionName, false);
+                $nextAction = ($candidate && $candidate->isVisible()) ? $candidate : null;
+            } catch (\Throwable $e) {
+                $nextAction = null;
+            }
+        }
+    }
 @endphp
 
 @if($next)
@@ -42,14 +62,17 @@
             @endforeach
         </div>
 
-        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.25);">
-            <div style="min-width:0;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:10px 12px;border-radius:8px;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.25);">
+            <div style="min-width:0;flex:1 1 320px;">
                 <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#2563eb;">Următorul pas · {{ $doneCount }} din {{ $total }} făcuți</div>
                 <div style="font-size:13px;font-weight:600;margin-top:2px;">{{ $next['label'] }}</div>
                 @if(!empty($next['hint']))
                     <div style="font-size:12px;color:#6b7280;margin-top:2px;">{{ $next['hint'] }}</div>
                 @endif
             </div>
+            @if($nextAction)
+                <div style="flex-shrink:0;">{{ $nextAction }}</div>
+            @endif
         </div>
     </div>
 @endif

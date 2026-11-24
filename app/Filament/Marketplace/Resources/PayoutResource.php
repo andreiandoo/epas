@@ -254,6 +254,7 @@ class PayoutResource extends Resource
                         // the card edges.
                         Section::make('Detalii bilete')
                             ->icon('heroicon-o-ticket')
+                            ->afterHeader(fn ($livewire) => static::ticketActionsHtml($livewire))
                             ->schema([
                                 Infolists\Components\ViewEntry::make('ticket_breakdown_view')
                                     ->hiddenLabel()
@@ -1445,20 +1446,28 @@ class PayoutResource extends Resource
                 default => static::uiChip(e((string) $inv->status), '#6b7280'),
             };
 
+            $meta = $inv->meta ?? [];
+            $pdf = $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
+            $download = $pdf ? ' ' . static::iconLink($pdf, 'Descarcă factura', static::ICON_DOWNLOAD) : '';
+
             return static::uiLine(
                 $title,
                 static::uiMoney($inv->amount, $inv->currency ?? 'RON'),
-                "<a href='" . e($url) . "' style='color:#2563eb;font-weight:500;'>" . e($inv->number) . '</a> &nbsp;' . $chip
+                "<a href='" . e($url) . "' style='color:#2563eb;font-weight:500;'>" . e($inv->number) . '</a> &nbsp;' . $chip . $download
             );
         };
 
         $doc = $record->decontDocument;
         if ($doc) {
             $when = MarketplaceTz::fmt($doc->issued_at ?? $doc->created_at, 'd.m.Y', null);
-            $link = $doc->file_path
-                ? " · <a href='" . e(\Illuminate\Support\Facades\Storage::disk('public')->url($doc->file_path)) . "' target='_blank' rel='noopener' style='color:#2563eb;'>deschide</a>"
-                : '';
-            $decont = static::uiLine('Decont PDF', static::uiChip('generat', '#059669'), 'din ' . e($when) . $link);
+            $icons = '';
+            if ($doc->file_path && $doc->download_url) {
+                $icons .= static::iconLink($doc->download_url, 'Descarcă decontul', static::ICON_DOWNLOAD);
+            }
+            if (! in_array($record->status, ['rejected', 'cancelled'], true)) {
+                $icons .= static::iconWire("mountAction('regenerate_decont')", 'Regenerează decontul', static::ICON_REGENERATE);
+            }
+            $decont = static::uiLine('Decont PDF', static::uiChip('generat', '#059669'), 'din ' . e($when) . ($icons !== '' ? ' ' . $icons : ''));
         } else {
             $decont = static::uiLine('Decont PDF', $muted('negenerat'));
         }
@@ -1488,5 +1497,48 @@ class PayoutResource extends Resource
             . "<div style='font-size:13px;margin-top:4px;white-space:pre-line;'>" . e((string) ($record->rejection_reason ?: 'fără motiv')) . '</div>'
             . '</div>'
         );
+    }
+
+    public const ICON_DOWNLOAD = 'M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3';
+
+    public const ICON_REGENERATE = 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99';
+
+    /** Iconiță galbenă care deschide un link (ex. descărcare). */
+    protected static function iconLink(string $url, string $title, string $path): string
+    {
+        $color = static::ACTION_ICON_COLOR;
+
+        return "<a href='" . e($url) . "' target='_blank' rel='noopener' title='" . e($title) . "' aria-label='" . e($title) . "'"
+            . " style='display:inline-flex;vertical-align:-3px;margin-left:4px;color:{$color};'>" . static::iconSvg($path, 15) . '</a>';
+    }
+
+    /** Iconiță galbenă care pornește o acțiune a paginii (Livewire). */
+    protected static function iconWire(string $call, string $title, string $path): string
+    {
+        $color = static::ACTION_ICON_COLOR;
+
+        return "<button type='button' wire:click=\"{$call}\" title='" . e($title) . "' aria-label='" . e($title) . "'"
+            . " style='display:inline-flex;vertical-align:-3px;margin-left:4px;color:{$color};cursor:pointer;'>" . static::iconSvg($path, 15) . '</button>';
+    }
+
+    /** Butoanele din colțul „Detalii bilete”: acțiuni ale paginii ViewPayout. */
+    public static function ticketActionsHtml($livewire): ?\Illuminate\Support\HtmlString
+    {
+        if (! is_object($livewire) || ! method_exists($livewire, 'getAction')) {
+            return null;
+        }
+        $html = '';
+        foreach (['snapshotDriftBadge', 'recalcBreakdown', 'editTicketSelection'] as $name) {
+            try {
+                $action = $livewire->getAction($name, false);
+            } catch (\Throwable $e) {
+                $action = null;
+            }
+            if ($action && $action->isVisible()) {
+                $html .= $action->size('sm')->toHtml();
+            }
+        }
+
+        return $html === '' ? null : new \Illuminate\Support\HtmlString("<div style='display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;'>{$html}</div>");
     }
 }

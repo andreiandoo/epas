@@ -36,28 +36,16 @@ class ViewPayout extends ViewRecord
         );
     }
 
-    protected function getHeaderActions(): array
-    {
-        $decont = $this->record->decontDocument;
-        $invoice = $this->record->invoice;
+    // ── Acțiunile pe bilete stau în colțul secțiunii „Detalii bilete”
+    // (PayoutResource::ticketActionsHtml), nu în header. Sunt acțiuni ale
+    // paginii, rezolvate după nume: snapshotDriftBadge, editTicketSelection,
+    // recalcBreakdown.
 
-        // Compute drift once per render so both the visible-guard and the
-        // modal body don't re-hit SalesBreakdownService. Cheap for a single
-        // payout, but this method fires on every visible() call and Filament
-        // evaluates them dozens of times per page.
+    public function snapshotDriftBadgeAction(): Actions\Action
+    {
         $drift = $this->record->getSnapshotDrift();
 
-        return [
-            // "Snapshot învechit" — red pill that only shows when the
-            // stored ticket_breakdown disagrees with a fresh live recompute.
-            // Root cause example: payout 3196 counted 50 Presale in the
-            // snapshot while a cross-cart ticket (event 3855's tt#9358 on an
-            // order belonging to org 381 for event 3848) legitimately makes
-            // it 51 live. The snapshot never refreshed after the ticket was
-            // linked, so the decont PDF understated by 129 lei until an
-            // operator manually clicked "Recalculează snapshot bilete".
-            // This badge makes the mismatch obvious BEFORE they generate.
-            Actions\Action::make('snapshotDriftBadge')
+        return Actions\Action::make('snapshotDriftBadge')
                 ->label(function () use ($drift) {
                     $delta = ($drift['total_live_qty'] ?? 0) - ($drift['total_snapshot_qty'] ?? 0);
                     $sign = $delta > 0 ? '+' : '';
@@ -102,22 +90,12 @@ class ViewPayout extends ViewRecord
                     );
                 })
                 ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Închide'),
+                ->modalCancelActionLabel('Închide');
+    }
 
-            // Recalcul snapshot din SalesBreakdownService — util pentru deconturile
-            // create inainte de refactor (snapshot pe baza prețului catalog) sau
-            // dupa modificari de preturi pe bilete. Doar status-uri editabile.
-            // Recalculează și `amount` / `gross_amount` / `commission_amount`
-            // la nivel de payout + ajustează balanța rezervată a organizatorului
-            // ca să nu rămână bani blocați degeaba.
-            // Operator-driven edit of which tickets this payout covers.
-            // Use when the saved ticket_breakdown doesn't match reality
-            // (legacy payouts created before the breakdown-from-repeater
-            // fix), or when the admin wants to redistribute the amount
-            // across different ticket types. Saves a clean breakdown
-            // built from the operator's exact selection — same logic
-            // as the manual-decont modal.
-            Actions\Action::make('edit_ticket_selection')
+    public function editTicketSelectionAction(): Actions\Action
+    {
+        return Actions\Action::make('editTicketSelection')
                 ->label('Editează bilete decontate')
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
@@ -567,9 +545,12 @@ class ViewPayout extends ViewRecord
                         ->send();
 
                     $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
-                }),
+                });
+    }
 
-            Actions\Action::make('recalc_breakdown')
+    public function recalcBreakdownAction(): Actions\Action
+    {
+        return Actions\Action::make('recalcBreakdown')
                 ->label('Recalculează snapshot bilete')
                 ->icon('heroicon-o-arrow-path-rounded-square')
                 ->color('warning')
@@ -604,8 +585,47 @@ class ViewPayout extends ViewRecord
                         ->success()
                         ->send();
                     $this->redirect(PayoutResource::getUrl('view', ['record' => $payout]));
-                }),
+                });
+    }
 
+    /** Butonul pasului „Aprobă” din Pași de urmat. */
+    public function approvePayoutStepAction(): Actions\Action
+    {
+        return Actions\Action::make('approvePayoutStep')
+            ->label('Aprobă decontul')
+            ->icon('heroicon-o-check')
+            ->color('success')
+            ->requiresConfirmation()
+            ->visible(fn () => $this->record->canBeApproved())
+            ->action(function () {
+                $admin = Auth::guard('marketplace_admin')->user();
+                $this->record->approve($admin->id);
+                $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+            });
+    }
+
+    /** Titlul paginii: seria decontului și evenimentul. */
+    public function getTitle(): string
+    {
+        $r = $this->record;
+        $series = $r->decont_series ?: ($r->reference ?: ('#' . $r->id));
+        $title = null;
+        if ($r->event) {
+            $t = $r->event->title;
+            $title = is_array($t) ? ($t['ro'] ?? $t['en'] ?? (reset($t) ?: null)) : $t;
+        }
+
+        return $title ? $series . ' - ' . $title : $series;
+    }
+
+    protected function getHeaderActions(): array
+    {
+        $decont = $this->record->decontDocument;
+        $invoice = $this->record->invoice;
+
+        // Acțiunile pe bilete (snapshot învechit, editare, recalculare) sunt în
+        // secțiunea „Detalii bilete”: vezi metodele *Action de mai sus.
+        return [
             // ========== GENERATE DECONT (when none exists) ==========
             Actions\Action::make('generate_decont')
                 ->label('Generează Decont')
