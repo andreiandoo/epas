@@ -457,6 +457,14 @@ class OrganizerBalance extends Page
         // face parte din vânzări: plătit + POS + în procesare + sold = total.
         $pos = round((float) collect($eventData['rows'])->sum('pos_net'), 2);
 
+        // Comision inclus facturat separat: nu se reține, organizatorul îl primește
+        // în transfer. Se adaugă la net, plătit și în procesare doar la afișare;
+        // soldul disponibil rămâne același (apare în ambele părți).
+        $inv = $this->invoicedCommissionTotals();
+        $net = round($net + $inv['paid'] + $inv['pending'], 2);
+        $paid = round($paid + $inv['paid'], 2);
+        $pending = round($pending + $inv['pending'], 2);
+
         return [
             'net' => $net,
             'pos' => $pos,
@@ -465,6 +473,21 @@ class OrganizerBalance extends Page
             'pending' => $pending,
             'available' => round($net - $paid - $pending, 2),
             'computed_at' => $eventData['computed_at'],
+        ];
+    }
+
+    /** Comisionul facturat separat pe deconturile organizatorului, plătite / încă neplătite. */
+    protected function invoicedCommissionTotals(): array
+    {
+        $rows = MarketplacePayout::where('marketplace_organizer_id', $this->organizerId)
+            ->whereNotNull('invoiced_commission_amount')
+            ->whereIn('status', ['approved', 'processing', 'completed'])
+            ->get(['event_id', 'status', 'invoiced_commission_amount']);
+
+        return [
+            'paid' => round((float) $rows->where('status', 'completed')->sum('invoiced_commission_amount'), 2),
+            'pending' => round((float) $rows->whereIn('status', ['approved', 'processing'])->sum('invoiced_commission_amount'), 2),
+            'by_event' => $rows->groupBy('event_id'),
         ];
     }
 
@@ -487,9 +510,22 @@ class OrganizerBalance extends Page
             ->whereNotNull('event_id')->whereIn('status', ['approved', 'processing'])
             ->groupBy('event_id')->selectRaw('event_id, SUM(amount) as total')->pluck('total', 'event_id');
 
-        $eventRows = collect($eventData['rows'])->map(function (array $row) use ($paidByEvent, $pendingByEvent) {
+        $invByEvent = $this->invoicedCommissionTotals()['by_event'];
+
+        $eventRows = collect($eventData['rows'])->map(function (array $row) use ($paidByEvent, $pendingByEvent, $invByEvent) {
             $row['paid'] = round((float) ($paidByEvent[$row['id']] ?? 0), 2);
             $row['pending'] = round((float) ($pendingByEvent[$row['id']] ?? 0), 2);
+
+            // Comision facturat separat: nu se scade din net, iar transferul îl include.
+            $inv = $invByEvent->get($row['id']);
+            $invPaid = $inv ? round((float) $inv->where('status', 'completed')->sum('invoiced_commission_amount'), 2) : 0.0;
+            $invPending = $inv ? round((float) $inv->whereIn('status', ['approved', 'processing'])->sum('invoiced_commission_amount'), 2) : 0.0;
+            $row['commission_invoiced'] = round($invPaid + $invPending, 2);
+            $row['commission'] = round((float) $row['commission'] - $row['commission_invoiced'], 2);
+            $row['net'] = round((float) $row['net'] + $row['commission_invoiced'], 2);
+            $row['paid'] = round($row['paid'] + $invPaid, 2);
+            $row['pending'] = round($row['pending'] + $invPending, 2);
+
             $row['balance'] = round($row['net'] - $row['paid'] - $row['pending'], 2);
 
             return $row;

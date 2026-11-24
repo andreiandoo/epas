@@ -163,7 +163,7 @@
                         Sold pe eveniment
                         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $eventRows->count() }})</span>
                     </h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Brut − comision − reduceri − taxe peste preț (asigurare, card cultural) = net. Net − plătit − în procesare = sold.@if($hasPos) Vânzările POS le-a încasat organizatorul la ușă: nu intră în net și nici în sold.@endif</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Brut − comision − reduceri − taxe peste preț (asigurare, card cultural) = net. Net − plătit − în procesare = sold. Comisionul inclus facturat separat nu se scade: organizatorul îl primește în transfer și îl plătește pe factură.@if($hasPos) Vânzările POS le-a încasat organizatorul la ușă: nu intră în net și nici în sold.@endif</p>
                 </div>
                 <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
             </button>
@@ -203,7 +203,12 @@
                                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ implode(' - ', array_filter([$row['date'], $row['venue'], $row['city']])) }}</div>
                                 </td>
                                 <td class="{{ $td }} text-gray-900 dark:text-white">{{ number_format((float) $row['revenue'], 2, ',', '.') }}</td>
-                                <td class="{{ $td }} text-red-600 dark:text-red-400">{{ $row['commission'] > 0 ? '−' : '' }}{{ number_format((float) $row['commission'], 2, ',', '.') }}</td>
+                                <td class="{{ $td }} text-red-600 dark:text-red-400">
+                                    {{ $row['commission'] > 0 ? '−' : '' }}{{ number_format((float) $row['commission'], 2, ',', '.') }}
+                                    @if(($row['commission_invoiced'] ?? 0) > 0.004)
+                                        <div class="text-[11px] font-normal text-gray-500 dark:text-gray-400">{{ number_format((float) $row['commission_invoiced'], 2, ',', '.') }} facturat separat</div>
+                                    @endif
+                                </td>
                                 <td class="{{ $td }} text-red-600 dark:text-red-400">{{ $row['discount'] > 0 ? '−' : '' }}{{ number_format((float) $row['discount'], 2, ',', '.') }}</td>
                                 <td class="{{ $td }} text-red-600 dark:text-red-400">{{ $row['extras'] > 0 ? '−' : '' }}{{ number_format((float) $row['extras'], 2, ',', '.') }}</td>
                                 <td class="{{ $td }} font-medium text-gray-900 dark:text-white">{{ number_format((float) $row['net'], 2, ',', '.') }}</td>

@@ -67,7 +67,11 @@ class Balances extends Page implements HasForms, HasTable
             ->toBase()
             ->first();
 
-        $pending = (float) ($totals->pending ?? 0);
+        // Comisionul facturat separat pe deconturile neplătite: intră în transfer.
+        $pending = (float) ($totals->pending ?? 0) + (float) \App\Models\MarketplacePayout::query()
+            ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
+            ->whereIn('status', ['approved', 'processing'])
+            ->sum('invoiced_commission_amount');
         $available = (float) ($totals->available ?? 0);
 
         return view('filament.marketplace.pages.balances-header', [
@@ -262,7 +266,17 @@ class Balances extends Page implements HasForms, HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn () => $this->applyQuickFilter($this->baseQuery(), $this->quick))
+            ->query(fn () => $this->applyQuickFilter($this->baseQuery(), $this->quick)
+                ->select('marketplace_organizers.*')
+                // Comision inclus facturat separat: soldul salvat e net, transferul îl include.
+                ->addSelect([
+                    'inv_pending' => \App\Models\MarketplacePayout::selectRaw('COALESCE(SUM(invoiced_commission_amount), 0)')
+                        ->whereColumn('marketplace_organizer_id', 'marketplace_organizers.id')
+                        ->whereIn('status', ['approved', 'processing']),
+                    'inv_paid' => \App\Models\MarketplacePayout::selectRaw('COALESCE(SUM(invoiced_commission_amount), 0)')
+                        ->whereColumn('marketplace_organizer_id', 'marketplace_organizers.id')
+                        ->where('status', 'completed'),
+                ]))
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Organizator')
@@ -275,7 +289,8 @@ class Balances extends Page implements HasForms, HasTable
                 // (Σ orders.total, cu comision) nu avea legătură cu soldul.
                 Tables\Columns\TextColumn::make('net_sales')
                     ->label('Total vânzări (net)')
-                    ->state(fn ($record) => (float) $record->available_balance + (float) $record->pending_balance + (float) $record->total_paid_out)
+                    ->state(fn ($record) => (float) $record->available_balance + (float) $record->pending_balance + (float) $record->total_paid_out
+                        + (float) ($record->inv_pending ?? 0) + (float) ($record->inv_paid ?? 0))
                     ->money('RON', locale: 'ro')
                     ->sortable(query: fn ($query, string $direction) => $query->orderByRaw(
                         '(COALESCE(available_balance, 0) + COALESCE(pending_balance, 0) + COALESCE(total_paid_out, 0)) ' . ($direction === 'asc' ? 'asc' : 'desc')
@@ -283,11 +298,13 @@ class Balances extends Page implements HasForms, HasTable
                     ->color('gray'),
                 Tables\Columns\TextColumn::make('total_paid_out')
                     ->label('Total plătit')
+                    ->state(fn ($record) => (float) $record->total_paid_out + (float) ($record->inv_paid ?? 0))
                     ->money('RON', locale: 'ro')
                     ->sortable()
                     ->color('primary'),
                 Tables\Columns\TextColumn::make('pending_balance')
                     ->label('În procesare')
+                    ->state(fn ($record) => (float) $record->pending_balance + (float) ($record->inv_pending ?? 0))
                     ->money('RON', locale: 'ro')
                     ->sortable()
                     ->color('warning'),
