@@ -160,16 +160,26 @@ class PayoutResource extends Resource
                 // ========== OPERATOR STEPS (wizard) ==========
                 // Shows the remaining actions in order; each disappears once
                 // done. Hidden when nothing is left (or payout dead).
-                Section::make('Pași de urmat')
-                    ->icon('heroicon-o-list-bullet')
-                    ->compact()
-                    ->schema([
-                        Infolists\Components\ViewEntry::make('operator_steps')
-                            ->hiddenLabel()
-                            ->view('filament.infolists.payout-operator-steps')
-                            ->columnSpanFull(),
-                    ])
+                \Filament\Schemas\Components\Group::make([
+                    Infolists\Components\ViewEntry::make('operator_steps')
+                        ->hiddenLabel()
+                        ->view('filament.infolists.payout-operator-steps')
+                        ->columnSpanFull(),
+                ])
+                    ->columnSpanFull()
                     ->visible(fn ($record) => collect($record->getOperatorSteps())->where('done', false)->isNotEmpty()),
+
+                // Decont respins: motivul sus, cât se vede.
+                \Filament\Schemas\Components\Group::make([
+                    Infolists\Components\TextEntry::make('rejection_view')
+                        ->hiddenLabel()
+                        ->getStateUsing(fn () => '—')
+                        ->formatStateUsing(fn ($state, $record) => static::renderRejection($record))
+                        ->html()
+                        ->columnSpanFull(),
+                ])
+                    ->columnSpanFull()
+                    ->visible(fn ($record) => $record->status === 'rejected'),
 
                 // ========== MAIN INFO ==========
                 \Filament\Schemas\Components\Grid::make(3)->schema([
@@ -282,21 +292,6 @@ class PayoutResource extends Resource
                                     ->columnSpanFull(),
                             ]),
 
-                        // Rejection details
-                        Section::make('Respingere')
-                            ->icon('heroicon-o-x-circle')
-                            ->schema([
-                                Infolists\Components\TextEntry::make('rejection_reason')
-                                    ->label('Motiv')
-                                    ->columnSpanFull(),
-                                Infolists\Components\TextEntry::make('rejectedByUser.name')
-                                    ->label('Respins de'),
-                                Infolists\Components\TextEntry::make('rejected_at')
-                                    ->label('Data')
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
-                            ])
-                            ->columns(2)
-                            ->visible(fn ($record) => $record->status === 'rejected'),
                     ]),
 
                     // RIGHT: Sidebar (1/3)
@@ -549,6 +544,18 @@ class PayoutResource extends Resource
                                 ])->fullWidth(),
                             ]),
 
+                        Section::make('Documente')
+                            ->icon('heroicon-o-document-duplicate')
+                            ->compact()
+                            ->schema([
+                                Infolists\Components\TextEntry::make('documents_view')
+                                    ->hiddenLabel()
+                                    ->getStateUsing(fn () => '—')
+                                    ->formatStateUsing(fn ($state, $record) => static::renderDocuments($record))
+                                    ->html(),
+                            ])
+                            ->visible(fn ($record) => ! in_array($record->status, ['rejected', 'cancelled'], true)),
+
                         // Event decont context
                         Section::make('Context eveniment')
                             ->icon('heroicon-o-chart-bar')
@@ -574,22 +581,6 @@ class PayoutResource extends Resource
                                     ->html(),
                             ]),
 
-                        // Invoice
-                        Section::make('Factură')
-                            ->icon('heroicon-o-document-currency-dollar')
-                            ->compact()
-                            ->schema([
-                                Infolists\Components\TextEntry::make('invoice.number')
-                                    ->label('Număr'),
-                                Infolists\Components\TextEntry::make('invoice.amount')
-                                    ->label('Suma')
-                                    ->money('RON'),
-                                Infolists\Components\TextEntry::make('invoice.status')
-                                    ->label('Status')
-                                    ->badge()
-                                    ->color(fn (string $state): string => $state === 'paid' ? 'success' : 'warning'),
-                            ])
-                            ->visible(fn ($record) => $record->invoice !== null),
                     ]),
                 ]),
             ])->columns(1);
@@ -1437,5 +1428,65 @@ class PayoutResource extends Resource
         $note .= "<div style='margin-top:2px;'>{$meta}</div>";
 
         return static::uiTotal($paid ? 'Plătit organizatorului' : 'De plată organizatorului', $amount, $note);
+    }
+
+    /** Documentele decontului: PDF-ul și facturile, cu starea fiecăruia. */
+    public static function renderDocuments(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $muted = fn (string $t) => "<span style='color:#9ca3af;'>{$t}</span>";
+        $invoiceRow = function (string $title, $inv, string $missing) use ($muted) {
+            if (! $inv) {
+                return static::uiLine($title, $muted($missing));
+            }
+            $url = \App\Filament\Marketplace\Resources\OrganizerInvoiceResource::getUrl('edit', ['record' => $inv]);
+            $chip = match ($inv->status) {
+                'paid' => static::uiChip('încasată', '#059669'),
+                'outstanding' => static::uiChip('neîncasată', '#d97706'),
+                default => static::uiChip(e((string) $inv->status), '#6b7280'),
+            };
+
+            return static::uiLine(
+                $title,
+                static::uiMoney($inv->amount, $inv->currency ?? 'RON'),
+                "<a href='" . e($url) . "' style='color:#2563eb;font-weight:500;'>" . e($inv->number) . '</a> &nbsp;' . $chip
+            );
+        };
+
+        $doc = $record->decontDocument;
+        if ($doc) {
+            $when = MarketplaceTz::fmt($doc->issued_at ?? $doc->created_at, 'd.m.Y', null);
+            $link = $doc->file_path
+                ? " · <a href='" . e(\Illuminate\Support\Facades\Storage::disk('public')->url($doc->file_path)) . "' target='_blank' rel='noopener' style='color:#2563eb;'>deschide</a>"
+                : '';
+            $decont = static::uiLine('Decont PDF', static::uiChip('generat', '#059669'), 'din ' . e($when) . $link);
+        } else {
+            $decont = static::uiLine('Decont PDF', $muted('negenerat'));
+        }
+
+        $rows = $decont;
+        $onTop = ($record->commission_mode ?? 'included') === 'added_on_top';
+        if ($record->invoice || $onTop) {
+            $rows .= $invoiceRow('Factură comision (client general)', $record->invoice, 'neemisă');
+        }
+        if ($record->posInvoice || $record->invoicedCommission() > 0.005 || ! $onTop) {
+            $rows .= $invoiceRow('Factură organizator', $record->posInvoice, $record->invoicedCommission() > 0.005 ? 'neemisă: comisionul nu se reține' : 'neemisă');
+        }
+
+        return static::uiWrap($rows);
+    }
+
+    /** Decont respins: cine, când și de ce. */
+    public static function renderRejection(MarketplacePayout $record): \Illuminate\Support\HtmlString
+    {
+        $who = $record->rejectedByUser?->name;
+        $when = $record->rejected_at ? MarketplaceTz::fmt($record->rejected_at, 'd.m.Y H:i', null) : null;
+        $meta = e(implode(' · ', array_filter([$when, $who ? 'de ' . $who . ' (admin)' : null])));
+
+        return new \Illuminate\Support\HtmlString(
+            "<div style='padding:14px 16px;border-radius:10px;background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.35);'>"
+            . "<div style='font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#dc2626;'>Decont respins" . ($meta !== '' ? " <span style='text-transform:none;letter-spacing:0;font-weight:400;color:#9ca3af;'>· {$meta}</span>" : '') . '</div>'
+            . "<div style='font-size:13px;margin-top:4px;white-space:pre-line;'>" . e((string) ($record->rejection_reason ?: 'fără motiv')) . '</div>'
+            . '</div>'
+        );
     }
 }

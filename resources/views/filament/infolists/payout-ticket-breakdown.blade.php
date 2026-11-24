@@ -364,56 +364,61 @@
 @endphp
 
 @if(!empty($refundRows))
-<div class="overflow-x-auto mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-    <div class="px-3 mb-2 flex items-center gap-2">
-        <x-heroicon-o-arrow-uturn-left class="w-4 h-4 text-amber-500" />
-        <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Bilete rambursate</h4>
-        <span class="text-xs text-gray-500">{{ $refundTotals['qty'] }} {{ $refundTotals['qty'] === 1 ? 'bilet' : 'bilete' }}</span>
+@php
+    $rth = 'padding:10px 12px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;white-space:nowrap;text-align:right;';
+    $rtd = 'padding:10px 12px;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;';
+    $rm = fn ($v) => number_format((float) $v, 2, ',', '.');
+@endphp
+<div style="border-top:1px solid rgba(127,127,127,.2);">
+    <div style="padding:12px 12px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;">
+        Bilete rambursate · {{ $refundTotals['qty'] }} {{ $refundTotals['qty'] === 1 ? 'bilet' : 'bilete' }}
     </div>
-    <table class="w-full text-sm">
+    <div class="overflow-x-auto">
+    <table class="w-full" style="border-collapse:collapse;">
         <thead>
-            <tr class="border-b border-gray-200 dark:border-gray-700">
-                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip bilet</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Qty</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Valoare nominală</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision returnat</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Sumă rambursată</th>
-                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase" title="Impact pe net-ul organizatorului">Impact net</th>
+            <tr style="border-bottom:1px solid rgba(127,127,127,.2);">
+                <th style="{{ $rth }}text-align:left;">Tip bilet</th>
+                <th style="{{ $rth }}">Bilete</th>
+                <th style="{{ $rth }}">Valoare</th>
+                <th style="{{ $rth }}">Comision</th>
+                <th style="{{ $rth }}">Comision returnat</th>
+                <th style="{{ $rth }}">Rambursat</th>
+                <th style="{{ $rth }}" title="Impact pe net-ul organizatorului">Impact net</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+        <tbody>
             @foreach($refundRows as $r)
-                <tr>
-                    <td class="py-2 px-3 text-gray-900 dark:text-white">{{ $r['ticket_type_name'] }}</td>
-                    <td class="py-2 px-3 text-right text-amber-500 font-semibold">-{{ $r['qty'] }}</td>
-                    <td class="py-2 px-3 text-right font-mono text-amber-500">-{{ number_format($r['face'], 2) }} {{ $currency }}</td>
-                    <td class="py-2 px-3 text-right font-mono text-gray-600 dark:text-gray-300">{{ number_format($r['commission'], 2) }} {{ $currency }}</td>
-                    <td class="py-2 px-3 text-right text-xs text-gray-500">
+                <tr style="border-bottom:1px solid rgba(127,127,127,.1);">
+                    <td style="padding:10px 12px;font-size:13px;font-weight:500;">{{ $r['ticket_type_name'] }}</td>
+                    <td style="{{ $rtd }}">{{ $r['qty'] }}</td>
+                    <td style="{{ $rtd }}color:#dc2626;">−{{ $rm($r['face']) }}</td>
+                    <td style="{{ $rtd }}">{{ $rm($r['commission']) }}</td>
+                    <td style="{{ $rtd }}font-size:12px;">
                         @if($r['commission_returned_qty'] === $r['qty'])
-                            <span class="text-emerald-600 dark:text-emerald-400">da ({{ $r['commission_returned_qty'] }}/{{ $r['qty'] }})</span>
+                            <span style="color:#059669;">da ({{ $r['commission_returned_qty'] }}/{{ $r['qty'] }})</span>
                         @elseif($r['commission_returned_qty'] === 0)
-                            <span class="text-gray-400">nu</span>
+                            <span style="color:#9ca3af;">nu</span>
                         @else
                             parțial ({{ $r['commission_returned_qty'] }}/{{ $r['qty'] }})
                         @endif
                     </td>
-                    <td class="py-2 px-3 text-right font-mono text-amber-500">-{{ number_format($r['refunded'], 2) }} {{ $currency }}</td>
-                    <td class="py-2 px-3 text-right font-mono font-semibold text-amber-600 dark:text-amber-400">{{ number_format($r['net_offset'], 2) }} {{ $currency }}</td>
+                    <td style="{{ $rtd }}color:#dc2626;">−{{ $rm($r['refunded']) }}</td>
+                    <td style="{{ $rtd }}font-weight:600;color:#d97706;">{{ $rm($r['net_offset']) }}</td>
                 </tr>
             @endforeach
         </tbody>
         <tfoot>
-            <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-semibold">
-                <td class="py-2 px-3 text-gray-900 dark:text-white">Total rambursări</td>
-                <td class="py-2 px-3 text-right text-amber-500">-{{ $refundTotals['qty'] }}</td>
-                <td class="py-2 px-3 text-right font-mono text-amber-500">-{{ number_format($refundTotals['face'], 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ number_format($refundTotals['commission'], 2) }} {{ $currency }}</td>
-                <td class="py-2 px-3"></td>
-                <td class="py-2 px-3"></td>
-                <td class="py-2 px-3 text-right font-mono text-amber-600 dark:text-amber-400">{{ number_format($refundTotals['net'], 2) }} {{ $currency }}</td>
+            <tr style="background:rgba(127,127,127,.06);">
+                <td style="padding:10px 12px;font-size:13px;font-weight:600;">Total rambursări</td>
+                <td style="{{ $rtd }}font-weight:600;">{{ $refundTotals['qty'] }}</td>
+                <td style="{{ $rtd }}font-weight:600;color:#dc2626;">−{{ $rm($refundTotals['face']) }}</td>
+                <td style="{{ $rtd }}font-weight:600;">{{ $rm($refundTotals['commission']) }}</td>
+                <td style="{{ $rtd }}"></td>
+                <td style="{{ $rtd }}"></td>
+                <td style="{{ $rtd }}font-weight:700;color:#d97706;">{{ $rm($refundTotals['net']) }} {{ $currency }}</td>
             </tr>
         </tfoot>
     </table>
+    </div>
 </div>
 @endif
