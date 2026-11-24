@@ -327,6 +327,60 @@ class PayoutResource extends Resource
                                     ->getStateUsing(fn () => '—')
                                     ->formatStateUsing(fn ($state, $record) => static::renderNotes($record))
                                     ->html(),
+                                \Filament\Schemas\Components\Actions::make([
+                                    \Filament\Actions\Action::make('add_admin_note')
+                                        ->label('Notă admin')
+                                        ->icon('heroicon-o-pencil-square')
+                                        ->color('gray')
+                                        ->form([
+                                            \Filament\Forms\Components\Textarea::make('admin_notes')
+                                                ->label('Note admin')
+                                                ->default(fn ($record) => $record->admin_notes)
+                                                ->rows(3),
+                                        ])
+                                        ->action(function (array $data, $record, $livewire) {
+                                            $record->update(['admin_notes' => $data['admin_notes']]);
+                                            $livewire->refreshFormData(['admin_notes']);
+                                        }),
+                                    \Filament\Actions\Action::make('edit_decont_mentions')
+                                        ->label('Mențiuni decont')
+                                        ->icon('heroicon-o-chat-bubble-bottom-center-text')
+                                        ->color('gray')
+                                        ->modalHeading('Mențiuni decont')
+                                        ->modalDescription('Textul apare în PDF-ul decontului, sub nota „Facturile pot circula fără semnătură...”. Lasă gol ca să nu apară nimic.')
+                                        ->visible(fn ($record) => ! in_array($record->status, ['rejected', 'cancelled'], true))
+                                        ->fillForm(fn ($record) => [
+                                            'decont_mentions' => $record->decont_mentions,
+                                            'regenerate' => $record->decontDocument !== null,
+                                        ])
+                                        ->form([
+                                            \Filament\Forms\Components\Textarea::make('decont_mentions')
+                                                ->label('Mențiuni')
+                                                ->rows(4)
+                                                ->maxLength(2000),
+                                            \Filament\Forms\Components\Toggle::make('regenerate')
+                                                ->label('Regenerează decontul acum')
+                                                ->helperText('Numărul decontului rămâne același.')
+                                                ->visible(fn ($record) => $record->decontDocument !== null),
+                                        ])
+                                        ->action(function (array $data, $record, $livewire) {
+                                            $mentions = trim((string) ($data['decont_mentions'] ?? ''));
+                                            $record->update(['decont_mentions' => $mentions !== '' ? $mentions : null]);
+
+                                            if (! empty($data['regenerate']) && $record->decontDocument !== null
+                                                && method_exists($livewire, 'regenerateDecontDocument')) {
+                                                $livewire->regenerateDecontDocument();
+                                                return;
+                                            }
+
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Mențiuni salvate')
+                                                ->body($record->decontDocument !== null ? 'Regenerează decontul ca să apară în PDF.' : null)
+                                                ->success()
+                                                ->send();
+                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
+                                        }),
+                                ]),
                             ]),
 
                         Section::make('Acțiuni')
@@ -438,58 +492,6 @@ class PayoutResource extends Resource
 
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\ActionGroup::make([
-                                    \Filament\Actions\Action::make('add_admin_note')
-                                        ->label('Notă admin')
-                                        ->icon('heroicon-o-pencil-square')
-                                        ->color('gray')
-                                        ->form([
-                                            \Filament\Forms\Components\Textarea::make('admin_notes')
-                                                ->label('Note admin')
-                                                ->default(fn ($record) => $record->admin_notes)
-                                                ->rows(3),
-                                        ])
-                                        ->action(function (array $data, $record, $livewire) {
-                                            $record->update(['admin_notes' => $data['admin_notes']]);
-                                            $livewire->refreshFormData(['admin_notes']);
-                                        }),
-                                    \Filament\Actions\Action::make('edit_decont_mentions')
-                                        ->label('Mențiuni decont')
-                                        ->icon('heroicon-o-chat-bubble-bottom-center-text')
-                                        ->color('gray')
-                                        ->modalHeading('Mențiuni decont')
-                                        ->modalDescription('Textul apare în PDF-ul decontului, sub nota „Facturile pot circula fără semnătură...”. Lasă gol ca să nu apară nimic.')
-                                        ->visible(fn ($record) => ! in_array($record->status, ['rejected', 'cancelled'], true))
-                                        ->fillForm(fn ($record) => [
-                                            'decont_mentions' => $record->decont_mentions,
-                                            'regenerate' => $record->decontDocument !== null,
-                                        ])
-                                        ->form([
-                                            \Filament\Forms\Components\Textarea::make('decont_mentions')
-                                                ->label('Mențiuni')
-                                                ->rows(4)
-                                                ->maxLength(2000),
-                                            \Filament\Forms\Components\Toggle::make('regenerate')
-                                                ->label('Regenerează decontul acum')
-                                                ->helperText('Numărul decontului rămâne același.')
-                                                ->visible(fn ($record) => $record->decontDocument !== null),
-                                        ])
-                                        ->action(function (array $data, $record, $livewire) {
-                                            $mentions = trim((string) ($data['decont_mentions'] ?? ''));
-                                            $record->update(['decont_mentions' => $mentions !== '' ? $mentions : null]);
-
-                                            if (! empty($data['regenerate']) && $record->decontDocument !== null
-                                                && method_exists($livewire, 'regenerateDecontDocument')) {
-                                                $livewire->regenerateDecontDocument();
-                                                return;
-                                            }
-
-                                            \Filament\Notifications\Notification::make()
-                                                ->title('Mențiuni salvate')
-                                                ->body($record->decontDocument !== null ? 'Regenerează decontul ca să apară în PDF.' : null)
-                                                ->success()
-                                                ->send();
-                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
-                                        }),
                                     \Filament\Actions\Action::make('set_net_override')
                                         ->label('Ajustare manuală net')
                                         ->icon('heroicon-o-adjustments-horizontal')
@@ -1132,11 +1134,26 @@ class PayoutResource extends Resource
                 : 'automat, la creare';
         }
 
+        $docDate = ($record->created_at && $createdAt && $record->created_at->format('Y-m-d') !== $createdAt->format('Y-m-d'))
+            ? $record->created_at->format('d.m.Y') : null;
+        $createdNote = implode(' · ', array_filter([
+            $creator ? 'de ' . e($creator) : null,
+            $docDate ? 'data pe document: ' . $docDate : null,
+        ]));
+
+        // Cine a marcat plătit: salvat din 10.10.2026 (completed_by).
+        $completedNote = '';
+        if ($record->completed_at) {
+            $who = static::adminName($record->completed_by ?? null);
+            $completedNote = $who ? 'de ' . e($who) . ' (admin)'
+                : ($record->completed_at < '2026-10-10' ? 'cine: neînregistrat (înainte de 10.10.2026)' : '');
+        }
+
         $steps = [
-            ['Creat', $dt($createdAt), $creator ? 'de ' . e($creator) : ''],
+            ['Creat', $dt($createdAt), $createdNote],
             ['Aprobat', $dt($record->approved_at), $approvedNote],
             ['Procesat', $dt($record->processed_at), ''],
-            ['Finalizat', $dt($record->completed_at), ''],
+            ['Finalizat', $dt($record->completed_at), $completedNote],
         ];
 
         $items = '';
@@ -1197,6 +1214,9 @@ class PayoutResource extends Resource
         if ($record->source === 'organizer') {
             return $record->organizer ? $record->organizer->name . ' (organizator)' : 'organizator';
         }
+        if (($admin = static::adminName($record->created_by ?? null)) !== null) {
+            return $admin . ' (admin)';
+        }
         if ($record->approvedByUser) {
             return $record->approvedByUser->name . ' (admin)';
         }
@@ -1208,6 +1228,16 @@ class PayoutResource extends Resource
         }
 
         return null;
+    }
+
+    protected static function adminName($id): ?string
+    {
+        if (! $id) {
+            return null;
+        }
+        static $cache = [];
+
+        return $cache[$id] ??= \App\Models\MarketplaceAdmin::find($id)?->name;
     }
 
     /** Momentul real al creării (created_at poate fi antedatat la deconturile admin). */
@@ -1244,13 +1274,6 @@ class PayoutResource extends Resource
                 . ($date ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>" . e($date) . '</div>' : '');
         }
 
-        $moment = static::createdMoment($record);
-        $created = MarketplaceTz::fmt($moment, 'd.m.Y H:i', null, fallback: '—');
-        $creator = static::creatorText($record);
-        // Decont antedatat: data de pe document diferă de ziua creării.
-        $docDate = ($record->created_at && $moment && $record->created_at->format('Y-m-d') !== $moment->format('Y-m-d'))
-            ? $record->created_at->format('d.m.Y') : null;
-
         $color = static::ACTION_ICON_COLOR;
         $pencil = static::iconSvg('m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10', 15);
         $editSeries = "<button type='button' title='Editează seria' aria-label='Editează seria'"
@@ -1263,9 +1286,7 @@ class PayoutResource extends Resource
         $decont = $row('Serie', $editSeries . $series . ' &nbsp;' . static::statusChip((string) $record->status))
             . $row('Referință', $ref)
             . $row('Organizator', $org)
-            . $row('Eveniment', $eventHtml)
-            . $row('Creat', e($created) . ($creator ? " <span style='color:#9ca3af;'>· de " . e($creator) . '</span>' : '')
-                . ($docDate ? "<div style='font-size:11px;color:#9ca3af;margin-top:1px;'>data pe document: {$docDate}</div>" : ''));
+            . $row('Eveniment', $eventHtml);
 
         $m = $record->payout_method ?? [];
         $iban = ! empty($m['iban'])
