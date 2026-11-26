@@ -222,6 +222,7 @@ require_once __DIR__ . '/includes/header.php';
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Toate tranzacțiile sunt procesate prin protocoale securizate (SSL/TLS). Nu stocăm datele complete ale cardurilor pe serverele noastre. Plățile sunt procesate de parteneri autorizați PCI-DSS.</p>
 
             <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">5.3 Facturare</h3>
+            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Biletul de concert ține loc de chitanță fiscală însă dacă cumpărătorul dorește și factură fiscală este rugat să menționeze acest lucru și să introducă datele în momentul în care plasează comanda.</p>
             <p class="text-[15px] leading-[1.8] text-gray-600">După fiecare achiziție, veți primi automat pe email factura fiscală. Facturile sunt disponibile și în contul dumneavoastră, în secțiunea "Comenzile mele".</p>
         </section>
 
