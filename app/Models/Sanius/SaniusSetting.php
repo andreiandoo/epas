@@ -31,14 +31,69 @@ class SaniusSetting extends Model
         'grace_minutes' => 10,
     ];
 
-    public const CONTRACT_DEFAULT_TITLE = 'Contract de închiriere sănii și asumare a răspunderii';
+    public const CONTRACT_DEFAULT_TITLE = 'Contract de închiriere echipamente';
 
-    /** Text provizoriu, pana vine contractul tipizat folosit azi la Sf. Ana. */
-    public const CONTRACT_DEFAULT_BODY = 'Subsemnatul/Subsemnata {nume}, act de identitate {act_tip} seria {act_serie} nr. {act_numar}, telefon {telefon}, '
-        ."închiriez în data de {data}, ora {ora}, sănii de la {organizator}, pe tichetul de parcare nr. {tichet_parcare}.\n\n"
-        ."Declar că am primit săniile în stare bună și că le voi folosi doar pe traseul amenajat, conform regulilor afișate la ghișeu.\n\n"
-        .'Răspund pentru săniile primite până la predarea lor la ghișeu. Mă oblig să achit la casierie chiria, depășirile de timp, '
-        .'tractările peste cele incluse și, dacă este cazul, contravaloarea avariilor sau a saniei pierdute, conform tarifelor afișate.';
+    /** Contractul tipizat folosit la Sf. Ana (Sanius, model 2023); organizatorul il poate modifica din setari. */
+    public const CONTRACT_DEFAULT_BODY = <<<'TXT'
+Data: {data}, ora: {ora}. Număr sănii: {sanii}.
+
+I. PĂRȚILE CONTRACTANTE
+1.1. SC CSOMADCOM SRL, cu sediul în localitatea com. Cozmeni, sat Lăzărești nr. 76, județul Harghita, cod fiscal RO28151402, înregistrat la Registrul Comerțului Harghita sub nr. J19/117/2011, reprezentat(ă) prin Szakács-Czont Márton, în calitate de locator și
+1.2. {nume}, cu domiciliul în {adresa}, {act_tip} seria {act_serie} nr. {act_numar}, nr. telefon {telefon}, tichet parcare nr. {tichet_parcare}, în calitate de locatar,
+au convenit să încheie prezentul contract de închiriere, cu respectarea dispozițiilor art. 1777-1835 Cod civil.
+
+II. OBIECTUL CONTRACTULUI
+2.1. Obiectul contractului îl constituie cedarea folosinței asupra echipamentului sportiv: „Sanie EKO SNOW-STAR 100”, la prețul afișat la casierie.
+
+III. TERMENUL CONTRACTULUI
+3.1. Termenul contractului este de 1 zi, la data semnării prezentului contract.
+
+IV. PREȚUL CONTRACTULUI
+4.1. Prețul închirierii – chiria – pentru folosirea bunului care face obiectul închirierii este conform art. 2.1., calculat de la data și ora semnării prezentului contract.
+4.2. Plata chiriei se face în numerar sau cu card bancar la casă, după predarea echipamentului închiriat, predare confirmată de reprezentantul locatorului.
+
+V. OBLIGAȚIILE PĂRȚILOR
+5.1. Locatorul se obligă:
+a) să predea bunul în starea corespunzătoare folosinței;
+b) să asigure folosința bunului închiriat pe toată durata contractului.
+5.2. Obligațiile locatarului sunt următoarele:
+a) să folosească bunul închiriat potrivit destinației sale și să se îngrijească de bunul închiriat ca de proprietatea sa;
+b) să plătească chiria în cuantumul și la termenele stabilite prin prezentul contract;
+c) la încheierea duratei contractului, să restituie bunul închiriat în locația de unde l-a preluat, în starea în care l-a primit, adică în stare bună.
+
+VI. SUBÎNCHIRIEREA ȘI CESIUNEA CONTRACTULUI
+6.1. Subînchirierea bunului închiriat sau cesiunea contractului de închiriere unui terț nu este permisă.
+
+VII. RĂSPUNDEREA CONTRACTUALĂ
+7.1. Deteriorarea, distrugerea sau pierderea bunului închiriat obligă locatarul la plata sumei de 116,50 Euro pentru sania Snowstar, calculată la cursul valutar al zilei la banca locatorului, Raiffeisen Bank.
+7.2. Echipamentele închiriate sunt folosite de locatar pe propria responsabilitate, locatorul nu este răspunzător de eventualele accidente survenite în timpul utilizării echipamentelor.
+
+VIII. FORȚA MAJORĂ
+8.1. Niciuna dintre părțile contractante nu răspunde de neexecutarea la termen sau/și de executarea în mod necorespunzător – total sau parțial – a oricărei obligații care îi revine în baza prezentului contract, dacă neexecutarea sau/și executarea obligației respective a fost cauzată de forța majoră așa cum este definită de lege.
+
+IX. NOTIFICĂRILE ÎNTRE PĂRȚI
+9.1. În accepțiunea părților contractante, orice notificare adresată de una dintre acestea celeilalte este valabil îndeplinită dacă va fi transmisă la adresa/sediul prevăzut în partea introductivă a prezentului contract. Notificările verbale nu se iau în considerare de niciuna dintre părți.
+
+X. SOLUȚIONAREA LITIGIILOR
+10.1. În cazul în care eventualele neînțelegeri privind validitatea prezentului contract sau rezultate din interpretarea, executarea sau încetarea lui nu se vor putea rezolva pe cale amiabilă, părțile au convenit să se adreseze instanței judecătorești competente a județului Harghita.
+
+XI. CLAUZE GENERALE REFERITOARE LA PROTECȚIA DATELOR CU CARACTER PERSONAL
+11.1. Părțile colectează și prelucrează datele cu caracter personal înscrise în prezentul contract în conformitate cu legislația în vigoare, în modalități care asigură confidențialitatea și securitatea adecvată a acestor date, în vederea asigurării protecției împotriva prelucrării neautorizate sau ilegale și împotriva pierderii, a distrugerii sau a deteriorării accidentale.
+11.2. În procesul de prelucrare a datelor cu caracter personal, părțile aplică prevederile Regulamentului (UE) 2016/679 al Parlamentului European și al Consiliului din 27 aprilie 2016 privind protecția persoanelor fizice în ceea ce privește prelucrarea datelor cu caracter personal și privind libera circulație a acestor date și de abrogare a Directivei 95/46/CE (regulamentul general privind protecția datelor) și ale legislației naționale.
+11.3. Datele cu caracter personal comunicate în cadrul prezentului contract vor fi prelucrate în scopul executării prezentului contract.
+11.4. Datele cu caracter personal colectate și prelucrate în vederea executării prezentului contract sunt următoarele: nume și prenume, adresa, serie și număr carte de identitate, cod numeric personal, număr de telefon, tichet de parcare.
+11.5. Datele personale comunicate în cadrul prezentului contract pot fi comunicate instituțiilor publice, în conformitate cu prevederile legale în vigoare.
+11.6. În situația în care este necesară prelucrarea datelor personale în alte scopuri decât cele prevăzute la pct. 11.3, partea care realizează prelucrarea va informa cealaltă parte și îi va solicita acordul scris cu privire la prelucrarea datelor cu caracter personal, în conformitate cu prevederile legislației în vigoare.
+11.7. Părțile își garantează reciproc dreptul la informare și acces la datele cu caracter personal, dreptul la rectificare, actualizare, portabilitate, ștergere, la restricționare și opoziție în conformitate cu prevederile legislației în vigoare.
+11.8. Datele personale înscrise în prezentul contract sunt păstrate pe întreaga perioadă de executare a contractului și ulterior încetării acestuia, în conformitate cu prevederile legale referitoare la arhivarea documentelor.
+
+XII. CLAUZE FINALE
+12.1. Prezentul contract reprezintă voința părților și înlătură orice altă înțelegere verbală dintre acestea, anterioară sau ulterioară încheierii lui.
+12.2. Prin semnarea contractului părțile au luat la cunoștință faptul că declararea unei identități false și uzul de fals se pedepsesc conform art. 323 și 327 din Codul Penal.
+12.3. Prezentul contract s-a încheiat într-un număr de 2 exemplare.
+
+Locatar: {nume}. Declar că am luat la cunoștință clauzele contractului și mă angajez să respect regulamentul de funcționare.
+TXT;
 
     protected $table = 'sanius_settings';
 
