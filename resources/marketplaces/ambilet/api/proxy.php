@@ -4260,6 +4260,20 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.team.reset-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/reset-password';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.set-pin':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/set-pin';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER API KEY ====================
 
     case 'organizer.api-key':

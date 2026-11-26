@@ -9,6 +9,7 @@ use App\Models\MarketplaceOrganizerTeamMember;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Address;
 
@@ -63,6 +64,7 @@ class TeamController extends BaseController
                 'leisure_role' => $member->leisure_role,
                 'permissions' => $member->getEffectivePermissions(),
                 'gate_id' => $member->gate_id,
+                'has_pin' => ! empty($member->kiosk_pin),
                 'status' => $member->status,
                 // event_ids = [] means "all events" (legacy); a non-empty list
                 // is an explicit whitelist for non-admin members. Admins always
@@ -404,6 +406,67 @@ class TeamController extends BaseController
                 'email' => $member->email,
             ],
         ], 'Parola a fost resetata');
+    }
+
+    /**
+     * PIN-ul de iesire din aplicatie pe tableta (kiosk). pin = null il sterge.
+     * Doar contul principal sau un membru cu drept de echipa il poate seta.
+     */
+    public function setPin(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+        if (! $organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+        $caller = $this->currentTeamMember($request);
+        if ($caller && $caller->role !== 'admin' && ! in_array('team', (array) $caller->getEffectivePermissions(), true)) {
+            return $this->error('Nu ai drept să modifici echipa.', 403);
+        }
+
+        $validated = $request->validate([
+            'member_id' => 'required|string',
+            'pin' => ['nullable', 'string', 'regex:/^\d{4,8}$/'],
+        ], ['pin.regex' => 'PIN-ul are între 4 și 8 cifre.']);
+
+        if (str_starts_with($validated['member_id'], 'owner_')) {
+            return $this->error('Contul principal iese din aplicație cu parola lui.', 422);
+        }
+        $member = $organizer->teamMembers()->find($validated['member_id']);
+        if (! $member) {
+            return $this->error('Membrul nu a fost gasit', 404);
+        }
+
+        $pin = $validated['pin'] ?? null;
+        $member->forceFill(['kiosk_pin' => $pin ? bcrypt($pin) : null])->save();
+
+        return $this->success(['member' => ['id' => (string) $member->id, 'has_pin' => (bool) $pin]],
+            $pin ? 'PIN setat' : 'PIN șters');
+    }
+
+    /**
+     * Aplicatia de pe tableta verifica PIN-ul (sau parola) contului logat inainte
+     * sa iasa din kiosk. Raspunsul gresit e 422, ca aplicatia sa ramana logata.
+     */
+    public function verifyExit(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+        if (! $organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+        $validated = $request->validate(['secret' => 'required|string|max:100']);
+        $secret = $validated['secret'];
+
+        $member = $this->currentTeamMember($request);
+        $ok = $member
+            ? ((! empty($member->kiosk_pin) && Hash::check($secret, $member->kiosk_pin))
+                || (! empty($member->password) && Hash::check($secret, $member->password)))
+            : (! empty($organizer->password) && Hash::check($secret, $organizer->password));
+
+        if (! $ok) {
+            return $this->error('PIN sau parolă greșită.', 422);
+        }
+
+        return $this->success(['ok' => true]);
     }
 
     public function activate(Request $request): JsonResponse

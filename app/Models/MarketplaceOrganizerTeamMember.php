@@ -52,6 +52,7 @@ class MarketplaceOrganizerTeamMember extends Model
     protected $hidden = [
         'password',
         'invite_token',
+        'kiosk_pin',
     ];
 
     protected $casts = [

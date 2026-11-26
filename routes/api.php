@@ -1947,6 +1947,11 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.team.activate');
         Route::post('/team/reset-password', [OrganizerTeamController::class, 'resetPassword'])
             ->name('api.marketplace-client.organizer.team.reset-password');
+        Route::post('/team/set-pin', [OrganizerTeamController::class, 'setPin'])
+            ->name('api.marketplace-client.organizer.team.set-pin');
+        Route::post('/me/verify-exit', [OrganizerTeamController::class, 'verifyExit'])
+            ->middleware('throttle:10,1')
+            ->name('api.marketplace-client.organizer.me.verify-exit');
 
         // Dashboard
         Route::get('/dashboard', [OrganizerDashboardController::class, 'index'])
