@@ -461,6 +461,32 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     </div>
 </div>
 
+<!-- Parola / PIN pentru un membru -->
+<div id="cred-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="TeamManager.hideCredModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="relative w-full max-w-sm bg-white shadow-xl rounded-2xl">
+            <form class="p-6 space-y-4" onsubmit="TeamManager.submitCred(event)">
+                <div>
+                    <h3 id="cred-title" class="text-lg font-semibold text-secondary"></h3>
+                    <p id="cred-member" class="text-sm text-muted"></p>
+                </div>
+                <p id="cred-help" class="text-xs text-muted"></p>
+                <div class="relative">
+                    <input type="text" id="cred-value" autocomplete="off" class="w-full px-4 py-2.5 pr-24 text-sm font-mono border rounded-lg border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                    <button type="button" id="cred-generate" onclick="TeamManager.generateCred()" class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[11px] text-primary hover:underline"><?= amb_icon('dices', 'w-3 h-3') ?> Generează</button>
+                </div>
+                <p id="cred-error" class="hidden text-sm font-medium text-red-600"></p>
+                <div class="flex gap-3">
+                    <button type="button" onclick="TeamManager.hideCredModal()" class="flex-1 px-4 py-2.5 text-sm font-semibold border rounded-lg border-border text-muted hover:bg-slate-50">Anulează</button>
+                    <button type="submit" id="cred-submit" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-primary hover:bg-primary-dark">Salvează</button>
+                </div>
+                <button type="button" id="cred-clear" onclick="TeamManager.clearPin()" class="hidden w-full text-xs font-semibold text-red-600 hover:underline">Șterge PIN-ul</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php require_once dirname(__DIR__) . '/includes/scripts.php'; ?>
 
 <script>
@@ -619,6 +645,12 @@ const TeamManager = {
 
         return `
             <div class="flex gap-2">
+                <button onclick="TeamManager.showCredModal('${member.id}', 'password')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Schimbă parola">
+                    ${ambIcon('lock', 'w-4 h-4')}
+                </button>
+                <button onclick="TeamManager.showCredModal('${member.id}', 'pin')" class="flex items-center justify-center h-8 px-2 text-[11px] font-bold transition-colors border rounded-lg ${member.has_pin ? 'border-primary text-primary bg-primary/5' : 'border-border text-gray-500'} hover:border-primary hover:text-primary" title="${member.has_pin ? 'PIN setat — schimbă sau șterge' : 'Setează PIN de ieșire din aplicație'}">
+                    PIN
+                </button>
                 <button onclick="TeamManager.showEditModal('${member.id}')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Editează">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                 </button>
@@ -939,6 +971,88 @@ const TeamManager = {
         } catch (error) {
             console.error('Error resending invite:', error);
             this.showError('Eroare la retrimiterea invitației');
+        }
+    },
+
+    /**
+     * Parola si PIN-ul de iesire din aplicatie, per membru
+     */
+    showCredModal(memberId, mode) {
+        const member = this.members.find(m => String(m.id) === String(memberId));
+        if (!member) return;
+        this.cred = { memberId, mode };
+        const isPin = mode === 'pin';
+        document.getElementById('cred-title').textContent = isPin ? 'PIN ieșire din aplicație' : 'Schimbă parola';
+        document.getElementById('cred-member').textContent = `${member.name} · ${member.email}`;
+        document.getElementById('cred-help').textContent = isPin
+            ? 'Cu PIN-ul (4–8 cifre) se iese din ecranul de kiosk al aplicației: apăsare lungă 3 secunde în colțul stânga-sus. Merge și parola contului.'
+            : 'Minimum 8 caractere. Parola se schimbă la toate organizatorii unde e folosit același email. Aplicațiile deja logate rămân logate.';
+        const input = document.getElementById('cred-value');
+        input.value = '';
+        input.inputMode = isPin ? 'numeric' : 'text';
+        input.maxLength = isPin ? 8 : 100;
+        input.placeholder = isPin ? 'ex: 4821' : 'Parola nouă';
+        document.getElementById('cred-clear').classList.toggle('hidden', !(isPin && member.has_pin));
+        document.getElementById('cred-error').classList.add('hidden');
+        document.getElementById('cred-modal').classList.remove('hidden');
+        setTimeout(() => input.focus(), 50);
+    },
+
+    hideCredModal() {
+        document.getElementById('cred-modal').classList.add('hidden');
+        this.cred = null;
+    },
+
+    generateCred() {
+        const isPin = this.cred?.mode === 'pin';
+        const chars = isPin ? '0123456789' : 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const len = isPin ? 6 : 12;
+        let out = '';
+        const rnd = new Uint32Array(len);
+        crypto.getRandomValues(rnd);
+        for (let i = 0; i < len; i++) out += chars[rnd[i] % chars.length];
+        document.getElementById('cred-value').value = out;
+    },
+
+    credError(msg) {
+        const el = document.getElementById('cred-error');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    },
+
+    async submitCred(e) {
+        e.preventDefault();
+        if (!this.cred) return;
+        const value = document.getElementById('cred-value').value.trim();
+        const isPin = this.cred.mode === 'pin';
+        if (isPin && !/^\d{4,8}$/.test(value)) return this.credError('PIN-ul are între 4 și 8 cifre.');
+        if (!isPin && value.length < 8) return this.credError('Parola trebuie să aibă minimum 8 caractere.');
+        await this.saveCred(isPin ? '/organizer/team/set-pin' : '/organizer/team/reset-password',
+            isPin ? { member_id: this.cred.memberId, pin: value } : { member_id: this.cred.memberId, password: value },
+            isPin ? `PIN setat: ${value}. Notează-l, nu se mai poate vedea.` : 'Parola a fost schimbată. Comunic-o direct persoanei.');
+    },
+
+    async clearPin() {
+        if (!this.cred || !confirm('Ștergi PIN-ul? Din kiosk se va putea ieși doar cu parola contului.')) return;
+        await this.saveCred('/organizer/team/set-pin', { member_id: this.cred.memberId, pin: null }, 'PIN șters');
+    },
+
+    async saveCred(endpoint, payload, okMsg) {
+        const btn = document.getElementById('cred-submit');
+        btn.disabled = true;
+        try {
+            const response = await AmbiletAPI.request(endpoint, { method: 'POST', body: JSON.stringify(payload) });
+            if (response.success) {
+                this.hideCredModal();
+                this.showSuccess(okMsg);
+                await this.loadTeam();
+            } else {
+                this.credError(response.message || 'Nu s-a putut salva.');
+            }
+        } catch (error) {
+            this.credError(error?.message || 'Nu s-a putut salva.');
+        } finally {
+            btn.disabled = false;
         }
     },
 
