@@ -128,10 +128,16 @@ class EditEvent extends EditRecord
             $title .= ' (' . implode(', ', $parts) . ')';
         }
 
-        // Inject CSS for header layout
+        return $title ?: 'Edit Event';
+    }
+
+    // The header layout CSS rides on the heading only; on the title it
+    // leaked into the browser tab as text.
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
+    {
         $css = '<style>.fi-header{flex-direction:column;align-items:start;}</style>';
 
-        return new \Illuminate\Support\HtmlString(e($title ?: 'Edit Event') . $css);
+        return new \Illuminate\Support\HtmlString(e($this->getTitle()) . $css);
     }
 
     public function getBreadcrumbs(): array
