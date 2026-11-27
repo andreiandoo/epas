@@ -50,7 +50,7 @@
                 </div>
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $todo->title }}</h2>
                 <p class="mt-1 text-xs text-gray-500">
-                    {{ __('Deschis pe') }} <strong>{{ $todo->opened_at?->format('d M Y, H:i') }}</strong>
+                    {{ __('Deschis pe') }} <strong>{{ \App\Support\MarketplaceTz::fmt($todo->opened_at, 'd M Y, H:i', fallback: '') }}</strong>
                     @if ($todo->creator)
                         de <strong>{{ $todo->creator->name }}</strong>
                     @endif
@@ -122,7 +122,7 @@
                                     <div class="flex-1 max-w-[80%] {{ $isSelf ? 'text-right' : '' }}">
                                         <div class="text-xs text-gray-500 mb-1">
                                             <strong>{{ $authorName }}</strong>
-                                            <span class="text-gray-400">· {{ $comment->created_at?->format('d M Y, H:i') }}</span>
+                                            <span class="text-gray-400">· {{ \App\Support\MarketplaceTz::fmt($comment->created_at, 'd M Y, H:i', fallback: '') }}</span>
                                         </div>
                                         <div class="rounded-2xl px-4 py-3 inline-block text-left" style="{{ $isSelf ? $bubbleSelf : $bubbleOther }}">
                                             <div class="prose prose-sm max-w-none">
@@ -184,7 +184,7 @@
                     </div>
                     <div class="flex justify-between gap-3">
                         <dt class="text-gray-500">{{ __('Deschis') }}</dt>
-                        <dd class="text-gray-800 dark:text-gray-200">{{ $todo->opened_at?->format('d M Y, H:i') }}</dd>
+                        <dd class="text-gray-800 dark:text-gray-200">{{ \App\Support\MarketplaceTz::fmt($todo->opened_at, 'd M Y, H:i', fallback: '') }}</dd>
                     </div>
                     @if ($todo->first_response_at)
                         <div class="flex justify-between gap-3">
@@ -195,13 +195,13 @@
                     @if ($todo->resolved_at)
                         <div class="flex justify-between gap-3">
                             <dt class="text-gray-500">{{ __('Rezolvat') }}</dt>
-                            <dd class="text-gray-800 dark:text-gray-200">{{ $todo->resolved_at->format('d M Y, H:i') }}</dd>
+                            <dd class="text-gray-800 dark:text-gray-200">{{ \App\Support\MarketplaceTz::fmt($todo->resolved_at, 'd M Y, H:i', fallback: '') }}</dd>
                         </div>
                     @endif
                     @if ($todo->closed_at)
                         <div class="flex justify-between gap-3">
                             <dt class="text-gray-500">{{ __('Închis') }}</dt>
-                            <dd class="text-gray-800 dark:text-gray-200">{{ $todo->closed_at->format('d M Y, H:i') }}</dd>
+                            <dd class="text-gray-800 dark:text-gray-200">{{ \App\Support\MarketplaceTz::fmt($todo->closed_at, 'd M Y, H:i', fallback: '') }}</dd>
                         </div>
                     @endif
                 </dl>

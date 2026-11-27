@@ -86,10 +86,10 @@
                     <p class="text-xs text-right text-gray-400">{{ $progress }}%</p>
 
                     @if($seg['campaign']->started_at)
-                    <p class="text-xs text-gray-400">Pornit: {{ \Carbon\Carbon::parse($seg['campaign']->started_at)->format('d M Y H:i') }}</p>
+                    <p class="text-xs text-gray-400">Pornit: {{ \App\Support\MarketplaceTz::fmt($seg['campaign']->started_at, 'd M Y H:i', fallback: '') }}</p>
                     @endif
                     @if($seg['campaign']->completed_at)
-                    <p class="text-xs text-gray-400">Finalizat: {{ \Carbon\Carbon::parse($seg['campaign']->completed_at)->format('d M Y H:i') }}</p>
+                    <p class="text-xs text-gray-400">Finalizat: {{ \App\Support\MarketplaceTz::fmt($seg['campaign']->completed_at, 'd M Y H:i', fallback: '') }}</p>
                     @endif
                 </div>
             @else

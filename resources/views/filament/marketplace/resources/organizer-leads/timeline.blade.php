@@ -53,7 +53,7 @@
                             {{ $event->type_label }}
                         </p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                            {{ $event->created_at->format('d M Y H:i') }}
+                            {{ \App\Support\MarketplaceTz::fmt($event->created_at, 'd M Y H:i', fallback: '') }}
                             @if ($event->performedBy)
                                 · <span class="font-semibold">{{ $event->performedBy->name }}</span>
                             @endif

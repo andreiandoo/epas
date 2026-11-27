@@ -44,7 +44,7 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
-                            {{ $domain->created_at->format('M d, Y') }}
+                            {{ \App\Support\MarketplaceTz::fmt($domain->created_at, 'M d, Y', fallback: '') }}
                         </td>
                     </tr>
                 @endforeach

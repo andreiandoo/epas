@@ -99,7 +99,7 @@
                                         <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-sans">Ref: {{ $advance->payment_reference }}</div>
                                     @endif
                                 </td>
-                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">{{ ($advance->completed_at ?? $advance->created_at)?->format('d.m.Y') }}</td>
+                                <td class="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">{{ \App\Support\MarketplaceTz::fmt($advance->completed_at ?? $advance->created_at, 'd.m.Y', fallback: '') }}</td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">{{ number_format((float) $advance->amount, 2, ',', '.') }} RON</td>
                                 <td class="px-6 py-3 text-sm text-right text-gray-600 dark:text-gray-300">{{ number_format((float) $advance->advance_used, 2, ',', '.') }} RON</td>
                                 <td class="px-6 py-3 text-sm text-right font-semibold {{ $advance->advance_remaining > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400' }}">{{ number_format((float) $advance->advance_remaining, 2, ',', '.') }} RON</td>
@@ -383,10 +383,10 @@
                                     {{ $payout->payment_reference ?? '-' }}
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                    <span class="whitespace-nowrap">{{ $payout->created_at?->format('d.m.Y') }}</span>
+                                    <span class="whitespace-nowrap">{{ \App\Support\MarketplaceTz::fmt($payout->created_at, 'd.m.Y', fallback: '') }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">
-                                    <span class="whitespace-nowrap">{{ $payout->completed_at?->format('d.m.Y') ?? '-' }}</span>
+                                    <span class="whitespace-nowrap">{{ \App\Support\MarketplaceTz::fmt($payout->completed_at, 'd.m.Y', fallback: '-') }}</span>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
                                     @if($payout->canBeCompleted())

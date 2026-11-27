@@ -223,7 +223,7 @@
                             </td>
                             <td class="px-3 py-2 text-xs text-gray-500">
                                 @if($ticket->checked_in_at)
-                                    {{ $ticket->checked_in_at->format('d.m.Y H:i') }}
+                                    {{ \App\Support\TenantTz::fmt($ticket->checked_in_at, 'd.m.Y H:i', fallback: '') }}
                                     <br><span class="text-gray-400">{{ $ticket->checked_in_by }}</span>
                                 @else
                                     -

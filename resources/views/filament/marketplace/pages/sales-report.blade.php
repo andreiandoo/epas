@@ -224,7 +224,7 @@
                                             ">{{ $r['status'] }}</span>
                                         </div>
                                     </td>
-                                    <td class="py-2 px-3 text-gray-600 dark:text-gray-300 text-xs">{{ optional($r['paid_at'])->format('d.m.Y H:i') ?? optional($r['created_at'])->format('d.m.Y H:i') ?? '—' }}</td>
+                                    <td class="py-2 px-3 text-gray-600 dark:text-gray-300 text-xs">{{ \App\Support\MarketplaceTz::fmt($r['paid_at'] ?? $r['created_at'], 'd.m.Y H:i') }}</td>
                                     <td class="py-2 px-3 text-gray-900 dark:text-white">{{ $r['event_title'] }}</td>
                                     <td class="py-2 px-3 text-gray-700 dark:text-gray-300">
                                         <div class="font-medium">{{ $r['customer_name'] ?: '—' }}</div>

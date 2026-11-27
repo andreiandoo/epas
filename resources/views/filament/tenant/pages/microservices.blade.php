@@ -50,7 +50,7 @@
                             @if($microservice->pivot->activated_at)
                                 <span class="flex items-center gap-1">
                                     <x-heroicon-o-calendar class="w-3.5 h-3.5" />
-                                    {{ \Carbon\Carbon::parse($microservice->pivot->activated_at)->format('M d, Y') }}
+                                    {{ \App\Support\TenantTz::fmt($microservice->pivot->activated_at, 'M d, Y', fallback: '') }}
                                 </span>
                             @else
                                 <span></span>

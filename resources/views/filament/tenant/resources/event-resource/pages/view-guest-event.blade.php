@@ -272,7 +272,7 @@
                                             {{ number_format($order['total'], 2) }} {{ $tenant->currency ?? 'EUR' }}
                                         </td>
                                         <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                            {{ $order['created_at']->format('M d, H:i') }}
+                                            {{ \App\Support\TenantTz::fmt($order['created_at'], 'M d, H:i', fallback: '') }}
                                         </td>
                                     </tr>
                                 @endforeach

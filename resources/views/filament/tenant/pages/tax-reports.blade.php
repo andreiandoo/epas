@@ -41,7 +41,7 @@
                     </div>
                     <div class="text-right">
                         <div class="text-sm text-emerald-100">{{ __('Generated') }}</div>
-                        <div class="text-lg font-semibold">{{ now()->format('d M Y H:i') }}</div>
+                        <div class="text-lg font-semibold">{{ \App\Support\TenantTz::fmt(now(), 'd M Y H:i', fallback: '') }}</div>
                     </div>
                 </div>
             </div>

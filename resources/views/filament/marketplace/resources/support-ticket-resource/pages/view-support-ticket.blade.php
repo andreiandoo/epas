@@ -62,7 +62,7 @@
                 </div>
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $ticket->subject }}</h2>
                 <p class="mt-1 text-xs text-gray-500">
-                    {{ __('Deschis pe') }} <strong>{{ $ticket->opened_at?->format('d M Y, H:i') }}</strong>
+                    {{ __('Deschis pe') }} <strong>{{ \App\Support\MarketplaceTz::fmt($ticket->opened_at, 'd M Y, H:i', fallback: '') }}</strong>
                     @if ($ticket->first_response_at)
                         · Primul răspuns: {{ $ticket->first_response_at->diffForHumans($ticket->opened_at, ['parts' => 2, 'short' => true]) }}
                     @endif
@@ -140,7 +140,7 @@
                                     <div class="flex-1 h-px" style="background:#e5e7eb"></div>
                                     <div class="flex items-center gap-2 px-3 py-1 text-xs rounded-full" style="background:#f1f5f9;color:#475569">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $eventIcon }}"/></svg>
-                                        <span><strong>{{ $message->body }}</strong> <span style="opacity:.7">de {{ $authorName }} · {{ $message->created_at?->format('d M Y, H:i') }}</span></span>
+                                        <span><strong>{{ $message->body }}</strong> <span style="opacity:.7">de {{ $authorName }} · {{ \App\Support\MarketplaceTz::fmt($message->created_at, 'd M Y, H:i', fallback: '') }}</span></span>
                                     </div>
                                     <div class="flex-1 h-px" style="background:#e5e7eb"></div>
                                 </div>
@@ -175,7 +175,7 @@
                                         @endif
                                     </div>
                                     <p class="mt-1 text-xs text-gray-500 {{ $isStaff ? '' : 'text-right' }}">
-                                        {{ $message->created_at?->format('d M Y, H:i') }}
+                                        {{ \App\Support\MarketplaceTz::fmt($message->created_at, 'd M Y, H:i', fallback: '') }}
                                     </p>
                                 </div>
                             </div>
@@ -298,7 +298,7 @@
                             <div><dt class="text-gray-500">{{ __('Limbă') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['language'] }}</dd></div>
                         @endif
                         @if (!empty($context['captured_at']))
-                            <div><dt class="text-gray-500">{{ __('Capturat la') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ \Carbon\Carbon::parse($context['captured_at'])->format('d M Y, H:i:s') }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Capturat la') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ \App\Support\MarketplaceTz::fmt($context['captured_at'], 'd M Y, H:i:s', fallback: '') }}</dd></div>
                         @endif
                     </dl>
                 </div>

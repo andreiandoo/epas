@@ -8,7 +8,7 @@
                 <div class="flex justify-between"><dt class="text-gray-500">{{ __('Status') }}</dt><dd><span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $account->status?->value === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">{{ $account->status?->value ?? $account->status }}</span></dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500">{{ __('Edition') }}</dt><dd>{{ $account->edition?->name ?? '-' }}</dd></div>
                 <div class="flex justify-between"><dt class="text-gray-500">{{ __('Wristband') }}</dt><dd>{{ $account->wristband?->uid ?? '-' }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">{{ __('Activated') }}</dt><dd>{{ $account->activated_at?->format('d M Y H:i') ?? '-' }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500">{{ __('Activated') }}</dt><dd>{{ \App\Support\TenantTz::fmt($account->activated_at, 'd M Y H:i', fallback: '') ?? '-' }}</dd></div>
             </dl>
         </div>
 

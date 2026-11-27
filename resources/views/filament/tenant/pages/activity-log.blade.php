@@ -34,7 +34,7 @@
                                 <p class="text-xs text-gray-500 mt-1">
                                     {{ $activity->created_at->diffForHumans() }}
                                     &bull;
-                                    {{ $activity->created_at->format('M d, Y H:i') }}
+                                    {{ \App\Support\TenantTz::fmt($activity->created_at, 'M d, Y H:i', fallback: '') }}
                                 </p>
                                 @if($activity->properties && $activity->properties->count() > 0)
                                     <details class="mt-2">

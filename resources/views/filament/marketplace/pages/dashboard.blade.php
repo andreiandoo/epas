@@ -47,16 +47,16 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500 dark:text-gray-400">
                             @if($capi['expired_at'])
-                                <span>{{ __('Expirat pe') }} <strong class="font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $capi['expired_at']->format('d.m.Y H:i') }}</strong></span>
+                                <span>{{ __('Expirat pe') }} <strong class="font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ \App\Support\MarketplaceTz::fmt($capi['expired_at'], 'd.m.Y H:i', fallback: '') }}</strong></span>
                                 <span>·</span>
                             @endif
                             @if($capi['first_failed_at'])
-                                <span class="tabular-nums">Respins din {{ $capi['first_failed_at']->format('d.m.Y H:i') }}</span>
+                                <span class="tabular-nums">Respins din {{ \App\Support\MarketplaceTz::fmt($capi['first_failed_at'], 'd.m.Y H:i', fallback: '') }}</span>
                                 <span>·</span>
                             @endif
                             <span class="tabular-nums">{{ $capi['failed_count'] }} {{ $capi['failed_count'] === 1 ? 'eveniment pierdut' : 'evenimente pierdute' }}</span>
                             <span>·</span>
-                            <span class="tabular-nums">Ultimul trimis cu succes: {{ $capi['last_sent_at'] ? $capi['last_sent_at']->format('d.m.Y H:i') : 'niciodată' }}</span>
+                            <span class="tabular-nums">Ultimul trimis cu succes: {{ $capi['last_sent_at'] ? \App\Support\MarketplaceTz::fmt($capi['last_sent_at'], 'd.m.Y H:i', fallback: '') : 'niciodată' }}</span>
                         </div>
                         @if($capi['message'])
                             <p class="mt-1 text-[11px] text-gray-400 truncate" title="{{ $capi['message'] }}">{{ $capi['message'] }}</p>

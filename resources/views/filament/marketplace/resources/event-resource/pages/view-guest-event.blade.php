@@ -185,7 +185,7 @@
                                             </td>
                                             <td class="py-3 text-gray-600 dark:text-gray-300">{{ $order['tickets_count'] }}</td>
                                             <td class="py-3 text-right font-medium text-gray-900 dark:text-white">{{ number_format($order['total'], 2) }} RON</td>
-                                            <td class="py-3 text-right text-gray-500 dark:text-gray-400">{{ $order['created_at']->format('d M H:i') }}</td>
+                                            <td class="py-3 text-right text-gray-500 dark:text-gray-400">{{ \App\Support\MarketplaceTz::fmt($order['created_at'], 'd M H:i', fallback: '') }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

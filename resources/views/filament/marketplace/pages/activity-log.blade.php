@@ -32,7 +32,7 @@
                                     </p>
                                 </div>
                                 <div class="flex-shrink-0 text-xs text-gray-400">
-                                    {{ $activity->created_at->format('d M Y H:i') }}
+                                    {{ \App\Support\MarketplaceTz::fmt($activity->created_at, 'd M Y H:i', fallback: '') }}
                                 </div>
                             </div>
                         </li>

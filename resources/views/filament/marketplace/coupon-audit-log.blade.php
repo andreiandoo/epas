@@ -77,7 +77,7 @@
                     <div class="flex justify-between gap-3">
                         <dt class="text-gray-500 dark:text-gray-400">{{ __('La') }}</dt>
                         <dd class="font-medium text-gray-900 dark:text-white text-right">
-                            {{ $record->created_at?->translatedFormat('d M Y, H:i:s') ?? '—' }}
+                            {{ $record->created_at?->copy()->setTimezone(\App\Support\MarketplaceTz::tz())->translatedFormat('d M Y, H:i:s') ?? '—' }}
                         </dd>
                     </div>
                     @if ($createdIp)
@@ -133,7 +133,7 @@
                                 </span>
                             @endif
                             <span class="ml-auto text-xs text-gray-500 dark:text-gray-400">
-                                {{ $activity->created_at?->translatedFormat('d M Y, H:i:s') }}
+                                {{ $activity->created_at?->copy()->setTimezone(\App\Support\MarketplaceTz::tz())->translatedFormat('d M Y, H:i:s') }}
                             </span>
                         </div>
 

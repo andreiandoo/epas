@@ -238,15 +238,15 @@
 
                         <div class="flex-1 overflow-y-auto p-4 space-y-3" x-data
                             x-init="$el.scrollTop = $el.scrollHeight; new MutationObserver(() => { $el.scrollTop = $el.scrollHeight; }).observe($el, { childList: true, subtree: true });">
-                            <div class="text-center text-[11px] text-gray-400">Conversație începută {{ optional($active->created_at)->format('d.m.Y H:i') }}</div>
+                            <div class="text-center text-[11px] text-gray-400">Conversație începută {{ \App\Support\MarketplaceTz::fmt($active->created_at, 'd.m.Y H:i', fallback: '') }}</div>
                             @foreach($messages as $m)
                                 @if($m->type === 'system')
-                                    <div class="text-center text-[11px] text-gray-400">{{ $m->body }} · {{ optional($m->created_at)->format('H:i') }}</div>
+                                    <div class="text-center text-[11px] text-gray-400">{{ $m->body }} · {{ \App\Support\MarketplaceTz::fmt($m->created_at, 'H:i', fallback: '') }}</div>
                                 @elseif($m->is_internal)
                                     {{-- Internal note (operator-only) → LEFT, amber --}}
                                     <div class="flex justify-start">
                                         <div class="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
-                                            <div class="text-[10px] font-semibold text-amber-600 mb-0.5">Notă internă · {{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
+                                            <div class="text-[10px] font-semibold text-amber-600 mb-0.5">Notă internă · {{ $m->author_label }} · {{ \App\Support\MarketplaceTz::fmt($m->created_at, 'H:i', fallback: '') }}</div>
                                             <div class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $m->body }}</div>
                                         </div>
                                     </div>
@@ -254,7 +254,7 @@
                                     {{-- Operator (staff) → LEFT --}}
                                     <div class="flex justify-start">
                                         <div class="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 bg-gray-100 dark:bg-gray-800">
-                                            <div class="text-[10px] font-semibold text-gray-500 mb-0.5">{{ $m->author_label }} · {{ optional($m->created_at)->format('H:i') }}</div>
+                                            <div class="text-[10px] font-semibold text-gray-500 mb-0.5">{{ $m->author_label }} · {{ \App\Support\MarketplaceTz::fmt($m->created_at, 'H:i', fallback: '') }}</div>
                                             @if($m->body)<div class="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{{ $m->body }}</div>@endif
                                             @foreach($m->attachments ?? [] as $att)
                                                 @if(!empty($att['token']))
@@ -273,7 +273,7 @@
                                                     <img src="{{ route('marketplace.chat.attachment', ['conversation' => $active->id, 'token' => $att['token']]) }}" onclick="window.open(this.src,'_blank')" class="mt-1 rounded-lg max-w-[220px] max-h-[220px] cursor-pointer border border-white/20" alt="imagine">
                                                 @endif
                                             @endforeach
-                                            <div class="text-[10px] text-white/70 mt-0.5 text-right">{{ optional($m->created_at)->format('H:i') }}</div>
+                                            <div class="text-[10px] text-white/70 mt-0.5 text-right">{{ \App\Support\MarketplaceTz::fmt($m->created_at, 'H:i', fallback: '') }}</div>
                                         </div>
                                     </div>
                                 @endif
@@ -289,7 +289,7 @@
                             @endphp
                             <div class="border-t border-gray-100 dark:border-gray-800 p-3 text-center">
                                 <div class="text-xs font-semibold text-gray-600 dark:text-gray-300">{{ __('Conversație încheiată') }}</div>
-                                <div class="text-[11px] text-gray-400 mt-0.5">{{ $closedReason }}@if($closedAt) · {{ $closedAt->format('d.m.Y H:i') }}@endif</div>
+                                <div class="text-[11px] text-gray-400 mt-0.5">{{ $closedReason }}@if($closedAt) · {{ \App\Support\MarketplaceTz::fmt($closedAt, 'd.m.Y H:i', fallback: '') }}@endif</div>
                             </div>
                         @endif
 
@@ -429,7 +429,7 @@
                                         @php [$hlabel, $hclass] = $statusMeta[$h->status] ?? ['—','bg-gray-100 text-gray-600']; @endphp
                                         <button type="button" wire:click="select('{{ $h->reference }}')"
                                             class="w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                                            <span class="text-xs text-gray-600 dark:text-gray-300">{{ optional($h->created_at)->format('d.m.Y H:i') }}</span>
+                                            <span class="text-xs text-gray-600 dark:text-gray-300">{{ \App\Support\MarketplaceTz::fmt($h->created_at, 'd.m.Y H:i', fallback: '') }}</span>
                                             <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $hclass }}">{{ $hlabel }}</span>
                                         </button>
                                     @endforeach

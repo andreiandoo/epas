@@ -23,7 +23,7 @@
                     @if($activatedAt)
                         <p class="text-xs text-gray-500 dark:text-gray-500 mt-2 flex items-center gap-1">
                             <x-heroicon-o-calendar class="w-3.5 h-3.5" />
-                            {{ __('Active since :date', ['date' => \Carbon\Carbon::parse($activatedAt)->format('M d, Y')]) }}
+                            {{ __('Active since :date', ['date' => \App\Support\TenantTz::fmt($activatedAt, 'M d, Y', fallback: '')]) }}
                         </p>
                     @endif
                 </div>

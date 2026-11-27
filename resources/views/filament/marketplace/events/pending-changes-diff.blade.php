@@ -51,7 +51,7 @@
     <div class="epd-meta">
         <span>{{ __('Eveniment:') }} <strong>{{ $event->getTranslation('title', 'ro') }}</strong></span>
         @if ($submitted)
-            <span>{{ __('Trimis de organizator:') }} <strong>{{ $submitted->timezone('Europe/Bucharest')->format('d.m.Y H:i') }}</strong></span>
+            <span>{{ __('Trimis de organizator:') }} <strong>{{ \App\Support\MarketplaceTz::fmt($submitted, 'd.m.Y H:i', fallback: '') }}</strong></span>
         @endif
         <span>{{ count($rows) }} {{ count($rows) === 1 ? 'modificare' : 'modificări' }}</span>
     </div>

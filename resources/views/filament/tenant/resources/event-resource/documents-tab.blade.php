@@ -58,7 +58,7 @@
                         <b>{{ $label }}</b>
                         <small>
                             @if(!$tpl) Nu există șablon pentru acest document.
-                            @elseif($last) Ultima generare: {{ $last->created_at?->timezone('Europe/Bucharest')->format('d.m.Y H:i') }}@if($last->generated_by_name), de {{ $last->generated_by_name }}@endif.
+                            @elseif($last) Ultima generare: {{ \App\Support\TenantTz::fmt($last->created_at, 'd.m.Y H:i', fallback: '') }}@if($last->generated_by_name), de {{ $last->generated_by_name }}@endif.
                             @elseif($can) Încă negenerat.
                             @else Se poate genera {{ $when[$whenRules[$type]] ?? '' }}.
                             @endif
@@ -78,7 +78,7 @@
                 <div class="tsd-row">
                     <div>
                         <b>{{ $doc->typeLabel() }}</b>
-                        <small>{{ $doc->created_at?->timezone('Europe/Bucharest')->format('d.m.Y H:i') }}@if($doc->generated_by_name) · {{ $doc->generated_by_name }}@endif @if($doc->file_size) · {{ number_format($doc->file_size / 1024, 0, ',', '.') }} KB @endif</small>
+                        <small>{{ \App\Support\TenantTz::fmt($doc->created_at, 'd.m.Y H:i', fallback: '') }}@if($doc->generated_by_name) · {{ $doc->generated_by_name }}@endif @if($doc->file_size) · {{ number_format($doc->file_size / 1024, 0, ',', '.') }} KB @endif</small>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px">
                         <a class="tsd-btn tsd-btn--line" href="{{ $doc->url() }}" target="_blank" rel="noopener">Descarcă PDF</a>

@@ -24,7 +24,7 @@
                             </div>
                         </div>
                         @if($service->pivot->activated_at)
-                            <p class="mt-4 text-xs text-gray-400">Active since {{ \Carbon\Carbon::parse($service->pivot->activated_at)->format('d M Y') }}</p>
+                            <p class="mt-4 text-xs text-gray-400">Active since {{ \App\Support\MarketplaceTz::fmt($service->pivot->activated_at, 'd M Y', fallback: '') }}</p>
                         @endif
                     </div>
                 @endforeach

@@ -142,8 +142,8 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-200">{{ $fmtDuration($responseSeconds) }}</td>
-                                <td class="px-3 py-2 text-gray-600 dark:text-gray-300 text-xs">{{ optional($c->created_at)->format('d.m.Y H:i') }}</td>
-                                <td class="px-3 py-2 text-gray-600 dark:text-gray-300 text-xs">{{ $endedAt ? $endedAt->format('d.m.Y H:i') : '—' }}</td>
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-300 text-xs">{{ \App\Support\MarketplaceTz::fmt($c->created_at, 'd.m.Y H:i', fallback: '') }}</td>
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-300 text-xs">{{ $endedAt ? \App\Support\MarketplaceTz::fmt($endedAt, 'd.m.Y H:i', fallback: '') : '—' }}</td>
                             </tr>
                         @empty
                             <tr>

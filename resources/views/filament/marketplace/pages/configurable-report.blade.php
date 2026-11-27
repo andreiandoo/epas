@@ -29,7 +29,7 @@
         <p class="text-xs text-gray-500 dark:text-gray-400 -mt-2">
             {{ count((array) $current->columns) }} coloane alese
             @if($current->created_by_name) · creat de {{ $current->created_by_name }} @endif
-            · modificat {{ $current->updated_at?->format('d.m.Y H:i') }}
+            · modificat {{ \App\Support\MarketplaceTz::fmt($current->updated_at, 'd.m.Y H:i', fallback: '') }}
         </p>
     @endif
 

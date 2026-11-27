@@ -174,7 +174,7 @@
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                             @foreach($recentLogs as $log)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                    <td class="px-6 py-3 whitespace-nowrap">{{ $log->created_at->format('d.m.Y H:i') }}</td>
+                                    <td class="px-6 py-3 whitespace-nowrap">{{ \App\Support\MarketplaceTz::fmt($log->created_at, 'd.m.Y H:i', fallback: '') }}</td>
                                     <td class="px-6 py-3 whitespace-nowrap font-mono text-xs">{{ $log->phone }}</td>
                                     <td class="px-6 py-3">
                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium {{ $log->type === 'transactional' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200' }}">

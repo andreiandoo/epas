@@ -83,7 +83,7 @@
                                         {{ $campaign->scheduled_at ? $campaign->scheduled_at->format('d.m.Y H:i') : '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-                                        {{ $campaign->created_at->format('d.m.Y H:i') }}
+                                        {{ \App\Support\MarketplaceTz::fmt($campaign->created_at, 'd.m.Y H:i', fallback: '') }}
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         @if ($campaign->status === 'draft')

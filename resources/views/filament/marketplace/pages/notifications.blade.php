@@ -105,7 +105,7 @@
                                             {{ $notification->type_label }}
                                         </span>
                                         <span class="text-xs text-gray-500 dark:text-gray-500">
-                                            {{ $notification->created_at->copy()->timezone('Europe/Bucharest')->format('d.m.Y H:i') }} ({{ $notification->time_ago }})
+                                            {{ \App\Support\MarketplaceTz::fmt($notification->created_at, 'd.m.Y H:i', fallback: '') }} ({{ $notification->time_ago }})
                                         </span>
                                     </div>
                                 </div>

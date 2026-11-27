@@ -42,7 +42,7 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
-                                {{ $domain->created_at->format('M d, Y') }}
+                                {{ \App\Support\TenantTz::fmt($domain->created_at, 'M d, Y', fallback: '') }}
                             </td>
                             <td class="px-6 py-4">
                                 @php
