@@ -36,6 +36,27 @@ trait HasListChrome
         return __('De completat');
     }
 
+    /**
+     * Labelled "Filtre" / "Coloane" buttons like on the events list. Pages whose
+     * resource table already sets its own trigger labels (events, venues) return false.
+     */
+    protected function listLabelsTriggers(): bool
+    {
+        return true;
+    }
+
+    public function table(\Filament\Tables\Table $table): \Filament\Tables\Table
+    {
+        $table = parent::table($table);
+        if (! $this->listLabelsTriggers()) {
+            return $table;
+        }
+
+        return $table
+            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Filtre'))->icon('heroicon-o-funnel')->button())
+            ->columnManagerTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Coloane'))->icon('heroicon-o-view-columns')->button());
+    }
+
     /** Page title + record count, the same on every redesigned list. */
     protected function listHeading(string $label): \Illuminate\Support\HtmlString
     {

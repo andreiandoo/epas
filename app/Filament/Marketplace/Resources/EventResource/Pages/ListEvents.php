@@ -17,6 +17,12 @@ class ListEvents extends ListRecords
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
     use \App\Filament\Marketplace\Concerns\HasListChrome;
 
+    /** The resource table sets its own Filtre / Coloane buttons. */
+    protected function listLabelsTriggers(): bool
+    {
+        return false;
+    }
+
     protected static string $resource = EventResource::class;
 
     public function getHeading(): string|Htmlable

@@ -15,6 +15,12 @@ class ListVenues extends ListRecords
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
     use \App\Filament\Marketplace\Concerns\HasListChrome;
 
+    /** The resource table sets its own Categorie / Coloane buttons. */
+    protected function listLabelsTriggers(): bool
+    {
+        return false;
+    }
+
     protected static string $resource = VenueResource::class;
 
     public function getBreadcrumbs(): array
