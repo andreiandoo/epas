@@ -7796,5 +7796,11 @@
     "bilet": "jegy",
     "bilete": "jegy",
     "cod": "kód",
-    "Invitație": "Meghívó"
+    "Invitație": "Meghívó",
+    "Respinse": "Elutasított",
+    "Comanda": "Rendelés",
+    "Rambursare integrală": "Teljes visszatérítés",
+    "Rambursare parțială": "Részleges visszatérítés",
+    "Anulare": "Lemondás",
+    "În analiză": "Elbírálás alatt"
 }

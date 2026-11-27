@@ -14,6 +14,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use Filament\Notifications\Notification;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
@@ -173,30 +174,60 @@ class RefundRequestResource extends Resource
                     ->label(__('Reference'))
                     ->searchable()
                     ->sortable(),
+                // Customer with the order number and organizer as the muted line
+                // (the Order # and Organizer columns stay in "Coloane").
                 Tables\Columns\TextColumn::make('customer.full_name')
                     ->label(__('Customer'))
+                    ->description(fn ($record): string => implode(' | ', array_filter([
+                        $record->order_id ? __('Comanda') . ' #' . str_pad((string) $record->order_id, 6, '0', STR_PAD_LEFT) : null,
+                        $record->organizer?->name,
+                    ])))
                     ->searchable(['customer.first_name', 'customer.last_name']),
                 Tables\Columns\TextColumn::make('order_id')
                     ->label(__('Order #'))
-                    ->formatStateUsing(fn ($state) => '#' . str_pad($state, 6, '0', STR_PAD_LEFT)),
+                    ->formatStateUsing(fn ($state) => '#' . str_pad($state, 6, '0', STR_PAD_LEFT))
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label(__('Organizer'))
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('type')
                     ->badge()
-                    ->formatStateUsing(fn ($state) => match($state) {
+                    ->formatStateUsing(fn ($state) => match ($state) {
                         'full_refund' => 'Full',
                         'partial_refund' => 'Partial',
                         'cancellation' => 'Cancel',
                         default => $state,
-                    }),
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
+                // Amount with the request type under it (Type stays in "Coloane").
                 Tables\Columns\TextColumn::make('requested_amount')
                     ->label(__('Amount'))
                     ->money('RON')
+                    ->description(fn ($record): ?string => match ($record->type) {
+                        'full_refund' => __('Rambursare integrală'),
+                        'partial_refund' => __('Rambursare parțială'),
+                        'cancellation' => __('Anulare'),
+                        default => null,
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn ($record) => $record->status_color),
+                    ->label(__('Status'))
+                    ->html()
+                    ->state(function ($record): HtmlString {
+                        [$label, $tone] = match ($record->status) {
+                            'pending' => [__('În așteptare'), 'warn'],
+                            'under_review' => [__('În analiză'), 'warn'],
+                            'approved' => [__('Aprobată'), 'ok'],
+                            'rejected' => [__('Respinsă'), 'bad'],
+                            'processing' => [__('În procesare'), 'warn'],
+                            'refunded' => [__('Rambursată'), 'ok'],
+                            'partially_refunded' => [__('Rambursată parțial'), 'warn'],
+                            'failed' => [__('Eșuată'), 'bad'],
+                            default => [ucfirst((string) $record->status), 'mute'],
+                        };
+
+                        return new HtmlString('<div class="ep-stare"><span class="ep-pill ep-pill--' . $tone . '"><span class="ep-dot"></span>' . e($label) . '</span></div>');
+                    }),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label(__('Requested'))
                     ->dateTime(timezone: MarketplaceTz::tz())
@@ -225,17 +256,13 @@ class RefundRequestResource extends Resource
                     ->relationship('organizer', 'name'),
             ])
             ->recordActions([
-                ViewAction::make(),
-                ActionGroup::make([
-                    Action::make('review')
-                        ->icon('heroicon-o-eye')
-                        ->color('info')
-                        ->visible(fn ($record) => $record->status === 'pending')
-                        ->action(fn ($record) => $record->markUnderReview()),
-
+                // Next step as icon buttons (shown by status); Review + View in the menu.
                     Action::make('approve')
+                        ->label(__('Approve'))
                         ->icon('heroicon-o-check')
                         ->color('success')
+                        ->iconButton()
+                        ->tooltip(__('Approve'))
                         ->form([
                             Forms\Components\TextInput::make('approved_amount')
                                 ->label(__('Approved Amount'))
@@ -260,8 +287,11 @@ class RefundRequestResource extends Resource
                         }),
 
                     Action::make('reject')
+                        ->label(__('Reject'))
                         ->icon('heroicon-o-x-mark')
                         ->color('danger')
+                        ->iconButton()
+                        ->tooltip(__('Reject'))
                         ->form([
                             Forms\Components\Textarea::make('reason')
                                 ->label(__('Rejection Reason'))
@@ -285,6 +315,8 @@ class RefundRequestResource extends Resource
                         ->label(__('Auto Refund'))
                         ->icon('heroicon-o-bolt')
                         ->color('warning')
+                        ->iconButton()
+                        ->tooltip(__('Auto Refund'))
                         ->visible(fn ($record) => $record->status === 'approved')
                         ->requiresConfirmation()
                         ->modalDescription(__('Attempt to process refund automatically through the payment provider.'))
@@ -324,6 +356,8 @@ class RefundRequestResource extends Resource
                         ->label(__('Mark as Refunded'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
+                        ->iconButton()
+                        ->tooltip(__('Mark as Refunded'))
                         ->form([
                             Forms\Components\TextInput::make('reference')
                                 ->label(__('Reference Number'))
@@ -351,7 +385,21 @@ class RefundRequestResource extends Resource
                                 ->success()
                                 ->send();
                         }),
-                ]),
+
+                ActionGroup::make([
+                    ViewAction::make(),
+                    Action::make('review')
+                        ->label(__('Review'))
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->visible(fn ($record) => $record->status === 'pending')
+                        ->action(fn ($record) => $record->markUnderReview()),
+
+                ])
+                    ->label(__('Mai multe'))
+                    ->icon('heroicon-m-ellipsis-horizontal')
+                    ->color('gray')
+                    ->iconButton(),
             ])
             ->toolbarActions([]);
     }

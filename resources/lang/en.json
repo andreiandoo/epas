@@ -4420,5 +4420,11 @@
     "bilete": "tickets",
     "cod": "code",
     "Valid": "Valid",
-    "Invitație": "Invitation"
+    "Invitație": "Invitation",
+    "Respinse": "Rejected",
+    "Comanda": "Order",
+    "Rambursare integrală": "Full refund",
+    "Rambursare parțială": "Partial refund",
+    "Anulare": "Cancellation",
+    "În analiză": "Under review"
 }
