@@ -110,11 +110,22 @@
                 if ($brandingLogo) {
                     $epFrameLogo = str_starts_with($brandingLogo, 'http') ? $brandingLogo : \Illuminate\Support\Facades\Storage::disk('public')->url($brandingLogo);
                 } else {
-                    $slug = \Illuminate\Support\Str::slug((string) $currentMarketplaceClient?->name);
-                    foreach (['webp', 'svg', 'png'] as $ext) {
-                        if ($slug && is_file(public_path("images/marketplaces/{$slug}-logo.{$ext}"))) {
-                            $epFrameLogo = asset("images/marketplaces/{$slug}-logo.{$ext}");
-                            break;
+                    // Candidați: numele (AmBilet.ro → ambilet-ro, ambiletro) și domeniul (ambilet.ro → ambilet).
+                    $name = (string) $currentMarketplaceClient?->name;
+                    $host = (string) parse_url(str_contains((string) $currentMarketplaceClient?->domain, '//') ? $currentMarketplaceClient->domain : 'https://' . $currentMarketplaceClient?->domain, PHP_URL_HOST);
+                    $host = preg_replace('/^www\./', '', $host);
+                    $candidates = array_unique(array_filter([
+                        \Illuminate\Support\Str::slug($name),
+                        \Illuminate\Support\Str::slug(preg_replace('/\.[a-z]{2,4}$/i', '', $name)),
+                        $host ? explode('.', $host)[0] : null,
+                    ]));
+                    foreach ($candidates as $slug) {
+                        foreach (['webp', 'svg', 'png'] as $ext) {
+                            $path = public_path("images/marketplaces/{$slug}-logo.{$ext}");
+                            if (is_file($path)) {
+                                $epFrameLogo = asset("images/marketplaces/{$slug}-logo.{$ext}") . '?v=' . filemtime($path);
+                                break 2;
+                            }
                         }
                     }
                 }

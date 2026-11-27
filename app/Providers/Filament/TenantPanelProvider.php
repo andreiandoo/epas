@@ -119,9 +119,9 @@ class TenantPanelProvider extends PanelProvider
             // Custom assets (Tailwind utilities + custom skin)
             ->assets([
                 Css::make('tailwind-theme', \Illuminate\Support\Facades\Vite::asset('resources/css/filament/tenant/theme.css')),
-                Css::make('epas-skin', asset('css/epas-skin.css')),
+                Css::make('epas-skin', asset('css/epas-skin.css?v=' . @filemtime(public_path('css/epas-skin.css')))),
                 Css::make('tixello-auth', asset('css/tixello-auth.css?v=' . @filemtime(public_path('css/tixello-auth.css')))),
-                Js::make('epas-skin', asset('js/epas-skin.js')),
+                Js::make('epas-skin', asset('js/epas-skin.js?v=' . @filemtime(public_path('js/epas-skin.js')))),
             ])
 
             // Hide default brand logo (we use sidebar logo instead, like Marketplace)
