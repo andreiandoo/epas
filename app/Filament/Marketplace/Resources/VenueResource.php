@@ -1051,7 +1051,7 @@ class VenueResource extends Resource
                     ->label(__('Imagine'))
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make("name.{$lang}")
                     ->label(__('Nume'))
                     ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search) use ($lang): void {
@@ -1064,35 +1064,64 @@ class VenueResource extends Resource
                                 ->orWhereRaw("LOWER(`city`) LIKE ?", [$term]);
                         }
                     })
+                    // Miniatura (sau initialele) + nume + oras, intr-o celula; coloanele "Imagine" si "Oraș" raman in "Coloane".
+                    ->formatStateUsing(function ($state, $record) {
+                        $name = $state ?: ($record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: '—');
+                        $initials = collect(preg_split('/\s+/u', trim((string) $name)))
+                            ->filter(fn ($w) => mb_strlen($w) > 2)
+                            ->take(2)
+                            ->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))
+                            ->implode('');
+                        $img = $record->image_url;
+                        $src = null;
+                        if (filled($img)) {
+                            $src = preg_match('#^(https?:)?//#i', $img) ? $img : \Illuminate\Support\Facades\Storage::disk('public')->url($img);
+                        }
+                        $avatar = $src
+                            ? '<span class="ep-av"><img src="' . e($src) . '" alt="" loading="lazy"></span>'
+                            : '<span class="ep-av" aria-hidden="true">' . e($initials !== '' ? $initials : '·') . '</span>';
+
+                        return new HtmlString(
+                            '<div class="ep-venue">' . $avatar . '<div><div class="ep-venue-name">' . e($name) . '</div>'
+                            . (filled($record->city) ? '<div class="ep-sub">' . e($record->city) . '</div>' : '')
+                            . '</div></div>'
+                        );
+                    })
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('city')
                     ->label(__('Oraș'))
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('capacity_total')
                     ->label(__('Capacitate'))
                     ->sortable()
                     ->numeric()
+                    ->alignEnd()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('venueCategories.name')
                     ->label(__('Categorii'))
                     ->badge()
+                    ->color('gray')
                     ->separator(',')
                     ->getStateUsing(fn ($record) => $record->venueCategories->map(fn ($c) => $c->icon . ' ' . ($c->getTranslation('name', 'ro') ?? $c->getTranslation('name', 'en')))->join(', '))
                     ->toggleable(),
-                Tables\Columns\IconColumn::make('is_partner')
+                // Pastila "Partener" doar la locatiile partenere (filtrul si tab-urile ramane pe is_partner).
+                Tables\Columns\TextColumn::make('is_partner')
                     ->label(__('Partener'))
-                    ->boolean()
+                    ->state(fn ($record) => $record->is_partner ? 'yes' : 'no')
+                    ->formatStateUsing(fn ($state) => $state === 'yes'
+                        ? new HtmlString('<span class="ep-pill ep-pill--ok">' . e(__('Partener')) . '</span>')
+                        : '')
                     ->toggleable(),
                 // Owner = venues.tenant_id → tenants.owner_id set (see "Proprietar locație" on edit)
-                Tables\Columns\IconColumn::make('has_owner')
-                    ->label(__('Owner'))
-                    ->state(fn ($record) => (bool) $record->tenant?->owner_id)
-                    ->boolean()
+                Tables\Columns\TextColumn::make('has_owner')
+                    ->label(__('Proprietar'))
+                    ->state(fn ($record) => $record->tenant?->owner?->name ?: ($record->tenant?->owner_id ? '#' . $record->tenant->owner_id : '—'))
                     ->tooltip(fn ($record) => $record->tenant?->owner
                         ? $record->tenant->owner->name . ' · ' . $record->tenant->owner->email
                         : null)
+                    ->color('gray')
                     ->toggleable(),
             ])
             ->modifyQueryUsing(fn (Builder $query) => $query->with('tenant.owner'))
@@ -1109,7 +1138,9 @@ class VenueResource extends Resource
                     ->preload()
                     ->multiple(),
             ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
-            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Filtre'))->icon('heroicon-o-funnel')->button())
+            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Categorie'))->icon('heroicon-o-tag')->button())
+            ->columnManagerTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Coloane'))->icon('heroicon-o-view-columns')->button())
+            ->searchPlaceholder(__('Caută după nume sau oraș…'))
             ->actions([])
             ->bulkActions([
                 \Filament\Actions\BulkAction::make('make_partner')

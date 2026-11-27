@@ -6248,6 +6248,107 @@ class EventResource extends Resource
         return $startDate && $startDate->startOfDay()->isPast();
     }
 
+    /**
+     * Codul de stare al evenimentului (folosit de coloanele "Stare" si "Status").
+     */
+    private static function eventStatusCode($record): string
+    {
+        // Determine event end date based on duration mode
+        $endDate = null;
+
+        if ($record->duration_mode === 'range') {
+            $endDate = $record->range_end_date ?? $record->range_start_date;
+        } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+            $lastSlot = collect($record->multi_slots)->pluck('date')->filter()->sort()->last();
+            $endDate = $lastSlot ? Carbon::parse($lastSlot) : null;
+        } else {
+            // Single day
+            $endDate = $record->event_date;
+        }
+
+        if ($endDate && $endDate->endOfDay()->isPast()) {
+            return 'ended';
+        }
+
+        // Not live yet: say where it stands in the approval
+        // flow, so a draft the organizer is still working on
+        // isn't mistaken for something staff has to handle.
+        if (!$record->is_published) {
+            if ($record->rejected_at) {
+                return 'rejected';
+            }
+            if ($record->submitted_at) {
+                return 'pending_approval';
+            }
+
+            return self::wasCreatedByOrganizer($record) ? 'organizer_draft' : 'draft';
+        }
+
+        return $endDate ? 'active' : 'unknown';
+    }
+
+    /**
+     * Prima si ultima zi a evenimentului, pentru ziua saptamanii din coloana "Data".
+     *
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private static function eventDateBounds($record): array
+    {
+        if ($record->duration_mode === 'range' && $record->range_start_date) {
+            return [$record->range_start_date, $record->range_end_date];
+        }
+
+        if ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+            $slots = collect($record->multi_slots)->pluck('date')->filter()->sort();
+            if ($slots->isNotEmpty()) {
+                return [Carbon::parse($slots->first()), Carbon::parse($slots->last())];
+            }
+        }
+
+        $single = $record->event_date ?? $record->range_start_date;
+
+        return [$single, null];
+    }
+
+    /**
+     * Loc ramas / cota si procentul vandut, pentru coloana "Disponibil" (memorat per cerere).
+     * Doar biletele valid/used ocupa capacitate; tipurile cu stoc independent nu intra aici.
+     *
+     * @return array{remaining: int, quota: int, sold: int, pct: float}|null
+     */
+    private static function capacityStats($record): ?array
+    {
+        static $memo = [];
+
+        if ($record->general_quota === null) {
+            return null;
+        }
+
+        $key = $record->getKey();
+        if (isset($memo[$key])) {
+            return $memo[$key];
+        }
+
+        $nonIndepIds = $record->ticketTypes
+            ->where('is_independent_stock', false)
+            ->pluck('id');
+        // Only valid/used tickets occupy capacity. The old
+        // "everything except cancelled/refunded" filter also
+        // counted `pending` tickets from unpaid/in-progress
+        // orders, inflating the sold figure.
+        $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
+            ->whereIn('status', ['valid', 'used'])
+            ->count();
+        $quota = (int) $record->general_quota;
+
+        return $memo[$key] = [
+            'remaining' => max(0, $quota - $activeCount),
+            'quota' => $quota,
+            'sold' => $activeCount,
+            'pct' => $quota > 0 ? ($activeCount / $quota) * 100 : 0,
+        ];
+    }
+
     public static function table(Table $table): Table
     {
         $marketplace = static::getMarketplaceClient();
@@ -6282,10 +6383,29 @@ class EventResource extends Resource
                                 . '</span>';
                         }
 
+                        // Alertele operationale (aceleasi ca in coloana "!") stau langa titlu.
+                        $alertsCount = app(\App\Services\EventAlertsService::class)->getAlertsCount($record);
+                        $alertBadge = $alertsCount > 0
+                            ? '<span class="ep-alert" title="' . $alertsCount . ' alerte operaționale — deschide evenimentul pentru detalii">' . $alertsCount . '</span>'
+                            : '';
+
                         $html = $expiringIcon . '<a href="' . static::getUrl('edit', ['record' => $record]) . '" class="ep-title-link">' . e($state) . '</a>' .
+                            $alertBadge .
                             '<button type="button" wire:click="mountTableAction(\'editTitle\', \'' . $record->getKey() . '\')" class="ep-title-edit" title="Quick Edit">' .
                                 '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>' .
                             '</button>';
+
+                        // Locatie + oras + nota de harta de locuri sub titlu (coloanele separate raman in "Coloane").
+                        $placeParts = array_values(array_filter([
+                            $record->venue?->getTranslation('name', app()->getLocale()),
+                            $record->marketplaceCity?->getTranslation('name', app()->getLocale()),
+                        ]));
+                        if (! empty($record->seating_layout_id)) {
+                            $placeParts[] = __('hartă de locuri');
+                        }
+                        if ($placeParts) {
+                            $html .= '<div class="ep-sub">' . e(implode(' · ', $placeParts)) . '</div>';
+                        }
 
                         // Show child events (representations) for multi_day/recurring parents
                         if ($record->is_template && $record->children()->exists()) {
@@ -6321,7 +6441,7 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('alerts_count')
                     ->label('!')
                     ->alignCenter()
-                    ->toggleable()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->getStateUsing(fn (Event $record): int =>
                         app(\App\Services\EventAlertsService::class)->getAlertsCount($record))
                     ->formatStateUsing(function (int $state): HtmlString {
@@ -6346,74 +6466,7 @@ class EventResource extends Resource
                     ->falseColor('gray')
                     ->getStateUsing(fn ($record) => !empty($record->seating_layout_id))
                     ->sortable()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('general_quota')
-                    ->label(__('Cap.'))
-                    ->getStateUsing(function ($record) {
-                        if ($record->general_quota === null) return '—';
-                        $nonIndepIds = $record->ticketTypes
-                            ->where('is_independent_stock', false)
-                            ->pluck('id');
-                        // Only valid/used tickets occupy capacity. The old
-                        // "everything except cancelled/refunded" filter also
-                        // counted `pending` tickets from unpaid/in-progress
-                        // orders, inflating the sold figure.
-                        $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
-                            ->whereIn('status', ['valid', 'used'])
-                            ->count();
-                        $remaining = max(0, $record->general_quota - $activeCount);
-                        return $remaining . '/' . $record->general_quota;
-                    })
-                    ->color(function ($record) {
-                        if ($record->general_quota === null) return 'gray';
-                        $nonIndepIds = $record->ticketTypes->where('is_independent_stock', false)->pluck('id');
-                        $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
-                            ->whereIn('status', ['valid', 'used'])->count();
-                        $pct = ($record->general_quota > 0) ? ($activeCount / $record->general_quota) * 100 : 0;
-                        if ($pct >= 80) return 'success';
-                        if ($pct >= 50) return 'warning';
-                        return 'danger';
-                    })
-                    ->badge()
-                    ->sortable()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
-                    ->label(__('Organizer'))
-                    ->searchable(query: function ($query, string $search): void {
-                        $term = '%' . mb_strtolower($search) . '%';
-                        if (\DB::getDriverName() === 'pgsql') {
-                            $query->whereHas('marketplaceOrganizer', fn ($q) =>
-                                $q->whereRaw('unaccent(LOWER(name)) LIKE unaccent(?)', [$term])
-                                  ->orWhereRaw('unaccent(LOWER(company_name)) LIKE unaccent(?)', [$term])
-                            );
-                        } else {
-                            $query->whereHas('marketplaceOrganizer', fn ($q) =>
-                                $q->whereRaw('LOWER(name) LIKE ?', [$term])
-                                  ->orWhereRaw('LOWER(company_name) LIKE ?', [$term])
-                            );
-                        }
-                    })
-                    ->sortable()
-                    ->toggleable()
-                    ->limit(20)
-                    ->tooltip(fn ($record) => $record->marketplaceOrganizer?->name)
-                    ->extraAttributes(['style' => 'max-width:140px; overflow:hidden; text-overflow:ellipsis; font-size:0.75rem;'])
-                    ->url(fn (Event $record) => $record->marketplace_organizer_id
-                        ? \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
-                        : null),
-                Tables\Columns\TextColumn::make('venue_id')
-                    ->label(__('Venue'))
-                    ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
-                    ->limit(20)
-                    ->tooltip(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()))
-                    ->extraAttributes(['style' => 'max-width:140px; overflow:hidden; text-overflow:ellipsis; font-size:0.75rem;'])
-                    ->sortable()
-                    ->toggleable(),
-                Tables\Columns\TextColumn::make('marketplace_city_id')
-                    ->label(__('Oraș'))
-                    ->formatStateUsing(fn ($state, $record) => $record->marketplaceCity?->getTranslation('name', app()->getLocale()) ?? '-')
-                    ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('event_date')
                     ->label(__('Event Date'))
                     ->getStateUsing(function ($record) {
@@ -6460,12 +6513,89 @@ class EventResource extends Resource
                             ?? $record->range_start_date?->format('d M Y')
                             ?? '-';
                     })
-                    ->badge()
-                    ->color('gray')
+                    ->description(function ($record) {
+                        [$start, $end] = self::eventDateBounds($record);
+                        if (! $start) {
+                            return null;
+                        }
+                        $start = $start->copy()->locale('ro');
+                        if (! $end || $end->isSameDay($start)) {
+                            return $start->isoFormat('dddd');
+                        }
+
+                        return $start->isoFormat('ddd') . '–' . $end->copy()->locale('ro')->isoFormat('ddd');
+                    })
+                    ->extraAttributes(['class' => 'ep-nowrap'])
                     ->sortable(query: function ($query, string $direction) {
                         $query->orderByRaw('COALESCE(event_date, range_start_date) ' . $direction);
                     })
                     ->toggleable(),
+                Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
+                    ->label(__('Organizer'))
+                    ->searchable(query: function ($query, string $search): void {
+                        $term = '%' . mb_strtolower($search) . '%';
+                        if (\DB::getDriverName() === 'pgsql') {
+                            $query->whereHas('marketplaceOrganizer', fn ($q) =>
+                                $q->whereRaw('unaccent(LOWER(name)) LIKE unaccent(?)', [$term])
+                                  ->orWhereRaw('unaccent(LOWER(company_name)) LIKE unaccent(?)', [$term])
+                            );
+                        } else {
+                            $query->whereHas('marketplaceOrganizer', fn ($q) =>
+                                $q->whereRaw('LOWER(name) LIKE ?', [$term])
+                                  ->orWhereRaw('LOWER(company_name) LIKE ?', [$term])
+                            );
+                        }
+                    })
+                    ->sortable()
+                    ->toggleable()
+                    ->limit(20)
+                    ->tooltip(fn ($record) => $record->marketplaceOrganizer?->name)
+                    ->extraAttributes(['style' => 'max-width:140px; overflow:hidden; text-overflow:ellipsis; font-size:0.75rem;'])
+                    ->url(fn (Event $record) => $record->marketplace_organizer_id
+                        ? \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
+                        : null),
+                Tables\Columns\TextColumn::make('general_quota')
+                    ->label(__('Disponibil'))
+                    ->getStateUsing(function ($record) {
+                        $stats = self::capacityStats($record);
+                        return $stats ? $stats['remaining'] . '/' . $stats['quota'] : '—';
+                    })
+                    // Bara arata cota vanduta; pragurile de culoare sunt cele de pana acum
+                    // (>= 80% verde, >= 50% galben, sub 50% rosu).
+                    ->formatStateUsing(function ($state, $record) {
+                        $stats = self::capacityStats($record);
+                        if (! $stats) {
+                            return new HtmlString('<span class="ep-sub">—</span>');
+                        }
+                        $color = match (true) {
+                            $stats['pct'] >= 80 => '#10b981',
+                            $stats['pct'] >= 50 => '#f59e0b',
+                            default => '#ef4444',
+                        };
+                        $width = min(100, max((int) round($stats['pct']), $stats['sold'] > 0 ? 2 : 0));
+
+                        return new HtmlString(
+                            '<div class="ep-cap" title="' . (int) round($stats['pct']) . '% vândut">'
+                            . '<div class="ep-bar"><div class="ep-bar-fill" style="width:' . $width . '%;background:' . $color . ';"></div></div>'
+                            . '<span class="ep-cap-n">' . $stats['remaining'] . '/' . $stats['quota'] . '</span>'
+                            . '</div>'
+                        );
+                    })
+                    ->sortable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('venue_id')
+                    ->label(__('Venue'))
+                    ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
+                    ->limit(20)
+                    ->tooltip(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()))
+                    ->extraAttributes(['style' => 'max-width:140px; overflow:hidden; text-overflow:ellipsis; font-size:0.75rem;'])
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('marketplace_city_id')
+                    ->label(__('Oraș'))
+                    ->formatStateUsing(fn ($state, $record) => $record->marketplaceCity?->getTranslation('name', app()->getLocale()) ?? '-')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('eventTypes_display')
                     ->label(__('Categorie'))
                     ->badge()
@@ -6498,42 +6628,53 @@ class EventResource extends Resource
                     ->getStateUsing(fn (Event $record) => $record->artists->pluck('name')->implode(', ') ?: '-')
                     ->wrap()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('stare')
+                    ->label(__('Stare'))
+                    ->getStateUsing(fn ($record) => self::eventStatusCode($record))
+                    ->formatStateUsing(function ($state, $record) {
+                        $base = match ($state) {
+                            'active' => __('Activ'),
+                            'ended' => __('Încheiat'),
+                            'organizer_draft' => __('Ciornă la organizator'),
+                            'draft' => __('Ciornă'),
+                            'pending_approval' => __('De aprobat'),
+                            'rejected' => __('Respins'),
+                            default => $record->is_published ? __('Publicat') : '—',
+                        };
+                        $tone = match (true) {
+                            $state === 'pending_approval' => 'warn',
+                            $state === 'rejected' => 'bad',
+                            $state === 'active' || ($state === 'unknown' && $record->is_published) => 'ok',
+                            default => 'mute',
+                        };
+                        // Publicat / nepublicat ramane vizibil (coloana "Publicat" e in "Coloane").
+                        $label = match (true) {
+                            $state === 'active' => $base . ' · ' . __('publicat'),
+                            $state === 'ended' => $base . ' · ' . ($record->is_published ? __('publicat') : __('nepublicat')),
+                            default => $base,
+                        };
+                        $tip = match ($state) {
+                            'organizer_draft' => 'Organizatorul încă lucrează la eveniment și nu l-a trimis spre aprobare. Nu necesită nicio acțiune.',
+                            'draft' => 'Eveniment nepublicat, netrimis spre aprobare.',
+                            'pending_approval' => 'Organizatorul a trimis evenimentul spre aprobare. Deschide-l pentru a-l aproba sau respinge.',
+                            'rejected' => 'Respins; organizatorul îl poate edita și retrimite.',
+                            default => '',
+                        };
+
+                        $html = '<span class="ep-pill ep-pill--' . $tone . '"' . ($tip !== '' ? ' title="' . e($tip) . '"' : '') . '><span class="ep-dot"></span>' . e($label) . '</span>';
+                        if ($record->is_cancelled) {
+                            $html .= ' <span class="ep-pill ep-pill--bad">' . e(__('Anulat')) . '</span>';
+                        }
+                        if ($record->is_sold_out) {
+                            $html .= ' <span class="ep-pill ep-pill--warn">' . e(__('Sold out')) . '</span>';
+                        }
+
+                        return new HtmlString('<div class="ep-stare">' . $html . '</div>');
+                    })
+                    ->toggleable(),
                 Tables\Columns\BadgeColumn::make('status_display')
                     ->label(__('Status'))
-                    ->getStateUsing(function ($record) {
-                        // Determine event end date based on duration mode
-                        $endDate = null;
-
-                        if ($record->duration_mode === 'range') {
-                            $endDate = $record->range_end_date ?? $record->range_start_date;
-                        } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
-                            $lastSlot = collect($record->multi_slots)->pluck('date')->filter()->sort()->last();
-                            $endDate = $lastSlot ? Carbon::parse($lastSlot) : null;
-                        } else {
-                            // Single day
-                            $endDate = $record->event_date;
-                        }
-
-                        if ($endDate && $endDate->endOfDay()->isPast()) {
-                            return 'ended';
-                        }
-
-                        // Not live yet: say where it stands in the approval
-                        // flow, so a draft the organizer is still working on
-                        // isn't mistaken for something staff has to handle.
-                        if (!$record->is_published) {
-                            if ($record->rejected_at) {
-                                return 'rejected';
-                            }
-                            if ($record->submitted_at) {
-                                return 'pending_approval';
-                            }
-
-                            return self::wasCreatedByOrganizer($record) ? 'organizer_draft' : 'draft';
-                        }
-
-                        return $endDate ? 'active' : 'unknown';
-                    })
+                    ->getStateUsing(fn ($record) => self::eventStatusCode($record))
                     ->formatStateUsing(fn ($state) => match($state) {
                         'active' => 'Activ',
                         'ended' => 'Încheiat',
@@ -6556,7 +6697,7 @@ class EventResource extends Resource
                         'rejected' => 'Respins; organizatorul îl poate edita și retrimite.',
                         default => null,
                     })
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
                     ->label(__('Publicat'))
@@ -6564,15 +6705,15 @@ class EventResource extends Resource
                     ->falseIcon('heroicon-o-eye-slash')
                     ->trueColor('success')
                     ->falseColor('danger')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_cancelled')
                     ->boolean()
                     ->label(__('Cancelled'))
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_sold_out')
                     ->boolean()
                     ->label(__('Sold Out'))
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 // tics.ro: pe câte alte platforme se mai vinde (snapshot local, sincronizat din oră în oră).
                 Tables\Columns\TextColumn::make('ticsListing.other_active_count')
                     ->label(__('Alte platforme'))
@@ -6617,6 +6758,9 @@ class EventResource extends Resource
                     ->toggle(),
             ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
             ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Filtre'))->icon('heroicon-o-funnel')->button())
+            ->columnManagerTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Coloane'))->icon('heroicon-o-view-columns')->button())
+            ->searchPlaceholder(__('Caută titlu, organizator…'))
+            ->modifyQueryUsing(fn ($query) => $query->with(['venue', 'marketplaceCity', 'marketplaceOrganizer']))
             ->actions([
                 // Organizer live edits that landed as pending (organizer without
                 // allow_live_edits). Approving applies them to the live event;
@@ -6734,6 +6878,51 @@ class EventResource extends Resource
                     }),
             ])
             ->bulkActions([
+                // Publica / Depublica / Schimba status sunt la vedere; restul in "Mai multe".
+                BulkAction::make('bulk_publish')
+                    ->label(__('Publică'))
+                    ->icon('heroicon-o-eye')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function (Collection $records) {
+                        $records->each(fn ($record) => $record->update(['is_published' => true]));
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
+                BulkAction::make('bulk_unpublish')
+                    ->label(__('Depublică'))
+                    ->icon('heroicon-o-eye-slash')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->action(function (Collection $records) {
+                        $records->each(fn ($record) => $record->update(['is_published' => false]));
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
+                BulkAction::make('change_status')
+                    ->label(__('Schimbă status'))
+                    ->icon('heroicon-o-arrow-path')
+                    ->form([
+                        Forms\Components\Select::make('status')
+                            ->label(__('Status'))
+                            ->options([
+                                'active' => __('Activ'),
+                                'cancelled' => __('Anulat'),
+                                'ended' => __('Încheiat'),
+                            ])
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data) {
+                        foreach ($records as $record) {
+                            match ($data['status']) {
+                                'cancelled' => $record->update(['is_cancelled' => true, 'cancelled_at' => now()]),
+                                'ended' => $record->update(['is_cancelled' => false, 'cancelled_at' => null, 'status' => 'archived']),
+                                'active' => $record->update(['is_cancelled' => false, 'cancelled_at' => null, 'status' => 'active']),
+                            };
+                        }
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
                 BulkActionGroup::make([
                     BulkAction::make('assign_venue')
                         ->label(__('Alocă venue'))
@@ -6801,50 +6990,6 @@ class EventResource extends Resource
                                 ->success()
                                 ->title("Venue alocat pentru {$count} evenimente")
                                 ->send();
-                        })
-                        ->deselectRecordsAfterCompletion(),
-
-                    BulkAction::make('bulk_publish')
-                        ->label(__('Publică'))
-                        ->icon('heroicon-o-eye')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->action(function (Collection $records) {
-                            $records->each(fn ($record) => $record->update(['is_published' => true]));
-                        })
-                        ->deselectRecordsAfterCompletion(),
-
-                    BulkAction::make('bulk_unpublish')
-                        ->label(__('Depublică'))
-                        ->icon('heroicon-o-eye-slash')
-                        ->color('warning')
-                        ->requiresConfirmation()
-                        ->action(function (Collection $records) {
-                            $records->each(fn ($record) => $record->update(['is_published' => false]));
-                        })
-                        ->deselectRecordsAfterCompletion(),
-
-                    BulkAction::make('change_status')
-                        ->label(__('Schimbă status'))
-                        ->icon('heroicon-o-arrow-path')
-                        ->form([
-                            Forms\Components\Select::make('status')
-                                ->label(__('Status'))
-                                ->options([
-                                    'active' => __('Activ'),
-                                    'cancelled' => __('Anulat'),
-                                    'ended' => __('Încheiat'),
-                                ])
-                                ->required(),
-                        ])
-                        ->action(function (Collection $records, array $data) {
-                            foreach ($records as $record) {
-                                match ($data['status']) {
-                                    'cancelled' => $record->update(['is_cancelled' => true, 'cancelled_at' => now()]),
-                                    'ended' => $record->update(['is_cancelled' => false, 'cancelled_at' => null, 'status' => 'archived']),
-                                    'active' => $record->update(['is_cancelled' => false, 'cancelled_at' => null, 'status' => 'active']),
-                                };
-                            }
                         })
                         ->deselectRecordsAfterCompletion(),
 
@@ -7074,7 +7219,11 @@ class EventResource extends Resource
                             $records,
                             fn (Event $event) => $event->getTranslation('title') ?: "#{$event->id}"
                         )),
-                ]),
+                ])
+                    ->label(__('Mai multe'))
+                    ->icon('heroicon-m-ellipsis-horizontal')
+                    ->color('gray')
+                    ->button(),
             ])
             ->recordUrl(null)
             ->recordClasses(function (Event $record) {

@@ -15,14 +15,15 @@ use Illuminate\Support\HtmlString;
 class ListEvents extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasListChrome;
 
     protected static string $resource = EventResource::class;
 
     public function getHeading(): string|Htmlable
     {
         $query = static::getResource()::getEloquentQuery();
-        $count = number_format($query->count());
-        return new HtmlString("Evenimente <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+        $count = number_format($query->count(), 0, ',', '.');
+        return new HtmlString(e(__('Evenimente')) . " <span class=\"ep-lst-count\">{$count}</span>");
     }
 
     public function getSubheading(): string|Htmlable|null
@@ -62,28 +63,10 @@ class ListEvents extends ListRecords
         }
     }
 
-    /**
-     * Override tabs component to move it inline with the page header.
-     * Adds x-init Alpine directive on the wrapper div.fi-sc-tabs
-     * which physically moves itself into the fi-header element.
-     */
-    public function getTabsContentComponent(): Component
+    /** Tab-urile din "De completat" (aceleasi interogari, doar grupate in meniu). */
+    protected function listTodoTabKeys(): array
     {
-        return parent::getTabsContentComponent()
-            ->extraAttributes([
-                'x-data' => '{}',
-                'x-init' => "\$nextTick(() => {
-                    const toolbar = document.querySelector('.fi-ta-header-toolbar');
-                    if (!toolbar) return;
-                    const nav = \$el.querySelector('.fi-tabs');
-                    if (!nav) return;
-                    toolbar.prepend(nav);
-                    nav.style.order = '-1';
-                    const style = document.createElement('style');
-                    style.textContent = '.fi-ta-header-toolbar .fi-ta-bulk-actions { order: -3; }';
-                    document.head.appendChild(style);
-                })",
-            ]);
+        return ['no_venue', 'no_artists', 'no_category', 'no_genre'];
     }
 
     public function getBreadcrumbs(): array
@@ -94,15 +77,17 @@ class ListEvents extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
-                ->extraAttributes([
-                    'id' => 'create-event-btn',
-                ]),
             Actions\Action::make('import')
-                ->label(__('Import Events'))
+                ->label(__('Importă'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('import')),
+            Actions\CreateAction::make()
+                ->label(__('Eveniment nou'))
+                ->icon('heroicon-m-plus')
+                ->extraAttributes([
+                    'id' => 'create-event-btn',
+                ]),
         ];
     }
 
@@ -111,12 +96,8 @@ class ListEvents extends ListRecords
         $now = now();
 
         return [
-            'all' => Tab::make('Toate'),
-            'unpublished' => Tab::make('Nepublicate')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_published', false))
-                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('is_published', false)->count())
-                ->badgeColor('warning'),
-            'active' => Tab::make('Active')
+            'all' => Tab::make(__('Toate'))->badge(fn () => number_format($this->getResource()::getEloquentQuery()->count(), 0, ',', '.')),
+            'active' => Tab::make(__('Active'))
                 ->modifyQueryUsing(function (Builder $query) use ($now) {
                     return $query->where(function ($q) use ($now) {
                         // Range mode: end date in future
@@ -187,7 +168,11 @@ class ListEvents extends ListRecords
                         ->count();
                 })
                 ->badgeColor('success'),
-            'ended' => Tab::make('Încheiate')
+            'unpublished' => Tab::make(__('Nepublicate'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_published', false))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('is_published', false)->count())
+                ->badgeColor('warning'),
+            'ended' => Tab::make(__('Încheiate'))
                 ->modifyQueryUsing(function (Builder $query) use ($now) {
                     return $query->where(function ($q) use ($now) {
                         // Range mode: end date in past
@@ -239,19 +224,19 @@ class ListEvents extends ListRecords
                         ->count();
                 })
                 ->badgeColor('gray'),
-            'no_venue' => Tab::make('Fără venue')
+            'no_venue' => Tab::make(__('Fără locație'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('venue_id'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->whereNull('venue_id')->count())
                 ->badgeColor('danger'),
-            'no_artists' => Tab::make('Fără artiști')
+            'no_artists' => Tab::make(__('Fără artiști'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereDoesntHave('artists'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->whereDoesntHave('artists')->count())
                 ->badgeColor('danger'),
-            'no_category' => Tab::make('Fără categorie')
+            'no_category' => Tab::make(__('Fără categorie'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('marketplace_event_category_id'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->whereNull('marketplace_event_category_id')->count())
                 ->badgeColor('danger'),
-            'no_genre' => Tab::make('Fără gen')
+            'no_genre' => Tab::make(__('Fără gen'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereDoesntHave('eventGenres'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->whereDoesntHave('eventGenres')->count())
                 ->badgeColor('danger'),
