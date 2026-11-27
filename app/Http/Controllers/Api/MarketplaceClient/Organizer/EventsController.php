@@ -1860,7 +1860,59 @@ class EventsController extends BaseController
             }
         }
 
-        $participants = $tickets->map(function ($ticket) use ($eventTitles) {
+        // Locurile din hartă pentru biletele afișate, încărcate o singură dată,
+        // ca să arătăm „PARTER 1 · Rând 4 · Loc 15” în loc de seat_uid brut.
+        $seatUidOf = function ($ticket) {
+            $meta = is_array($ticket->meta) ? $ticket->meta : [];
+            $uid = $ticket->seat_uid ?: ($meta['seat_uid'] ?? null);
+            if (!$uid && $ticket->seat_label && preg_match('/^S\d+-.+-\d+$/', $ticket->seat_label)) {
+                $uid = $ticket->seat_label;
+            }
+            return $uid;
+        };
+        $eventSeatsByUid = [];
+        $seatUids = $tickets->map($seatUidOf)->filter()->unique()->values()->all();
+        if (!empty($seatUids) && !empty($scopedEventIds)) {
+            $layoutIds = \App\Models\Seating\EventSeatingLayout::whereIn('event_id', $scopedEventIds)->pluck('event_id', 'id');
+            if ($layoutIds->isNotEmpty()) {
+                \App\Models\Seating\EventSeat::whereIn('event_seating_id', $layoutIds->keys())
+                    ->whereIn('seat_uid', $seatUids)
+                    ->get(['event_seating_id', 'seat_uid', 'section_name', 'row_label', 'seat_label'])
+                    ->each(function ($s) use (&$eventSeatsByUid, $layoutIds) {
+                        $eventSeatsByUid[$layoutIds[$s->event_seating_id] . '|' . $s->seat_uid] = $s;
+                    });
+            }
+        }
+        $humanSeatLabel = function ($ticket, $eventId) use ($seatUidOf, $eventSeatsByUid) {
+            $meta = is_array($ticket->meta) ? $ticket->meta : [];
+            $section = $meta['section_name'] ?? null;
+            $row = $meta['row_label'] ?? null;
+            $seat = $meta['seat_number'] ?? null;
+            $uid = $seatUidOf($ticket);
+
+            if ((!$section || !$row || !$seat) && $uid && isset($eventSeatsByUid[$eventId . '|' . $uid])) {
+                $es = $eventSeatsByUid[$eventId . '|' . $uid];
+                $section = $section ?: $es->section_name;
+                $row = $row ?: $es->row_label;
+                $seat = $seat ?: $es->seat_label;
+            }
+            if ((!$section || !$row || !$seat) && $uid) {
+                $details = $ticket->getSeatDetails();
+                $section = $section ?: ($details['section_name'] ?? null);
+                $row = $row ?: ($details['row_label'] ?? null);
+                $seat = $seat ?: ($details['seat_number'] ?? null);
+            }
+
+            $parts = array_filter([
+                $section,
+                $row ? 'Rând ' . $row : null,
+                $seat ? 'Loc ' . $seat : null,
+            ]);
+
+            return !empty($parts) ? implode(' · ', $parts) : ($ticket->seat_label ?: null);
+        };
+
+        $participants = $tickets->map(function ($ticket) use ($eventTitles, $humanSeatLabel) {
             $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
             $isInvitation = !empty($ticketMeta['is_invitation'])
                 || (!$ticket->order && $ticket->ticketType?->event_id);
@@ -1902,7 +1954,7 @@ class EventsController extends BaseController
                 'ticket_type' => $ticket->ticketType?->name ?? ($isInvitation ? 'Invitatie' : 'Standard'),
                 'ticket_code' => $ticket->barcode,
                 'control_code' => $ticket->code,
-                'seat_label' => $ticket->seat_label ?? null,
+                'seat_label' => $humanSeatLabel($ticket, $eventId),
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                 'checked_in_by' => $ticket->checked_in_by,
