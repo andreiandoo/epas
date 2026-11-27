@@ -14,6 +14,7 @@ use Illuminate\Support\HtmlString;
 class ListOrders extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasListChrome;
 
     protected static string $resource = OrderResource::class;
 
@@ -35,8 +36,7 @@ class ListOrders extends ListRecords
 
     public function getHeading(): string|Htmlable
     {
-        $count = number_format(static::getResource()::getEloquentQuery()->count());
-        $title = "Comenzi <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>";
+        $title = (string) $this->listHeading(__('Comenzi'));
 
         $eventId = request()->query('event_id');
         if ($eventId && ($event = Event::with('venue')->find($eventId))) {
@@ -104,48 +104,51 @@ class ListOrders extends ListRecords
         return new HtmlString($title);
     }
 
-    public function getTabsContentComponent(): Component
+    /** Less used states go in one dropdown next to the main views. */
+    protected function listTodoTabKeys(): array
     {
-        return parent::getTabsContentComponent()
-            ->extraAttributes([
-                'x-data' => '{}',
-                'x-init' => "\$nextTick(() => { const toolbar = document.querySelector('.fi-ta-header-toolbar'); if (!toolbar) return; toolbar.prepend(\$el); \$el.style.flex = 'none'; \$el.style.minWidth = '0'; const nav = \$el.querySelector('.fi-tabs'); if (nav) { nav.style.marginInline = '0'; } })",
-            ]);
+        return ['cancelled', 'refunded', 'expired'];
     }
 
+    protected function listTodoTabsLabel(): string
+    {
+        return __('Alte stări');
+    }
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('Toate'),
-            'completed' => Tab::make('Finalizate')
+            'all' => Tab::make(__('Toate'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->count())
+                ->badgeColor('gray'),
+            'completed' => Tab::make(__('Finalizate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'completed'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'completed')->count())
                 ->badgeColor('success'),
-            'paid' => Tab::make('Plătite')
+            'paid' => Tab::make(__('Plătite'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'paid'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'paid')->count())
                 ->badgeColor('success'),
-            'pending' => Tab::make('În așteptare')
+            'pending' => Tab::make(__('În așteptare'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'pending')->count())
                 ->badgeColor('warning'),
-            'failed' => Tab::make('Eșuate')
+            'failed' => Tab::make(__('Eșuate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'failed'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'failed')->count())
                 ->badgeColor('danger'),
-            'cancelled' => Tab::make('Anulate')
+            'cancelled' => Tab::make(__('Anulate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'cancelled'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'cancelled')->count())
                 ->badgeColor('gray'),
-            'refunded' => Tab::make('Rambursate')
+            'refunded' => Tab::make(__('Rambursate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'refunded')->count())
                 ->badgeColor('gray'),
-            'refund_manual' => Tab::make('De rambursat manual')
+            'refund_manual' => Tab::make(__('De rambursat manual'))
                 ->modifyQueryUsing(fn (Builder $query) => $this->pendingManualRefundScope($query))
                 ->badge(fn () => $this->pendingManualRefundScope($this->getResource()::getEloquentQuery())->count() ?: null)
                 ->badgeColor('danger'),
-            'expired' => Tab::make('Expirate')
+            'expired' => Tab::make(__('Expirate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'expired'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'expired')->count())
                 ->badgeColor('gray'),

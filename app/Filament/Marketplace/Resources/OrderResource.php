@@ -322,18 +322,24 @@ class OrderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // The rows read tickets and their events: load them in two queries, not per row.
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['tickets.event']))
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label(__('Nr. Comandă'))
                     ->html()
                     ->formatStateUsing(function ($state, $record) {
                         $primary = '#' . str_pad($state, 6, '0', STR_PAD_LEFT);
-                        $secondary = trim(($record->order_number ?? '')
-                            . ($record->source === 'test_order' ? ' ⚗️ TEST' : '')
-                            . ($record->source === 'external_import' ? ' 🌐 ' . ($record->meta['external_platform'] ?? $record->meta['imported_from'] ?? 'Extern') : ''));
+                        $secondary = trim((string) ($record->order_number ?? ''));
                         $html = '<div class="font-semibold">' . e($primary) . '</div>';
                         if ($secondary !== '') {
-                            $html .= '<div class="text-xs text-gray-500 dark:text-gray-400">' . e($secondary) . '</div>';
+                            $html .= '<div class="ep-sub">' . e($secondary) . '</div>';
+                        }
+                        if ($record->source === 'test_order') {
+                            $html .= '<div class="ep-stare" style="margin-top:4px"><span class="ep-pill ep-pill--warn">TEST</span></div>';
+                        } elseif ($record->source === 'external_import') {
+                            $platform = $record->meta['external_platform'] ?? $record->meta['imported_from'] ?? 'Extern';
+                            $html .= '<div class="ep-stare" style="margin-top:4px"><span class="ep-pill ep-pill--mute">' . e(__('Import') . ': ' . $platform) . '</span></div>';
                         }
                         return $html;
                     })
@@ -356,7 +362,7 @@ class OrderResource extends Resource
                             $html .= '<div class="font-semibold">' . e($name) . '</div>';
                         }
                         if ($email !== '') {
-                            $html .= '<div class="text-xs text-gray-500 dark:text-gray-400">' . e($email) . '</div>';
+                            $html .= '<div class="ep-sub">' . e($email) . '</div>';
                         }
                         return $html !== '' ? $html : '-';
                     })
@@ -429,10 +435,20 @@ class OrderResource extends Resource
                     ->getStateUsing(fn ($record) => $record->tickets->count())
                     ->badge()
                     ->color('info')
-                    ->toggleable(),
+                    // Shown under the total.
+                    ->toggleable(isToggledHiddenByDefault: true),
+                // Total with the ticket count and discount code as the muted line.
                 Tables\Columns\TextColumn::make('total')
                     ->label(__('Total'))
-                    ->formatStateUsing(fn ($state, $record) => number_format($state ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON'))
+                    ->formatStateUsing(fn ($state, $record) => number_format($state ?? ($record->total_cents / 100), 2, ',', '.') . ' ' . ($record->currency ?? 'RON'))
+                    ->description(function ($record): string {
+                        $n = $record->tickets->count();
+
+                        return implode(' | ', array_filter([
+                            $n . ' ' . ($n === 1 ? __('bilet') : __('bilete')),
+                            filled($record->promo_code) ? __('cod') . ' ' . $record->promo_code : null,
+                        ]));
+                    })
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('promo_code')
@@ -441,35 +457,38 @@ class OrderResource extends Resource
                     ->badge()
                     ->color('success')
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label(__('Status'))
-                    ->colors([
-                        'warning' => 'pending',
-                        'success' => fn ($state) => in_array($state, ['completed', 'paid', 'confirmed']),
-                        'danger' => fn ($state) => in_array($state, ['cancelled', 'failed']),
-                        'gray' => fn ($state) => in_array($state, ['refunded', 'expired']),
-                        'info' => 'partially_refunded',
-                    ])
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending' => 'În așteptare',
-                        'paid' => 'Plătită',
-                        'confirmed' => 'Confirmată',
-                        'completed' => 'Finalizată',
-                        'cancelled' => 'Anulată',
-                        'refunded' => 'Rambursată',
-                        'partially_refunded' => 'Rambursată parțial',
-                        'failed' => 'Eșuată',
-                        'expired' => 'Expirată',
-                        default => ucfirst($state),
-                    })
-                    ->tooltip(function ($record) {
-                        if ($record->status !== 'pending' || !$record->expires_at) return null;
-                        $expiresAt = $record->expires_at;
-                        if ($expiresAt->isPast()) return 'Expirat — se va actualiza automat';
-                        $diff = now()->diff($expiresAt);
-                        if ($diff->h > 0) return "Expiră în {$diff->h}h {$diff->i}min";
-                        if ($diff->i > 0) return "Expiră în {$diff->i} min {$diff->s}s";
-                        return "Expiră în {$diff->s}s";
+                    ->html()
+                    ->state(function ($record): HtmlString {
+                        [$label, $tone] = match ($record->status) {
+                            'pending' => [__('În așteptare'), 'warn'],
+                            'paid' => [__('Plătită'), 'ok'],
+                            'confirmed' => [__('Confirmată'), 'ok'],
+                            'completed' => [__('Finalizată'), 'ok'],
+                            'cancelled' => [__('Anulată'), 'bad'],
+                            'refunded' => [__('Rambursată'), 'mute'],
+                            'partially_refunded' => [__('Rambursată parțial'), 'warn'],
+                            'failed' => [__('Eșuată'), 'bad'],
+                            'expired' => [__('Expirată'), 'mute'],
+                            default => [ucfirst((string) $record->status), 'mute'],
+                        };
+
+                        // Same hint the old badge tooltip gave for pending orders.
+                        $tip = '';
+                        if ($record->status === 'pending' && $record->expires_at) {
+                            $expiresAt = $record->expires_at;
+                            if ($expiresAt->isPast()) {
+                                $tip = 'Expirat — se va actualiza automat';
+                            } else {
+                                $diff = now()->diff($expiresAt);
+                                $tip = $diff->h > 0 ? "Expiră în {$diff->h}h {$diff->i}min"
+                                    : ($diff->i > 0 ? "Expiră în {$diff->i} min {$diff->s}s" : "Expiră în {$diff->s}s");
+                            }
+                        }
+
+                        return new HtmlString('<div class="ep-stare"><span class="ep-pill ep-pill--' . $tone . '"'
+                            . ($tip !== '' ? ' title="' . e($tip) . '"' : '') . '><span class="ep-dot"></span>' . e($label) . '</span></div>');
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
