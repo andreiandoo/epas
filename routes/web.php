@@ -667,6 +667,13 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
     Route::post('/cockpit/prefs', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'savePrefs'])
         ->name('marketplace.cockpit.prefs');
 
+    // Diagnostic super-admin (doar citire): texte netraduse și erori pe o adresă
+    Route::get('/diag/i18n-missing/{locale}', [\App\Http\Controllers\Marketplace\DiagnosticsController::class, 'i18nMissing'])
+        ->where('locale', '[a-z]{2}')
+        ->name('marketplace.diag.i18n-missing');
+    Route::get('/diag/errors', [\App\Http\Controllers\Marketplace\DiagnosticsController::class, 'errors'])
+        ->name('marketplace.diag.errors');
+
     // Chatul intern al echipei
     Route::prefix('team-chat')->group(function () {
         Route::get('/threads', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'threads'])->name('marketplace.team-chat.threads');
