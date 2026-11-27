@@ -18,7 +18,7 @@
         --ep-frame-bg: #ffffff; --ep-frame-line: #e3e7ec; --ep-frame-fg: #17202a; --ep-frame-muted: #66717f; --ep-frame-hover: #f2f4f7;
     }
     .dark {
-        --ep-frame-bg: #0c0f13; --ep-frame-line: #2b333d; --ep-frame-fg: #e6eaef; --ep-frame-muted: #8a95a3; --ep-frame-hover: #1a2027;
+        --ep-frame-bg: #0c0f13; --ep-frame-line: #161a21; --ep-frame-fg: #e6eaef; --ep-frame-muted: #8a95a3; --ep-frame-hover: #1a2027;
     }
     .ep-frame-brand, .ep-gicon { display: none; }
 
@@ -38,8 +38,9 @@
         html.ep-frame body .fi-custom-topbar.fi-custom-topbar.fi-custom-topbar.fi-custom-topbar { background-color: var(--ep-frame-bg) !important; background-image: none !important; box-shadow: none !important; }
         html.ep-frame .fi-custom-topbar > .ep-topbar-row { width: 100%; max-width: none; height: var(--ep-top); align-items: center; gap: 12px; }
         html.ep-frame .fi-custom-topbar > .ep-topbar-row > * { align-self: center; }
+        html.ep-frame .ep-frame-brand img { height: 34px; width: auto; display: block; }
         html.ep-frame .ep-frame-brand {
-            display: inline-flex; align-items: center; flex: none; height: 36px; padding: 0 4px; margin-right: 8px;
+            display: inline-flex; align-items: center; flex: none; height: 36px; padding: 0 4px; margin-right: 2px;
             font-size: 19px; font-weight: 800; letter-spacing: -.01em; line-height: 1; color: #10b981; text-decoration: none; white-space: nowrap;
         }
         html.ep-frame .ep-sidebar-toggle { width: 36px !important; height: 36px !important; border-radius: 9px; color: var(--ep-frame-muted) !important; }
@@ -81,12 +82,34 @@
             height: 100dvh !important; width: var(--ep-left) !important;
             translate: none !important; z-index: 39 !important;
             background: var(--ep-frame-bg) !important; border-right: 1px solid var(--ep-frame-line);
-            box-shadow: none !important; overflow-x: hidden; transition: width .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease;
+            box-shadow: none !important; overflow-x: hidden;
         }
         html.ep-frame.ep-nav-pinned .fi-sidebar.fi-main-sidebar { width: var(--ep-left-open) !important; }
+        /* Deschis la hover: lățimea se schimbă instant, dar e decupat la 64px; apoi decupajul se retrage
+           (fără reflow, ca un sertar). Umbra rămâne în afara decupajului. */
         html.ep-frame.ep-nav-open:not(.ep-nav-pinned) .fi-sidebar.fi-main-sidebar {
             width: var(--ep-left-open) !important;
-            box-shadow: 24px 0 48px rgba(0,0,0,.28) !important;
+            clip-path: inset(0 calc(var(--ep-left-open) - var(--ep-left)) 0 0);
+            transition: clip-path .24s cubic-bezier(.2,.8,.2,1), box-shadow .24s ease;
+        }
+        html.ep-frame.ep-nav-open.ep-nav-reveal:not(.ep-nav-pinned) .fi-sidebar.fi-main-sidebar {
+            clip-path: inset(0 -80px 0 0);
+            box-shadow: 24px 0 48px rgba(0,0,0,.32) !important;
+        }
+        html.ep-frame.ep-nav-open:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-label,
+        html.ep-frame.ep-nav-open:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-label,
+        html.ep-frame.ep-nav-open:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-collapse-btn,
+        html.ep-frame.ep-nav-open:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-badge-ctn {
+            opacity: 0; transition: opacity .14s ease;
+        }
+        html.ep-frame.ep-nav-open.ep-nav-reveal:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-label,
+        html.ep-frame.ep-nav-open.ep-nav-reveal:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-label,
+        html.ep-frame.ep-nav-open.ep-nav-reveal:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-collapse-btn,
+        html.ep-frame.ep-nav-open.ep-nav-reveal:not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-badge-ctn {
+            opacity: 1; transition-delay: .08s;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            html.ep-frame .fi-sidebar.fi-main-sidebar, html.ep-frame .fi-main-sidebar * { transition: none !important; }
         }
         html.ep-frame .fi-main-sidebar .fi-sidebar-header,
         html.ep-frame .fi-main-sidebar .ep-sidebar-logo { display: none !important; }
@@ -209,22 +232,36 @@
         function pinned() { return html.classList.contains('ep-nav-pinned'); }
         function secondaryOpen() { return document.body && document.body.classList.contains('ep-secondary-sidebar-open'); }
         function repositionSecondary() { setTimeout(function () { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }, 200); }
+        var hideT = null;
         function open() {
             clearTimeout(closeT);
-            if (pinned() || html.classList.contains('ep-nav-open')) return;
-            openT = setTimeout(function () { html.classList.add('ep-nav-open'); repositionSecondary(); }, 120);
+            clearTimeout(hideT);
+            if (pinned()) return;
+            if (html.classList.contains('ep-nav-open')) { html.classList.add('ep-nav-reveal'); return; }
+            clearTimeout(openT);
+            openT = setTimeout(function () {
+                // Întâi forma deschisă (decupată la 64px), apoi în cadrul următor se dezvăluie.
+                html.classList.add('ep-nav-open');
+                requestAnimationFrame(function () { requestAnimationFrame(function () { html.classList.add('ep-nav-reveal'); }); });
+                repositionSecondary();
+            }, 110);
         }
         function close() {
             clearTimeout(openT);
             if (secondaryOpen()) return; // meniul principal rămâne deschis lângă cel secundar
-            closeT = setTimeout(function () { html.classList.remove('ep-nav-open'); }, 260);
+            clearTimeout(closeT);
+            closeT = setTimeout(function () {
+                html.classList.remove('ep-nav-reveal');
+                // După ce s-a strâns decupajul, revenim la forma doar cu iconițe.
+                hideT = setTimeout(function () { if (!html.classList.contains('ep-nav-reveal')) html.classList.remove('ep-nav-open'); }, 240);
+            }, 220);
         }
 
         // ☰ din bara de sus: fixează meniul deschis (alegerea fiecărui operator, ținută minte).
         window.epToggleNavPin = function () {
             var on = !pinned();
             html.classList.toggle('ep-nav-pinned', on);
-            html.classList.remove('ep-nav-open');
+            html.classList.remove('ep-nav-open', 'ep-nav-reveal');
             try { localStorage.setItem('ep-nav-pinned', on ? '1' : '0'); } catch (e) {}
             syncToggle();
             repositionSecondary();
@@ -278,7 +315,7 @@
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && html.classList.contains('ep-nav-open') && !secondaryOpen()) html.classList.remove('ep-nav-open');
+            if (e.key === 'Escape' && html.classList.contains('ep-nav-open') && !secondaryOpen()) html.classList.remove('ep-nav-open', 'ep-nav-reveal');
         });
         window.addEventListener('resize', function () {
             var desk = window.matchMedia('(min-width: 1024px)').matches;

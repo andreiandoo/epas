@@ -139,81 +139,7 @@
         </div>
         @endif
 
-        <!-- Active TODOs (marketplace-internal task list) — visible to all admins -->
-        @if(isset($pendingTodos) && $pendingTodos->count() > 0)
-        <div x-data="{ open: false }" :class="open ? 'lg:col-span-2' : ''" class="overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-blue-300 dark:border-blue-800">
-            <div class="flex items-center justify-between px-4 py-3 border-b bg-blue-800 dark:bg-blue-900 border-blue-800 dark:border-blue-800">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 text-blue-100 transition-transform" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-blue-100" />
-                    <h3 class="font-semibold text-white">TODOs active</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-900 bg-amber-300 rounded-full">{{ $pendingTodosCount }}</span>
-                </div>
-                <a href="{{ route('filament.marketplace.resources.marketplace-todos.index') }}" class="text-xs font-medium text-blue-100 hover:text-white hover:underline">
-                    Vezi toate
-                </a>
-            </div>
-            <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96" x-show="open" x-collapse x-cloak>
-                @foreach($pendingTodos as $todo)
-                @php
-                    $statusLabel = match ($todo->status) {
-                        'open' => 'Deschis',
-                        'in_progress' => 'În lucru',
-                        'awaiting_response' => 'Așteaptă răspuns',
-                        default => $todo->status,
-                    };
-                    $statusClass = match ($todo->status) {
-                        'open' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-                        'in_progress' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-                        'awaiting_response' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-                        default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                    };
-                    $priorityClass = match ($todo->priority) {
-                        'urgent' => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
-                        'high' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-                        'low' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-                        default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                    };
-                    $priorityLabel = match ($todo->priority) {
-                        'urgent' => 'Urgentă',
-                        'high' => 'Ridicată',
-                        'normal' => 'Normală',
-                        'low' => 'Scăzută',
-                        default => $todo->priority,
-                    };
-                @endphp
-                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ route('filament.marketplace.resources.marketplace-todos.view', $todo->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-sky-600 dark:hover:text-sky-400">
-                                {{ $todo->title }}
-                            </a>
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded {{ $statusClass }}">{{ $statusLabel }}</span>
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded {{ $priorityClass }}">{{ $priorityLabel }}</span>
-                            <span class="font-mono text-[10px] text-gray-500">{{ $todo->todo_number }}</span>
-                        </div>
-                        <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            <span>{{ $todo->creator?->name ?? '—' }}</span>
-                            @if ($todo->category)
-                                <span>·</span>
-                                <span>{{ $todo->category->name }}</span>
-                            @endif
-                            @if ($todo->assignee)
-                                <span>·</span>
-                                <span>Asignat: {{ $todo->assignee->name }}</span>
-                            @endif
-                            <span class="text-gray-400">{{ $todo->last_activity_at?->diffForHumans() }}</span>
-                        </div>
-                    </div>
-                    <a href="{{ route('filament.marketplace.resources.marketplace-todos.view', $todo->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 dark:text-sky-300 dark:bg-sky-900/40 dark:hover:bg-sky-900/60 rounded-lg transition-colors">
-                        <x-heroicon-o-eye class="w-3.5 h-3.5" />
-                        Deschide
-                    </a>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
+        {{-- TODOs active și Conturi artist în review: mutate în bara de atenție din dreapta. --}}
 
         <!-- Invitation Abuse Detector — events where free-ticket giveaways exceed paid-ticket commission -->
         {{-- Financial report — restricted to Super Administrators only. --}}
@@ -370,51 +296,6 @@
         </div>
         @endif
 
-        <!-- Pending Artist Accounts (status=pending → "În review") — visible to all admins -->
-        @if(isset($pendingArtistAccounts) && $pendingArtistAccounts->count() > 0)
-        <div x-data="{ open: false }" :class="open ? 'lg:col-span-2' : ''" class="overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-violet-300 dark:border-violet-700">
-            <div class="flex items-center justify-between px-4 py-3 border-b bg-violet-50 dark:bg-violet-900/30 border-violet-200 dark:border-violet-800">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 transition-transform text-violet-500" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-identification class="w-5 h-5 text-violet-500" />
-                    <h3 class="font-semibold text-violet-800 dark:text-violet-200">Conturi artist În review</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-violet-500 rounded-full">{{ $pendingArtistAccountsCount }}</span>
-                </div>
-                <a href="{{ route('filament.marketplace.resources.artist-accounts.index') }}?tableFilters[status][value]=pending" class="text-xs text-violet-600 dark:text-violet-400 hover:underline">
-                    Vezi toate
-                </a>
-            </div>
-            <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96" x-show="open" x-collapse x-cloak>
-                @foreach($pendingArtistAccounts as $artistAccount)
-                @php
-                    $artistName = trim(($artistAccount->first_name ?? '') . ' ' . ($artistAccount->last_name ?? '')) ?: $artistAccount->email;
-                @endphp
-                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ route('filament.marketplace.resources.artist-accounts.view', $artistAccount->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-violet-600 dark:hover:text-violet-400">
-                                {{ $artistName }}
-                            </a>
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">În review</span>
-                        </div>
-                        <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            <span>{{ $artistAccount->email }}</span>
-                            @if($artistAccount->phone)
-                                <span>·</span>
-                                <span>{{ $artistAccount->phone }}</span>
-                            @endif
-                            <span class="text-gray-400">Înregistrat {{ $artistAccount->created_at->diffForHumans() }}</span>
-                        </div>
-                    </div>
-                    <a href="{{ route('filament.marketplace.resources.artist-accounts.view', $artistAccount->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 dark:text-violet-300 dark:bg-violet-900/40 dark:hover:bg-violet-900/60 rounded-lg transition-colors">
-                        <x-heroicon-o-eye class="w-3.5 h-3.5" />
-                        Revizuieste
-                    </a>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
 
         <!-- Pending Review Events — visible to all admins -->
         @if(isset($pendingReviewEvents) && $pendingReviewEvents->count() > 0)

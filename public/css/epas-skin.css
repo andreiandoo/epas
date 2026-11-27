@@ -3972,10 +3972,8 @@ nav.fi-topbar .fi-topbar-end {
 .dark,
 .dark body,
 html.dark {
-	background-color: var(--metro-bg-primary) !important;
-	background-image: radial-gradient(circle at center,
-			var(--metro-dot-color) var(--metro-dot-size),
-			transparent var(--metro-dot-size)) !important;
+	background-color: #111827 !important;
+	background-image: radial-gradient(circle at center, #3741511a var(--metro-dot-size), transparent var(--metro-dot-size)) !important;
 	background-size: var(--metro-dot-spacing) var(--metro-dot-spacing) !important;
 	background-position: 0 0 !important;
 	background-attachment: fixed !important;

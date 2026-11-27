@@ -100,7 +100,36 @@
              sidebar to an icon-only rail. Filament's native isOpenDesktop state is
              inert in this build, so we drive a custom `ep-rail-collapsed` class on
              <html> (persisted, CSS below). --}}
-        @php $epFrameBrand = $panelType === 'marketplace' && \App\Services\OperatorCockpit\AttentionService::isEnabledFor($currentMarketplaceClient); @endphp
+        @php
+            $epFrameBrand = $panelType === 'marketplace' && \App\Services\OperatorCockpit\AttentionService::isEnabledFor($currentMarketplaceClient);
+            $epFrameLogo = null;
+            if ($epFrameBrand) {
+                // Logo-ul din branding-ul marketplace-ului, altfel cel din public/images/marketplaces/{nume}-logo.*
+                $brandingLogo = data_get($currentMarketplaceClient?->settings, 'branding.logo_dark') ?: data_get($currentMarketplaceClient?->settings, 'branding.logo_url');
+                if (is_array($brandingLogo)) { $brandingLogo = reset($brandingLogo) ?: null; }
+                if ($brandingLogo) {
+                    $epFrameLogo = str_starts_with($brandingLogo, 'http') ? $brandingLogo : \Illuminate\Support\Facades\Storage::disk('public')->url($brandingLogo);
+                } else {
+                    $slug = \Illuminate\Support\Str::slug((string) $currentMarketplaceClient?->name);
+                    foreach (['webp', 'svg', 'png'] as $ext) {
+                        if ($slug && is_file(public_path("images/marketplaces/{$slug}-logo.{$ext}"))) {
+                            $epFrameLogo = asset("images/marketplaces/{$slug}-logo.{$ext}");
+                            break;
+                        }
+                    }
+                }
+            }
+        @endphp
+        @if($epFrameBrand)
+            {{-- În cadrul nou: logo-ul marketplace-ului primul, apoi ☰ în dreapta lui. --}}
+            <a href="{{ url('/marketplace') }}" class="ep-frame-brand" aria-label="{{ $currentMarketplaceClient?->name ?? 'Marketplace' }}">
+                @if($epFrameLogo)
+                    <img src="{{ $epFrameLogo }}" alt="{{ $currentMarketplaceClient?->name }}">
+                @else
+                    {{ $currentMarketplaceClient?->name ?? 'Marketplace' }}
+                @endif
+            </a>
+        @endif
         <button
             type="button"
             x-data
@@ -112,10 +141,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
         </button>
-        @if($epFrameBrand)
-            {{-- În cadrul nou: numele marketplace-ului ca logo, după ☰, pe același rând. --}}
-            <a href="{{ url('/marketplace') }}" class="ep-frame-brand">{{ $currentMarketplaceClient?->name ?? 'Marketplace' }}</a>
-        @endif
 
         {{-- Center: Global Search --}}
         <div class="flex-1 hidden md:block ep-mobile-search" @if($panelType === 'marketplace') x-bind:class="{ 'is-open': searchOpen }" @endif>

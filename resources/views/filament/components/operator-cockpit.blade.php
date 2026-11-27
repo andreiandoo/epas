@@ -9,7 +9,7 @@
         font-family: inherit;
     }
     .dark #epc-root {
-        --epc-rail: #0c0f13; --epc-drawer: #141920; --epc-line: #2b333d; --epc-fg: #e6eaef; --epc-muted: #8a95a3;
+        --epc-rail: #0c0f13; --epc-drawer: #141920; --epc-line: #161a21; --epc-fg: #e6eaef; --epc-muted: #8a95a3;
         --epc-hover: #1e252d; --epc-seg: #0e1217; --epc-seg-on: #1e252d; --epc-btn: #dfe5ec; --epc-btn-fg: #0f1318;
         --epc-late: #f2645f;
     }
