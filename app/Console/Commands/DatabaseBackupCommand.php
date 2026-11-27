@@ -159,6 +159,15 @@ class DatabaseBackupCommand extends Command
             }
         }
 
+        // Tabele păstrate doar ca structură (fără rânduri): notificări, chat intern
+        if (!empty($backupConfig['exclude_table_data'])) {
+            foreach (explode(',', $backupConfig['exclude_table_data']) as $table) {
+                if (trim($table) !== '') {
+                    $command[] = '--exclude-table-data=' . trim($table);
+                }
+            }
+        }
+
         $process = new Process($command);
         $process->setEnv(['PGPASSWORD' => $config['password']]);
         $process->setTimeout(3600); // 1 hour timeout

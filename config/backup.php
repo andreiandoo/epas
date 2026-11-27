@@ -179,6 +179,9 @@ return [
         // Exclude tables (comma-separated)
         'exclude_tables' => env('BACKUP_PG_EXCLUDE_TABLES', 'sessions,cache,jobs,failed_jobs'),
 
+        // Tabele salvate fără date (doar structura). Tabelele care nu există încă sunt ignorate de pg_dump.
+        'exclude_table_data' => env('BACKUP_PG_EXCLUDE_TABLE_DATA', 'marketplace_notifications,marketplace_notification_reads,team_messages,team_message_attachments'),
+
         // WAL archiving for PITR
         'wal_archiving' => [
             'enabled' => env('BACKUP_PG_WAL_ENABLED', false),
