@@ -331,6 +331,10 @@ class Dashboard extends Page
                 ->where('is_published', false)
                 ->whereNotNull('submitted_at')
                 ->where('is_cancelled', false)
+                // Aceeași regulă ca bara de atenție: fără cele respinse (așteaptă organizatorul) și fără cele trecute.
+                ->whereNull('rejected_at')
+                ->where(fn ($q) => $q->whereRaw('COALESCE(range_end_date, event_date) IS NULL')
+                    ->orWhereRaw('COALESCE(range_end_date, event_date) >= CURRENT_DATE'))
                 ->with(['marketplaceOrganizer:id,name', 'venue:id,name,city'])
                 ->orderBy('submitted_at', 'desc')
                 ->get();
