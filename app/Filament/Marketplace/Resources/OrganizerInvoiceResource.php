@@ -319,8 +319,10 @@ class OrganizerInvoiceResource extends Resource
     {
         return $table
             ->columns([
+                // Oblio series/number sits under the invoice number (own column stays in "Coloane").
                 Tables\Columns\TextColumn::make('number')
                     ->label(__('Număr'))
+                    ->description(fn ($record): ?string => ($record->meta['accounting']['invoice_number'] ?? $record->meta['accounting_proforma']['invoice_number'] ?? null))
                     ->searchable()
                     ->sortable(),
 
@@ -461,7 +463,7 @@ class OrganizerInvoiceResource extends Resource
                     })
                     ->placeholder('—')
                     ->copyable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 // Voided-in-Oblio badge — mirrors the invoice edit page
                 // header pill. Renders nothing when the invoice is live
@@ -524,20 +526,23 @@ class OrganizerInvoiceResource extends Resource
                 Tables\Columns\TextColumn::make('subtotal')
                     ->label(__('Subtotal'))
                     ->money(fn (Invoice $record) => $record->currency ?? 'RON')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('vat_amount')
                     ->label(__('TVA'))
-                    ->money(fn (Invoice $record) => $record->currency ?? 'RON'),
+                    ->money(fn (Invoice $record) => $record->currency ?? 'RON')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('amount')
                     ->label(__('Total'))
                     ->money(fn (Invoice $record) => $record->currency ?? 'RON')
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->description(fn (Invoice $record): string => number_format((float) $record->subtotal, 2, ',', '.') . ' + ' . __('TVA') . ' ' . number_format((float) $record->vat_amount, 2, ',', '.')),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label(__('Status'))
+                    ->label(__('Stare'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'paid' => 'success',
@@ -590,16 +595,20 @@ class OrganizerInvoiceResource extends Resource
                     }),
             ])
             ->actions([
-                EditAction::make(),
                 Action::make('preview')
-                    ->label(__('Preview'))
+                    ->label(__('Previzualizare'))
                     ->icon('heroicon-o-eye')
+                    ->iconButton()
+                    ->tooltip(__('Previzualizare'))
                     ->modalHeading(fn (Invoice $record) => "Factură #{$record->number}")
                     ->modalContent(function (Invoice $record) {
                         return new HtmlString(static::renderInvoiceHtml($record));
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel(__('Închide')),
+                // Edit and delete in one menu; the row opens the invoice.
+                \Filament\Actions\ActionGroup::make([
+                EditAction::make(),
                 DeleteAction::make()
                     ->before(function (DeleteAction $action, Invoice $record) {
                         $blocker = $record->deletionBlocker();
@@ -609,6 +618,11 @@ class OrganizerInvoiceResource extends Resource
                             $action->cancel();
                         }
                     }),
+                ])
+                    ->label(__('Mai multe'))
+                    ->icon('heroicon-m-ellipsis-horizontal')
+                    ->color('gray')
+                    ->iconButton(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

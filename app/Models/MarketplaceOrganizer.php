@@ -405,6 +405,16 @@ class MarketplaceOrganizer extends Authenticatable
         return $this->hasMany(MarketplaceEvent::class);
     }
 
+    /**
+     * The organizer's events in the panel (events.marketplace_organizer_id).
+     * events() above points at the legacy marketplace_events table, which is
+     * empty for current organizers.
+     */
+    public function panelEvents(): HasMany
+    {
+        return $this->hasMany(Event::class, 'marketplace_organizer_id');
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'marketplace_organizer_id');
@@ -595,7 +605,7 @@ class MarketplaceOrganizer extends Authenticatable
     public function updateStats(): void
     {
         $this->update([
-            'total_events' => $this->events()->count(),
+            'total_events' => $this->panelEvents()->count(),
             // Test POS nu intra in statistici
             'total_tickets_sold' => $this->orders()
                 ->where('status', 'completed')

@@ -129,5 +129,8 @@
 .ep-lst .fi-ta-header-cell-general-quota,.ep-lst .fi-ta-cell-general-quota{width:130px}
 .ep-lst .fi-ta-header-cell-stare,.ep-lst .fi-ta-cell-stare{width:180px}
 .ep-lst [class*=fi-ta-header-cell-tics-listing],.ep-lst [class*=fi-ta-cell-tics-listing]{width:100px}
+.ep-lst .ep-av--round{border-radius:999px}
+/* facturi: celula Organizator / Eveniment / Perioada ia spatiul ramas */
+.ep-lst .fi-ta-header-cell-organizer\.name{width:100%}
 </style>
 </div>

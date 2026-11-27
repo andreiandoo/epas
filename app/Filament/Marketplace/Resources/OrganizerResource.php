@@ -1537,40 +1537,75 @@ class OrganizerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->withCount('panelEvents'))
             ->columns([
+                // Logo + email now live in the name cell; the separate columns stay in "Coloane".
                 Tables\Columns\ImageColumn::make('logo')
                     ->circular()
                     ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&background=10b981&color=fff')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable()
+                    ->label(__('Nume'))
+                    ->searchable(query: fn (Builder $query, string $search) => $query->where(fn (Builder $q) => $q
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")))
                     ->sortable()
+                    ->html()
+                    ->formatStateUsing(function ($state, MarketplaceOrganizer $record) {
+                        $initials = collect(preg_split('/\s+/u', trim((string) $record->name)))
+                            ->filter(fn ($w) => mb_strlen($w) > 1)
+                            ->take(2)
+                            ->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))
+                            ->implode('');
+                        $logo = $record->logo_url ?? null;
+                        $avatar = $logo
+                            ? '<span class="ep-av ep-av--round"><img src="' . e($logo) . '" alt="" loading="lazy"></span>'
+                            : '<span class="ep-av ep-av--round" aria-hidden="true">' . e($initials !== '' ? $initials : '·') . '</span>';
+
+                        return '<div class="ep-venue">' . $avatar . '<div style="min-width:0"><div class="ep-venue-name">' . e($record->name) . '</div>'
+                            . (filled($record->email) ? '<div class="ep-sub">' . e($record->email) . '</div>' : '')
+                            . '</div></div>';
+                    })
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('person_type')
                     ->label(__('Tip'))
                     ->badge()
+                    // Short PF / PJ; the full name is in the tooltip.
                     ->state(fn (MarketplaceOrganizer $r): string => match ($r->person_type) {
-                        'pf' => 'Persoană Fizică',
-                        'pj' => 'Persoană Juridică',
+                        'pf' => 'PF',
+                        'pj' => 'PJ',
                         default => '—',
                     })
+                    ->tooltip(fn (MarketplaceOrganizer $r): ?string => match ($r->person_type) {
+                        'pf' => __('Persoană fizică'),
+                        'pj' => __('Persoană juridică'),
+                        default => null,
+                    })
                     ->color(fn (string $state): string => match ($state) {
-                        'Persoană Fizică' => 'info',
-                        'Persoană Juridică' => 'success',
+                        'PF' => 'info',
+                        'PJ' => 'success',
                         default => 'gray',
                     })
                     ->toggleable(),
 
+                // Status in Romanian, with "verificat" next to it (the Verified column stays in "Coloane").
                 Tables\Columns\TextColumn::make('status')
+                    ->label(__('Stare'))
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->formatStateUsing(fn (?string $state, MarketplaceOrganizer $record): string => match ($state) {
+                        'active' => __('Activ'),
+                        'pending' => __('În așteptare'),
+                        'suspended' => __('Suspendat'),
+                        default => (string) $state,
+                    } . ($state === 'active' && $record->verified_at ? ' | ' . __('verificat') : ''))
+                    ->color(fn (?string $state): string => match ($state) {
                         'active' => 'success',
                         'pending' => 'warning',
                         'suspended' => 'danger',
@@ -1583,7 +1618,7 @@ class OrganizerResource extends Resource
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-circle')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 // Contract signing status (3 buckets). Computed on read —
                 // no DB column. "Exceptat" = organizer created before the
@@ -1609,10 +1644,13 @@ class OrganizerResource extends Resource
                     })
                     ->toggleable(),
 
+                // Live count of the organizer's events in the panel. The cached
+                // total_events column counted the legacy marketplace_events table (0).
                 Tables\Columns\TextColumn::make('total_events')
                     ->label(__('Events'))
+                    ->state(fn (MarketplaceOrganizer $record): int => (int) ($record->panel_events_count ?? 0))
                     ->numeric()
-                    ->sortable()
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('panel_events_count', $direction))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_revenue')
@@ -1677,6 +1715,8 @@ class OrganizerResource extends Resource
                     ->label(__('Approve'))
                     ->icon('heroicon-o-check')
                     ->color('success')
+                    ->iconButton()
+                    ->tooltip(__('Approve'))
                     ->requiresConfirmation()
                     ->visible(fn (MarketplaceOrganizer $record): bool => $record->status === 'pending')
                     ->action(function (MarketplaceOrganizer $record): void {
@@ -1687,6 +1727,8 @@ class OrganizerResource extends Resource
                     ->label(__('Verify'))
                     ->icon('heroicon-o-check-badge')
                     ->color('info')
+                    ->iconButton()
+                    ->tooltip(__('Verify'))
                     ->requiresConfirmation()
                     ->visible(fn (MarketplaceOrganizer $record): bool => $record->verified_at === null && $record->status === 'active')
                     ->action(function (MarketplaceOrganizer $record): void {
@@ -1703,6 +1745,8 @@ class OrganizerResource extends Resource
                     ->label(__('Trimite reminder semnare'))
                     ->icon('heroicon-o-envelope')
                     ->color('primary')
+                    ->iconButton()
+                    ->tooltip(__('Trimite reminder semnare'))
                     ->requiresConfirmation()
                     ->modalHeading(__('Trimite reminder pentru semnarea contractului'))
                     ->modalDescription(fn (MarketplaceOrganizer $record) =>
@@ -1722,7 +1766,12 @@ class OrganizerResource extends Resource
                             ->send();
                     }),
 
-                self::markContractSignedOfflineAction(),
+                self::markContractSignedOfflineAction()
+                    ->iconButton()
+                    ->tooltip(__('Marchează contract semnat offline')),
+
+                // Everything else in one menu; the row itself opens the organizer.
+                \Filament\Actions\ActionGroup::make([
 
                 Action::make('suspend')
                     ->label(__('Suspend'))
@@ -1752,6 +1801,11 @@ class OrganizerResource extends Resource
 
                 ViewAction::make(),
                 EditAction::make(),
+                ])
+                    ->label(__('Mai multe'))
+                    ->icon('heroicon-m-ellipsis-horizontal')
+                    ->color('gray')
+                    ->iconButton(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
