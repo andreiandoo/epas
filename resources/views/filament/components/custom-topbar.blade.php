@@ -109,7 +109,7 @@
         <button
             type="button"
             x-data
-            x-on:click="window.matchMedia('(min-width: 1024px)').matches ? window.epToggleSidebarRail() : $store.sidebar.open()"
+            x-on:click="window.matchMedia('(min-width: 1024px)').matches ? (document.documentElement.classList.contains('ep-frame') && window.epToggleNavPin ? window.epToggleNavPin() : window.epToggleSidebarRail()) : $store.sidebar.open()"
             class="ep-sidebar-toggle flex items-center justify-center w-10 h-10 text-gray-600 transition rounded-lg shrink-0 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="{{ __('Toggle sidebar') }}"
         >
