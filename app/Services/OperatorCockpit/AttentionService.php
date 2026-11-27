@@ -499,6 +499,12 @@ class AttentionService
      */
     private function docItems(): array
     {
+        $ops = $this->opsBoardItems();
+        if ($ops !== null) {
+            return $ops;
+        }
+
+        // Fără Ops board: verificarea documentelor fiscale, doar ce are termen săptămâna asta sau e restant.
         $rows = \Illuminate\Support\Facades\Cache::remember('cockpit-docs-v2:' . $this->client->id, 600, function () {
             $svc = app(\App\Services\Marketplace\OrganizerFiscalDocuments::class);
             if (! $svc->marketplaceHasTemplates((int) $this->client->id)) {
@@ -528,41 +534,133 @@ class AttentionService
         });
 
         $labels = [
-            'cerere_missing' => 'cerere de vizare de generat',
-            'cerere_stale' => 'cerere de vizare de refăcut',
-            'impozit_pv_missing' => 'impozit + PV distrugere de generat',
+            'cerere_missing' => 'Cerere vizare',
+            'cerere_stale' => 'Cerere vizare',
+            'impozit_pv_missing' => 'Impozit + PV distrugere',
         ];
+        $states = [
+            'cerere_missing' => 'de generat',
+            'cerere_stale' => 'de refăcut, s-au schimbat biletele',
+            'impozit_pv_missing' => 'de generat',
+        ];
+        $weekEnd = now('Europe/Bucharest')->endOfWeek(\Carbon\Carbon::SUNDAY);
 
         $items = [];
-        foreach (array_slice($rows, 0, $this->limit) as $r) {
-            $deadline = $r['deadline'] ? \Carbon\Carbon::parse($r['deadline']) : null;
-            $item = $this->item(
-                'docs',
-                $r['id'],
-                $r['title'],
-                implode(' · ', array_filter([
-                    $labels[$r['kind']] ?? $r['kind'],
-                    $deadline ? 'termen ' . $deadline->format('d.m.Y') : null,
-                    $r['organizer'],
-                ])),
-                null,
-                $deadline !== null && $deadline->lte(now()->addDays(3)->endOfDay()),
-                $this->resourceUrl(EventResource::class, 'edit', $r['id']),
-                null,
-            );
-            $item['key'] = 'docs:' . $r['id'] . ':' . $r['kind'];
-            $item['claimable'] = false;
-            $item['kind'] = $r['kind'];
-            // Afișate separat în sertar: tipul documentului îngroșat și termenul vizibil.
-            $item['doc_label'] = $labels[$r['kind']] ?? $r['kind'];
-            $item['deadline'] = $deadline?->format('d.m.Y');
-            $item['deadline_passed'] = $deadline !== null && $deadline->lt(now()->startOfDay());
-            $item['event_date'] = $r['event_date'] ?? null;
-            $item['organizer'] = $r['organizer'];
-            $items[] = $item;
+        foreach ($rows as $r) {
+            $deadline = $r['deadline'] ? \Carbon\Carbon::parse($r['deadline'], 'Europe/Bucharest') : null;
+            if ($deadline && $deadline->gt($weekEnd)) {
+                continue; // de făcut mai târziu, nu săptămâna asta
+            }
+            $overdue = $deadline !== null && $deadline->lt(now('Europe/Bucharest')->startOfDay());
+            $items[] = $this->docItem((int) $r['id'], $r['title'], $r['event_date'] ?? null, $r['organizer'] ?? null,
+                $this->resourceUrl(EventResource::class, 'edit', (int) $r['id']), null, [[
+                    'name' => $labels[$r['kind']] ?? $r['kind'],
+                    'state' => $states[$r['kind']] ?? '',
+                    'due' => $deadline?->format('d.m'),
+                    'overdue' => $overdue,
+                ]], $r['kind']);
+            if (count($items) >= $this->limit) {
+                break;
+            }
         }
 
         return $items;
+    }
+
+    /**
+     * Operațiunile din Ops board pentru săptămâna în curs (luni-duminică) plus restanțele:
+     * cerere de vizare, decont, factură, impozit, PV distrugere. null dacă marketplace-ul n-are Ops board.
+     */
+    private function opsBoardItems(): ?array
+    {
+        $pivot = \App\Models\MarketplaceClientMicroservice::query()
+            ->where('marketplace_client_id', $this->client->id)
+            ->whereHas('microservice', fn ($q) => $q->where('slug', \App\Services\Marketplace\OpsBoardService::SLUG))
+            ->first();
+        if (! $pivot) {
+            return null;
+        }
+
+        $tz = \App\Support\MarketplaceTz::tz($this->client);
+        $from = now($tz)->startOfWeek(\Carbon\Carbon::MONDAY)->startOfDay();
+        $to = now($tz)->endOfWeek(\Carbon\Carbon::SUNDAY)->startOfDay();
+
+        $board = \Illuminate\Support\Facades\Cache::remember('cockpit-ops:' . $this->client->id . ':' . $from->format('Ymd'), 300, function () use ($pivot, $tz, $from, $to) {
+            $service = app(\App\Services\Marketplace\OpsBoardService::class);
+            $built = $service->build($this->client, $from, $to, \App\Services\Marketplace\OpsBoardService::trackFrom($pivot, $tz), ['only_open' => true]);
+
+            $rows = [];
+            foreach (['backlog', 'period', 'upcoming'] as $zone) {
+                foreach ($built[$zone] ?? [] as $row) {
+                    $tasks = [];
+                    foreach (\App\Services\Marketplace\OpsBoardService::TASKS as $key => $name) {
+                        $cell = $row['cells'][$key] ?? null;
+                        if (! $cell || empty($cell['open'])) {
+                            continue;
+                        }
+                        // La evenimentele viitoare, doar cererea de vizare cu termen în săptămâna asta.
+                        if ($zone === 'upcoming' && $key !== 'cerere') {
+                            continue;
+                        }
+                        $tasks[] = [
+                            'name' => $name,
+                            'state' => trim((string) ($cell['label'] ?? '')),
+                            'due' => ! empty($cell['due']) ? \Carbon\Carbon::parse($cell['due'])->format('d.m') : null,
+                            'overdue' => (bool) ($cell['overdue'] ?? false),
+                        ];
+                    }
+                    if (! $tasks) {
+                        continue;
+                    }
+                    $rows[] = [
+                        'id' => (int) $row['id'],
+                        'title' => (string) $row['title'],
+                        'date' => $row['date_label'] ?? null,
+                        'organizer' => $row['organizer'] ?? null,
+                        'url' => $row['url'] ?? null,
+                        'tasks' => $tasks,
+                        'zone' => $zone,
+                    ];
+                }
+            }
+
+            return $rows;
+        });
+
+        $items = [];
+        foreach (array_slice($board, 0, $this->limit) as $r) {
+            $items[] = $this->docItem($r['id'], $r['title'], $r['date'], $r['organizer'], $r['url'], '/marketplace/ops-board', $r['tasks'], $r['zone']);
+        }
+
+        return $items;
+    }
+
+    private function docItem(int $eventId, string $title, ?string $date, ?string $organizer, ?string $eventUrl, ?string $actionUrl, array $tasks, string $kind): array
+    {
+        $overdue = (bool) array_filter($tasks, fn ($t) => $t['overdue']);
+        $item = $this->item(
+            'docs',
+            $eventId,
+            $title,
+            implode(' · ', array_filter([
+                implode(', ', array_map(fn ($t) => $t['name'] . ($t['state'] ? ': ' . $t['state'] : '') . ($t['due'] ? ' (termen ' . $t['due'] . ')' : ''), $tasks)),
+                $date,
+                $organizer,
+            ])),
+            null,
+            $overdue,
+            $actionUrl ?: ($eventUrl ?: '/marketplace'),
+            null,
+        );
+        $item['key'] = 'docs:' . $eventId . ':' . $kind;
+        $item['claimable'] = false;
+        $item['kind'] = 'docs';
+        $item['tasks'] = $tasks;
+        $item['event_url'] = $eventUrl;
+        $item['event_date'] = $date;
+        $item['organizer'] = $organizer;
+
+        return $item;
     }
 
     // ------------------------------------------------------------------ claim

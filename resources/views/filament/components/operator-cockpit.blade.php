@@ -169,6 +169,10 @@
     .epc-set .epc-opts { display: grid; gap: 10px; }
     .epc-set .epc-dnd { display: flex; flex-wrap: wrap; gap: 6px; }
     .epc-set .epc-dnd-state { font-size: 12.5px; color: var(--epc-fg); }
+    .epc-jrow .epc-jx { grid-column: 2 / span 2; font-size: 12px; line-height: 1.45; color: var(--epc-fg); opacity: .85; margin-top: 3px; }
+    .epc-jrow .epc-jorig { color: var(--epc-muted); }
+    .epc-item-m.epc-tasks { white-space: normal; display: grid; gap: 1px; overflow: visible; }
+    .epc-item-m.epc-tasks .epc-docmeta { color: var(--epc-muted); font-size: 11.5px; }
     .epc-item-m .epc-doc { color: var(--epc-fg); font-weight: 700; }
     .epc-deadline { color: var(--epc-fg); font-weight: 600; }
     .epc-deadline.is-late { color: var(--epc-late); }
@@ -421,20 +425,22 @@
         html += '<div class="epc-jfilter"><button type="button" data-jf="all" class="' + (journalFilter === 'all' ? 'is-on' : '') + '">Toate</button>'
             + '<button type="button" data-jf="action" class="' + (journalFilter === 'action' ? 'is-on' : '') + '">Cer acțiune (' + actionCount + ')</button></div>';
         if (journalFilter === 'action') {
-            html += '<p class="epc-jnote">Cererile de rambursare, cererile de plată, documentele de emis și facturile cerute pe firmă rămân aici până apeși „Văzut”.</p>';
+            html += '<p class="epc-jnote">Cereri de rambursare, deconturi, documente de generat și facturi cerute pe firmă. Ies singure de aici când cererea e rezolvată (de exemplu când organizatorul încarcă factura) sau când apeși „Văzut”.</p>';
         }
         state.journal.filter(function (j) { return journalFilter === 'all' || j.attention; }).forEach(function (j) {
             if (j.day !== day) { day = j.day; html += '<div class="epc-jday">' + esc(day) + '</div>'; }
             var title = j.url
                 ? '<a class="epc-jt" href="' + esc(j.url) + '" title="' + esc(j.title) + '">' + esc(j.title) + '</a>'
                 : '<span class="epc-jt" title="' + esc(j.title) + '">' + esc(j.title) + '</span>';
-            var meta = j.label + (j.message ? ' · ' + j.message : '');
+            // La cele care cer acțiune: starea de acum a cererii în loc de textul scris pentru organizator.
+            var meta = j.explain ? (j.label + (j.state ? ' · stare: ' + j.state : '')) : (j.label + (j.message ? ' · ' + j.message : ''));
             html += '<div class="epc-jrow' + (j.attention ? ' is-att' : '') + '">'
                 + '<span class="epc-jdot" style="background:' + (JCOLOR[j.color] || JCOLOR.primary) + '"></span>'
                 + title
                 + '<span class="epc-jtime">' + esc(j.time) + '</span>'
                 + '<span class="epc-jm" title="' + esc(meta) + '">' + esc(meta) + '</span>'
-                + (j.attention ? '<button type="button" class="epc-btn epc-jread" data-jread="' + j.id + '">Văzut</button>' : '')
+                + (j.attention ? '<button type="button" class="epc-btn epc-jread" data-jread="' + j.id + '">Văzut</button>' : (j.done ? '<span class="epc-chip epc-jread">rezolvat</span>' : ''))
+                + (j.explain ? '<span class="epc-jx">' + esc(j.explain) + (j.message ? '<br><span class="epc-jorig">' + esc(j.message) + '</span>' : '') + '</span>' : '')
                 + '</div>';
         });
         jbody.innerHTML = html || '<p class="epc-empty">Nimic în ultimele 3 zile.</p>';
@@ -541,16 +547,20 @@
                 if (!i.late && i.kind === 'changes') chip = '<span class="epc-chip">de aprobat</span>';
                 if (!i.late && (i.category === 'service' || i.category === 'docs')) chip = '';
                 var action = i.claimable === false
-                    ? '<a class="epc-btn is-pri" href="' + esc(i.url) + '">' + (i.kind === 'changes' ? 'Revizuiește' : i.kind === 'payment' ? 'Confirmă plata' : i.kind === 'activate' ? 'Activează' : 'Deschide') + '</a>'
+                    ? '<a class="epc-btn is-pri" href="' + esc(i.url) + '">' + (i.kind === 'changes' ? 'Revizuiește' : i.kind === 'payment' ? 'Confirmă plata' : i.kind === 'activate' ? 'Activează' : (i.category === 'docs' && i.url.indexOf('ops-board') !== -1) ? 'Ops board' : 'Deschide') + '</a>'
                     : !i.owner_id
                     ? '<button type="button" class="epc-btn is-pri" data-claim="' + esc(i.key) + '" data-url="' + esc(i.url) + '">Preiau</button>'
                     : '<a class="epc-btn" href="' + esc(i.url) + '">Deschide</a>';
                 var snooze = '<button type="button" class="epc-snooze" data-snooze="' + esc(i.key) + '" title="Amână 1h" aria-label="Amână 1h"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" d="M12 9v4l2.5 2M9 2h6"/></svg></button>';
-                html += '<div class="epc-item"><a class="epc-item-t" href="' + esc(i.url) + '" title="' + esc(i.title) + '">' + esc(i.title) + '</a>'
+                html += '<div class="epc-item"><a class="epc-item-t" href="' + esc(i.event_url || i.url) + '" title="' + esc(i.title) + '">' + esc(i.title) + '</a>'
                     + (i.category === 'docs'
-                        ? '<span class="epc-item-m" title="' + esc(i.meta) + '"><b class="epc-doc">' + esc(i.doc_label) + '</b>'
-                            + (i.deadline ? ' · <span class="epc-deadline' + (i.deadline_passed ? ' is-late' : '') + '">termen ' + esc(i.deadline) + '</span>' : '')
-                            + (i.event_date ? ' · eveniment ' + esc(i.event_date) : '') + '</span>'
+                        ? '<span class="epc-item-m epc-tasks" title="' + esc(i.meta) + '">'
+                            + (i.tasks || []).map(function (t) {
+                                return '<span><b class="epc-doc">' + esc(t.name) + '</b>' + (t.state ? ' ' + esc(t.state) : '')
+                                    + (t.due ? ' · <span class="epc-deadline' + (t.overdue ? ' is-late' : '') + '">' + (t.overdue ? 'restant, termen ' : 'termen ') + esc(t.due) + '</span>' : (t.overdue ? ' · <span class="epc-deadline is-late">restant</span>' : ''))
+                                    + '</span>';
+                            }).join('')
+                            + '<span class="epc-docmeta">' + esc([i.event_date, i.organizer].filter(Boolean).join(' · ')) + '</span></span>'
                         : '<span class="epc-item-m" title="' + esc(i.meta) + '">' + esc(i.meta) + '</span>')
                     + '<span class="epc-item-a">' + chip + action + snooze + '</span></div>';
             });

@@ -145,12 +145,12 @@ class OperatorNotificationJournal
         // să corespundă cu ce apare la „Cer acțiune”.
         $latest = $this->query()->orderByDesc('id')->limit($limit)->get();
         $pending = $this->unreadQuery()->orderByDesc('id')->limit(100)->get();
+        $all = $latest->concat($pending)->unique('id')->sortByDesc('id')->values();
+        $states = $this->actionStates($all);
 
-        return $latest->concat($pending)
-            ->unique('id')
-            ->sortByDesc('id')
-            ->values()
-            ->map(function (MarketplaceNotification $n) use ($labels) {
+        return $all
+            ->map(function (MarketplaceNotification $n) use ($labels, $states) {
+                $st = $states[$n->id] ?? null;
                 $url = (string) ($n->action_url ?? '');
                 // Serverul e pe UTC; operatorii citesc ora României.
                 $at = $n->created_at?->copy()->timezone('Europe/Bucharest');
@@ -166,8 +166,12 @@ class OperatorNotificationJournal
                     'time' => $at && $at->isSameDay($today) ? $at->format('H:i') : $at?->format('d.m H:i'),
                     'day' => ! $at ? '' : ($at->isSameDay($today) ? 'Azi' : ($at->isSameDay($today->copy()->subDay()) ? 'Ieri' : $at->format('d.m'))),
                     // Linkurile notificărilor de organizator duc în contul lui, nu în panou.
-                    'url' => str_starts_with($url, '/marketplace') ? $url : null,
-                    'attention' => $n->needsOperatorAttention(),
+                    'url' => $st['url'] ?? (str_starts_with($url, '/marketplace') ? $url : null),
+                    // Cere acțiune doar cât timp cererea din spate e încă deschisă.
+                    'attention' => $n->needsOperatorAttention() && ($st['open'] ?? true),
+                    'explain' => $st['explain'] ?? null,
+                    'state' => $st['state'] ?? null,
+                    'done' => $st !== null && ! $st['open'],
                 ];
             })
             ->all();
@@ -184,7 +188,114 @@ class OperatorNotificationJournal
 
     public function unreadCount(): int
     {
-        return $this->unreadQuery()->count();
+        // Doar cele a căror cerere e încă deschisă (factura încă neîncărcată, decontul încă neaprobat etc.).
+        $rows = $this->unreadQuery()->orderByDesc('id')->limit(200)->get();
+        $states = $this->actionStates($rows);
+
+        return $rows->filter(fn ($n) => $states[$n->id]['open'] ?? true)->count();
+    }
+
+    /**
+     * Starea de acum a cererii din spatele fiecărei notificări care cere acțiune, plus o
+     * explicație pentru operator și linkul din panou unde se rezolvă.
+     *
+     * @return array<int, array{open: bool, state: ?string, explain: string, url: ?string}>
+     */
+    public function actionStates($notifications): array
+    {
+        $out = [];
+        $byType = collect($notifications)->filter(fn ($n) => self::isActionType($n->type))->groupBy('type');
+
+        $panel = function (string $resource, string $page, $id): ?string {
+            try {
+                return $resource::getUrl($page, ['record' => $id], isAbsolute: false, panel: 'marketplace');
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
+        // Factură pe firmă: clientul a cerut-o, organizatorul trebuie să încarce factura pentru bilete.
+        if ($rows = $byType->get(MarketplaceNotification::TYPE_COMPANY_INVOICE_REQUEST)) {
+            $models = \App\Models\OrderCompanyInvoice::query()->whereIn('id', $rows->pluck('actionable_id')->filter())->with('order:id,order_number')->get()->keyBy('id');
+            foreach ($rows as $n) {
+                $m = $models->get($n->actionable_id);
+                $status = $m?->status;
+                $open = in_array($status, [\App\Models\OrderCompanyInvoice::STATUS_REQUESTED, \App\Models\OrderCompanyInvoice::STATUS_PENDING, \App\Models\OrderCompanyInvoice::STATUS_FAILED], true);
+                $sent = $m?->sent_to_customer_at ? ' · trimisă clientului ' . $m->sent_to_customer_at->copy()->timezone('Europe/Bucharest')->format('d.m H:i') : '';
+                $out[$n->id] = [
+                    'open' => $m ? $open : false,
+                    'state' => $m ? ((\App\Models\OrderCompanyInvoice::STATUS_LABELS[$status] ?? $status) . $sent) : 'cererea nu mai există',
+                    'explain' => 'Clientul a cerut factură pe firmă' . ($m?->order?->order_number ? ' pentru comanda ' . $m->order->order_number : '')
+                        . '. Factura pentru bilete o emite organizatorul și o încarcă în contul lui; o trimitem noi clientului. Urmărești până apare încărcată.',
+                    'url' => $m?->order_id ? $panel(\App\Filament\Marketplace\Resources\OrderResource::class, 'view', $m->order_id) : null,
+                ];
+            }
+        }
+
+        // Cerere de rambursare: se aprobă sau se respinge din Rambursări.
+        if ($rows = $byType->get(MarketplaceNotification::TYPE_REFUND_REQUEST)) {
+            $ids = $rows->map(fn ($n) => $n->actionable_type === \App\Models\MarketplaceRefundRequest::class ? $n->actionable_id : data_get($n->data, 'refund_request_id'))->filter();
+            $models = \App\Models\MarketplaceRefundRequest::query()->whereIn('id', $ids)->get()->keyBy('id');
+            $labels = [
+                'pending' => 'în așteptare', 'under_review' => 'în analiză', 'approved' => 'aprobată, de procesat',
+                'processing' => 'în procesare', 'refunded' => 'rambursată', 'partially_refunded' => 'rambursată parțial',
+                'rejected' => 'respinsă', 'failed' => 'eșuată la procesator',
+            ];
+            foreach ($rows as $n) {
+                $id = $n->actionable_type === \App\Models\MarketplaceRefundRequest::class ? $n->actionable_id : data_get($n->data, 'refund_request_id');
+                $m = $id ? $models->get($id) : null;
+                $out[$n->id] = [
+                    'open' => $m ? in_array($m->status, ['pending', 'under_review', 'approved', 'failed'], true) : true,
+                    'state' => $m ? ($labels[$m->status] ?? $m->status) : null,
+                    'explain' => 'Un client a cerut rambursarea unei comenzi. Se analizează și se aprobă sau se respinge din Rambursări.',
+                    'url' => $m ? $panel(\App\Filament\Marketplace\Resources\RefundRequestResource::class, 'view', $m->id) : null,
+                ];
+            }
+        }
+
+        // Cerere de plată (decont): se verifică și se aprobă din Deconturi.
+        if ($rows = $byType->get(MarketplaceNotification::TYPE_PAYOUT_REQUEST)) {
+            $ids = $rows->map(fn ($n) => $n->actionable_type === \App\Models\MarketplacePayout::class ? $n->actionable_id : data_get($n->data, 'payout_id'))->filter();
+            $models = \App\Models\MarketplacePayout::query()->whereIn('id', $ids)->get(['id', 'status', 'reference'])->keyBy('id');
+            $labels = ['pending' => 'așteaptă aprobarea', 'approved' => 'aprobat, de plătit', 'processing' => 'în plată', 'completed' => 'plătit', 'rejected' => 'respins', 'cancelled' => 'anulat'];
+            foreach ($rows as $n) {
+                $id = $n->actionable_type === \App\Models\MarketplacePayout::class ? $n->actionable_id : data_get($n->data, 'payout_id');
+                $m = $id ? $models->get($id) : null;
+                $out[$n->id] = [
+                    'open' => $m ? $m->status === 'pending' : true,
+                    'state' => $m ? ($labels[$m->status] ?? $m->status) : null,
+                    'explain' => 'Organizatorul a cerut decontul' . ($m?->reference ? ' ' . $m->reference : '') . '. Îl verifici și îl aprobi din Deconturi.',
+                    'url' => $m ? $panel(\App\Filament\Marketplace\Resources\PayoutResource::class, 'view', $m->id) : null,
+                ];
+            }
+        }
+
+        // Documente de emis: organizatorul are de generat cererea de vizare / impozitul și PV-ul.
+        if ($rows = $byType->get(MarketplaceNotification::TYPE_DOCUMENT_ACTION)) {
+            $svc = app(\App\Services\Marketplace\OrganizerFiscalDocuments::class);
+            $events = \App\Models\Event::query()->whereIn('id', $rows->map(fn ($n) => data_get($n->data, 'event_id') ?: $n->actionable_id)->filter())->get()->keyBy('id');
+            $what = ['cerere_missing' => 'cererea de vizare', 'cerere_stale' => 'cererea de vizare din nou (s-au schimbat biletele)', 'impozit_pv_missing' => 'declarația de impozit și PV-ul de distrugere'];
+            foreach ($rows as $n) {
+                $eventId = data_get($n->data, 'event_id') ?: $n->actionable_id;
+                $event = $eventId ? $events->get($eventId) : null;
+                $issue = data_get($n->data, 'issue');
+                $still = null;
+                try {
+                    $current = $event ? $svc->issue($event) : null;
+                    $still = $current && (! $issue || $current['kind'] === $issue);
+                } catch (\Throwable) {
+                    $still = true;
+                }
+                $out[$n->id] = [
+                    'open' => (bool) $still,
+                    'state' => $still ? 'încă negenerat' : 'rezolvat',
+                    'explain' => 'Organizatorul are de generat ' . ($what[$issue] ?? 'documentele fiscale') . ' pentru eveniment. Termenele și depunerea le urmărești în Ops board.',
+                    'url' => '/marketplace/ops-board',
+                ];
+            }
+        }
+
+        return $out;
     }
 
     public function markRead(int $notificationId): void
