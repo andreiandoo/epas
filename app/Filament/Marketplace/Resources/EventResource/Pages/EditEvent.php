@@ -101,15 +101,20 @@ class EditEvent extends EditRecord
         }
     }
 
-    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    protected function eventName(): string
     {
         $marketplace = static::getMarketplaceClient();
         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
 
-        $title = $this->record->getTranslation('title', $lang)
+        return (string) ($this->record->getTranslation('title', $lang)
             ?? $this->record->getTranslation('title', 'ro')
             ?? $this->record->getTranslation('title', 'en')
-            ?? '';
+            ?? '');
+    }
+
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        $title = $this->eventName();
 
         // Append city and date in parentheses. The date string is
         // produced by Event::displayDateLabel() so range / multi_day /
@@ -137,7 +142,70 @@ class EditEvent extends EditRecord
     {
         $css = '<style>.fi-header{flex-direction:column;align-items:start;}</style>';
 
-        return new \Illuminate\Support\HtmlString(e($this->getTitle()) . $css);
+        // City and date moved to the meta line under the heading.
+        return new \Illuminate\Support\HtmlString(e($this->eventName() ?: 'Edit Event') . $css);
+    }
+
+    /** Meta line (status, place, date, organizer, series) and operational alerts. */
+    public function getSubheading(): string|\Illuminate\Contracts\Support\Htmlable|null
+    {
+        $event = $this->record;
+        $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+
+        $status = null;
+        $statusLabel = null;
+        if ($event->is_cancelled) {
+            [$status, $statusLabel] = ['cancelled', __('ANULAT')];
+        } elseif ($event->is_postponed) {
+            [$status, $statusLabel] = ['postponed', __('AMÂNAT')];
+        } elseif (method_exists($event, 'isPast') && $event->isPast()) {
+            [$status, $statusLabel] = ['ended', __('ÎNCHEIAT')];
+        }
+
+        $parts = [];
+        $city = $event->city ?? $event->venue?->city ?? null;
+        if ($city) {
+            $parts[] = ['text' => $city];
+        }
+        if ($event->venue) {
+            $venueName = method_exists($event->venue, 'getTranslation')
+                ? ($event->venue->getTranslation('name', $lang) ?? $event->venue->getTranslation('name', 'ro'))
+                : $event->venue->name;
+            if (is_string($venueName) && $venueName !== '') {
+                $parts[] = ['text' => $venueName];
+            }
+        }
+        $date = $event->displayDateLabel();
+        if ($date && $event->duration_mode === 'single_day' && $event->start_time) {
+            $date .= ', ' . substr((string) $event->start_time, 0, 5);
+        }
+        if ($date) {
+            $parts[] = ['text' => $date];
+        }
+        if ($event->marketplace_organizer_id && $event->marketplaceOrganizer) {
+            $parts[] = [
+                'text' => $event->marketplaceOrganizer->name,
+                'url' => \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('view', ['record' => $event->marketplace_organizer_id]),
+            ];
+        }
+        if ($event->event_series) {
+            $parts[] = ['text' => $event->event_series, 'mono' => true];
+        }
+
+        try {
+            $alerts = app(\App\Services\EventAlertsService::class)->getAlerts($event);
+        } catch (\Throwable $e) {
+            $alerts = [];
+        }
+
+        return new \Illuminate\Support\HtmlString(view('filament.marketplace.events.edit-header-meta', [
+            'published' => (bool) $event->is_published,
+            'status' => $status,
+            'statusLabel' => $statusLabel,
+            'parts' => $parts,
+            'alerts' => $alerts,
+        ])->render());
     }
 
     public function getBreadcrumbs(): array
@@ -155,19 +223,37 @@ class EditEvent extends EditRecord
             ->wherePivot('is_active', true)
             ->exists() ?? false;
 
+        // Visible: manual, preview, images. Everything else sits under "Mai multe".
         $actions = [];
+        $more = [];
 
         // Contextual manual: a browser event opens the drawer rendered by
         // MarketplacePanelProvider. No Livewire round-trip, so unsaved form
         // changes stay untouched.
         $actions[] = Actions\Action::make('page_manual')
             ->label(__('Manual pagină'))
-            ->icon('heroicon-o-book-open')
+            ->tooltip(__('Manual pagină'))
+            ->iconButton()
+            ->icon('heroicon-o-question-mark-circle')
             ->color('gray')
             ->alpineClickHandler("window.dispatchEvent(new CustomEvent('ep-manual:open'))");
 
+        // Same preview URL as the sidebar button.
+        $domain = preg_replace('#^(https?:?/?/?|//)#i', '', (string) ($marketplace?->domain ?? ''));
+        $domain = ltrim($domain, '/');
+        if ($domain !== '' && $this->record->slug) {
+            $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+            $actions[] = Actions\Action::make('header_preview')
+                ->label(__('Previzualizare'))
+                ->icon('heroicon-o-eye')
+                ->color('gray')
+                ->link()
+                ->url($protocol . '://' . $domain . '/bilete/' . $this->record->slug . '?preview=1')
+                ->openUrlInNewTab();
+        }
+
         if ($hasInvitations) {
-            $actions[] = Actions\Action::make('invitations')
+            $more[] = Actions\Action::make('invitations')
                 ->label(__('Create Invitations'))
                 ->icon('heroicon-o-envelope')
                 ->color('warning')
@@ -176,7 +262,7 @@ class EditEvent extends EditRecord
 
         // External tickets import
         $extCount = \App\Models\ExternalTicket::where('event_id', $this->record->id)->count();
-        $actions[] = Actions\Action::make('external_tickets')
+        $more[] = Actions\Action::make('external_tickets')
             ->label('Bilete Externe' . ($extCount > 0 ? " ({$extCount})" : ''))
             ->icon('heroicon-o-ticket')
             ->color('gray')
@@ -188,7 +274,7 @@ class EditEvent extends EditRecord
             'organizer_id' => $this->record->marketplace_organizer_id,
         ]));
         $couponUrl = \App\Filament\Marketplace\Resources\CouponCodeResource::getUrl('create') . '?' . $params;
-        $actions[] = Actions\Action::make('coupon_codes')
+        $more[] = Actions\Action::make('coupon_codes')
             ->label(__('Coduri reducere'))
             ->icon('heroicon-o-tag')
             ->color('gray')
@@ -198,7 +284,7 @@ class EditEvent extends EditRecord
         // Newsletter — pre-targets ticket buyers of this event
         $newsletterUrl = \App\Filament\Marketplace\Resources\NewsletterResource::getUrl('create')
             . '?event=' . $this->record->id;
-        $actions[] = Actions\Action::make('newsletter')
+        $more[] = Actions\Action::make('newsletter')
             ->label(__('Newsletter'))
             ->icon('heroicon-o-megaphone')
             ->color('gray')
@@ -209,7 +295,7 @@ class EditEvent extends EditRecord
 
         // Daily Capacities (leisure venue only)
         if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
-            $actions[] = Actions\Action::make('daily_capacities')
+            $more[] = Actions\Action::make('daily_capacities')
                 ->label(__('Capacitate Zilnică'))
                 ->icon('heroicon-o-calendar-days')
                 ->color('warning')
@@ -217,7 +303,7 @@ class EditEvent extends EditRecord
         }
 
         // Duplicate action
-        $actions[] = Actions\Action::make('duplicate')
+        $more[] = Actions\Action::make('duplicate')
             ->label(__('Duplică'))
             ->icon('heroicon-o-document-duplicate')
             ->color('gray')
@@ -321,7 +407,7 @@ class EditEvent extends EditRecord
                 return redirect(EventResource::getUrl('edit', ['record' => $newEvent]));
             });
 
-        $actions[] = Actions\DeleteAction::make()
+        $more[] = Actions\DeleteAction::make()
             ->before(function (Actions\DeleteAction $action) {
                 $blocker = $this->record->deletionBlocker();
 
@@ -330,6 +416,13 @@ class EditEvent extends EditRecord
                     $action->cancel();
                 }
             });
+
+        $actions[] = Actions\ActionGroup::make($more)
+            ->label(__('Mai multe'))
+            ->icon('heroicon-m-chevron-down')
+            ->iconPosition(\Filament\Support\Enums\IconPosition::After)
+            ->color('gray')
+            ->button();
 
         return $actions;
     }

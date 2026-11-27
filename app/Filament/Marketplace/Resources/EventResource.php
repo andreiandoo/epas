@@ -1377,8 +1377,9 @@ class EventResource extends Resource
                                 'Documents / actions still missing for this event. Resolve before closing it out administratively.'
                             ))
                             ->icon('heroicon-o-exclamation-triangle')
-                            ->visible(fn (?Event $record): bool =>
-                                $record !== null
+                            // Alerts now sit in the page header (EditEvent::getSubheading) on every tab.
+                            ->visible(fn (?Event $record): bool => false
+                                && $record !== null
                                 && $record->exists
                                 && count(app(\App\Services\EventAlertsService::class)->getAlerts($record)) > 0)
                             ->schema([
