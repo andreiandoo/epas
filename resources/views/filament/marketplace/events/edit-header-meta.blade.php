@@ -39,7 +39,7 @@
         @endif
 
         @foreach($parts as $i => $part)
-            @if($i > 0)<span class="evh-sep">·</span>@endif
+            @if($i > 0)<span class="evh-sep">|</span>@endif
             @if(!empty($part['url']))
                 <a href="{{ $part['url'] }}" target="_blank" rel="noopener" @class(['evh-mono' => $part['mono'] ?? false])>{{ $part['text'] }}</a>
             @else

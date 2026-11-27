@@ -6389,7 +6389,15 @@ class EventResource extends Resource
                             ? '<span class="ep-alert" title="' . $alertsCount . ' alerte operaționale — deschide evenimentul pentru detalii">' . $alertsCount . '</span>'
                             : '';
 
+                        // Seating map: an icon next to the title instead of a text note.
+                        $seatIcon = ! empty($record->seating_layout_id)
+                            ? '<span class="ep-seat" title="' . e(__('Hartă de locuri')) . '" aria-label="' . e(__('Hartă de locuri')) . '">'
+                                . '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>'
+                                . '</span>'
+                            : '';
+
                         $html = $expiringIcon . '<a href="' . static::getUrl('edit', ['record' => $record]) . '" class="ep-title-link">' . e($state) . '</a>' .
+                            $seatIcon .
                             $alertBadge .
                             '<button type="button" wire:click="mountTableAction(\'editTitle\', \'' . $record->getKey() . '\')" class="ep-title-edit" title="Quick Edit">' .
                                 '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>' .
@@ -6400,11 +6408,8 @@ class EventResource extends Resource
                             $record->venue?->getTranslation('name', app()->getLocale()),
                             $record->marketplaceCity?->getTranslation('name', app()->getLocale()),
                         ]));
-                        if (! empty($record->seating_layout_id)) {
-                            $placeParts[] = __('hartă de locuri');
-                        }
                         if ($placeParts) {
-                            $html .= '<div class="ep-sub">' . e(implode(' · ', $placeParts)) . '</div>';
+                            $html .= '<div class="ep-sub">' . e(implode(' | ', $placeParts)) . '</div>';
                         }
 
                         // Show child events (representations) for multi_day/recurring parents
@@ -6428,7 +6433,16 @@ class EventResource extends Resource
                             $html .= '</div>';
                         }
 
-                        return new HtmlString($html);
+                        // Poster thumbnail in front, like the venue avatar in the venues list.
+                        $poster = $record->poster_url;
+                        $src = filled($poster)
+                            ? (preg_match('#^(https?:)?//#i', $poster) ? $poster : \Illuminate\Support\Facades\Storage::disk('public')->url($poster))
+                            : null;
+                        $thumb = $src
+                            ? '<span class="ep-poster"><img src="' . e($src) . '" alt="" loading="lazy"></span>'
+                            : '<span class="ep-poster" aria-hidden="true"></span>';
+
+                        return new HtmlString('<div class="ep-ev">' . $thumb . '<div class="ep-ev-body">' . $html . '</div></div>');
                     }),
 
                 // Alerts badge — red circle with count of "missing/redo"
@@ -6520,12 +6534,12 @@ class EventResource extends Resource
                         }
                         $start = $start->copy()->locale(app()->getLocale());
                         if (! $end || $end->isSameDay($start)) {
-                            return $start->isoFormat('dddd');
+                            return mb_strtoupper($start->isoFormat('dddd'));
                         }
 
-                        return $start->isoFormat('ddd') . '–' . $end->copy()->locale(app()->getLocale())->isoFormat('ddd');
+                        return mb_strtoupper($start->isoFormat('ddd') . '–' . $end->copy()->locale(app()->getLocale())->isoFormat('ddd'));
                     })
-                    ->extraAttributes(['class' => 'ep-nowrap'])
+                    ->extraAttributes(['class' => 'ep-nowrap ep-date'])
                     ->sortable(query: function ($query, string $direction) {
                         $query->orderByRaw('COALESCE(event_date, range_start_date) ' . $direction);
                     })
@@ -6649,8 +6663,8 @@ class EventResource extends Resource
                         };
                         // Publicat / nepublicat ramane vizibil (coloana "Publicat" e in "Coloane").
                         $label = match (true) {
-                            $state === 'active' => $base . ' · ' . __('publicat'),
-                            $state === 'ended' => $base . ' · ' . ($record->is_published ? __('publicat') : __('nepublicat')),
+                            $state === 'active' => $base . ' | ' . __('publicat'),
+                            $state === 'ended' => $base . ' | ' . ($record->is_published ? __('publicat') : __('nepublicat')),
                             default => $base,
                         };
                         $tip = match ($state) {
@@ -6667,6 +6681,10 @@ class EventResource extends Resource
                         }
                         if ($record->is_sold_out) {
                             $html .= ' <span class="ep-pill ep-pill--warn">' . e(__('Sold out')) . '</span>';
+                        }
+                        // Organizer changes waiting for review; Aprobă / Respinge sit at the end of the row.
+                        if ($record->pending_changes_status === 'pending') {
+                            $html .= ' <span class="ep-pill ep-pill--warn" title="' . e(__('Organizatorul a trimis modificări care așteaptă aprobarea.')) . '"><span class="ep-dot"></span>' . e(__('Modificări de aprobat')) . '</span>';
                         }
 
                         return new HtmlString('<div class="ep-stare">' . $html . '</div>');
@@ -6769,6 +6787,9 @@ class EventResource extends Resource
                     ->label(__('Aprobă modificări'))
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
+                    // Compact: icon + tooltip, so the actions column stays narrow when a row has pending changes.
+                    ->iconButton()
+                    ->tooltip(__('Aprobă modificări'))
                     ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
                     ->modalHeading(__('Modificări trimise de organizator'))
                     ->modalDescription(__('Doar câmpurile schimbate de organizator. La aprobare se aplică pe evenimentul live numai acestea.'))
@@ -6800,6 +6821,8 @@ class EventResource extends Resource
                     ->label(__('Respinge modificări'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
+                    ->iconButton()
+                    ->tooltip(__('Respinge modificări'))
                     ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
                     ->modalHeading(__('Respinge modificările organizatorului'))
                     ->modalDescription(__('Evenimentul live rămâne neschimbat. Acestea sunt modificările care se renunță.'))

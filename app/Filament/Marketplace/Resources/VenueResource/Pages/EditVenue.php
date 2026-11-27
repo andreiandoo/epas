@@ -63,7 +63,7 @@ class EditVenue extends EditRecord
             $parts[] = '<span style="font-family:ui-monospace,monospace;font-size:.9em">/' . e($r->slug) . '</span>';
         }
 
-        return new HtmlString(implode(' <span style="opacity:.5">·</span> ', $parts));
+        return new HtmlString(implode(' <span style="opacity:.5">|</span> ', $parts));
     }
 
     protected function getHeaderActions(): array

@@ -56,8 +56,8 @@
 .ep-lst .ep-alert{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-inline-start:8px;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:700;line-height:1;vertical-align:middle;box-sizing:border-box}
 
 /* disponibil: bara + rest/cota */
-.ep-lst .ep-cap{display:flex;align-items:center;gap:8px;min-width:150px}
-.ep-lst .ep-bar{flex:1;height:6px;border-radius:999px;background:var(--l-track);overflow:hidden}
+.ep-lst .ep-cap{display:flex;align-items:center;gap:6px;min-width:104px}
+.ep-lst .ep-bar{flex:1;max-width:48px;height:5px;border-radius:999px;background:var(--l-track);overflow:hidden}
 .ep-lst .ep-bar-fill{height:100%;border-radius:999px}
 .ep-lst .ep-cap-n{font-size:12px;color:var(--l-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 
@@ -78,8 +78,23 @@
 
 /* actiunile de rand apar la hover / focus (doar pe dispozitive cu hover); aprobarea ramane vizibila */
 @media (hover:hover){
-  .ep-lst .fi-ta-row:not(:hover):not(:focus-within) .fi-ta-actions .fi-icon-btn{opacity:0}
+  .ep-lst .fi-ta-row:not(:hover):not(:focus-within) .fi-ta-actions .fi-icon-btn:not(.fi-color-success):not(.fi-color-danger){opacity:0}
   .ep-lst .fi-ta-row .fi-ta-actions .fi-icon-btn{transition:opacity .12s}
 }
+
+/* evenimente: poster + titlu lat, iconita harta, data mica cu ziua in majuscule */
+.ep-lst .ep-title-cell{min-width:420px}
+.ep-lst .ep-ev{display:flex;align-items:flex-start;gap:12px}
+.ep-lst .ep-ev-body{min-width:0;flex:1}
+.ep-lst .ep-poster{display:block;flex:none;width:36px;height:48px;border-radius:6px;background:var(--l-mute-bg);overflow:hidden}
+.ep-lst .ep-poster img{width:100%;height:100%;object-fit:cover;display:block}
+.ep-lst .ep-seat{display:inline-flex;vertical-align:middle;margin-inline-start:6px;color:#10b981}
+.ep-lst .ep-seat svg{width:15px;height:15px}
+.ep-lst .ep-date,.ep-lst .ep-date *{font-size:12px}
+.ep-lst .ep-date .fi-ta-text-description,.ep-lst .ep-date [class*=description]{font-size:10.5px;letter-spacing:.06em;color:var(--l-muted)}
+/* total in fata filtrelor active */
+.ep-lst .ep-lst-total{font-size:13px;color:var(--l-soft);white-space:nowrap}
+.ep-lst .ep-lst-total strong{color:var(--l-text);font-weight:600}
+.ep-lst .ep-lst-total-sep{color:var(--l-faint);margin-inline:6px}
 </style>
 </div>

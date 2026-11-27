@@ -1119,7 +1119,7 @@ class VenueResource extends Resource
                     ->label(__('Proprietar'))
                     ->state(fn ($record) => $record->tenant?->owner?->name ?: ($record->tenant?->owner_id ? '#' . $record->tenant->owner_id : '—'))
                     ->tooltip(fn ($record) => $record->tenant?->owner
-                        ? $record->tenant->owner->name . ' · ' . $record->tenant->owner->email
+                        ? $record->tenant->owner->name . ' | ' . $record->tenant->owner->email
                         : null)
                     ->color('gray')
                     ->toggleable(),

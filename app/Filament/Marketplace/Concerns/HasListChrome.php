@@ -45,6 +45,17 @@ trait HasListChrome
             ])->render(),
             scopes: static::class,
         );
+
+        // Active-filter row with the total number of results in front of it.
+        FilamentView::registerRenderHook(
+            TablesRenderHook::FILTER_INDICATORS,
+            fn (array $data): string => view('filament.marketplace.lists.filter-indicators', [
+                'filterIndicators' => $data['filterIndicators'] ?? [],
+                'total' => $this->getAllTableRecordsCount(),
+                'removeAll' => $this->getTable()->getFiltersRemoveAllAction(),
+            ])->render(),
+            scopes: static::class,
+        );
     }
 
     /**
