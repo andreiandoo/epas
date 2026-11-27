@@ -34,11 +34,42 @@
             background: var(--ep-frame-bg) !important; border-bottom: 1px solid var(--ep-frame-line) !important;
             display: flex; align-items: center; transition: left .18s cubic-bezier(.2,.8,.2,1);
         }
-        html.ep-frame .fi-custom-topbar > .ep-topbar-row { width: 100%; max-width: none; }
-        html.ep-frame .ep-frame-brand { display: flex; align-items: center; flex: none; height: var(--ep-top); padding: 0 8px; max-width: 200px; overflow: hidden; }
-        html.ep-frame .ep-frame-brand .ep-sidebar-logo { display: flex; align-items: center; }
-        html.ep-frame .ep-frame-brand img { max-height: 30px; width: auto; }
-        html.ep-frame .ep-sidebar-toggle[aria-pressed="true"] { background: var(--ep-frame-hover); color: var(--ep-frame-fg); }
+        /* epas-skin face bara transparentă pe dark și îi pune umbră; în cadru are fundalul barelor laterale */
+        html.ep-frame body .fi-custom-topbar.fi-custom-topbar { background-color: var(--ep-frame-bg) !important; background-image: none !important; box-shadow: none !important; }
+        html.ep-frame .fi-custom-topbar > .ep-topbar-row { width: 100%; max-width: none; height: var(--ep-top); align-items: center; gap: 12px; }
+        html.ep-frame .fi-custom-topbar > .ep-topbar-row > * { align-self: center; }
+        html.ep-frame .ep-frame-brand {
+            display: inline-flex; align-items: center; flex: none; height: 36px; padding: 0 4px; margin-right: 8px;
+            font-size: 19px; font-weight: 800; letter-spacing: -.01em; line-height: 1; color: #10b981; text-decoration: none; white-space: nowrap;
+        }
+        html.ep-frame .ep-sidebar-toggle { width: 36px !important; height: 36px !important; border-radius: 9px; color: var(--ep-frame-muted) !important; }
+        html.ep-frame .ep-sidebar-toggle:hover, html.ep-frame .ep-sidebar-toggle[aria-pressed="true"] { background: var(--ep-frame-hover) !important; color: var(--ep-frame-fg) !important; }
+
+        /* Dreapta barei: limbă, site public, cont (și comutatorul de marketplace) */
+        html.ep-frame .fi-custom-topbar .ep-tb-btn {
+            height: 36px; padding: 0 10px !important; gap: 8px; border-radius: 9px !important; border: 1px solid transparent !important;
+            background: transparent !important; color: var(--ep-frame-muted) !important; font-size: 13px; font-weight: 500;
+        }
+        html.ep-frame .fi-custom-topbar .ep-tb-btn:hover, html.ep-frame .fi-custom-topbar .ep-tb-btn:focus-visible {
+            background: var(--ep-frame-hover) !important; color: var(--ep-frame-fg) !important; outline: none;
+        }
+        html.ep-frame .fi-custom-topbar .ep-tb-btn > svg:last-child { width: 14px; height: 14px; opacity: .6; }
+        html.ep-frame .fi-custom-topbar .ep-tb-lang svg { width: 18px; height: 18px; border-radius: 3px; }
+        html.ep-frame .fi-custom-topbar .ep-tb-lang .uppercase { font-size: 12px; letter-spacing: .04em; }
+        html.ep-frame .fi-custom-topbar .ep-tb-link { width: 36px; padding: 0 !important; justify-content: center; }
+        html.ep-frame .fi-custom-topbar .ep-tb-link span { display: none !important; }
+        html.ep-frame .fi-custom-topbar .ep-tb-link svg { width: 17px; height: 17px; }
+        html.ep-frame .fi-custom-topbar .fi-user-menu { padding-left: 12px; margin-left: 4px; border-left: 1px solid var(--ep-frame-line); }
+        html.ep-frame .fi-custom-topbar .ep-tb-user { padding: 0 6px 0 4px !important; color: var(--ep-frame-fg) !important; }
+        html.ep-frame .fi-custom-topbar .ep-tb-user .fi-avatar { width: 28px !important; height: 28px !important; border-radius: 50%; box-shadow: 0 0 0 2px var(--ep-frame-line); }
+        html.ep-frame .fi-custom-topbar .ep-tb-switch { color: #f2b53d !important; border-color: color-mix(in srgb, #f2b53d 35%, transparent) !important; }
+        html.ep-frame .fi-custom-topbar .ep-tb-panel {
+            background: var(--ep-frame-bg) !important; border: 1px solid var(--ep-frame-line) !important; border-radius: 12px !important;
+            box-shadow: 0 16px 40px rgba(0,0,0,.28) !important; padding: 6px !important; margin-top: 10px !important;
+        }
+        html.ep-frame .fi-custom-topbar .ep-tb-panel a, html.ep-frame .fi-custom-topbar .ep-tb-panel button[type="submit"] { border-radius: 8px; }
+        html.ep-frame .fi-custom-topbar .ep-tb-panel a:hover, html.ep-frame .fi-custom-topbar .ep-tb-panel button[type="submit"]:hover { background: var(--ep-frame-hover) !important; }
+        html.ep-frame .fi-custom-topbar .ep-tb-panel .border-b { border-color: var(--ep-frame-line) !important; }
 
         /* ---- conținutul: lasă loc cadrului ---- */
         html.ep-frame .fi-layout { padding-left: var(--ep-left-now); transition: padding-left .18s cubic-bezier(.2,.8,.2,1); }

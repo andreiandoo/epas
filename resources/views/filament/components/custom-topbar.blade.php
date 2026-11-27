@@ -100,12 +100,7 @@
              sidebar to an icon-only rail. Filament's native isOpenDesktop state is
              inert in this build, so we drive a custom `ep-rail-collapsed` class on
              <html> (persisted, CSS below). --}}
-        @if($panelType === 'marketplace' && \App\Services\OperatorCockpit\AttentionService::isEnabledFor($currentMarketplaceClient))
-            {{-- Logo-ul stă în bara de sus în cadrul nou (desktop); în meniul îngust nu încape. --}}
-            <a href="{{ url('/marketplace') }}" class="ep-frame-brand" aria-label="{{ $currentMarketplaceClient?->name ?? 'Marketplace' }}">
-                @include('filament.components.marketplace-sidebar-logo')
-            </a>
-        @endif
+        @php $epFrameBrand = $panelType === 'marketplace' && \App\Services\OperatorCockpit\AttentionService::isEnabledFor($currentMarketplaceClient); @endphp
         <button
             type="button"
             x-data
@@ -117,6 +112,10 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
         </button>
+        @if($epFrameBrand)
+            {{-- În cadrul nou: numele marketplace-ului ca logo, după ☰, pe același rând. --}}
+            <a href="{{ url('/marketplace') }}" class="ep-frame-brand">{{ $currentMarketplaceClient?->name ?? 'Marketplace' }}</a>
+        @endif
 
         {{-- Center: Global Search --}}
         <div class="flex-1 hidden md:block ep-mobile-search" @if($panelType === 'marketplace') x-bind:class="{ 'is-open': searchOpen }" @endif>
@@ -163,7 +162,7 @@
                     <button
                         @click="open = !open"
                         type="button"
-                        class="flex items-center gap-2 px-3 py-2 text-sm transition border rounded-lg text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-transparent"
+                        class="ep-tb-btn ep-tb-switch flex items-center gap-2 px-3 py-2 text-sm transition border rounded-lg text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-transparent"
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
@@ -178,7 +177,7 @@
                         x-show="open"
                         @click.away="open = false"
                         x-cloak
-                        class="absolute right-0 z-50 py-1 mt-2 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg w-72 max-h-96 dark:bg-gray-800 dark:border-gray-700"
+                        class="ep-tb-panel absolute right-0 z-50 py-1 mt-2 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg w-72 max-h-96 dark:bg-gray-800 dark:border-gray-700"
                     >
                         <div class="px-4 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase border-b border-gray-200 dark:border-gray-700 dark:text-gray-400">
                             <div class="flex items-center gap-2">
@@ -230,7 +229,8 @@
                 <button
                     @click="open = !open"
                     type="button"
-                    class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    title="{{ __('Language') }}"
+                    class="ep-tb-btn ep-tb-lang flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                     <span class="flex-shrink-0">{!! $localeFlags[$currentLocale] ?? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' !!}</span>
                     <span class="font-medium uppercase">{{ $currentLocale }}</span>
@@ -243,7 +243,7 @@
                     x-show="open"
                     @click.away="open = false"
                     x-cloak
-                    class="absolute right-0 z-50 w-48 py-1 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700"
+                    class="ep-tb-panel absolute right-0 z-50 w-48 py-1 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700"
                 >
                     @foreach($localeNames as $locale => $name)
                         <a
@@ -269,7 +269,8 @@
             <a
                 href="{{ $publicSiteUrl }}"
                 target="_blank"
-                class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                rel="noopener"
+                class="ep-tb-btn ep-tb-link flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 title="{{ __('View Public Site') }}"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,7 +301,7 @@
                     <button
                         @click="open = !open"
                         type="button"
-                        class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg fi-dropdown-trigger dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        class="ep-tb-btn ep-tb-user flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg fi-dropdown-trigger dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                         <x-filament-panels::avatar.user :user="filament()->auth()->user()" class="w-8 h-8" />
                         <span class="hidden font-medium md:inline">{{ filament()->auth()->user()->name }}</span>
@@ -319,7 +320,7 @@
                         x-transition:leave="transition ease-in duration-75"
                         x-transition:leave-start="opacity-100 scale-100"
                         x-transition:leave-end="opacity-0 scale-95"
-                        class="absolute right-0 z-50 w-56 py-1 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg fi-dropdown-panel dark:bg-gray-800 dark:border-gray-700"
+                        class="ep-tb-panel absolute right-0 z-50 w-56 py-1 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg fi-dropdown-panel dark:bg-gray-800 dark:border-gray-700"
                     >
                         {{-- User Info Header --}}
                         <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-200 fi-dropdown-header dark:border-gray-700">
