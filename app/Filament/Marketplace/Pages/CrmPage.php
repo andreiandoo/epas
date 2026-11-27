@@ -12,6 +12,13 @@ class CrmPage extends Page
 
     use HasMarketplaceContext;
 
+    // Pagină copiată din panoul tenant și neterminată pentru marketplace (view-ul există doar la tenant):
+    // o închidem ca să răspundă 403, nu eroare 500, și să nu apară în meniu.
+    public static function canAccess(): bool
+    {
+        return false;
+    }
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'CRM';
     protected static \UnitEnum|string|null $navigationGroup = 'Tools';

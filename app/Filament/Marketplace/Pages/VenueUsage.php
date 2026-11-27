@@ -14,6 +14,13 @@ class VenueUsage extends Page
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
 
+    // Pagină copiată din panoul tenant și neterminată pentru marketplace (view-ul există doar la tenant):
+    // o închidem ca să răspundă 403, nu eroare 500, și să nu apară în meniu.
+    public static function canAccess(): bool
+    {
+        return false;
+    }
+
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Venue Usage';
     protected static \UnitEnum|string|null $navigationGroup = 'Content';
@@ -80,12 +87,12 @@ class VenueUsage extends Page
 
         // Apply status filter
         if ($this->statusFilter === 'upcoming') {
-            $eventsQuery->where('start_date', '>=', Carbon::now()->startOfDay());
+            $eventsQuery->where('starts_at', '>=', Carbon::now()->startOfDay());
         } elseif ($this->statusFilter === 'past') {
-            $eventsQuery->where('start_date', '<', Carbon::now()->startOfDay());
+            $eventsQuery->where('starts_at', '<', Carbon::now()->startOfDay());
         }
 
-        $events = $eventsQuery->orderBy('start_date', 'asc')->get();
+        $events = $eventsQuery->orderBy('starts_at', 'asc')->get();
 
         // Get venues used in marketplace events
         $venueIds = MarketplaceEvent::where('marketplace_client_id', $marketplace->id)
@@ -99,7 +106,7 @@ class VenueUsage extends Page
         $totalEvents = MarketplaceEvent::where('marketplace_client_id', $marketplace->id)->count();
         $upcomingEvents = MarketplaceEvent::where('marketplace_client_id', $marketplace->id)
             ->where('status', 'published')
-            ->where('start_date', '>=', Carbon::now()->startOfDay())
+            ->where('starts_at', '>=', Carbon::now()->startOfDay())
             ->count();
 
         return [

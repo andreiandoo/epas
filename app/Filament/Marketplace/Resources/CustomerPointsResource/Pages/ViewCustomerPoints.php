@@ -56,7 +56,7 @@ class ViewCustomerPoints extends ViewRecord
     {
         return $schema
             ->schema([
-                Info\Section::make(__('Customer'))
+                \Filament\Schemas\Components\Section::make(__('Customer'))
                     ->schema([
                         Info\TextEntry::make('customer.email')
                             ->label(__('Email')),
@@ -68,7 +68,7 @@ class ViewCustomerPoints extends ViewRecord
                             ->copyable(),
                     ])->columns(3),
 
-                Info\Section::make(__('Points Balance'))
+                \Filament\Schemas\Components\Section::make(__('Points Balance'))
                     ->schema([
                         Info\TextEntry::make('current_balance')
                             ->label(__('Current Balance'))
@@ -84,7 +84,7 @@ class ViewCustomerPoints extends ViewRecord
                             ->label(__('Pending')),
                     ])->columns(5),
 
-                Info\Section::make(__('Tier & Activity'))
+                \Filament\Schemas\Components\Section::make(__('Tier & Activity'))
                     ->schema([
                         Info\TextEntry::make('current_tier')
                             ->label(__('Tier'))
@@ -99,7 +99,7 @@ class ViewCustomerPoints extends ViewRecord
                             ->dateTime(),
                     ])->columns(4),
 
-                Info\Section::make(__('Referrals'))
+                \Filament\Schemas\Components\Section::make(__('Referrals'))
                     ->schema([
                         Info\TextEntry::make('referral_count')
                             ->label(__('Total Referrals')),

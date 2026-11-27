@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 class ListAffiliateSettings extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
     protected static string $resource = AffiliateSettingsResource::class;
 
