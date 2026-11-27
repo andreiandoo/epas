@@ -9,6 +9,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Support\MarketplaceTz;
 
@@ -100,9 +101,32 @@ class TicketResource extends Resource
             : (is_array($name) ? \App\Services\Activities\ActivityOrderBuilder::ro($name, '—') : '—');
     }
 
+    /**
+     * Resolved seat details (section, row, seat) when there are any, else the raw label.
+     * Paid tickets show "PARTER 2 | Rând 8 | Loc 3" instead of the checkout seat_uid.
+     */
+    protected static function seatText($record): ?string
+    {
+        $details = $record->getSeatDetails();
+        if ($details) {
+            $parts = array_filter([
+                $details['section_name'] ?? null,
+                ($details['row_label'] ?? null) ? 'Rând ' . $details['row_label'] : null,
+                ($details['seat_number'] ?? null) ? 'Loc ' . $details['seat_number'] : null,
+            ]);
+            if (!empty($parts)) {
+                return implode(' | ', $parts);
+            }
+        }
+
+        return $record->seat_label;
+    }
+
     public static function table(Table $table): Table
     {
         return $table
+            // Beneficiary falls back to the order's customer: one query for the page instead of one per row.
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('order'))
             ->reorderableColumns()
             ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(2)
@@ -112,6 +136,8 @@ class TicketResource extends Resource
                     ->icon(fn ($record) => ($record->meta['has_insurance'] ?? false) ? 'heroicon-o-shield-check' : null)
                     ->iconColor('success')
                     ->iconPosition('before')
+                    // Seat under the code (the Loc column stays in "Coloane").
+                    ->description(fn ($record): ?string => static::seatText($record))
                     ->searchable()
                     ->sortable()
                     ->copyable()
@@ -149,6 +175,18 @@ class TicketResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('beneficiary_name')
                     ->label(__('Beneficiar'))
+                    ->html()
+                    ->formatStateUsing(function ($state, $record) {
+                        // E-mail as the muted line (the Email column stays in "Coloane").
+                        $meta = $record->meta ?? [];
+                        $email = $meta['beneficiary']['email'] ?? $record->order?->customer_email ?? null;
+                        $html = '<div class="font-semibold">' . e($state) . '</div>';
+                        if (filled($email) && $email !== $state) {
+                            $html .= '<div class="ep-sub">' . e($email) . '</div>';
+                        }
+
+                        return new HtmlString($html);
+                    })
                     ->getStateUsing(function ($record) {
                         // Check if ticket has beneficiary in meta
                         $meta = $record->meta ?? [];
@@ -215,45 +253,29 @@ class TicketResource extends Resource
                         });
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label(__('Status'))
-                    ->colors([
-                        'success' => 'valid',
-                        'warning' => 'used',
-                        'danger' => 'cancelled',
-                        'gray' => 'refunded',
-                    ])
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'valid' => 'Valid',
-                        'used' => 'Utilizat',
-                        'cancelled' => 'Anulat',
-                        'refunded' => 'Rambursat',
-                        default => ucfirst($state),
+                    ->html()
+                    ->state(function ($record): HtmlString {
+                        [$label, $tone] = match ($record->status) {
+                            'valid' => [__('Valid'), 'ok'],
+                            'used' => [__('Utilizat'), 'warn'],
+                            'cancelled' => [__('Anulat'), 'bad'],
+                            'refunded' => [__('Rambursat'), 'mute'],
+                            default => [ucfirst((string) $record->status), 'mute'],
+                        };
+                        $html = '<span class="ep-pill ep-pill--' . $tone . '"><span class="ep-dot"></span>' . e($label) . '</span>';
+                        if (! empty($record->meta['is_invitation'])) {
+                            $html .= ' <span class="ep-pill ep-pill--mute">' . e(__('Invitație')) . '</span>';
+                        }
+
+                        return new HtmlString('<div class="ep-stare">' . $html . '</div>');
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('seat_label')
                     ->label(__('Loc'))
-                    ->getStateUsing(function ($record) {
-                        // Prefer the resolved seat details (section name,
-                        // row label, seat number) so paid tickets show
-                        // "PARTER 2 · Rând 8 · Loc 3" instead of the raw
-                        // seat_uid ("S228-7-16") that was stored at
-                        // checkout time. Invitations already store the
-                        // pretty label directly.
-                        $details = $record->getSeatDetails();
-                        if ($details) {
-                            $parts = array_filter([
-                                $details['section_name'] ?? null,
-                                ($details['row_label'] ?? null) ? 'Rând ' . $details['row_label'] : null,
-                                ($details['seat_number'] ?? null) ? 'Loc ' . $details['seat_number'] : null,
-                            ]);
-                            if (!empty($parts)) {
-                                return implode(' · ', $parts);
-                            }
-                        }
-                        return $record->seat_label;
-                    })
-                    ->toggleable(),
+                    ->getStateUsing(fn ($record) => static::seatText($record))
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label(__('Data achiziție'))
                     ->dateTime('d M Y H:i', timezone: MarketplaceTz::tz())

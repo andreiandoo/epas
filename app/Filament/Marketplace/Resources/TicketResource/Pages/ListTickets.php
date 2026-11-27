@@ -13,6 +13,7 @@ use Illuminate\Support\HtmlString;
 class ListTickets extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasListChrome;
 
     protected static string $resource = TicketResource::class;
 
@@ -33,37 +34,38 @@ class ListTickets extends ListRecords
 
     public function getHeading(): string|Htmlable
     {
-        $count = number_format(static::getResource()::getEloquentQuery()->count());
-        return new HtmlString("Bilete <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+        return $this->listHeading(__('Bilete'));
     }
 
-    public function getTabsContentComponent(): Component
+    /** Cancelled / refunded are rare: one dropdown next to the main views. */
+    protected function listTodoTabKeys(): array
     {
-        return parent::getTabsContentComponent()
-            ->extraAttributes([
-                'x-data' => '{}',
-                'x-init' => "\$nextTick(() => { const toolbar = document.querySelector('.fi-ta-header-toolbar'); if (!toolbar) return; toolbar.prepend(\$el); \$el.style.flex = 'none'; \$el.style.minWidth = '0'; const nav = \$el.querySelector('.fi-tabs'); if (nav) { nav.style.marginInline = '0'; } })",
-            ]);
+        return ['cancelled', 'refunded'];
     }
 
+    protected function listTodoTabsLabel(): string
+    {
+        return __('Alte stări');
+    }
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('Toate')
-                ->badge(fn () => $this->getResource()::getEloquentQuery()->count()),
-            'valid' => Tab::make('Valide')
+            'all' => Tab::make(__('Toate'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->count())
+                ->badgeColor('gray'),
+            'valid' => Tab::make(__('Valide'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', ['valid', 'used']))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->whereIn('status', ['valid', 'used'])->count())
                 ->badgeColor('success'),
-            'used' => Tab::make('Utilizate')
+            'used' => Tab::make(__('Utilizate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'used'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'used')->count())
                 ->badgeColor('warning'),
-            'cancelled' => Tab::make('Anulate')
+            'cancelled' => Tab::make(__('Anulate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'cancelled'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'cancelled')->count())
                 ->badgeColor('danger'),
-            'refunded' => Tab::make('Rambursate')
+            'refunded' => Tab::make(__('Rambursate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'refunded')->count())
                 ->badgeColor('gray'),
