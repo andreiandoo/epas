@@ -131,6 +131,8 @@
             el.removeAttribute('required');
         });
 
+        if (modalOpen()) return;
+
         var saveBtn = findSaveButton();
         if (saveBtn) {
             saveBtn.click();
@@ -138,13 +140,17 @@
     }
 
     /* ── Show/hide based on whether the page has form actions ── */
+    // Shown only when there is a real save button to press and no modal is
+    // open: on view pages it used to float above action modals doing nothing,
+    // so operators clicked it instead of the modal's own Submit.
+    function modalOpen() {
+        return !!document.querySelector('.fi-modal.fi-modal-open');
+    }
+
     function syncVisibility() {
-        var actions = document.querySelectorAll('.fi-sc-actions');
-        var hasForm = false;
-        actions.forEach(function (a) {
-            if (a.querySelector('button')) hasForm = true;
-        });
-        floatBtn.style.display = hasForm ? 'flex' : 'none';
+        var show = !modalOpen() && !!findSaveButton();
+        var display = show ? 'flex' : 'none';
+        if (floatBtn.style.display !== display) floatBtn.style.display = display;
     }
 
     /* ── Livewire pending state ── */
@@ -181,6 +187,8 @@
         setNormal();
         floatBtn.addEventListener('click', onSaveClick);
         syncVisibility();
+        // Modals open and close without a Livewire round-trip
+        setInterval(syncVisibility, 300);
     }
 
     /* ── Boot ── */
