@@ -364,7 +364,15 @@ class NetopiaProcessor implements PaymentProcessorInterface
 
         } catch (\SoapFault $e) {
             $msg = $e->getMessage();
-            \Illuminate\Support\Facades\Log::channel('marketplace')->error('Netopia SOAP credit failed', ['order_id' => $orderId, 'error' => $msg]);
+            // Keep everything Netopia sent back, not just the message: the
+            // fault detail is what their support needs to explain a refusal.
+            \Illuminate\Support\Facades\Log::channel('marketplace')->error('Netopia SOAP credit failed', [
+                'order_id' => $orderId,
+                'error' => $msg,
+                'fault_code' => $e->faultcode ?? null,
+                'fault_detail' => isset($e->detail) ? json_decode(json_encode($e->detail), true) : null,
+                'last_response' => isset($soapClient) ? mb_substr((string) $soapClient->__getLastResponse(), 0, 4000) : null,
+            ]);
 
             if (str_contains($msg, '53')) return ['success' => false, 'error' => 'Netopia: Comanda nu este confirmată (error 53).', 'requires_manual' => true];
             if (str_contains($msg, '54')) return ['success' => false, 'error' => 'Netopia: Suma depășește plata (error 54).', 'requires_manual' => false];
