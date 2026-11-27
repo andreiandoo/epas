@@ -285,6 +285,10 @@ class MarketplacePanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
                 AuthenticateMarketplaceOrSuperAdmin::class, // Allow super-admins from core
             ])
+            // Limba aleasă din bara de sus; persistent, ca să se aplice și pe cererile Livewire.
+            ->middleware([
+                \App\Http\Middleware\SetMarketplacePanelLocale::class,
+            ], isPersistent: true)
             ->authMiddleware([
                 Authenticate::class,
             ])

@@ -147,8 +147,11 @@
         html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-btn { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
         html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group { padding-left: 0 !important; padding-right: 0 !important; }
 
+        html.ep-frame.ep-nav-open.ep-nav-reveal .ep-secondary-sidebar { left: var(--ep-left-open) !important; }
+        html.ep-frame .ep-secondary-sidebar { transition: left .24s cubic-bezier(.2,.8,.2,1); }
         /* Meniul secundar (Microservicii, Comunicări…): același fundal, pe toată înălțimea */
         html.ep-frame .ep-secondary-sidebar {
+            left: var(--ep-left-now) !important;
             top: 0 !important; height: 100dvh !important; z-index: 38 !important;
             background: var(--ep-frame-bg) !important; border-right: 1px solid var(--ep-frame-line) !important;
         }
@@ -248,7 +251,6 @@
         }
         function close() {
             clearTimeout(openT);
-            if (secondaryOpen()) return; // meniul principal rămâne deschis lângă cel secundar
             clearTimeout(closeT);
             closeT = setTimeout(function () {
                 html.classList.remove('ep-nav-reveal');
@@ -288,7 +290,7 @@
         // Plasă de siguranță: dacă mouse-ul e clar în afara meniului și meniul a rămas deschis, îl închidem.
         var lastCheck = 0;
         document.addEventListener('mousemove', function (e) {
-            if (!framed() || pinned() || !html.classList.contains('ep-nav-open') || secondaryOpen()) return;
+            if (!framed() || pinned() || !html.classList.contains('ep-nav-open')) return;
             var now = Date.now();
             if (now - lastCheck < 150) return;
             lastCheck = now;
@@ -315,7 +317,7 @@
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && html.classList.contains('ep-nav-open') && !secondaryOpen()) html.classList.remove('ep-nav-open', 'ep-nav-reveal');
+            if (e.key === 'Escape' && html.classList.contains('ep-nav-open')) html.classList.remove('ep-nav-open', 'ep-nav-reveal');
         });
         window.addEventListener('resize', function () {
             var desk = window.matchMedia('(min-width: 1024px)').matches;
