@@ -216,6 +216,36 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
+        // Colector de texte netraduse în panoul marketplace (doar cât e pornit din config).
+        if (config('marketplace_locales.collect_missing')) {
+            app('translator')->handleMissingKeysUsing(function ($key, $replace, $locale) {
+                try {
+                    if (! is_string($key) || filament()->getCurrentPanel()?->getId() !== 'marketplace') {
+                        return $key;
+                    }
+                    $locale = $locale ?: app()->getLocale();
+                    if (! in_array($locale, (array) config('marketplace_locales.enabled', []), true)) {
+                        return $key;
+                    }
+                    static $seen = [];
+                    if (isset($seen[$locale . '|' . $key])) {
+                        return $key;
+                    }
+                    $seen[$locale . '|' . $key] = true;
+                    if (\Illuminate\Support\Facades\Cache::add('i18n-missing:' . $locale . ':' . md5($key), 1, 86400)) {
+                        @file_put_contents(
+                            storage_path('logs/i18n-missing-' . $locale . '.log'),
+                            json_encode($key, JSON_UNESCAPED_UNICODE) . PHP_EOL,
+                            FILE_APPEND | LOCK_EX
+                        );
+                    }
+                } catch (\Throwable) {
+                }
+
+                return $key;
+            });
+        }
+
         // Tab-urile: Filament face cheia (?tab=documente) din etichetă. Păstrăm cheia din textul
         // original, ca linkurile directe spre tab-uri să meargă în orice limbă, și traducem doar eticheta.
         \Filament\Schemas\Components\Tabs\Tab::configureUsing(function (\Filament\Schemas\Components\Tabs\Tab $tab) {

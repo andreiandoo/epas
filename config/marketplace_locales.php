@@ -10,6 +10,10 @@
 return [
     'enabled' => ['ro', 'en', 'hu'],
 
+    // Cât e pornit, textele din panou fără traducere se notează în storage/logs/i18n-missing-{locale}.log
+    // (o dată pe zi per text). Pornește-l temporar cu I18N_COLLECT_MISSING=true, apoi oprește-l.
+    'collect_missing' => (bool) env('I18N_COLLECT_MISSING', false),
+
     'names' => [
         'ro' => 'Română',
         'en' => 'English',
