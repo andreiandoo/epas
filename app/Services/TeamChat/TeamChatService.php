@@ -188,6 +188,10 @@ class TeamChatService
                 'name' => $this->threadName($t, $partner),
                 'initials' => $this->initials($this->threadName($t, $partner)),
                 'is_system' => (bool) $t->is_system,
+                'kind' => $t->type === TeamThread::TYPE_DM ? 'dm'
+                    : ($t->type === TeamThread::TYPE_HELP ? 'help'
+                    : ($t->system_key === 'team' ? 'team'
+                    : (str_starts_with((string) $t->system_key, 'dept:') ? 'department' : 'group'))),
                 'partner_id' => $partner ? (int) $partner->id : null,
                 'members' => $t->type === TeamThread::TYPE_DM ? 2 : (int) TeamThreadMember::query()->where('team_thread_id', $t->id)->count(),
                 'unread' => $unread,

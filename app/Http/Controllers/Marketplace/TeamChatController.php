@@ -65,6 +65,12 @@ class TeamChatController extends Controller
                     ? ($members->firstWhere('id', '!=', (int) $admin->id)['name'] ?? 'Conversație')
                     : (string) $t->name,
                 'is_system' => (bool) $t->is_system,
+                // dm | team (Toată echipa) | department | group | help
+                'kind' => $t->type === TeamThread::TYPE_DM ? 'dm'
+                    : ($t->type === TeamThread::TYPE_HELP ? 'help'
+                    : ($t->system_key === 'team' ? 'team'
+                    : (str_starts_with((string) $t->system_key, 'dept:') ? 'department' : 'group'))),
+                'partner_id' => $t->type === TeamThread::TYPE_DM ? ($members->firstWhere('id', '!=', (int) $admin->id)['id'] ?? null) : null,
                 'members' => $members,
                 'chat_ref' => $t->chat_conversation_id
                     ? \App\Models\Chat\ChatConversation::query()->whereKey($t->chat_conversation_id)->value('reference')

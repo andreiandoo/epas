@@ -692,6 +692,9 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
     Route::get('/chat-dock/{reference}', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'show'])
         ->where('reference', '[A-Za-z0-9_-]+')
         ->name('marketplace.chat-dock.show');
+    Route::get('/chat-dock/{reference}/context', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'context'])
+        ->where('reference', '[A-Za-z0-9_-]+')
+        ->name('marketplace.chat-dock.context');
     Route::post('/chat-dock/{reference}/reply', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'reply'])
         ->where('reference', '[A-Za-z0-9_-]+')
         ->name('marketplace.chat-dock.reply');

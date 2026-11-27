@@ -606,7 +606,11 @@
 
     // ================================================================ echipa
     var AVA_COLORS = ['#3a6a8f', '#6b4f8f', '#7b3f62', '#2f7a6a', '#8a5a2b', '#4b5f9e', '#7a3f3f', '#3f6f3f'];
-    function avaColor(t) { var k = t.partner_id || t.id || 0; return AVA_COLORS[k % AVA_COLORS.length]; }
+    // Aceleași culori ca în dock: 1:1 pe coleg, apoi Toată echipa, departament, grup, ajutor.
+    function avaColor(t) {
+        if (window.epChatColors) return window.epChatColors.kind(t.kind || (t.type === 'dm' ? 'dm' : 'group'), t.partner_id);
+        var k = t.partner_id || t.id || 0; return AVA_COLORS[k % AVA_COLORS.length];
+    }
     function teamPost(url, data) {
         return fetch(url, {
             method: 'POST', credentials: 'same-origin',

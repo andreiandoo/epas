@@ -149,6 +149,105 @@ class ChatDockController extends Controller
         ]);
     }
 
+    /**
+     * Ce arată consola în dreapta unui chat: contextul vizitatorului, conversațiile lui anterioare
+     * și istoricul de client sau de organizator (comenzi, evenimente).
+     */
+    public function context(Request $request, string $reference): JsonResponse
+    {
+        $admin = $this->admin();
+        $c = $admin ? $this->find($admin, $reference) : null;
+        if (! $c) {
+            return response()->json(['ok' => false], 404);
+        }
+
+        $ctx = (array) ($c->context ?? []);
+        $eventTitle = null;
+        if ($c->event_id) {
+            $event = \App\Models\Event::query()->find($c->event_id);
+            $eventTitle = $event ? ($event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en')) : null;
+        }
+
+        $statusLabels = [
+            'queued' => 'În așteptare', 'active' => 'Activ', 'offline_message' => 'Offline',
+            'resolved' => 'Rezolvat', 'closed' => 'Închis',
+        ];
+
+        $history = collect();
+        $hq = ChatConversation::query()
+            ->where('marketplace_client_id', $c->marketplace_client_id)
+            ->where('id', '!=', $c->id);
+        if ($c->guest_email) {
+            $history = $hq->where('guest_email', $c->guest_email)->orderByDesc('created_at')->limit(15)->get();
+        } elseif ($c->opener_type && $c->opener_id) {
+            $history = $hq->where('opener_type', $c->opener_type)->where('opener_id', $c->opener_id)->orderByDesc('created_at')->limit(15)->get();
+        }
+
+        $search = trim((string) $request->query('search', ''));
+        $visitor = app(\App\Services\Chat\ChatVisitorContextService::class)->forConversation($c, $search);
+
+        $orderStatus = [
+            'paid' => 'Plătită', 'confirmed' => 'Confirmată', 'completed' => 'Finalizată',
+            'partially_refunded' => 'Parțial rambursată', 'refunded' => 'Rambursată', 'cancelled' => 'Anulată',
+            'expired' => 'Expirată', 'failed' => 'Eșuată', 'pending' => 'În așteptare',
+        ];
+        $mapEvent = function (array $ev) use ($orderStatus) {
+            $eventId = $ev['event_id'] ?? null;
+
+            return [
+                'title' => (string) ($ev['event_title'] ?? 'Eveniment'),
+                'url' => $eventId ? $this->panelUrl(\App\Filament\Marketplace\Resources\EventResource::class, 'edit', (int) $eventId) : null,
+                'date' => $ev['event_date'] ?? null,
+                'count' => isset($ev['total']) ? ((int) $ev['total']) . ' bilete' : (((int) ($ev['tickets_sold'] ?? 0)) . ' vândute'),
+                'orders' => collect((array) ($ev['orders'] ?? []))->map(fn ($o) => [
+                    'number' => (string) ($o['order_number'] ?? ''),
+                    'url' => ! empty($o['order_id']) ? $this->panelUrl(\App\Filament\Marketplace\Resources\OrderResource::class, 'view', (int) $o['order_id']) : null,
+                    'status' => $orderStatus[$o['status'] ?? ''] ?? ucfirst((string) ($o['status'] ?? '')),
+                    'status_key' => (string) ($o['status'] ?? ''),
+                    'detail' => trim(($o['tickets'] ?? 0) . ' bilete · ' . ($o['order_date'] ?? '') . ' · ' . ($o['payment'] ?? ''), ' ·'),
+                ])->values()->all(),
+            ];
+        };
+
+        return response()->json([
+            'ok' => true,
+            'visitor' => [
+                'name' => method_exists($c, 'openerName') ? $c->openerName() : ($c->guest_name ?: 'Vizitator'),
+                'type' => ucfirst((string) $c->visitor_type),
+                'email' => $c->guest_email,
+                'event' => $c->event_id ? (($eventTitle ? $eventTitle . ' ' : '') . '(#' . $c->event_id . ')') : null,
+                'event_url' => $c->event_id ? $this->panelUrl(\App\Filament\Marketplace\Resources\EventResource::class, 'edit', (int) $c->event_id) : null,
+                'operator' => $c->assigned_to_marketplace_admin_id ? $this->cleanName(MarketplaceAdmin::query()->whereKey($c->assigned_to_marketplace_admin_id)->value('name')) : 'nepreluat',
+                'page' => data_get($ctx, 'opened_url'),
+                'ip' => data_get($ctx, 'ip'),
+                'device' => data_get($ctx, 'device'),
+                'browser' => trim((string) data_get($ctx, 'browser') . (data_get($ctx, 'os') ? ' · ' . data_get($ctx, 'os') : '')),
+                'screen' => data_get($ctx, 'screen'),
+            ],
+            'history' => $history->map(fn ($h) => [
+                'ref' => (string) $h->reference,
+                'date' => $h->created_at?->copy()->timezone('Europe/Bucharest')->format('d.m.Y H:i'),
+                'status' => $statusLabels[$h->status] ?? $h->status,
+            ])->values(),
+            'profile' => empty($visitor['type']) ? null : [
+                'type' => $visitor['type'],
+                'stats' => (array) ($visitor['stats'] ?? []),
+                'searching' => (bool) ($visitor['searching'] ?? false),
+                'upcoming' => collect((array) ($visitor['upcoming'] ?? []))->map($mapEvent)->values(),
+                'past' => collect((array) ($visitor['past'] ?? []))->map($mapEvent)->values(),
+            ],
+        ]);
+    }
+
+    private function panelUrl(string $resource, string $page, int $id): ?string
+    {
+        try {
+            return $resource::getUrl($page, ['record' => $id], isAbsolute: false, panel: 'marketplace');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public function reply(Request $request, string $reference): JsonResponse
     {
         $admin = $this->admin();
