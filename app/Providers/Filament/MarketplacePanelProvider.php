@@ -1134,7 +1134,7 @@ class MarketplacePanelProvider extends PanelProvider
                 // Pages where tabs should move into the table toolbar
                 const TABS_INSIDE_TABLE = [];
                 // Pages where header "New" button should move into the table toolbar
-                const BUTTON_INSIDE_TABLE = ['/marketplace-customers', '/gift-cards'];
+                const BUTTON_INSIDE_TABLE = ['/gift-cards'];
 
                 function getPath() {
                     return window.location.pathname.replace(/\/+$/, '');

@@ -471,24 +471,65 @@ class MarketplaceCustomerResource extends Resource
     {
         return $table
             ->columns([
+                // Name with e-mail and phone as the muted line; the separate columns stay in "Coloane".
                 Tables\Columns\TextColumn::make('full_name')
                     ->label(__('Name'))
-                    ->searchable(['first_name', 'last_name'])
+                    ->searchable(query: fn (Builder $query, string $search) => $query->where(fn (Builder $q) => $q
+                        ->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")))
                     ->sortable()
-                    ->formatStateUsing(function ($state, $record) {
+                    ->html()
+                    ->formatStateUsing(function ($state, MarketplaceCustomer $record) {
+                        $name = trim((string) $state) !== '' ? (string) $state : '—';
+                        $initials = collect(preg_split('/\s+/u', trim((string) $state)))
+                            ->filter(fn ($w) => mb_strlen($w) > 0)
+                            ->take(2)
+                            ->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))
+                            ->implode('');
                         $source = $record->settings['imported_from'] ?? null;
-                        return $state . ($source ? " 🌐" : '');
+                        $import = $source
+                            ? ' <span class="ep-pill ep-pill--mute" title="' . e('Import: ' . $source) . '">' . e(__('Import')) . '</span>'
+                            : '';
+                        $sub = collect([$record->email, $record->phone])->filter()->map(fn ($v) => e($v))->implode(' | ');
+
+                        return '<div class="ep-venue"><span class="ep-av ep-av--round" aria-hidden="true">' . e($initials !== '' ? $initials : '·') . '</span>'
+                            . '<div style="min-width:0"><div class="ep-venue-name">' . e($name) . $import . '</div>'
+                            . ($sub !== '' ? '<div class="ep-sub">' . $sub . '</div>' : '')
+                            . '</div></div>';
                     })
-                    ->tooltip(fn ($record) => ($record->settings['imported_from'] ?? null) ? 'Import: ' . $record->settings['imported_from'] : null)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('phone')
                     ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                // Status + e-mail verification + account type as pills (the three columns they replace stay in "Coloane").
+                Tables\Columns\TextColumn::make('account_state')
+                    ->label(__('Stare'))
+                    ->html()
+                    ->state(function (MarketplaceCustomer $record): HtmlString {
+                        [$label, $tone] = match ($record->status) {
+                            'active' => [__('Activ'), 'ok'],
+                            'suspended' => [__('Suspendat'), 'bad'],
+                            default => [(string) $record->status, 'mute'],
+                        };
+                        $html = '<span class="ep-pill ep-pill--' . $tone . '"><span class="ep-dot"></span>' . e($label) . '</span>';
+                        $html .= $record->email_verified_at !== null
+                            ? ' <span class="ep-pill ep-pill--ok">' . e(__('Email verificat')) . '</span>'
+                            : ' <span class="ep-pill ep-pill--mute">' . e(__('Email neverificat')) . '</span>';
+                        $html .= $record->isGuest()
+                            ? ' <span class="ep-pill ep-pill--mute" title="' . e('Guest (no password)') . '">' . e(__('Oaspete')) . '</span>'
+                            : ' <span class="ep-pill ep-pill--ok" title="Registered">' . e(__('Cu cont')) . '</span>';
+
+                        return new HtmlString('<div class="ep-stare">' . $html . '</div>');
+                    })
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('email_verified_at')
@@ -497,7 +538,7 @@ class MarketplaceCustomerResource extends Resource
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-circle')
                     ->getStateUsing(fn ($record) => $record->email_verified_at !== null)
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('is_guest')
                     ->label(__('Type'))
@@ -508,7 +549,7 @@ class MarketplaceCustomerResource extends Resource
                     ->falseColor('success')
                     ->getStateUsing(fn ($record) => $record->isGuest())
                     ->tooltip(fn ($record) => $record->isGuest() ? 'Guest (no password)' : 'Registered')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -517,10 +558,13 @@ class MarketplaceCustomerResource extends Resource
                         'suspended' => 'danger',
                         default => 'gray',
                     })
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
+                // Orders with the amount spent under it (Spent stays in "Coloane").
                 Tables\Columns\TextColumn::make('total_orders')
                     ->label(__('Orders'))
+                    ->numeric(thousandsSeparator: '.')
+                    ->description(fn (MarketplaceCustomer $record): string => number_format((float) $record->total_spent, 2, ',', '.') . ' RON')
                     ->sortable()
                     ->alignCenter()
                     ->toggleable(),
@@ -529,11 +573,16 @@ class MarketplaceCustomerResource extends Resource
                     ->label(__('Spent'))
                     ->money('RON')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
+                // Last login with the registration date under it (Registered stays in "Coloane").
                 Tables\Columns\TextColumn::make('last_login_at')
                     ->label(__('Last Login'))
                     ->dateTime(timezone: MarketplaceTz::tz())
+                    ->placeholder('—')
+                    ->description(fn (MarketplaceCustomer $record): ?string => $record->created_at
+                        ? __('Înregistrat') . ' ' . $record->created_at->copy()->setTimezone(MarketplaceTz::tz())->format('d.m.Y')
+                        : null)
                     ->sortable()
                     ->toggleable(),
 
@@ -602,13 +651,20 @@ class MarketplaceCustomerResource extends Resource
                     ),
             ])
             ->recordActions([
-                Action::make('login_as')
-                    ->label(__('Login as'))
-                    ->icon('heroicon-o-arrow-right-on-rectangle')
-                    ->color('warning')
-                    ->url(fn ($record) => url('/marketplace/marketplace-customers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
-                ViewAction::make(),
-                EditAction::make(),
+                // The row opens the edit page; everything else sits in one menu.
+                \Filament\Actions\ActionGroup::make([
+                    Action::make('login_as')
+                        ->label(__('Login as'))
+                        ->icon('heroicon-o-arrow-right-on-rectangle')
+                        ->color('warning')
+                        ->url(fn ($record) => url('/marketplace/marketplace-customers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
+                    ViewAction::make(),
+                    EditAction::make(),
+                ])
+                    ->label(__('Mai multe'))
+                    ->icon('heroicon-m-ellipsis-horizontal')
+                    ->color('gray')
+                    ->iconButton(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
