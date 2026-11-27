@@ -291,59 +291,102 @@ class AttentionService
 
     // ------------------------------------------------------------------- event
 
+    /**
+     * Două nevoi diferite:
+     * - aprobare: eveniment nou trimis de organizator, încă nepublicat. Cere o verificare
+     *   completă, deci se preia (un singur operator îl lucrează);
+     * - modificări: organizatorul a schimbat un eveniment live. E o decizie rapidă pe un diff,
+     *   nu se alocă nimănui; dispare când cineva aprobă sau respinge.
+     * Evenimentele terminate sau anulate nu mai apar.
+     */
     private function eventItems(): array
     {
         if (! $this->hasAssignmentColumn('events')) {
             return [];
         }
 
-        $query = Event::query()
+        $columns = ['id', 'title', 'marketplace_organizer_id', 'is_published', 'submitted_at', 'pending_changes_status', 'pending_changes_submitted_at', 'event_date', 'range_start_date', 'range_end_date', 'assigned_to_marketplace_admin_id', 'created_at'];
+
+        $base = fn () => Event::query()
             ->where('marketplace_client_id', $this->client->id)
-            ->where(function (Builder $q) {
-                $q->where(function (Builder $submitted) {
-                    $submitted->whereNotNull('submitted_at')
-                        ->where(fn ($p) => $p->where('is_published', false)->orWhereNull('is_published'))
-                        ->whereNull('rejected_at');
-                })->orWhere('pending_changes_status', 'pending');
-            })
-            ->select(['id', 'title', 'marketplace_organizer_id', 'is_published', 'submitted_at', 'pending_changes_status', 'pending_changes_submitted_at', 'event_date', 'range_start_date', 'assigned_to_marketplace_admin_id', 'created_at'])
+            ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'))
+            ->where(fn ($q) => $q->whereRaw('COALESCE(range_end_date, event_date) IS NULL')
+                ->orWhereRaw('COALESCE(range_end_date, event_date) >= CURRENT_DATE'))
+            ->select($columns)
             ->with('marketplaceOrganizer:id,name');
-        $this->applyOwnerFilter($query);
-        $query->orderByRaw('COALESCE(pending_changes_submitted_at, submitted_at, created_at) asc')->limit($this->limit);
+
+        $approval = $base()
+            ->whereNotNull('submitted_at')
+            ->where(fn ($p) => $p->where('is_published', false)->orWhereNull('is_published'))
+            ->whereNull('rejected_at')
+            ->where(fn ($q) => $q->whereNull('pending_changes_status')->orWhere('pending_changes_status', '!=', 'pending'));
+        $this->applyOwnerFilter($approval);
+        $approval = $approval->orderBy('submitted_at')->limit($this->limit)->get();
+
+        $changes = $base()
+            ->where('pending_changes_status', 'pending')
+            ->orderByRaw('COALESCE(pending_changes_submitted_at, created_at) asc')
+            ->limit($this->limit)
+            ->get();
 
         $items = [];
-        $soonLimit = now()->addDays((int) $this->thresholds['event_starts_within_days'])->endOfDay();
-
-        foreach ($query->get() as $e) {
-            $owner = $e->assigned_to_marketplace_admin_id;
-            $isChanges = $e->pending_changes_status === 'pending' && $e->is_published;
-            $since = $isChanges ? ($e->pending_changes_submitted_at ?? $e->created_at) : ($e->submitted_at ?? $e->created_at);
-            $startsAt = $e->event_date ?? $e->range_start_date;
-
-            $late = ($since && $since->lt(now()->subMinutes((int) $this->thresholds['event_waiting_minutes'])))
-                || ($startsAt && $startsAt->lte($soonLimit) && $startsAt->gte(now()->startOfDay()));
-
-            $title = method_exists($e, 'getTranslation') ? ($e->getTranslation('title', 'ro') ?: $e->getTranslation('title', 'en')) : null;
-            $organizer = $e->marketplaceOrganizer?->name;
-
-            $meta = ($isChanges ? 'modificări în așteptare' : 'trimis spre aprobare')
-                . ' · ' . $this->ownerLabel($owner)
-                . ($startsAt ? ' · începe ' . $startsAt->format('d.m') : '')
-                . ($organizer ? ' · ' . $organizer : '');
-
-            $items[] = $this->item(
-                'event',
-                $e->id,
-                (string) ($title ?: 'Eveniment #' . $e->id),
-                $meta,
-                $owner,
-                $late,
-                $this->resourceUrl(EventResource::class, 'edit', $e->id),
-                $since,
-            );
+        foreach ($approval as $e) {
+            $items[] = $this->eventItem($e, 'approval');
+        }
+        foreach ($changes as $e) {
+            $items[] = $this->eventItem($e, 'changes');
         }
 
         return $items;
+    }
+
+    private function eventItem(Event $e, string $kind): array
+    {
+        $soonLimit = now()->addDays((int) $this->thresholds['event_starts_within_days'])->endOfDay();
+        $since = $kind === 'changes'
+            ? ($e->pending_changes_submitted_at ?? $e->created_at)
+            : ($e->submitted_at ?? $e->created_at);
+        $startsAt = $e->event_date ?? $e->range_start_date;
+
+        $late = ($since && $since->lt(now()->subMinutes((int) $this->thresholds['event_waiting_minutes'])))
+            || ($startsAt && $startsAt->lte($soonLimit) && $startsAt->gte(now()->startOfDay()));
+
+        $title = $e->getTranslation('title', 'ro') ?: $e->getTranslation('title', 'en');
+        $organizer = $e->marketplaceOrganizer?->name;
+
+        $parts = [];
+        if ($kind === 'approval') {
+            $parts[] = $this->ownerLabel($e->assigned_to_marketplace_admin_id);
+            $parts[] = 'trimis ' . $this->ago($since);
+        } else {
+            $parts[] = 'trimise ' . $this->ago($since);
+        }
+        if ($startsAt) {
+            $parts[] = 'începe ' . $startsAt->format('d.m');
+        }
+        if ($organizer) {
+            $parts[] = $organizer;
+        }
+
+        $item = $this->item(
+            'event',
+            $e->id,
+            (string) ($title ?: 'Eveniment #' . $e->id),
+            implode(' · ', $parts),
+            $kind === 'approval' ? $e->assigned_to_marketplace_admin_id : null,
+            $late,
+            $this->resourceUrl(EventResource::class, 'edit', $e->id),
+            $since,
+        );
+
+        // Cheie separată pentru modificări, ca „Amână” să nu ascundă și aprobarea aceluiași eveniment.
+        if ($kind === 'changes') {
+            $item['key'] = 'eventchg:' . $e->id;
+        }
+        $item['kind'] = $kind;
+        $item['claimable'] = $kind === 'approval';
+
+        return $item;
     }
 
     // ------------------------------------------------------------------ claim
@@ -429,12 +472,14 @@ class AttentionService
             'late' => $late,
             'url' => $url,
             'since' => $since?->toIso8601String(),
+            'kind' => null,
+            'claimable' => true,
         ];
     }
 
     private function parseKey(string $key): array
     {
-        if (! preg_match('/^(chat|ticket|todo|artist|event):(\d+)$/', $key, $m)) {
+        if (! preg_match('/^(chat|ticket|todo|artist|event|eventchg):(\d+)$/', $key, $m)) {
             throw new \InvalidArgumentException('Cheie invalidă.');
         }
 

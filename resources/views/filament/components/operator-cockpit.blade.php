@@ -67,10 +67,12 @@
     .epc-seg { display: flex; gap: 4px; background: var(--epc-seg); padding: 3px; border-radius: 7px; }
     .epc-seg button { flex: 1; border: 0; background: transparent; color: var(--epc-muted); font-size: 12px; font-weight: 500; padding: 5px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
     .epc-seg button.is-on { background: var(--epc-seg-on); color: var(--epc-fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-    .epc-body { overflow-y: auto; padding: 4px 0 16px; flex: 1; overscroll-behavior: contain; }
-    .epc-grp { position: sticky; top: 0; background: var(--epc-drawer); padding: 10px 16px 6px; display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--epc-muted); z-index: 1; }
+    .epc-body { overflow-y: auto; padding: 0 0 16px; flex: 1; overscroll-behavior: contain; }
+    .epc-grp { position: sticky; top: 0; margin-top: 0; background: var(--epc-drawer); padding: 10px 16px 6px; display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--epc-muted); z-index: 1; }
     .epc-grp .epc-sq { width: 10px; height: 10px; border-radius: 2px; flex: none; }
     .epc-grp .epc-n { margin-left: auto; font-variant-numeric: tabular-nums; }
+    .epc-sub { padding: 8px 18px 4px; font-size: 11.5px; font-weight: 600; color: var(--epc-fg); display: flex; align-items: center; gap: 6px; }
+    .epc-sub small { color: var(--epc-muted); font-weight: 400; }
     .epc-item { margin: 0 8px; padding: 9px 10px; border-radius: 7px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; }
     .epc-item:hover { background: var(--epc-hover); }
     .epc-item-t { color: var(--epc-fg); font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
@@ -288,7 +290,7 @@
 
     function passes(i) {
         if (state.filter === 'mine') return i.mine;
-        if (state.filter === 'pool') return !i.owner_id;
+        if (state.filter === 'pool') return !i.owner_id && i.claimable !== false;
         if (state.filter === 'others') return !!i.owner_id && !i.mine;
         return true;
     }
@@ -299,10 +301,19 @@
             var list = (state.items[cat] || []).filter(passes);
             if (!list.length) return;
             html += '<div class="epc-grp" data-g="' + cat + '"><span class="epc-sq" style="background:' + COLOR[cat] + '"></span>' + esc(LABEL[cat]) + '<span class="epc-n">' + list.length + '</span></div>';
+            var SUB = { approval: ['Evenimente noi de aprobat', 'se preiau'], changes: ['Modificări la evenimente live', 'nu se alocă, doar se aprobă'] };
+            var lastKind = null;
             list.forEach(function (i) {
+                if (cat === 'event' && i.kind && i.kind !== lastKind) {
+                    lastKind = i.kind;
+                    html += '<div class="epc-sub">' + esc(SUB[i.kind][0]) + ' <small>· ' + esc(SUB[i.kind][1]) + '</small></div>';
+                }
                 var chip = i.late ? '<span class="epc-chip is-late">întârziat</span>'
                     : (i.mine ? '<span class="epc-chip">al tău</span>' : (i.owner_id ? '<span class="epc-chip">' + esc(i.owner_name || 'preluat') + '</span>' : '<span class="epc-chip">nealocat</span>'));
-                var action = !i.owner_id
+                if (!i.late && i.kind === 'changes') chip = '<span class="epc-chip">de aprobat</span>';
+                var action = i.claimable === false
+                    ? '<a class="epc-btn is-pri" href="' + esc(i.url) + '">Revizuiește</a>'
+                    : !i.owner_id
                     ? '<button type="button" class="epc-btn is-pri" data-claim="' + esc(i.key) + '" data-url="' + esc(i.url) + '">Preiau</button>'
                     : '<a class="epc-btn" href="' + esc(i.url) + '">Deschide</a>';
                 var snooze = '<button type="button" class="epc-snooze" data-snooze="' + esc(i.key) + '" title="Amână 1h" aria-label="Amână 1h"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" d="M12 9v4l2.5 2M9 2h6"/></svg></button>';
