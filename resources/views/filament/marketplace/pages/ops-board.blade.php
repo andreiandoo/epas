@@ -38,6 +38,10 @@
         .opsb-zone-head span { font-size: .8125rem; color: var(--opsb-muted); }
         /* The table scrolls inside its own box so the header can stay pinned. */
         .opsb-scroll { overflow: auto; max-height: 75vh; }
+        /* Period list runs on with the page; only sideways scroll on narrow screens. */
+        .opsb-scroll.is-flow { max-height: none; overflow-y: visible; overflow-x: auto; }
+        .opsb-scroll.is-flow .opsb-table thead th { position: static; }
+        .dark .opsb-search, .dark .opsb-zone-head { background: #0c0f13; }
         .opsb-table thead th { position: sticky; top: 0; z-index: 2; background: var(--opsb-head); box-shadow: inset 0 -1px 0 var(--opsb-line); }
         .opsb-table { width: 100%; min-width: 60rem; border-collapse: collapse; font-size: .8125rem; }
         .opsb-table th { text-align: left; font-weight: 600; color: var(--opsb-muted); padding: .5rem .6rem; border-bottom: 1px solid var(--opsb-line); white-space: nowrap; }
@@ -82,7 +86,6 @@
         $zones = [
             'backlog' => ['Din urmă', 'evenimente încheiate cu ceva încă deschis · urmărite de la ' . $trackFromLabel, 'Nicio restanță din perioadele anterioare.'],
             'period' => ['Evenimentele perioadei', $periodLabel, 'Niciun eveniment în această perioadă.'],
-            'upcoming' => ['Urmează, cu scadență acum', 'evenimente de după perioadă, cu cererea de vizare scadentă în perioadă', null],
         ];
     @endphp
 
@@ -171,7 +174,7 @@
                 @if(empty($rows))
                     <div class="opsb-empty">{{ $emptyText }}</div>
                 @else
-                    <div class="opsb-scroll">
+                    <div @class(['opsb-scroll', 'is-flow' => $key === 'period'])>
                         <table class="opsb-table">
                             <thead>
                                 <tr>

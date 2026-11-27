@@ -272,6 +272,8 @@ class OpsBoard extends Page
                 'registry_id' => (int) $this->registry ?: null,
                 'only_open' => $this->onlyOpen,
                 'statuses' => $this->status,
+                // The board no longer shows the "upcoming" zone; the digest still does.
+                'skip_upcoming' => true,
             ])
             : ['backlog' => [], 'period' => [], 'upcoming' => [], 'counts' => ['overdue' => 0, 'todo' => 0, 'awaiting_payment' => 0, 'events' => 0], 'options' => ['organizers' => [], 'registries' => []]];
 

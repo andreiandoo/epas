@@ -84,7 +84,7 @@ class OpsBoardService
      * @param  Carbon  $from  first day of the period
      * @param  Carbon  $to  last day of the period
      * @param  Carbon  $trackFrom  events that ended before this day are never shown as backlog
-     * @param  array{organizer_id?: ?int, registry_id?: ?int, only_open?: bool, statuses?: string[]}  $filters
+     * @param  array{organizer_id?: ?int, registry_id?: ?int, only_open?: bool, statuses?: string[], skip_upcoming?: bool}  $filters
      * @return array{backlog: array, period: array, upcoming: array, counts: array, options: array}
      */
     public function build(MarketplaceClient $client, Carbon $from, Carbon $to, Carbon $trackFrom, array $filters = []): array
@@ -113,7 +113,7 @@ class OpsBoardService
                 $zone = 'period';
             } elseif ($end->lt($from) && $end->gte($trackFrom)) {
                 $zone = 'backlog';
-            } elseif ($start->gt($to) && $start->copy()->subDays(self::CERERE_DAYS_BEFORE)->lte($to)) {
+            } elseif (empty($filters['skip_upcoming']) && $start->gt($to) && $start->copy()->subDays(self::CERERE_DAYS_BEFORE)->lte($to)) {
                 $zone = 'upcoming';
             } else {
                 continue;
