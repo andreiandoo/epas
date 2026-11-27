@@ -27,7 +27,92 @@ class ViewTicket extends ViewRecord
 
     protected static string $resource = TicketResource::class;
 
-    protected string $view = 'filament.tickets.pages.view-ticket';
+    // Marketplace-only layout (admin/tenant keep filament.tickets.pages.view-ticket).
+    protected string $view = 'filament.marketplace.tickets.view-ticket';
+
+    public function getPageClasses(): array
+    {
+        return [...parent::getPageClasses(), 'ep-tk-page'];
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        return [
+            \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') => __('Bilete'),
+            (string) ($this->record->code ?? $this->record->id),
+        ];
+    }
+
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return __('Bilet') . ' ' . ($this->record->code ?? $this->record->id);
+    }
+
+    /** Ticket code + state pills (check-in wins over plain "Valid", as before). */
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        $t = $this->record;
+        [$label, $tone] = match (true) {
+            $t->checked_in_at && ! in_array($t->status, ['cancelled', 'void', 'refunded'], true) => [__('Check-in efectuat'), 'info'],
+            $t->status === 'valid' => [__('Valid'), 'ok'],
+            $t->status === 'used' => [__('Utilizat'), 'info'],
+            in_array($t->status, ['cancelled', 'void'], true) => [__('Anulat'), 'bad'],
+            $t->status === 'refunded' => [__('Rambursat'), 'bad'],
+            default => [ucfirst((string) $t->status), 'mute'],
+        };
+        $hasInsurance = (bool) ($t->meta['has_insurance'] ?? false);
+        $insuranceAmount = $t->meta['insurance_amount'] ?? null;
+        $isRefundable = (bool) ($t->marketplaceTicketType?->is_refundable ?? $t->ticketType?->is_refundable ?? false);
+        $second = $hasInsurance
+            ? [__('Asigurat') . ($insuranceAmount ? ' ' . number_format((float) $insuranceAmount, 2, ',', '.') . ' ' . ($t->order?->currency ?? 'RON') : ''), 'ok']
+            : ($isRefundable ? [__('Returnabil'), 'warn'] : [__('Nereturnabil'), 'mute']);
+
+        return new \Illuminate\Support\HtmlString(
+            '<span class="ep-tk-code">' . e($t->code) . '</span>'
+            . ' <span class="ep-tk-pill ep-tk-pill--' . $tone . '"><i></i>' . e($label) . '</span>'
+            . ' <span class="ep-tk-pill ep-tk-pill--' . $second[1] . '">' . e($second[0]) . '</span>'
+        );
+    }
+
+    /** One line: type | seat | price | event | date. */
+    public function getSubheading(): string|\Illuminate\Contracts\Support\Htmlable|null
+    {
+        $t = $this->record;
+        $event = $t->ticketType?->event;
+        $parts = [];
+        $parts[] = e($t->marketplaceTicketType?->name ?? $t->ticketType?->name ?? '');
+        $seat = static::seatHuman($t);
+        if ($seat !== '') {
+            $parts[] = e($seat);
+        }
+        $currency = $t->order?->currency ?? $t->ticketType?->currency ?? 'RON';
+        $price = $t->getEffectivePrice() ?: (($t->ticketType?->price_cents ?? 0) / 100);
+        $parts[] = e(number_format((float) $price, 2, ',', '.') . ' ' . $currency);
+        if ($event) {
+            $title = $event->getTranslation('title', app()->getLocale()) ?: $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en');
+            $url = \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $event]);
+            $parts[] = '<a href="' . e($url) . '">' . e((string) $title) . '</a>';
+            $when = trim(($event->event_date?->format('d.m.Y') ?? '') . ($event->start_time ? ', ' . substr((string) $event->start_time, 0, 5) : ''));
+            if ($when !== '') {
+                $parts[] = e($when);
+            }
+        }
+
+        return new \Illuminate\Support\HtmlString('<span class="ep-tk-meta">' . implode(' <span class="ep-tk-sep">|</span> ', array_filter($parts)) . '</span>');
+    }
+
+    /** "PARTER DR, rând 14, loc 6" (or the raw seat label when nothing else is known). */
+    public static function seatHuman(\App\Models\Ticket $t): string
+    {
+        $d = $t->getSeatDetails() ?? [];
+        $bits = array_filter([
+            $d['section_name'] ?? null,
+            ! empty($d['row_label']) ? __('rând') . ' ' . $d['row_label'] : null,
+            ! empty($d['seat_number']) ? __('loc') . ' ' . $d['seat_number'] : null,
+        ]);
+
+        return $bits ? implode(', ', $bits) : (string) ($t->seat_label ?? '');
+    }
 
     protected function hasInfolist(): bool
     {
@@ -39,7 +124,7 @@ class ViewTicket extends ViewRecord
     {
         return [
             Actions\Action::make('download')
-                ->label(__('Download Ticket'))
+                ->label(__('Descarcă PDF'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->action(function () {
                     $ticket = $this->record;
@@ -70,8 +155,9 @@ class ViewTicket extends ViewRecord
                 }),
 
             Actions\Action::make('email')
-                ->label(__('Email Ticket'))
+                ->label(__('Trimite pe email'))
                 ->icon('heroicon-o-envelope')
+                ->color('gray')
                 ->form([
                     \Filament\Forms\Components\Radio::make('recipient_type')
                         ->label(__('Send to'))
@@ -205,6 +291,8 @@ class ViewTicket extends ViewRecord
                     }
                 }),
 
+            // Rarely used: status change and undoing a check-in share one menu.
+            Actions\ActionGroup::make([
             Actions\Action::make('change_status')
                 ->label(__('Schimbă status'))
                 ->icon('heroicon-o-arrow-path')
@@ -307,6 +395,12 @@ class ViewTicket extends ViewRecord
                         ->success()
                         ->send();
                 }),
+            ])
+                ->label(__('Mai multe'))
+                ->icon('heroicon-m-chevron-down')
+                ->iconPosition(\Filament\Support\Enums\IconPosition::After)
+                ->color('gray')
+                ->button(),
         ];
     }
 
