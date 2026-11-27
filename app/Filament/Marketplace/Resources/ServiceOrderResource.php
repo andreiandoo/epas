@@ -320,19 +320,26 @@ class ServiceOrderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // Organizer + event are read in the rows: load them once instead of per row.
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['organizer:id,name', 'event']))
             ->columns([
+                // Order number with the order date as the muted line (created_at stays in "Coloane").
                 Tables\Columns\TextColumn::make('order_number')
                     ->label(__('Order #'))
+                    ->description(fn (ServiceOrder $record): ?string => $record->created_at?->format('d.m.Y H:i'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->toggleable(),
 
+                // Organizer with the event under it (the Event column stays in "Coloane").
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label(__('Organizer'))
+                    ->description(fn (ServiceOrder $record): ?string => $record->event?->name ?: null)
                     ->searchable()
                     ->sortable()
-                    ->limit(25)
+                    ->limit(40)
+                    ->placeholder('—')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('event.name')
@@ -340,10 +347,10 @@ class ServiceOrderResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->limit(25)
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('service_type')
-                    ->label(__('Type'))
+                    ->label(__('Serviciu'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'featuring' => 'primary',
@@ -354,14 +361,32 @@ class ServiceOrderResource extends Resource
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'featuring' => 'Featuring',
-                        'location_featuring' => 'Promovare locatie',
-                        'email' => 'Email',
-                        'tracking' => 'Tracking',
-                        'campaign' => 'Campaign',
+                        'featuring' => __('Promovare eveniment'),
+                        'location_featuring' => __('Promovare locație'),
+                        'email' => __('Email marketing'),
+                        'tracking' => __('Tracking reclame'),
+                        'campaign' => __('Campanie'),
+                        'extended_artist' => __('Artist extins'),
                         default => ucfirst($state),
                     })
                     ->toggleable(),
+
+                // Start date with the end date under it (End Date stays in "Coloane").
+                Tables\Columns\TextColumn::make('service_start_date')
+                    ->label(__('Perioadă'))
+                    ->date('d.m.Y')
+                    ->description(fn (ServiceOrder $record): ?string => $record->service_end_date
+                        ? __('până la') . ' ' . $record->service_end_date->format('d.m.Y')
+                        : null)
+                    ->placeholder('—')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('service_end_date')
+                    ->label(__('End Date'))
+                    ->date()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('total')
                     ->label(__('Total (incl. TVA)'))
@@ -369,28 +394,40 @@ class ServiceOrderResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
+                // Order state in Romanian + payment state, as pills.
                 Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'draft' => 'gray',
-                        'pending_payment' => 'warning',
-                        'processing' => 'info',
-                        'active' => 'success',
-                        'completed' => 'primary',
-                        'cancelled' => 'danger',
-                        'refunded' => 'danger',
-                        default => 'gray',
+                    ->label(__('Stare'))
+                    ->html()
+                    ->state(function (ServiceOrder $record): HtmlString {
+                        [$label, $tone] = match ($record->status) {
+                            'draft' => [__('Ciornă'), 'mute'],
+                            'pending_payment' => [__('Așteaptă plata'), 'warn'],
+                            'processing' => [__('În procesare'), 'warn'],
+                            'active' => [__('Activă'), 'ok'],
+                            'completed' => [__('Finalizată'), 'ok'],
+                            'cancelled' => [__('Anulată'), 'bad'],
+                            'refunded' => [__('Rambursată'), 'bad'],
+                            default => [ucfirst((string) $record->status), 'mute'],
+                        };
+                        $html = '<span class="ep-pill ep-pill--' . $tone . '"><span class="ep-dot"></span>' . e($label) . '</span>';
+
+                        // An unpaid payment on an unpaid order says the same as the order state: skip it.
+                        $redundant = ($record->payment_status === 'pending' && in_array($record->status, ['draft', 'pending_payment'], true))
+                            || ($record->payment_status === 'refunded' && $record->status === 'refunded');
+                        if (! $redundant) {
+                            [$pLabel, $pTone] = match ($record->payment_status) {
+                                'paid' => [__('Plătită'), 'ok'],
+                                'pending' => [__('Plată în așteptare'), 'warn'],
+                                'failed' => [__('Plată eșuată'), 'bad'],
+                                'refunded' => [__('Plată rambursată'), 'mute'],
+                                default => [ucfirst((string) $record->payment_status), 'mute'],
+                            };
+                            $html .= ' <span class="ep-pill ep-pill--' . $pTone . '">' . e($pLabel) . '</span>';
+                        }
+
+                        return new HtmlString('<div class="ep-stare">' . $html . '</div>');
                     })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'draft' => 'Draft',
-                        'pending_payment' => 'Pending Payment',
-                        'processing' => 'Processing',
-                        'active' => 'Active',
-                        'completed' => 'Completed',
-                        'cancelled' => 'Cancelled',
-                        'refunded' => 'Refunded',
-                        default => ucfirst($state),
-                    })
+                    ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('payment_status')
@@ -404,22 +441,10 @@ class ServiceOrderResource extends Resource
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\TextColumn::make('service_start_date')
-                    ->label(__('Start Date'))
-                    ->date()
-                    ->sortable()
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('service_end_date')
-                    ->label(__('End Date'))
-                    ->date()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -456,10 +481,13 @@ class ServiceOrderResource extends Resource
                     ->relationship('organizer', 'name'),
             ])
             ->recordActions([
+                // Next step as an icon button; Cancel + View in the menu.
                 Action::make('mark_paid')
                     ->label(__('Mark as Paid'))
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
+                    ->iconButton()
+                    ->tooltip(__('Mark as Paid'))
                     ->requiresConfirmation()
                     ->visible(fn (ServiceOrder $record): bool =>
                         $record->payment_status === ServiceOrder::PAYMENT_PENDING &&
@@ -480,6 +508,8 @@ class ServiceOrderResource extends Resource
                     ->label(__('Activate'))
                     ->icon('heroicon-o-play')
                     ->color('success')
+                    ->iconButton()
+                    ->tooltip(__('Activate'))
                     ->requiresConfirmation()
                     ->visible(fn (ServiceOrder $record): bool =>
                         $record->payment_status === ServiceOrder::PAYMENT_PAID &&
@@ -493,6 +523,8 @@ class ServiceOrderResource extends Resource
                     ->label(__('Complete'))
                     ->icon('heroicon-o-check-circle')
                     ->color('primary')
+                    ->iconButton()
+                    ->tooltip(__('Complete'))
                     ->requiresConfirmation()
                     ->visible(fn (ServiceOrder $record): bool =>
                         $record->status === ServiceOrder::STATUS_ACTIVE
@@ -501,24 +533,30 @@ class ServiceOrderResource extends Resource
                         $record->complete();
                     }),
 
-                Action::make('cancel')
-                    ->label(__('Cancel'))
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->visible(fn (ServiceOrder $record): bool => $record->canBeCancelled())
-                    ->form([
-                        Forms\Components\Textarea::make('cancellation_reason')
-                            ->label(__('Reason'))
-                            ->rows(2),
-                    ])
-                    ->action(function (ServiceOrder $record, array $data): void {
-                        $record->admin_notes = ($record->admin_notes ? $record->admin_notes . "\n\n" : '') .
-                            'Cancelled: ' . ($data['cancellation_reason'] ?? 'No reason provided');
-                        $record->cancel();
-                    }),
+                \Filament\Actions\ActionGroup::make([
+                    Action::make('cancel')
+                        ->label(__('Cancel'))
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->visible(fn (ServiceOrder $record): bool => $record->canBeCancelled())
+                        ->form([
+                            Forms\Components\Textarea::make('cancellation_reason')
+                                ->label(__('Reason'))
+                                ->rows(2),
+                        ])
+                        ->action(function (ServiceOrder $record, array $data): void {
+                            $record->admin_notes = ($record->admin_notes ? $record->admin_notes . "\n\n" : '') .
+                                'Cancelled: ' . ($data['cancellation_reason'] ?? 'No reason provided');
+                            $record->cancel();
+                        }),
 
-                ViewAction::make(),
+                    ViewAction::make(),
+                ])
+                    ->label(__('Mai multe'))
+                    ->icon('heroicon-m-ellipsis-horizontal')
+                    ->color('gray')
+                    ->iconButton(),
             ])
             ->toolbarActions([])
             ->defaultSort('created_at', 'desc');

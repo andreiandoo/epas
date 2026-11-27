@@ -4397,5 +4397,14 @@
     "Oblio: neverificată": "Oblio: unchecked",
     "Detectat la": "Detected at",
     "Verificat la": "Checked at",
-    "Se verifică la deschiderea facturii": "Checked when the invoice is opened"
+    "Se verifică la deschiderea facturii": "Checked when the invoice is opened",
+    "Serviciu": "Service",
+    "Promovare eveniment": "Event promotion",
+    "Promovare locație": "Venue promotion",
+    "Email marketing": "Email marketing",
+    "Tracking reclame": "Ad tracking",
+    "Artist extins": "Extended artist",
+    "Plată în așteptare": "Payment pending",
+    "Plată eșuată": "Payment failed",
+    "Plată rambursată": "Payment refunded"
 }
