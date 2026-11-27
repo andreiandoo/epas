@@ -169,6 +169,12 @@
     .epc-set .epc-opts { display: grid; gap: 10px; }
     .epc-set .epc-dnd { display: flex; flex-wrap: wrap; gap: 6px; }
     .epc-set .epc-dnd-state { font-size: 12.5px; color: var(--epc-fg); }
+    .epc-item-m .epc-doc { color: var(--epc-fg); font-weight: 700; }
+    .epc-deadline { color: var(--epc-fg); font-weight: 600; }
+    .epc-deadline.is-late { color: var(--epc-late); }
+    .epc-catbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px 0; font-size: 12.5px; color: var(--epc-muted); }
+    .epc-catbar b { color: var(--epc-fg); }
+    .epc-catbar button { border: 0; background: transparent; color: var(--epc-muted); cursor: pointer; font-size: 12.5px; text-decoration: underline; padding: 0; }
     .epc-empty { padding: 28px 16px; color: var(--epc-muted); font-size: 13px; }
     .epc-msg { margin: 8px 12px 0; padding: 8px 10px; border-radius: 7px; font-size: 12.5px; background: color-mix(in srgb, var(--epc-late) 14%, transparent); color: var(--epc-fg); }
     .epc-foot { border-top: 1px solid var(--epc-line); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--epc-muted); }
@@ -233,7 +239,7 @@
         <div class="epc-body epc-sbody" hidden></div>
         <div class="epc-foot">
             <a href="/marketplace/notifications">Toate notificările (3 zile)</a>
-            <button type="button" class="epc-pill epc-sound">Sunete</button>
+            <button type="button" class="epc-pill epc-sound">Setări</button>
         </div>
     </aside>
 </div>
@@ -343,6 +349,8 @@
     }
     function close() {
         clearTimeout(closeTimer);
+        // Filtrul pe o singură categorie ține doar cât e deschis sertarul.
+        if (state.cat) { state.cat = null; renderBody(); }
         root.classList.remove('is-open');
         drawer.setAttribute('aria-hidden', 'true');
     }
@@ -491,9 +499,10 @@
             }
             b.addEventListener('click', function () {
                 open();
+                state.cat = cat;
                 setTab('todo');
-                var h = body.querySelector('[data-g="' + cat + '"]');
-                if (h) body.scrollTop = h.offsetTop - 4;
+                renderBody();
+                body.scrollTop = 0;
             });
             b.addEventListener('focus', open);
             tiles.appendChild(b);
@@ -512,7 +521,11 @@
 
     function renderBody() {
         var html = '';
+        if (state.cat) {
+            html += '<div class="epc-catbar"><span>Doar <b>' + esc(LABEL[state.cat]) + '</b></span><button type="button" data-allcats="1">Arată tot</button></div>';
+        }
         CATS.forEach(function (cat) {
+            if (state.cat && state.cat !== cat) return;
             var list = (state.items[cat] || []).filter(passes);
             if (!list.length) return;
             html += '<div class="epc-grp" data-g="' + cat + '"><span class="epc-sq" style="background:' + COLOR[cat] + '"></span>' + esc(LABEL[cat]) + '<span class="epc-n">' + list.length + '</span></div>';
@@ -534,7 +547,11 @@
                     : '<a class="epc-btn" href="' + esc(i.url) + '">Deschide</a>';
                 var snooze = '<button type="button" class="epc-snooze" data-snooze="' + esc(i.key) + '" title="Amână 1h" aria-label="Amână 1h"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" d="M12 9v4l2.5 2M9 2h6"/></svg></button>';
                 html += '<div class="epc-item"><a class="epc-item-t" href="' + esc(i.url) + '" title="' + esc(i.title) + '">' + esc(i.title) + '</a>'
-                    + '<span class="epc-item-m" title="' + esc(i.meta) + '">' + esc(i.meta) + '</span>'
+                    + (i.category === 'docs'
+                        ? '<span class="epc-item-m" title="' + esc(i.meta) + '"><b class="epc-doc">' + esc(i.doc_label) + '</b>'
+                            + (i.deadline ? ' · <span class="epc-deadline' + (i.deadline_passed ? ' is-late' : '') + '">termen ' + esc(i.deadline) + '</span>' : '')
+                            + (i.event_date ? ' · eveniment ' + esc(i.event_date) : '') + '</span>'
+                        : '<span class="epc-item-m" title="' + esc(i.meta) + '">' + esc(i.meta) + '</span>')
                     + '<span class="epc-item-a">' + chip + action + snooze + '</span></div>';
             });
         });
@@ -572,6 +589,7 @@
     body.addEventListener('click', function (e) {
         var link = e.target.closest('a[href*="chat-console?c="]');
         if (link && openInDock(link.getAttribute('href'))) { e.preventDefault(); return; }
+        if (e.target.closest('[data-allcats]')) { state.cat = null; renderBody(); return; }
         var claimBtn = e.target.closest('[data-claim]');
         var snoozeBtn = e.target.closest('[data-snooze]');
         if (claimBtn) {
@@ -777,7 +795,7 @@
     }
 
     function seenAgo(iso) {
-        if (!iso) return 'nu a intrat încă';
+        if (!iso) return 'fără activitate înregistrată';
         var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
         if (mins < 60) return 'acum ' + Math.max(mins, 1) + ' min';
         var h = Math.round(mins / 60);

@@ -141,10 +141,15 @@ class OperatorNotificationJournal
     {
         $labels = MarketplaceNotification::getTypeLabels();
 
-        return $this->query()
-            ->orderByDesc('id')
-            ->limit($limit)
-            ->get()
+        // Ultimele intrări + toate cele care cer acțiune și n-au fost văzute, ca numărul de pe tab
+        // să corespundă cu ce apare la „Cer acțiune”.
+        $latest = $this->query()->orderByDesc('id')->limit($limit)->get();
+        $pending = $this->unreadQuery()->orderByDesc('id')->limit(100)->get();
+
+        return $latest->concat($pending)
+            ->unique('id')
+            ->sortByDesc('id')
+            ->values()
             ->map(function (MarketplaceNotification $n) use ($labels) {
                 $url = (string) ($n->action_url ?? '');
                 // Serverul e pe UTC; operatorii citesc ora României.

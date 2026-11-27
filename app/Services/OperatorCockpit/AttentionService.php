@@ -269,7 +269,7 @@ class AttentionService
             $items[] = $this->item(
                 'todo',
                 $t->id,
-                trim(($t->todo_number ? $t->todo_number . ' ' : '') . (string) $t->title),
+                (string) $t->title,
                 $meta,
                 $owner,
                 $late,
@@ -360,6 +360,8 @@ class AttentionService
             ->where(fn ($q) => $q->whereRaw('COALESCE(range_end_date, event_date) IS NULL')
                 ->orWhereRaw('COALESCE(range_end_date, event_date) >= CURRENT_DATE'))
             ->where('pending_changes_status', 'pending')
+            ->where(fn ($q) => $q->whereNull('marketplace_organizer_id')
+                ->orWhereHas('marketplaceOrganizer', fn ($o) => $o->where(fn ($w) => $w->where('allow_live_edits', false)->orWhereNull('allow_live_edits'))))
             ->with('marketplaceOrganizer:id,name')
             ->orderByRaw('COALESCE(pending_changes_submitted_at, created_at) asc')
             ->limit($this->limit)
@@ -497,7 +499,7 @@ class AttentionService
      */
     private function docItems(): array
     {
-        $rows = \Illuminate\Support\Facades\Cache::remember('cockpit-docs:' . $this->client->id, 600, function () {
+        $rows = \Illuminate\Support\Facades\Cache::remember('cockpit-docs-v2:' . $this->client->id, 600, function () {
             $svc = app(\App\Services\Marketplace\OrganizerFiscalDocuments::class);
             if (! $svc->marketplaceHasTemplates((int) $this->client->id)) {
                 return [];
@@ -510,11 +512,13 @@ class AttentionService
                     continue;
                 }
                 $deadline = $issue['kind'] === 'impozit_pv_missing' ? $svc->taxDeadline($event) : $svc->cerereDeadline($event);
-                [$title] = $svc->noticeText($event, $issue['kind']);
+                $name = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en');
+                $start = $svc->startDay($event);
                 $out[] = [
                     'id' => (int) $event->id,
                     'kind' => $issue['kind'],
-                    'title' => $title,
+                    'title' => (string) ($name ?: 'Eveniment #' . $event->id),
+                    'event_date' => $start?->format('d.m.Y'),
                     'organizer' => $event->marketplaceOrganizer?->name,
                     'deadline' => $deadline?->toDateString(),
                 ];
@@ -538,7 +542,7 @@ class AttentionService
                 $r['title'],
                 implode(' · ', array_filter([
                     $labels[$r['kind']] ?? $r['kind'],
-                    $deadline ? 'termen ' . $deadline->format('d.m') : null,
+                    $deadline ? 'termen ' . $deadline->format('d.m.Y') : null,
                     $r['organizer'],
                 ])),
                 null,
@@ -549,6 +553,12 @@ class AttentionService
             $item['key'] = 'docs:' . $r['id'] . ':' . $r['kind'];
             $item['claimable'] = false;
             $item['kind'] = $r['kind'];
+            // Afișate separat în sertar: tipul documentului îngroșat și termenul vizibil.
+            $item['doc_label'] = $labels[$r['kind']] ?? $r['kind'];
+            $item['deadline'] = $deadline?->format('d.m.Y');
+            $item['deadline_passed'] = $deadline !== null && $deadline->lt(now()->startOfDay());
+            $item['event_date'] = $r['event_date'] ?? null;
+            $item['organizer'] = $r['organizer'];
             $items[] = $item;
         }
 
