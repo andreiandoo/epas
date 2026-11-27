@@ -51,7 +51,7 @@
     .epc-icon-btn svg { width: 18px; height: 18px; }
 
     .epc-fab {
-        position: fixed; right: 16px; bottom: 84px; z-index: 36; height: 44px; min-width: 44px; padding: 0 14px;
+        position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 36; height: 44px; min-width: 44px; padding: 0 14px;
         border-radius: 22px; border: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;
         background: var(--epc-btn); color: var(--epc-btn-fg); font-weight: 700; font-size: 14px;
         box-shadow: 0 6px 20px rgba(0,0,0,.25);

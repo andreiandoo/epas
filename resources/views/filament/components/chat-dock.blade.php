@@ -121,8 +121,17 @@
     .epd-muted { color: var(--epd-muted); }
 
     @media (max-width: 1023px) {
-        #epd-root .epd-win:not(.is-min) { width: calc(100vw - 32px); }
+        /* Pe telefon: fereastra deschisă pe toată lățimea, cele minimizate ca bule rotunde (ca la Messenger). */
+        #epd-root { flex-wrap: wrap-reverse; justify-content: flex-start; max-width: calc(100vw - 32px); }
+        #epd-root .epd-win:not(.is-min) { width: calc(100vw - 32px); order: -1; }
+        #epd-root .epd-win.is-min { width: 48px; height: 48px; border-radius: 50%; border: 0; box-shadow: 0 4px 14px rgba(0,0,0,.25); margin-bottom: 12px; overflow: visible; }
+        #epd-root .epd-win.is-min .epd-head { padding: 0; min-height: 48px; justify-content: center; background: transparent; position: relative; }
+        #epd-root .epd-win.is-min .epd-ava { width: 48px; height: 48px; font-size: 14px; }
+        #epd-root .epd-win.is-min .epd-ava svg { width: 22px; height: 22px; }
+        #epd-root .epd-win.is-min .epd-who, #epd-root .epd-win.is-min .epd-hbtn { display: none; }
+        #epd-root .epd-win.is-min .epd-badge { position: absolute; top: -4px; right: -4px; border: 2px solid var(--epd-bg); }
         .epd-body, .epd-ctx { height: 50vh; }
+        .epd-compose textarea { font-size: 16px; } /* fără zoom automat pe iOS */
     }
 </style>
 
