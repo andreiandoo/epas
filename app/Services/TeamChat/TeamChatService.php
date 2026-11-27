@@ -70,7 +70,8 @@ class TeamChatService
             ->orderBy('name')
             ->get($hasColumn ? ['id', 'name', 'role', 'last_seen_at', 'last_login_at'] : ['id', 'name', 'role', 'last_login_at']);
 
-        $limit = now()->subSeconds(150);
+        // Heartbeat la 30s; 75s fără semnal = plecat.
+        $limit = now()->subSeconds(75);
 
         return $people->map(function ($p) use ($admin, $limit, $hasColumn) {
             $seen = $hasColumn ? $p->last_seen_at : null;

@@ -124,16 +124,26 @@ class OperatorCockpitController extends Controller
      * „Sunt aici”: orice fereastră deschisă din panou trimite asta la un minut.
      * Scriem cel mult o dată la 45 de secunde per operator.
      */
-    public function heartbeat(): JsonResponse
+    public function heartbeat(Request $request): JsonResponse
     {
         $admin = Auth::guard('marketplace_admin')->user();
         if (! $admin instanceof MarketplaceAdmin || ! \Illuminate\Support\Facades\Schema::hasColumn('marketplace_admins', 'last_seen_at')) {
             return response()->json(['ok' => false]);
         }
 
+        // La închiderea unei ferestre: îl dăm „plecat” peste ~15 secunde. Dacă mai are un tab
+        // deschis, heartbeat-ul acelui tab îl readuce online.
+        if ($request->boolean('leaving')) {
+            \Illuminate\Support\Facades\DB::table('marketplace_admins')
+                ->where('id', $admin->id)
+                ->update(['last_seen_at' => now()->subSeconds(60)]);
+
+            return response()->json(['ok' => true]);
+        }
+
         \Illuminate\Support\Facades\DB::table('marketplace_admins')
             ->where('id', $admin->id)
-            ->where(fn ($q) => $q->whereNull('last_seen_at')->orWhere('last_seen_at', '<', now()->subSeconds(45)))
+            ->where(fn ($q) => $q->whereNull('last_seen_at')->orWhere('last_seen_at', '<', now()->subSeconds(20)))
             ->update(['last_seen_at' => now()]);
 
         return response()->json(['ok' => true]);

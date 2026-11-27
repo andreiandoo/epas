@@ -263,8 +263,8 @@ class AttentionService
             $late = $t->priority === 'urgent'
                 || ($since && $since->lt(now()->subMinutes((int) $this->thresholds['todo_idle_minutes'])));
 
-            $priority = MarketplaceTodo::PRIORITY_LABELS[$t->priority] ?? null;
-            $meta = trim(($priority ? 'prioritate ' . mb_strtolower($priority) . ' · ' : '') . $this->ownerLabel($owner) . ' · ' . $this->ago($since));
+            $priority = ['urgent' => 'Urgent', 'high' => 'Important'][$t->priority] ?? null;
+            $meta = trim(($priority ? $priority . ' · ' : '') . $this->ownerLabel($owner) . ' · ' . $this->ago($since));
 
             $items[] = $this->item(
                 'todo',
@@ -501,7 +501,7 @@ class AttentionService
     {
         $ops = $this->opsBoardItems();
         if ($ops !== null) {
-            return $ops;
+            return array_slice(array_merge($ops, $this->organizerOverdueItems()), 0, $this->limit);
         }
 
         // Fără Ops board: verificarea documentelor fiscale, doar ce are termen săptămâna asta sau e restant.
@@ -585,7 +585,7 @@ class AttentionService
         $from = now($tz)->startOfWeek(\Carbon\Carbon::MONDAY)->startOfDay();
         $to = now($tz)->endOfWeek(\Carbon\Carbon::SUNDAY)->startOfDay();
 
-        $board = \Illuminate\Support\Facades\Cache::remember('cockpit-ops:' . $this->client->id . ':' . $from->format('Ymd'), 300, function () use ($pivot, $tz, $from, $to) {
+        $board = \Illuminate\Support\Facades\Cache::remember('cockpit-ops-v2:' . $this->client->id . ':' . $from->format('Ymd'), 300, function () use ($pivot, $tz, $from, $to) {
             $service = app(\App\Services\Marketplace\OpsBoardService::class);
             $built = $service->build($this->client, $from, $to, \App\Services\Marketplace\OpsBoardService::trackFrom($pivot, $tz), ['only_open' => true]);
 
@@ -594,6 +594,10 @@ class AttentionService
                 foreach ($built[$zone] ?? [] as $row) {
                     $tasks = [];
                     foreach (\App\Services\Marketplace\OpsBoardService::TASKS as $key => $name) {
+                        // Deconturile și facturile lor se fac oricum, nu sunt alerte pentru bară.
+                        if (in_array($key, ['decont', 'factura'], true)) {
+                            continue;
+                        }
                         $cell = $row['cells'][$key] ?? null;
                         if (! $cell || empty($cell['open'])) {
                             continue;
@@ -630,6 +634,61 @@ class AttentionService
         $items = [];
         foreach (array_slice($board, 0, $this->limit) as $r) {
             $items[] = $this->docItem($r['id'], $r['title'], $r['date'], $r['organizer'], $r['url'], '/marketplace/ops-board', $r['tasks'], $r['zone']);
+        }
+
+        return $items;
+    }
+
+    /**
+     * Organizatorii care își fac singuri documentele (fără „AmBilet depune documentele”):
+     * alertă doar când termenul a trecut și documentul nici măcar nu e generat.
+     */
+    private function organizerOverdueItems(): array
+    {
+        $rows = \Illuminate\Support\Facades\Cache::remember('cockpit-docs-org:' . $this->client->id, 600, function () {
+            $svc = app(\App\Services\Marketplace\OrganizerFiscalDocuments::class);
+            if (! $svc->marketplaceHasTemplates((int) $this->client->id)) {
+                return [];
+            }
+
+            $today = now('Europe/Bucharest')->startOfDay();
+            $out = [];
+            foreach ($svc->candidateEvents((int) $this->client->id) as $event) {
+                if ($event->marketplaceOrganizer?->marketplace_manages_documents) {
+                    continue; // pe aceștia îi acoperă Ops board
+                }
+                $issue = $svc->issue($event);
+                if (! $issue || ! in_array($issue['kind'], ['cerere_missing', 'impozit_pv_missing'], true)) {
+                    continue; // generat deja (chiar dacă nu știm dacă l-a depus): nu e treaba noastră
+                }
+                $deadline = $issue['kind'] === 'impozit_pv_missing' ? $svc->taxDeadline($event) : $svc->cerereDeadline($event);
+                if (! $deadline || ! $deadline->lt($today)) {
+                    continue;
+                }
+                $name = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en');
+                $out[] = [
+                    'id' => (int) $event->id,
+                    'kind' => $issue['kind'],
+                    'title' => (string) ($name ?: 'Eveniment #' . $event->id),
+                    'event_date' => $svc->startDay($event)?->format('d.m.Y'),
+                    'organizer' => $event->marketplaceOrganizer?->name,
+                    'deadline' => $deadline->format('d.m'),
+                ];
+            }
+
+            return $out;
+        });
+
+        $names = ['cerere_missing' => 'Cerere vizare', 'impozit_pv_missing' => 'Impozit + PV distrugere'];
+        $items = [];
+        foreach ($rows as $r) {
+            $items[] = $this->docItem($r['id'], $r['title'], $r['event_date'], $r['organizer'],
+                "/marketplace/events/{$r['id']}/edit?tab=documente", null, [[
+                    'name' => $names[$r['kind']] ?? $r['kind'],
+                    'state' => 'negenerată de organizator',
+                    'due' => $r['deadline'],
+                    'overdue' => true,
+                ]], 'org-' . $r['kind']);
         }
 
         return $items;

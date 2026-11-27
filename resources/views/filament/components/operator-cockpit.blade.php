@@ -100,6 +100,11 @@
     .epc-seg { display: flex; gap: 4px; background: var(--epc-seg); padding: 3px; border-radius: 7px; }
     .epc-seg button { flex: 1; border: 0; background: transparent; color: var(--epc-muted); font-size: 12px; font-weight: 500; padding: 5px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
     .epc-seg button.is-on { background: var(--epc-seg-on); color: var(--epc-fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .epc-body { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--epc-muted) 45%, transparent) transparent; }
+    .epc-body::-webkit-scrollbar { width: 6px; background: transparent; }
+    .epc-body::-webkit-scrollbar-track { background: transparent; }
+    .epc-body::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--epc-muted) 45%, transparent); border-radius: 6px; }
+    .epc-body::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--epc-muted) 75%, transparent); }
     .epc-body { overflow-y: auto; padding: 0 0 16px; flex: 1; overscroll-behavior: contain; }
     .epc-grp { position: sticky; top: 0; margin-top: 0; background: var(--epc-drawer); padding: 10px 16px 6px; display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--epc-muted); z-index: 1; }
     .epc-grp .epc-sq { width: 10px; height: 10px; border-radius: 2px; flex: none; }
@@ -108,6 +113,8 @@
     .epc-sub small { color: var(--epc-muted); font-weight: 400; }
     .epc-item { margin: 0 8px; padding: 9px 10px; border-radius: 7px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; }
     .epc-item:hover { background: var(--epc-hover); }
+    .epc-item.is-mine { background: color-mix(in srgb, var(--epc-event) 12%, transparent); }
+    .epc-item.is-mine:hover { background: color-mix(in srgb, var(--epc-event) 18%, transparent); }
     .epc-item-t { color: var(--epc-fg); font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
     .epc-item-t:hover { text-decoration: underline; }
     .epc-item-m { color: var(--epc-muted); font-size: 12px; grid-column: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -552,7 +559,7 @@
                     ? '<button type="button" class="epc-btn is-pri" data-claim="' + esc(i.key) + '" data-url="' + esc(i.url) + '">Preiau</button>'
                     : '<a class="epc-btn" href="' + esc(i.url) + '">Deschide</a>';
                 var snooze = '<button type="button" class="epc-snooze" data-snooze="' + esc(i.key) + '" title="Amână 1h" aria-label="Amână 1h"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" d="M12 9v4l2.5 2M9 2h6"/></svg></button>';
-                html += '<div class="epc-item"><a class="epc-item-t" href="' + esc(i.event_url || i.url) + '" title="' + esc(i.title) + '">' + esc(i.title) + '</a>'
+                html += '<div class="epc-item' + (i.mine && state.filter === 'all' ? ' is-mine' : '') + '"><a class="epc-item-t" href="' + esc(i.event_url || i.url) + '" title="' + esc(i.title) + '">' + esc(i.title) + '</a>'
                     + (i.category === 'docs'
                         ? '<span class="epc-item-m epc-tasks" title="' + esc(i.meta) + '">'
                             + (i.tasks || []).map(function (t) {
@@ -891,7 +898,8 @@
     setInterval(function () {
         if (document.hidden) return;
         var live = window.epRealtime && window.epRealtime.isConnected();
-        if (!live || Date.now() % 60000 < 20000) loadTeam();
+        var teamOpen = root.classList.contains('is-open') && state.tab === 'team';
+        if (teamOpen || !live || Date.now() % 60000 < 20000) loadTeam();
     }, 20000);
 
     // ================================================================ setări sunete
@@ -964,7 +972,16 @@
     // „Online” = cel puțin o fereastră a panoului deschisă (chiar și în fundal).
     function heartbeat() { teamPost('/marketplace/cockpit/heartbeat', {}).catch(function () {}); }
     heartbeat();
-    setInterval(heartbeat, 60000);
+    setInterval(heartbeat, 30000);
+    // Închiderea ferestrei (sau trecerea pe altă pagină) anunță plecarea; pagina nouă trimite imediat heartbeat.
+    window.addEventListener('pagehide', function () {
+        try {
+            var fd = new FormData();
+            fd.append('_token', csrf());
+            fd.append('leaving', '1');
+            navigator.sendBeacon('/marketplace/cockpit/heartbeat', fd);
+        } catch (e) {}
+    });
 
     // ================================================================ notificări pe desktop
     // Apar ca la WhatsApp când fereastra panoului nu e în față. Fiecare notificare are o etichetă,
