@@ -83,6 +83,7 @@ class Tenant extends Model
         'payment_processor',
         'payment_processor_mode',
         'currency',
+        'timezone',
         // Demo shadow
         'is_demo_shadow',
         'demo_shadow_id',

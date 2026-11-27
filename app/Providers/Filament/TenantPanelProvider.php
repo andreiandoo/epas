@@ -27,6 +27,9 @@ class TenantPanelProvider extends PanelProvider
 {
     public function boot(): void
     {
+        // Fus orar de afișare pe panou (doar display; pickerele nu sunt atinse)
+        \App\Support\PanelDisplayTz::register();
+
         // Disable autocomplete on all form inputs
         TextInput::configureUsing(function (TextInput $input): void {
             $input->autocomplete(false);

@@ -52,6 +52,7 @@ class Settings extends Page
                 'reg_com' => $tenant->reg_com,
                 'vat_payer' => (bool) $tenant->vat_payer,
                 'tax_display_mode' => $tenant->tax_display_mode ?? 'included',
+                'timezone' => $tenant->timezone ?: \App\Support\TenantTz::DEFAULT_TIMEZONE,
                 'address' => $tenant->address,
                 'city' => $tenant->city,
                 'state' => $tenant->state,
@@ -190,6 +191,17 @@ class Settings extends Page
                                             ->default('EUR')
                                             ->required()
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Default currency for sales and invoices'),
+
+                                        Forms\Components\Select::make('timezone')
+                                            ->label('Fus orar')
+                                            ->options(fn () => collect(\DateTimeZone::listIdentifiers())
+                                                ->mapWithKeys(fn ($tz) => [$tz => $tz])
+                                                ->all())
+                                            ->default(\App\Support\TenantTz::DEFAULT_TIMEZONE)
+                                            ->searchable()
+                                            ->required()
+                                            ->helperText('Toate orele afișate (comenzi, bilete, rapoarte) vor fi convertite în acest fus orar. Datele rămân stocate în UTC.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Default: Europe/Bucharest. Schimbarea afectează doar afișarea.'),
 
                                         Forms\Components\TextInput::make('ticket_series_prefix')
                                             ->label('Prefix serie bilete')
@@ -574,6 +586,7 @@ class Settings extends Page
             'reg_com' => $data['reg_com'],
             'vat_payer' => (bool) ($data['vat_payer'] ?? false),
             'tax_display_mode' => $data['tax_display_mode'] ?? 'included',
+            'timezone' => $data['timezone'] ?? null,
             'address' => $data['address'],
             'city' => $data['city'],
             'state' => $data['state'],
