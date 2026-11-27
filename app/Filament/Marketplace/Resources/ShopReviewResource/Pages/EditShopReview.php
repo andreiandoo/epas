@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditShopReview extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ShopReviewResource::class;
 
     protected function getHeaderActions(): array

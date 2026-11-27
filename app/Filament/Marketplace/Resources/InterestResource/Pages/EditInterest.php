@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditInterest extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = InterestResource::class;
 
     protected function getHeaderActions(): array

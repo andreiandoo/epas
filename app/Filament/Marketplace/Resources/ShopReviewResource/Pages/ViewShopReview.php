@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewShopReview extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ShopReviewResource::class;
 
     protected function getHeaderActions(): array

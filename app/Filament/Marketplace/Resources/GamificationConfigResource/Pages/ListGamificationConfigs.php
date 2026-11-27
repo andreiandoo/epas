@@ -9,6 +9,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class ListGamificationConfigs extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = GamificationConfigResource::class;

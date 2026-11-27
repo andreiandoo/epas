@@ -8,6 +8,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateTour extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = TourResource::class;

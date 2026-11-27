@@ -9,6 +9,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewPendingPayment extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = PendingPaymentResource::class;
 
     public function getTitle(): string

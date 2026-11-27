@@ -19,6 +19,8 @@ use Filament\Actions\DeleteBulkAction;
 
 class ContactTagResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceContactTag::class;

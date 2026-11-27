@@ -14,6 +14,8 @@ use Symfony\Component\Mime\Email;
 
 class EmailSettings extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';

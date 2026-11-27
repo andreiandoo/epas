@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ViewPayout extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = PayoutResource::class;
 
     /** Rambursările luate automat de acest decont (legate + nelegate până la data lui). */

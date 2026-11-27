@@ -20,6 +20,8 @@ use Illuminate\Support\HtmlString;
 
 class ListOrganizerDocuments extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerDocumentResource::class;
 
     protected function getHeaderActions(): array

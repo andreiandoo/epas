@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 
 class PaymentConfig extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-credit-card';

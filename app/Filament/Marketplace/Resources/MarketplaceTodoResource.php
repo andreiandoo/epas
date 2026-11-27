@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Auth;
 
 class MarketplaceTodoResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = MarketplaceTodo::class;
 
     protected static ?string $navigationLabel = 'TODOs';

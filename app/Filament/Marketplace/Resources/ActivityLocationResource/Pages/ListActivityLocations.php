@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListActivityLocations extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ActivityLocationResource::class;
 
     protected function getHeaderActions(): array

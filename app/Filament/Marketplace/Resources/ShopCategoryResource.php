@@ -21,6 +21,8 @@ use Illuminate\Support\Str;
 
 class ShopCategoryResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = ShopCategory::class;

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 
 class MicroserviceSettings extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static bool $shouldRegisterNavigation = false;
     protected static ?string $slug = 'microservices/{slug}/settings';

@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class EditVaultEntry extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = VaultEntryResource::class;
 
     public function getTitle(): string

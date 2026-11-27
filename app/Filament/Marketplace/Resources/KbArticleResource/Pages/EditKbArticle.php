@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditKbArticle extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = KbArticleResource::class;
 
     protected function getHeaderActions(): array

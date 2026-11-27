@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditExperienceAction extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ExperienceActionResource::class;
 
     protected function getHeaderActions(): array

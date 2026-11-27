@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditEventSeatingLayout extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = EventSeatingLayoutResource::class;
 
     protected function getHeaderActions(): array

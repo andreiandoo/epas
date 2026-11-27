@@ -11,6 +11,8 @@ use Filament\Notifications\Notification;
 
 class EditEmailTemplate extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = EmailTemplateResource::class;

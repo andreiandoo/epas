@@ -15,6 +15,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class AffiliateConversionResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = AffiliateConversion::class;

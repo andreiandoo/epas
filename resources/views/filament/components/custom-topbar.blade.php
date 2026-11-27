@@ -5,14 +5,16 @@
         'ro' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="2" x="0" fill="#002B7F"/><rect width="1" height="2" x="1" fill="#FCD116"/><rect width="1" height="2" x="2" fill="#CE1126"/></svg>',
         'de' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 5 3" xmlns="http://www.w3.org/2000/svg"><rect width="5" height="3" y="0" fill="#000"/><rect width="5" height="2" y="1" fill="#D00"/><rect width="5" height="1" y="2" fill="#FFCE00"/></svg>',
         'fr' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="2" fill="#002395"/><rect width="1" height="2" x="1" fill="#FFF"/><rect width="1" height="2" x="2" fill="#ED2939"/></svg>',
-        'es' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="3" height="2" fill="#AA151B"/><rect width="3" height="1" y="0.5" fill="#F1BF00"/></svg>'
+        'es' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="3" height="2" fill="#AA151B"/><rect width="3" height="1" y="0.5" fill="#F1BF00"/></svg>',
+        'hu' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="3" height="2" y="0" fill="#CD2A3E"/><rect width="3" height="1.3333" y="0.6667" fill="#FFF"/><rect width="3" height="0.6667" y="1.3333" fill="#436F4D"/></svg>'
     ];
     $localeNames = [
         'en' => 'English',
         'ro' => 'Română',
         'de' => 'Deutsch',
         'fr' => 'Français',
-        'es' => 'Español'
+        'es' => 'Español',
+        'hu' => 'Magyar'
     ];
     $currentLocale = app()->getLocale();
 
@@ -23,6 +25,11 @@
 
     // Set panel type for data attribute
     $panelType = $isAdminPanel ? 'admin' : ($isMarketplacePanel ? 'marketplace' : 'tenant');
+
+    // Panoul marketplace arată doar limbile activate (config/marketplace_locales.php).
+    if ($isMarketplacePanel) {
+        $localeNames = array_intersect_key($localeNames, array_flip((array) config('marketplace_locales.enabled', ['ro', 'en'])));
+    }
 
     // Set search placeholder based on panel
     if ($isAdminPanel) {

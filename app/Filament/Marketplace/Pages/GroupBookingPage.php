@@ -8,6 +8,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class GroupBookingPage extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';

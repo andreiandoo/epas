@@ -24,6 +24,8 @@ use Illuminate\Support\Str;
  */
 class InterestResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = Interest::class;

@@ -13,6 +13,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ViewOrganizerDocument extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerDocumentResource::class;
 
     protected function getHeaderActions(): array

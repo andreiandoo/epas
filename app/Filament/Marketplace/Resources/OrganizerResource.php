@@ -36,6 +36,8 @@ use App\Models\Order;
 
 class OrganizerResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceOrganizer::class;

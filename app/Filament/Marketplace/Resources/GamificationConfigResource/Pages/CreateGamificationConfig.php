@@ -8,6 +8,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateGamificationConfig extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = GamificationConfigResource::class;
 
     protected function afterCreate(): void

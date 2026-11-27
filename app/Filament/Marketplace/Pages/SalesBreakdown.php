@@ -17,6 +17,8 @@ use Livewire\Attributes\Locked;
 
 class SalesBreakdown extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-pie';
     protected static ?string $navigationLabel = 'Breakdown vânzări';
     protected static ?string $title = 'Breakdown vânzări & bilete';

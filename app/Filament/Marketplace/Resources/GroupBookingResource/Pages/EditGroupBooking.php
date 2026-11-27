@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditGroupBooking extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = GroupBookingResource::class;
 
     protected function getHeaderActions(): array

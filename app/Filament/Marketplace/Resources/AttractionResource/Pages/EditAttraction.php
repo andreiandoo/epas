@@ -10,6 +10,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditAttraction extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = AttractionResource::class;

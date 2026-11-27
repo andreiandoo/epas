@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class RewardRedemptionResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = RewardRedemption::class;

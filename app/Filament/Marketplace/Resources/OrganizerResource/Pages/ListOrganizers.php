@@ -17,6 +17,8 @@ use Illuminate\Support\HtmlString;
 
 class ListOrganizers extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerResource::class;
 
     public function getHeading(): string|Htmlable

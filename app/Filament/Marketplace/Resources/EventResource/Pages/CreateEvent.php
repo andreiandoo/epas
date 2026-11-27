@@ -10,6 +10,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CreateEvent extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = EventResource::class;

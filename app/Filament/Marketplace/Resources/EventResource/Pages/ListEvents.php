@@ -14,6 +14,8 @@ use Illuminate\Support\HtmlString;
 
 class ListEvents extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = EventResource::class;
 
     public function getHeading(): string|Htmlable

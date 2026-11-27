@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditContactList extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ContactListResource::class;
 
     protected function getHeaderActions(): array

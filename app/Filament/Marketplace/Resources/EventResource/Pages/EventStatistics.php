@@ -19,6 +19,8 @@ use Illuminate\Support\Carbon;
 
 class EventStatistics extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithRecord;
     use HasMarketplaceContext;
 

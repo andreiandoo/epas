@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListChatHolidays extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatHolidayResource::class;
 
     protected function getHeaderActions(): array

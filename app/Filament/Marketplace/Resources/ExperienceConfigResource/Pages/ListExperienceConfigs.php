@@ -10,6 +10,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListExperienceConfigs extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = ExperienceConfigResource::class;

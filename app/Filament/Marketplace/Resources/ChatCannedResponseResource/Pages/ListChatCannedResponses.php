@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListChatCannedResponses extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatCannedResponseResource::class;
 
     protected function getHeaderActions(): array

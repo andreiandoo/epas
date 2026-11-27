@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateTaxRegistry extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TaxRegistryResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

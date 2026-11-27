@@ -20,6 +20,8 @@ use Illuminate\Support\HtmlString;
 
 class OrganizerDocumentResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = OrganizerDocument::class;

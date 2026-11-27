@@ -21,6 +21,8 @@ use Symfony\Component\Mime\Address as SymfonyAddress;
 
 class ViewTicket extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = TicketResource::class;

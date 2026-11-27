@@ -28,6 +28,8 @@ use Illuminate\Support\Str;
 
 class ShopProductResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = ShopProduct::class;

@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditBlogCategory extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = BlogCategoryResource::class;
 
     protected function getHeaderActions(): array

@@ -9,6 +9,8 @@ use Spatie\Activitylog\Models\Activity;
 
 class ActivityLog extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';

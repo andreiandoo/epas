@@ -14,14 +14,13 @@ use Illuminate\Support\Facades\App;
  */
 class SetMarketplacePanelLocale
 {
-    private const SUPPORTED = ['en', 'ro', 'de', 'fr', 'es'];
-
     public function handle(Request $request, Closure $next)
     {
+        $supported = (array) config('marketplace_locales.enabled', ['ro', 'en']);
         $admin = auth('marketplace_admin')->user();
         $asked = $request->query('locale');
 
-        if (is_string($asked) && in_array($asked, self::SUPPORTED, true)) {
+        if (is_string($asked) && in_array($asked, $supported, true)) {
             $request->session()->put('marketplace_locale', $asked);
             if ($admin instanceof MarketplaceAdmin && $admin->locale !== $asked) {
                 $admin->forceFill(['locale' => $asked])->saveQuietly();
@@ -31,7 +30,7 @@ class SetMarketplacePanelLocale
         $locale = $request->session()->get('marketplace_locale')
             ?: ($admin instanceof MarketplaceAdmin ? $admin->locale : null);
 
-        if ($locale && in_array($locale, self::SUPPORTED, true)) {
+        if ($locale && in_array($locale, $supported, true)) {
             App::setLocale($locale);
         }
 

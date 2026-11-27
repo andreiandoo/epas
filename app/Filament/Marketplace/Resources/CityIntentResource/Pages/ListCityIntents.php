@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListCityIntents extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = CityIntentResource::class;
 
     protected function getHeaderActions(): array

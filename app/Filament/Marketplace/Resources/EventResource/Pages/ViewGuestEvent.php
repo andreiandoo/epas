@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ViewGuestEvent extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithRecord;
     use HasMarketplaceContext;
 

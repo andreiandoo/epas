@@ -12,6 +12,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewServiceOrder extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ServiceOrderResource::class;
 
     protected function getHeaderActions(): array

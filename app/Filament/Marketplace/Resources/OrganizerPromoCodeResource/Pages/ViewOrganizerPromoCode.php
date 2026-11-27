@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewOrganizerPromoCode extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerPromoCodeResource::class;
 
     protected function getHeaderActions(): array

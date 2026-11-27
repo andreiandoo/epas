@@ -12,6 +12,8 @@ use Illuminate\Support\HtmlString;
 
 class ListTickets extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TicketResource::class;
 
     public function mount(): void

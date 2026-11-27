@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Cache;
 
 class AllTimeStats extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
 
     protected static ?string $navigationLabel = 'Statistici All Time';

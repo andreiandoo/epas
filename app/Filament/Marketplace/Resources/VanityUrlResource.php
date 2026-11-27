@@ -25,6 +25,8 @@ use Illuminate\Validation\Rule;
 
 class VanityUrlResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceVanityUrl::class;

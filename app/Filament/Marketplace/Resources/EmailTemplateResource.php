@@ -20,6 +20,8 @@ use Illuminate\Support\HtmlString;
 
 class EmailTemplateResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceEmailTemplate::class;

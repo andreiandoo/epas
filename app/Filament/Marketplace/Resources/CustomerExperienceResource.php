@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class CustomerExperienceResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = CustomerExperience::class;

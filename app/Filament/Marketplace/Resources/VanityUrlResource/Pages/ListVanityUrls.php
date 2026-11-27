@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListVanityUrls extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = VanityUrlResource::class;
 
     protected function getHeaderActions(): array

@@ -23,6 +23,8 @@ use Filament\Support\Enums\IconPosition;
 
 class PayoutResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = MarketplacePayout::class;
     protected static ?string $navigationLabel = 'Deconturi';
 

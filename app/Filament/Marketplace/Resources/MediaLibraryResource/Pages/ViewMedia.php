@@ -11,6 +11,8 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class ViewMedia extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = MediaLibraryResource::class;
 
     public function getTitle(): string|Htmlable

@@ -23,6 +23,8 @@ use Livewire\Attributes\Url;
 
 class Dashboard extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-home';
     protected static ?string $navigationLabel = 'Dashboard';
     protected static ?int $navigationSort = 1;

@@ -17,6 +17,8 @@ use Illuminate\Support\HtmlString;
 
 class EditOrganizerInvoice extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = OrganizerInvoiceResource::class;

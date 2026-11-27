@@ -12,6 +12,8 @@ use Illuminate\Support\HtmlString;
 
 class ListRefundRequests extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = RefundRequestResource::class;
 
     public function getBreadcrumbs(): array

@@ -40,6 +40,8 @@ use Illuminate\Support\Str;
  */
 class TenantResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = Tenant::class;

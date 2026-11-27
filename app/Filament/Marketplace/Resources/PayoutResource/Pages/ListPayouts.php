@@ -24,6 +24,8 @@ use Illuminate\Support\HtmlString;
 
 class ListPayouts extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = PayoutResource::class;
 
     public function getHeading(): string|Htmlable

@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class InvitationAbuseReport extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-exclamation-triangle';
     protected static ?string $navigationLabel = 'Alerte invitații';
     protected static ?int $navigationSort = 999;

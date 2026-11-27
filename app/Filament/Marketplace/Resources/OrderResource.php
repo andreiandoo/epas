@@ -22,6 +22,8 @@ use Illuminate\Support\HtmlString;
 
 class OrderResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = Order::class;

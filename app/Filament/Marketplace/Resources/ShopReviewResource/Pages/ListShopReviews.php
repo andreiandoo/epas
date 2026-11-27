@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListShopReviews extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ShopReviewResource::class;
 
     protected function getHeaderActions(): array

@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TaxRegistryResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceTaxRegistry::class;

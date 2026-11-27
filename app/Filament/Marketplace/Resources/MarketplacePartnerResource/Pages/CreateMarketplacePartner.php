@@ -7,6 +7,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateMarketplacePartner extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = MarketplacePartnerResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

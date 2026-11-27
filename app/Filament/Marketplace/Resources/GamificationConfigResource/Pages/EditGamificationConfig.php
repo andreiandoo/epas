@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditGamificationConfig extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = GamificationConfigResource::class;
 
     protected function getHeaderActions(): array

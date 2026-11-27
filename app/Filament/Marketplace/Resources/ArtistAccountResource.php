@@ -28,6 +28,8 @@ use Illuminate\Support\Str;
 
 class ArtistAccountResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceArtistAccount::class;

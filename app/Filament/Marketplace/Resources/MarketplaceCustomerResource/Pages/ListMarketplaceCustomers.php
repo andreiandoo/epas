@@ -10,6 +10,8 @@ use Illuminate\Support\HtmlString;
 
 class ListMarketplaceCustomers extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = MarketplaceCustomerResource::class;
 
     public function getBreadcrumbs(): array

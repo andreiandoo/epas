@@ -28,6 +28,8 @@ use UnitEnum;
 
 class MediaLibraryResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MediaLibrary::class;

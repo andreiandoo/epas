@@ -10,6 +10,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class ViewAffiliate extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = AffiliateResource::class;

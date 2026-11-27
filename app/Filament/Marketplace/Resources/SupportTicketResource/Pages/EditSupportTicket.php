@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditSupportTicket extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = SupportTicketResource::class;
 
     protected function getHeaderActions(): array

@@ -9,6 +9,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditAffiliate extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = AffiliateResource::class;
 
     protected function getHeaderActions(): array

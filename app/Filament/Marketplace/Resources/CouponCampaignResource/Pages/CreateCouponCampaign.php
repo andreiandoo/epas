@@ -8,6 +8,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateCouponCampaign extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = CouponCampaignResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

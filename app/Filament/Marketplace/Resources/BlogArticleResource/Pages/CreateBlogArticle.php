@@ -7,6 +7,8 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateBlogArticle extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = BlogArticleResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

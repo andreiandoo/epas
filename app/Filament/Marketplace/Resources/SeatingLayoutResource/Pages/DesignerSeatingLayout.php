@@ -17,6 +17,8 @@ use Filament\Schemas\Components as SC;
 
 class DesignerSeatingLayout extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = SeatingLayoutResource::class;
 
     protected string $view = 'filament.resources.seating-layout-resource.pages.designer-konva';

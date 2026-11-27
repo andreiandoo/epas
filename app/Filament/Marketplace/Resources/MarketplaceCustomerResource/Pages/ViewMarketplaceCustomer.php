@@ -9,6 +9,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewMarketplaceCustomer extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = MarketplaceCustomerResource::class;
 
     // ─── Data exposed to blade ────────────────────────────────────

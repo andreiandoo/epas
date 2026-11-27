@@ -10,6 +10,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditPartnerAd extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = PartnerAdResource::class;
 
     /**

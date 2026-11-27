@@ -21,6 +21,8 @@ use Illuminate\Support\Str;
 
 class EventCategoryResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceEventCategory::class;

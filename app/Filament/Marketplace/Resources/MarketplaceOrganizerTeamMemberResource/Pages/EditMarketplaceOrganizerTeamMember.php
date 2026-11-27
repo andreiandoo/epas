@@ -9,6 +9,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditMarketplaceOrganizerTeamMember extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = MarketplaceOrganizerTeamMemberResource::class;
 
     public function getTitle(): string

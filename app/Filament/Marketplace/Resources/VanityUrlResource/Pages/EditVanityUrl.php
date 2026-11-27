@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditVanityUrl extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = VanityUrlResource::class;
 
     protected function getHeaderActions(): array

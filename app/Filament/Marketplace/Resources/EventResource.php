@@ -47,6 +47,8 @@ use Illuminate\Support\Carbon;
 
 class EventResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = Event::class;

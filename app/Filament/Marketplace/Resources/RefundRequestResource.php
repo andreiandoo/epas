@@ -21,6 +21,8 @@ use Filament\Actions\ActionGroup;
 
 class RefundRequestResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceRefundRequest::class;

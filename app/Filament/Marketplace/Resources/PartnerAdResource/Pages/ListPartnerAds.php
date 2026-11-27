@@ -10,6 +10,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListPartnerAds extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = PartnerAdResource::class;
 
     protected function getHeaderActions(): array

@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
 
 class EditMarketplaceCustomer extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = MarketplaceCustomerResource::class;

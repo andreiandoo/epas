@@ -26,6 +26,8 @@ use App\Support\MarketplaceTz;
 
 class MarketplaceCustomerResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceCustomer::class;

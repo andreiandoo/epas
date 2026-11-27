@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateChatHoliday extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatHolidayResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

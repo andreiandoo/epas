@@ -12,6 +12,8 @@ use Filament\Pages\Page;
  */
 class EventsManual extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $slug = 'manual-events';

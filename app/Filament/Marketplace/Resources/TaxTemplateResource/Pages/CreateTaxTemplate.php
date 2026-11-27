@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateTaxTemplate extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TaxTemplateResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

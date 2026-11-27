@@ -23,6 +23,8 @@ use Illuminate\Validation\Rules\Unique;
  */
 class MarketplacePartnerResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplacePartner::class;

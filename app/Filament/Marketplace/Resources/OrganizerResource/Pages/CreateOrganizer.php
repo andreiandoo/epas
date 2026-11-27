@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateOrganizer extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

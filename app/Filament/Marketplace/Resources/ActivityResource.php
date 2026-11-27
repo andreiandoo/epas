@@ -41,6 +41,8 @@ use Illuminate\Support\Str;
  */
 class ActivityResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = Activity::class;

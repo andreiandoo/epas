@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditGiftCard extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = GiftCardResource::class;
 
     protected function getHeaderActions(): array

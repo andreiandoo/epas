@@ -16,6 +16,8 @@ use Filament\Schemas\Schema;
 
 class TicketInsuranceSettings extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
     use InteractsWithForms;
 

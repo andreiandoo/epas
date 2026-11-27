@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 class BillingBreakdown extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-currency-dollar';
     protected static ?string $navigationLabel = 'Billing Breakdown';
     protected static ?string $title = 'Detalii facturare Tixello';

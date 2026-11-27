@@ -17,6 +17,8 @@ use Filament\Actions\BulkAction;
 
 class ManageSubscribers extends Page implements HasTable
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithTable;
     use HasMarketplaceContext;
 

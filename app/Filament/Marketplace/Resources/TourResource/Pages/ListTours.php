@@ -10,6 +10,8 @@ use Illuminate\Support\HtmlString;
 
 class ListTours extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TourResource::class;
 
     public function getHeading(): string|Htmlable

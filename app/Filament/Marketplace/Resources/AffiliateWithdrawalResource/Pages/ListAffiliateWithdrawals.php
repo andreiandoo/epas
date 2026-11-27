@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListAffiliateWithdrawals extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = AffiliateWithdrawalResource::class;
 
     protected function getHeaderActions(): array

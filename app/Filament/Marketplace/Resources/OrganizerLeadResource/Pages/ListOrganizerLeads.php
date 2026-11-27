@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListOrganizerLeads extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerLeadResource::class;
 
     protected function getHeaderActions(): array

@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ChatHolidayResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = ChatHoliday::class;
     protected static ?string $navigationLabel = 'Zile libere chat';
     protected static ?string $modelLabel = 'zi liberă';

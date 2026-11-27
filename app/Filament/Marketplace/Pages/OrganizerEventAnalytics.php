@@ -25,6 +25,8 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class OrganizerEventAnalytics extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
     use InteractsWithForms;
 

@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListOrganizerPromoCodes extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerPromoCodeResource::class;
 
     protected function getHeaderActions(): array

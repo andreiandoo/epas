@@ -10,6 +10,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditOrganizerLead extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerLeadResource::class;
 
     protected function getHeaderActions(): array

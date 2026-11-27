@@ -7,5 +7,7 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListPartnerArticles extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = PartnerArticleResource::class;
 }

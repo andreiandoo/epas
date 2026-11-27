@@ -38,6 +38,8 @@ use Illuminate\Support\HtmlString;
  */
 class PendingPaymentResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = MarketplacePayout::class;
     protected static ?string $navigationLabel = 'De plătit';
 

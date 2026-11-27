@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateMarketplaceTodo extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = MarketplaceTodoResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

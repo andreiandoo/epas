@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ViewMarketplaceTodo extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithRecord;
 
     protected static string $resource = MarketplaceTodoResource::class;

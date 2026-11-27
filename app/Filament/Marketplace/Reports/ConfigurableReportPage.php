@@ -52,6 +52,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
     use InteractsWithForms;
     use InteractsWithTable;

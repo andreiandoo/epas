@@ -28,6 +28,8 @@ use Illuminate\Support\Str;
  */
 class SystemUpdateResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = SystemUpdate::class;

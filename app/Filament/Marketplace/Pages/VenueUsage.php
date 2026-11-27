@@ -12,6 +12,8 @@ use Livewire\Attributes\Url;
 
 class VenueUsage extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Venue Usage';
     protected static \UnitEnum|string|null $navigationGroup = 'Content';

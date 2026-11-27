@@ -28,6 +28,8 @@ use Illuminate\Database\Eloquent\Collection;
 
 class CouponCodeResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = CouponCode::class;

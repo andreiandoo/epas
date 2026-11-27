@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewCouponCode extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = CouponCodeResource::class;
 
     protected function getHeaderActions(): array

@@ -17,6 +17,8 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class PageBuilder extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-group';

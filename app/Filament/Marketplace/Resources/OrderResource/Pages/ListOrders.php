@@ -13,6 +13,8 @@ use Illuminate\Support\HtmlString;
 
 class ListOrders extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrderResource::class;
 
     public function mount(): void

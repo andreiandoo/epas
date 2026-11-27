@@ -15,6 +15,8 @@ use Illuminate\Support\HtmlString;
 
 class TrackingSettings extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     use Forms\Concerns\InteractsWithForms;

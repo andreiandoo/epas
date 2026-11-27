@@ -29,6 +29,8 @@ use Illuminate\Support\HtmlString;
  */
 class VaultEntryResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = MarketplaceVaultEntry::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-lock-closed';

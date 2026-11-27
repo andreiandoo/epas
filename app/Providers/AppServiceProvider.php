@@ -197,6 +197,26 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
         \App\Models\Order::observe(\App\Observers\FacebookCapiOrderObserver::class);
 
+        // Panoul marketplace: etichetele câmpurilor, coloanelor, filtrelor, acțiunilor și tab-urilor
+        // trec prin __() (traducere din resources/lang/{locale}.json; cheia = textul din cod).
+        $translateInMarketplace = function ($component) {
+            if (filament()->getCurrentPanel()?->getId() === 'marketplace') {
+                $component->translateLabel();
+            }
+        };
+        foreach ([
+            \Filament\Forms\Components\Field::class,
+            \Filament\Tables\Columns\Column::class,
+            \Filament\Tables\Filters\BaseFilter::class,
+            \Filament\Infolists\Components\Entry::class,
+            \Filament\Actions\Action::class,
+            \Filament\Schemas\Components\Tabs\Tab::class,
+        ] as $translatable) {
+            if (class_exists($translatable)) {
+                $translatable::configureUsing($translateInMarketplace);
+            }
+        }
+
         // Bara de atenție a operatorilor: semnal Reverb când se schimbă ce afișează.
         foreach ([
             \App\Models\SupportTicket::class,

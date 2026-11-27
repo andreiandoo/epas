@@ -17,6 +17,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class Incomes extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';

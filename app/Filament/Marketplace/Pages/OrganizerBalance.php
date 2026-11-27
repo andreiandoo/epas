@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 class OrganizerBalance extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-wallet';

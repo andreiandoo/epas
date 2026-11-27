@@ -10,6 +10,8 @@ use Illuminate\Support\HtmlString;
 
 class ListVenues extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = VenueResource::class;
 
     public function getHeading(): string|Htmlable

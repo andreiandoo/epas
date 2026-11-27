@@ -26,6 +26,8 @@ use UnitEnum;
 
 class EventSeatingLayoutResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = EventSeatingLayout::class;

@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ChatOperatorScheduleResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = ChatOperatorSchedule::class;
     protected static ?string $navigationLabel = 'Program operatori chat';
     protected static ?string $modelLabel = 'program';

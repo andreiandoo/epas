@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListShopAttributes extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ShopAttributeResource::class;
 
     protected function getHeaderActions(): array

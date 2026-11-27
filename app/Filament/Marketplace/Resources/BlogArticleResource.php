@@ -26,6 +26,8 @@ use Illuminate\Support\Str;
 
 class BlogArticleResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = BlogArticle::class;

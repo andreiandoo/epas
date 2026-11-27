@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListPendingPayments extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = PendingPaymentResource::class;
 
     public function getTitle(): string

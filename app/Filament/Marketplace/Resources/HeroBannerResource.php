@@ -23,6 +23,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class HeroBannerResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceHeroBanner::class;

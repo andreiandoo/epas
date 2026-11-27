@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ChatCannedResponseResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = ChatCannedResponse::class;
     protected static ?string $navigationLabel = 'Răspunsuri predefinite';
     protected static ?string $modelLabel = 'răspuns predefinit';

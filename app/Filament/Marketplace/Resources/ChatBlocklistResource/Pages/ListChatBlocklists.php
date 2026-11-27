@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListChatBlocklists extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatBlocklistResource::class;
 
     protected function getHeaderActions(): array

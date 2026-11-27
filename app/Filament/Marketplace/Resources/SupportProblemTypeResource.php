@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 
 class SupportProblemTypeResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = SupportProblemType::class;
     protected static ?string $navigationLabel = 'Tipuri probleme';
     protected static ?string $modelLabel = 'tip problemă';

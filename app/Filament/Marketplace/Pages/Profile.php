@@ -13,6 +13,8 @@ use Illuminate\Validation\Rules\Password;
 
 class Profile extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use Forms\Concerns\InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-circle';

@@ -30,6 +30,8 @@ use Filament\Actions\DeleteBulkAction;
 
 class NewsletterResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceNewsletter::class;

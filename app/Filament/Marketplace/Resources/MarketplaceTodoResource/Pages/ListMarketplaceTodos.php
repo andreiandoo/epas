@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ListMarketplaceTodos extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = MarketplaceTodoResource::class;
 
     protected function getHeaderActions(): array

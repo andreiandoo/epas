@@ -31,6 +31,8 @@ use Livewire\Attributes\Renderless;
 
 class EventAnalytics extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithRecord;
     use HasMarketplaceContext;
     use InteractsWithForms;

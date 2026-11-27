@@ -21,6 +21,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class TicketTemplateResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = TicketTemplate::class;

@@ -24,6 +24,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class EditEvent extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = EventResource::class;

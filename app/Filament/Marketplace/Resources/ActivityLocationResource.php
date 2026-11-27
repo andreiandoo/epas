@@ -29,6 +29,8 @@ use Illuminate\Validation\Rule;
  */
 class ActivityLocationResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = ActivityLocation::class;

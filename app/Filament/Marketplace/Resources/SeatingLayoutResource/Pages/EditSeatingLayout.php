@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditSeatingLayout extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = SeatingLayoutResource::class;
 
     protected function getHeaderActions(): array

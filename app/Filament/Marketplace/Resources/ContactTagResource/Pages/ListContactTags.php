@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListContactTags extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ContactTagResource::class;
 
     protected function getHeaderActions(): array

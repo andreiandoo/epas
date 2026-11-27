@@ -16,6 +16,8 @@ use Illuminate\Support\HtmlString;
 
 class ViewOrder extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrderResource::class;
 
     protected function getHeaderActions(): array

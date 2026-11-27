@@ -13,6 +13,8 @@ use Illuminate\Support\HtmlString;
 
 class ListServiceOrders extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ServiceOrderResource::class;
 
     public function getHeading(): string|Htmlable

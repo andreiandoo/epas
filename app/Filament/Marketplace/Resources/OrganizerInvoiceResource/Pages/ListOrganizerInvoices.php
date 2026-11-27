@@ -11,6 +11,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListOrganizerInvoices extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = OrganizerInvoiceResource::class;

@@ -15,6 +15,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class ImportExternalTickets extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = EventResource::class;

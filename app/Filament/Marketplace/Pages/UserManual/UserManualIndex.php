@@ -7,6 +7,8 @@ use Livewire\Attributes\Url;
 
 class UserManualIndex extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-book-open';
 
     protected static ?string $navigationLabel = 'Manual Utilizator';

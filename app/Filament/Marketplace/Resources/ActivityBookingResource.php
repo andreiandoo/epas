@@ -35,6 +35,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ActivityBookingResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = ActivityBooking::class;

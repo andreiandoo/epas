@@ -11,6 +11,8 @@ use App\Services\Tax\TaxReportService;
 
 class EventTaxReport extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';

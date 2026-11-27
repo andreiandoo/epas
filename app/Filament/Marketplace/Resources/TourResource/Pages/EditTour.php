@@ -9,6 +9,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditTour extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = TourResource::class;

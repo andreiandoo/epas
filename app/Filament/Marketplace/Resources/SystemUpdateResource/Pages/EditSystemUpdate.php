@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditSystemUpdate extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = SystemUpdateResource::class;
 
     protected function getHeaderActions(): array

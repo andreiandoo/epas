@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ChatBlocklistResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = ChatBlocklistEntry::class;
     protected static ?string $navigationLabel = 'Blocklist chat';
     protected static ?string $modelLabel = 'intrare blocklist';

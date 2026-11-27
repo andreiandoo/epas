@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 
 class ListSupportTickets extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = SupportTicketResource::class;
 
     /**

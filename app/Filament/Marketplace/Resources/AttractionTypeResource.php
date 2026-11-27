@@ -23,6 +23,8 @@ use Illuminate\Support\Str;
  */
 class AttractionTypeResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = AttractionType::class;

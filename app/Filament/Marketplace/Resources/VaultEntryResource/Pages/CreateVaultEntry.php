@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class CreateVaultEntry extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = VaultEntryResource::class;
 
     protected static bool $canCreateAnother = false;

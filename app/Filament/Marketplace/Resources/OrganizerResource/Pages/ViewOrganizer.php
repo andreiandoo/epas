@@ -11,6 +11,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewOrganizer extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = OrganizerResource::class;

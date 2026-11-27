@@ -16,6 +16,8 @@ use Livewire\Attributes\On;
 
 class ThemeEditor extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-paint-brush';

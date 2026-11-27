@@ -19,6 +19,8 @@ use Filament\Actions\Action;
 
 class ServiceOrderResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = ServiceOrder::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-gift';

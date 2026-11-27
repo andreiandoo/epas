@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditChatHoliday extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatHolidayResource::class;
 
     protected function getHeaderActions(): array

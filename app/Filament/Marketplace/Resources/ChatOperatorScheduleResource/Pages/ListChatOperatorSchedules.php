@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListChatOperatorSchedules extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatOperatorScheduleResource::class;
 
     protected function getHeaderActions(): array

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateVanityUrl extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = VanityUrlResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

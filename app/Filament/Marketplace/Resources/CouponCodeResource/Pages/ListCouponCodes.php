@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Log;
 
 class ListCouponCodes extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = CouponCodeResource::class;

@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListTicketTemplates extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TicketTemplateResource::class;
 
     protected function getHeaderActions(): array

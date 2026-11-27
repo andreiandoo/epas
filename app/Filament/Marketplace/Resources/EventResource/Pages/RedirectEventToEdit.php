@@ -14,6 +14,8 @@ use Filament\Resources\Pages\Concerns\InteractsWithRecord;
  */
 class RedirectEventToEdit extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithRecord;
     use HasMarketplaceContext;
 

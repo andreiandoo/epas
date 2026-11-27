@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditReward extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = RewardResource::class;
 
     protected function getHeaderActions(): array

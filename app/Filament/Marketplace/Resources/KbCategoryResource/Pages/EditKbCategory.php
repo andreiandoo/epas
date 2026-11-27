@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditKbCategory extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = KbCategoryResource::class;
 
     protected function getHeaderActions(): array

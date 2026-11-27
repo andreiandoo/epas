@@ -28,6 +28,8 @@ use Illuminate\Validation\Rule;
  */
 class CreateArtistAccount extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = ArtistAccountResource::class;

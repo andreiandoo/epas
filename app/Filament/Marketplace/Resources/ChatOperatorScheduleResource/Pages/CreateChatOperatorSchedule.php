@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateChatOperatorSchedule extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatOperatorScheduleResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

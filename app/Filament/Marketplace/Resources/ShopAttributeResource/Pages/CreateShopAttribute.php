@@ -9,6 +9,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CreateShopAttribute extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = ShopAttributeResource::class;

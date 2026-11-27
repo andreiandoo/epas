@@ -22,6 +22,8 @@ use Illuminate\Support\HtmlString;
 
 class ShopGiftCardResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = ShopGiftCard::class;

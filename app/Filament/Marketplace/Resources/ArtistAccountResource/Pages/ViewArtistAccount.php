@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ViewRecord;
 
 class ViewArtistAccount extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ArtistAccountResource::class;
 
     /**

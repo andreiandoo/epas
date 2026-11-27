@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class ListAttractions extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = AttractionResource::class;
 
     protected function getHeaderActions(): array

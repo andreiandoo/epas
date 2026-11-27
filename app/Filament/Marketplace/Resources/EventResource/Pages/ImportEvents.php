@@ -14,6 +14,8 @@ use Filament\Resources\Pages\Page;
 
 class ImportEvents extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithForms;
     use HasEventImport;
     use HasMarketplaceContext;

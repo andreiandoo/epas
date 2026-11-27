@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListBadges extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = BadgeResource::class;
 
     protected function getHeaderActions(): array

@@ -19,6 +19,8 @@ use Illuminate\Support\Str;
 
 class ViewSupportTicket extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithRecord;
 
     protected static string $resource = SupportTicketResource::class;

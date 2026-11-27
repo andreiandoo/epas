@@ -15,6 +15,8 @@ use Filament\Infolists\Components as Info;
 
 class ViewCustomerPoints extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = CustomerPointsResource::class;
 
     protected function getHeaderActions(): array

@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class ViewActivityBooking extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ActivityBookingResource::class;
 
     protected function getHeaderActions(): array

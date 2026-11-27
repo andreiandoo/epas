@@ -26,6 +26,8 @@ use Illuminate\Support\Str;
 
 class VenueResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = Venue::class;

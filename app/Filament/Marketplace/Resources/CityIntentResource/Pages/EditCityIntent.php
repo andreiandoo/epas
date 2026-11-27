@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditCityIntent extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = CityIntentResource::class;
 
     protected function getHeaderActions(): array

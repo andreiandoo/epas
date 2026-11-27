@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListEmailTemplates extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = EmailTemplateResource::class;
 
     protected function getHeaderActions(): array

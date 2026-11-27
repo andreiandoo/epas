@@ -23,6 +23,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesReport extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
     use InteractsWithForms;
 

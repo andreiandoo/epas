@@ -8,6 +8,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CreateTicketTemplate extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = TicketTemplateResource::class;

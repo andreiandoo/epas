@@ -21,6 +21,8 @@ use Illuminate\Support\Str;
 
 class ShopAttributeResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = ShopAttribute::class;

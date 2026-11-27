@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
 
 class PageResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = TenantPage::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-duplicate';

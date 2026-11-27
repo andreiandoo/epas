@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListHeroBanners extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = HeroBannerResource::class;
 
     protected function getHeaderActions(): array

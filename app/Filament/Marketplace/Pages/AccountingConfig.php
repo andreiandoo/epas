@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\DB;
 
 class AccountingConfig extends Page implements HasForms
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithForms;
     use HasMarketplaceContext;
 

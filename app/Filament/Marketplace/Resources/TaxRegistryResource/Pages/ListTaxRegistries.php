@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ListTaxRegistries extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TaxRegistryResource::class;
 
     protected function getHeaderActions(): array

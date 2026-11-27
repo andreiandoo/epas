@@ -16,6 +16,8 @@ use Illuminate\Support\Str;
 
 class EventActivityLog extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use InteractsWithRecord;
     use HasMarketplaceContext;
 

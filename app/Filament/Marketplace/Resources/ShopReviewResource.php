@@ -22,6 +22,8 @@ use Illuminate\Support\HtmlString;
 
 class ShopReviewResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = ShopReview::class;

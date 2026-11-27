@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 
 class SupportDepartmentResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = SupportDepartment::class;
     protected static ?string $navigationLabel = 'Departamente suport';
     protected static ?string $modelLabel = 'departament';

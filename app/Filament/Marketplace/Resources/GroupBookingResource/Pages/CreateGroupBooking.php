@@ -8,6 +8,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CreateGroupBooking extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = GroupBookingResource::class;

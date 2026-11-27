@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
 
 class RegionResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceRegion::class;

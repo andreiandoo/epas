@@ -20,6 +20,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class AffiliateWithdrawalResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = AffiliateWithdrawal::class;

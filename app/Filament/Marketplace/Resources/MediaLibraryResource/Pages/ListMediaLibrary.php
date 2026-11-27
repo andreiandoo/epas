@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ListMediaLibrary extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = MediaLibraryResource::class;

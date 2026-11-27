@@ -24,6 +24,8 @@ use Filament\Actions\DeleteBulkAction;
 
 class MarketplaceAdminResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceAdmin::class;

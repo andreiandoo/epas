@@ -25,6 +25,8 @@ use Illuminate\Support\HtmlString;
 
 class OrganizerInvoiceResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = Invoice::class;
     protected static ?string $navigationLabel = 'Facturi';
     protected static ?string $modelLabel = 'Factură';

@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListInterests extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = InterestResource::class;
 
     protected function getHeaderActions(): array

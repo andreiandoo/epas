@@ -31,6 +31,8 @@ use Illuminate\Support\HtmlString;
  */
 class BulkCouponCodes extends Page implements HasTable
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use Forms\Concerns\InteractsWithForms;
     use HasMarketplaceContext;
     use InteractsWithTable;

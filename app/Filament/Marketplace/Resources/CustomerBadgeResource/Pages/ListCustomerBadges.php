@@ -7,5 +7,7 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListCustomerBadges extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = CustomerBadgeResource::class;
 }

@@ -23,6 +23,8 @@ use Illuminate\Support\HtmlString;
 
 class GiftCardResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceGiftCard::class;

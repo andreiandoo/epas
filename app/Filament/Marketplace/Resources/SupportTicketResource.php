@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Auth;
 
 class SupportTicketResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = SupportTicket::class;
 
     protected static ?string $navigationLabel = 'Tichete suport';

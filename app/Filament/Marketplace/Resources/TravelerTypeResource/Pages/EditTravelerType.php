@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditTravelerType extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TravelerTypeResource::class;
 
     protected function getHeaderActions(): array

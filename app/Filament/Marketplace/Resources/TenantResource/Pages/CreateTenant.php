@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class CreateTenant extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TenantResource::class;
 
 

@@ -10,6 +10,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class EditBlogArticle extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = BlogArticleResource::class;

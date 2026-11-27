@@ -10,6 +10,8 @@ use Illuminate\Support\HtmlString;
 
 class ListArtistAccounts extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ArtistAccountResource::class;
 
     public function getHeading(): string|Htmlable

@@ -20,6 +20,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CustomerPointsResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = CustomerPoints::class;

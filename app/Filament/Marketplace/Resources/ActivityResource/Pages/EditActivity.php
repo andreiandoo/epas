@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditActivity extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ActivityResource::class;
 
     /**

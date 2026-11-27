@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListAffiliateSettings extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = AffiliateSettingsResource::class;
 
     public function mount(): void

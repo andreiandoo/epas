@@ -7,6 +7,7 @@ use Livewire\Attributes\Url;
 
 class ReportsManual extends Page
 {
+
     use BaseManualPage;
 
     protected static bool $shouldRegisterNavigation = false;

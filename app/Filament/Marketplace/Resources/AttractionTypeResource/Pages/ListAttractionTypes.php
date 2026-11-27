@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListAttractionTypes extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = AttractionTypeResource::class;
 
     protected function getHeaderActions(): array

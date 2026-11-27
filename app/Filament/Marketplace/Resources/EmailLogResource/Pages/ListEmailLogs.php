@@ -7,5 +7,7 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListEmailLogs extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = EmailLogResource::class;
 }

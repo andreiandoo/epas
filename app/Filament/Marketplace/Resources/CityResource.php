@@ -22,6 +22,8 @@ use Illuminate\Support\Str;
 
 class CityResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceCity::class;

@@ -23,6 +23,8 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class GroupBookingResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = GroupBooking::class;

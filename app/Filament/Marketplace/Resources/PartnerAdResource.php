@@ -33,6 +33,8 @@ use Illuminate\Validation\ValidationException;
  */
 class PartnerAdResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = PartnerAd::class;

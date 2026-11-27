@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListVaultEntries extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = VaultEntryResource::class;
 
     public function getTitle(): string

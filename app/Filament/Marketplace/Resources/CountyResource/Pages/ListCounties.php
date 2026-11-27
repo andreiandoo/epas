@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListCounties extends ListRecords
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = CountyResource::class;
 
     protected function getHeaderActions(): array

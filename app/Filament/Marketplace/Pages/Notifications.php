@@ -11,6 +11,8 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class Notifications extends Page
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-bell';
     protected static ?string $navigationLabel = 'Jurnalul zilei';
     protected static ?string $slug = 'notifications';

@@ -25,6 +25,8 @@ use Filament\Actions\BulkAction;
 
 class OrganizerPromoCodeResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = MarketplaceOrganizerPromoCode::class;

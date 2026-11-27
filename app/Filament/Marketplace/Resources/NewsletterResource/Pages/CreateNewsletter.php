@@ -14,6 +14,8 @@ use Illuminate\Support\HtmlString;
 
 class CreateNewsletter extends CreateRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     use HasMarketplaceContext;
 
     protected static string $resource = NewsletterResource::class;

@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class BadgeResource extends Resource
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesResourceLabels;
+
     use HasMarketplaceContext;
 
     protected static ?string $model = Badge::class;

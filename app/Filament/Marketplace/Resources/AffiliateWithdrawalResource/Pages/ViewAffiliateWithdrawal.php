@@ -10,6 +10,8 @@ use Filament\Schemas\Components as SC;
 
 class ViewAffiliateWithdrawal extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = AffiliateWithdrawalResource::class;
 
     public function infolist(Schema $schema): Schema

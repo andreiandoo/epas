@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditChatBlocklist extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = ChatBlocklistResource::class;
 
     protected function getHeaderActions(): array

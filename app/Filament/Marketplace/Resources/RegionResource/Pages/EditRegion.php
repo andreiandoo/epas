@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditRegion extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = RegionResource::class;
 
     protected function getHeaderActions(): array

@@ -8,6 +8,8 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditBadge extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = BadgeResource::class;
 
     protected function getHeaderActions(): array

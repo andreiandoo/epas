@@ -25,6 +25,8 @@ use Illuminate\Support\HtmlString;
  */
 class ViewOrganizerLead extends ViewRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = OrganizerLeadResource::class;
 
     protected function getHeaderActions(): array

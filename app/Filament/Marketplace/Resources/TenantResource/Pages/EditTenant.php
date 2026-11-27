@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Hash;
 
 class EditTenant extends EditRecord
 {
+    use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+
     protected static string $resource = TenantResource::class;
 
     protected function getHeaderActions(): array
