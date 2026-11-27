@@ -347,6 +347,21 @@ class MarketplacePanelProvider extends PanelProvider
                 return '<script>window.EP_MARKETPLACE_IS_SUPER_ADMIN = ' . ($isSuper ? 'true' : 'false') . ';</script>';
             })
 
+            // Cadrul nou (bară sus fixă + meniu stânga îngust + bara de atenție), doar unde e activă bara.
+            ->renderHook('panels::head.end', function (): string {
+                try {
+                    $admin = auth('marketplace_admin')->user();
+                    if (! $admin || ! \App\Services\OperatorCockpit\AttentionService::isEnabledFor($admin->marketplaceClient)) {
+                        return '';
+                    }
+
+                    return view('filament.components.ep-frame')->render();
+                } catch (\Throwable $e) {
+                    report($e);
+                    return '';
+                }
+            })
+
             // Client Reverb comun (WebSocket, protocol Pusher), doar cu broadcast pe Reverb.
             ->renderHook('panels::head.end', function (): string {
                 if (config('broadcasting.default') !== 'reverb' || ! config('reverb-client.host') || ! auth('marketplace_admin')->check()) {

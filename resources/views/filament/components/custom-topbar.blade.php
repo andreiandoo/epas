@@ -100,11 +100,17 @@
              sidebar to an icon-only rail. Filament's native isOpenDesktop state is
              inert in this build, so we drive a custom `ep-rail-collapsed` class on
              <html> (persisted, CSS below). --}}
+        @if($panelType === 'marketplace' && \App\Services\OperatorCockpit\AttentionService::isEnabledFor($currentMarketplaceClient))
+            {{-- Logo-ul stă în bara de sus în cadrul nou (desktop); în meniul îngust nu încape. --}}
+            <a href="{{ url('/marketplace') }}" class="ep-frame-brand" aria-label="{{ $currentMarketplaceClient?->name ?? 'Marketplace' }}">
+                @include('filament.components.marketplace-sidebar-logo')
+            </a>
+        @endif
         <button
             type="button"
             x-data
             x-on:click="window.matchMedia('(min-width: 1024px)').matches ? window.epToggleSidebarRail() : $store.sidebar.open()"
-            class="flex items-center justify-center w-10 h-10 text-gray-600 transition rounded-lg shrink-0 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            class="ep-sidebar-toggle flex items-center justify-center w-10 h-10 text-gray-600 transition rounded-lg shrink-0 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="{{ __('Toggle sidebar') }}"
         >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -602,6 +608,7 @@
         // minimise any flash of the full-width sidebar.
         try {
             if (window.matchMedia('(min-width: 1024px)').matches &&
+                !document.documentElement.classList.contains('ep-frame') &&
                 localStorage.getItem('ep-rail-collapsed') === '1') {
                 document.documentElement.classList.add('ep-rail-collapsed');
             }
