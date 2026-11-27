@@ -231,6 +231,16 @@ class AppServiceProvider extends ServiceProvider
                     if (isset($seen[$locale . '|' . $key])) {
                         return $key;
                     }
+                    // Etichete deja traduse, trecute a doua oară prin __(), nu sunt texte lipsă.
+                    static $translated = [];
+                    if (! isset($translated[$locale])) {
+                        $file = lang_path($locale . '.json');
+                        $data = is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+                        $translated[$locale] = array_flip(array_filter(array_values($data), 'is_string'));
+                    }
+                    if (isset($translated[$locale][$key])) {
+                        return $key;
+                    }
                     $seen[$locale . '|' . $key] = true;
                     if (\Illuminate\Support\Facades\Cache::add('i18n-missing:' . $locale . ':' . md5($key), 1, 86400)) {
                         @file_put_contents(

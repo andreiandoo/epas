@@ -28,6 +28,23 @@ class DiagnosticsController extends Controller
         $lines = is_file($path) ? file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) : [];
         $keys = array_values(array_unique(array_filter(array_map(fn ($l) => json_decode($l, true), $lines), 'is_string')));
 
+        // ?filter=1: scoate ce e deja cunoscut — chei din oricare {locale}.json (sursa e tradusă sau
+        // identică) și traducerile deja afișate (etichetă trecută de două ori prin __()).
+        if ($request->boolean('filter')) {
+            $known = [];
+            foreach ((array) config('marketplace_locales.enabled', []) as $l) {
+                $file = lang_path($l . '.json');
+                $data = is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+                foreach ($data as $k => $v) {
+                    $known[$k] = true;
+                    if (is_string($v)) {
+                        $known[$v] = true;
+                    }
+                }
+            }
+            $keys = array_values(array_filter($keys, fn ($k) => ! isset($known[$k]) && trim($k) !== ''));
+        }
+
         $offset = max(0, (int) $request->query('offset', 0));
         $limit = min(1000, max(1, (int) $request->query('limit', 500)));
 
