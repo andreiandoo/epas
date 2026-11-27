@@ -345,14 +345,31 @@
         }).then(function (r) { return r.json().catch(function () { return { ok: false }; }); });
     }
 
+    function chatRef(url) {
+        try { return new URL(url, window.location.origin).searchParams.get('c'); } catch (err) { return null; }
+    }
+    function openInDock(url) {
+        var ref = chatRef(url);
+        if (!ref || !window.epDock) return false;
+        window.epDock.open(ref);
+        if (!isPinned()) close();
+        return true;
+    }
+
     body.addEventListener('click', function (e) {
+        var link = e.target.closest('a[href*="chat-console?c="]');
+        if (link && openInDock(link.getAttribute('href'))) { e.preventDefault(); return; }
         var claimBtn = e.target.closest('[data-claim]');
         var snoozeBtn = e.target.closest('[data-snooze]');
         if (claimBtn) {
             claimBtn.disabled = true;
             var url = claimBtn.getAttribute('data-url');
             post('/marketplace/cockpit/claim', claimBtn.getAttribute('data-claim')).then(function (res) {
-                if (res && res.ok) { window.location.href = url; return; }
+                if (res && res.ok) {
+                    if (openInDock(url)) { poll(); return; }
+                    window.location.href = url;
+                    return;
+                }
                 showMsg((res && res.message) || 'Nu am putut prelua elementul. Încearcă din nou.');
                 poll();
             }).catch(function () { claimBtn.disabled = false; showMsg('Fără conexiune. Încearcă din nou.'); });

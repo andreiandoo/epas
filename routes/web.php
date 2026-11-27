@@ -661,6 +661,27 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
     Route::post('/cockpit/snooze', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'snooze'])
         ->name('marketplace.cockpit.snooze');
 
+    // Dock-ul de chat (ferestre lipite jos, în orice ecran)
+    Route::get('/chat-dock/state', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'state'])
+        ->name('marketplace.chat-dock.state');
+    Route::post('/chat-dock/state', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'saveState'])
+        ->name('marketplace.chat-dock.save-state');
+    Route::get('/chat-dock/{reference}', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'show'])
+        ->where('reference', '[A-Za-z0-9_-]+')
+        ->name('marketplace.chat-dock.show');
+    Route::post('/chat-dock/{reference}/reply', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'reply'])
+        ->where('reference', '[A-Za-z0-9_-]+')
+        ->name('marketplace.chat-dock.reply');
+    Route::post('/chat-dock/{reference}/claim', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'claim'])
+        ->where('reference', '[A-Za-z0-9_-]+')
+        ->name('marketplace.chat-dock.claim');
+    Route::post('/chat-dock/{reference}/transfer', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'transfer'])
+        ->where('reference', '[A-Za-z0-9_-]+')
+        ->name('marketplace.chat-dock.transfer');
+    Route::post('/chat-dock/{reference}/resolve', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'resolve'])
+        ->where('reference', '[A-Za-z0-9_-]+')
+        ->name('marketplace.chat-dock.resolve');
+
     Route::get('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'edit'])
         ->name('marketplace.ticket-customizer.edit');
     Route::put('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'update'])

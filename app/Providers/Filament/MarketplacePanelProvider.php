@@ -364,7 +364,14 @@ class MarketplacePanelProvider extends PanelProvider
                         return '';
                     }
 
-                    return view('filament.components.operator-cockpit', ['clientId' => (int) $admin->marketplace_client_id])->render();
+                    $html = view('filament.components.operator-cockpit', ['clientId' => (int) $admin->marketplace_client_id])->render();
+
+                    // Dock-ul de chat vine cu bara, doar dacă marketplace-ul are și live-chat.
+                    if ($admin->marketplaceClient?->hasMicroservice('live-chat')) {
+                        $html .= view('filament.components.chat-dock')->render();
+                    }
+
+                    return $html;
                 } catch (\Throwable $e) {
                     report($e);
                     return '';
