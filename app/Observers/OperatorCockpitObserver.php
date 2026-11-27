@@ -23,6 +23,7 @@ class OperatorCockpitObserver
         MarketplaceArtistAccount::class => ['artist', ['status', 'assigned_to_marketplace_admin_id', 'artist_id']],
         Event::class => ['event', ['submitted_at', 'is_published', 'rejected_at', 'pending_changes_status', 'assigned_to_marketplace_admin_id', 'is_cancelled', 'event_date', 'range_end_date']],
         ChatConversation::class => ['chat', ['status', 'assigned_to_marketplace_admin_id']],
+        \App\Models\ServiceOrder::class => ['service', ['status', 'payment_status']],
     ];
 
     public function saved(Model $model): void

@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class AttentionService
 {
-    public const CATEGORIES = ['chat', 'ticket', 'todo', 'artist', 'event'];
+    public const CATEGORIES = ['chat', 'ticket', 'todo', 'artist', 'event', 'service', 'docs'];
 
     private MarketplaceAdmin $admin;
     private MarketplaceClient $client;
@@ -84,14 +84,30 @@ class AttentionService
         $snoozed = $this->snoozedKeys();
         $result = [];
 
+        // Departamentele operatorului decid ce categorii primește (super-adminul le vede pe toate).
+        $allowed = DepartmentScope::for($this->admin)['categories'];
+
         foreach (self::CATEGORIES as $category) {
-            $items = match ($category) {
-                'chat' => $this->chatItems(),
-                'ticket' => $this->ticketItems(),
-                'todo' => $this->todoItems(),
-                'artist' => $this->artistItems(),
-                'event' => $this->eventItems(),
-            };
+            if ($allowed !== null && ! in_array($category, $allowed, true)) {
+                $result[$category] = [];
+                continue;
+            }
+
+            try {
+                $items = match ($category) {
+                    'chat' => $this->chatItems(),
+                    'ticket' => $this->ticketItems(),
+                    'todo' => $this->todoItems(),
+                    'artist' => $this->artistItems(),
+                    'event' => $this->eventItems(),
+                    'service' => $this->serviceItems(),
+                    'docs' => $this->docItems(),
+                };
+            } catch (\Throwable $e) {
+                // O categorie stricată nu trebuie să golească toată bara.
+                report($e);
+                $items = [];
+            }
 
             $items = array_values(array_filter($items, fn ($i) => ! in_array($i['key'], $snoozed, true)));
             $result[$category] = $items;
@@ -337,11 +353,26 @@ class AttentionService
         $this->applyOwnerFilter($approval);
         $approval = $approval->orderBy('submitted_at')->limit($this->limit)->get();
 
-        $changes = $base()
+        // Fără select restrâns: diff-ul compară cu toate coloanele evenimentului.
+        $changes = Event::query()
+            ->where('marketplace_client_id', $this->client->id)
+            ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'))
+            ->where(fn ($q) => $q->whereRaw('COALESCE(range_end_date, event_date) IS NULL')
+                ->orWhereRaw('COALESCE(range_end_date, event_date) >= CURRENT_DATE'))
             ->where('pending_changes_status', 'pending')
+            ->with('marketplaceOrganizer:id,name')
             ->orderByRaw('COALESCE(pending_changes_submitted_at, created_at) asc')
             ->limit($this->limit)
-            ->get();
+            ->get()
+            // Modificările aplicate deja direct pe eveniment (fără „Aprobă”) nu mai cer nimic.
+            ->filter(function (Event $e) {
+                try {
+                    return count(app(\App\Services\Marketplace\EventLiveEditService::class)->diffPending($e)['rows'] ?? []) > 0;
+                } catch (\Throwable $ex) {
+                    report($ex);
+                    return true;
+                }
+            });
 
         $items = [];
         foreach ($approval as $e) {
@@ -401,6 +432,127 @@ class AttentionService
         $item['claimable'] = $kind === 'approval';
 
         return $item;
+    }
+
+    // ----------------------------------------------------------------- service
+
+    /**
+     * Comenzi de servicii care așteaptă operatorul: plată prin transfer de confirmat sau
+     * comandă plătită încă neactivată (cele plătite cu cardul se activează singure).
+     */
+    private function serviceItems(): array
+    {
+        if (! Schema::hasTable('service_orders')) {
+            return [];
+        }
+
+        $orders = \App\Models\ServiceOrder::query()
+            ->where('marketplace_client_id', $this->client->id)
+            ->where(function (Builder $q) {
+                $q->where(fn ($w) => $w->where('status', \App\Models\ServiceOrder::STATUS_PENDING_PAYMENT)
+                        ->where('payment_method', 'transfer')
+                        ->where('payment_status', \App\Models\ServiceOrder::PAYMENT_PENDING))
+                  ->orWhere(fn ($w) => $w->where('status', \App\Models\ServiceOrder::STATUS_PROCESSING)
+                        ->where('payment_status', \App\Models\ServiceOrder::PAYMENT_PAID));
+            })
+            ->with('marketplaceOrganizer:id,name')
+            ->orderBy('created_at')
+            ->limit($this->limit)
+            ->get();
+
+        $items = [];
+        foreach ($orders as $o) {
+            $toPay = $o->status === \App\Models\ServiceOrder::STATUS_PENDING_PAYMENT;
+            $since = $toPay ? $o->created_at : ($o->paid_at ?? $o->updated_at);
+            $total = $o->total !== null ? number_format((float) $o->total, 2, ',', '.') . ' ' . ($o->currency ?? 'RON') : null;
+
+            $item = $this->item(
+                'service',
+                $o->id,
+                trim(($o->order_number ? $o->order_number . ' · ' : '') . $o->service_type_label),
+                implode(' · ', array_filter([
+                    $toPay ? 'plată prin transfer de confirmat' : 'plătită, de activat',
+                    $o->marketplaceOrganizer?->name,
+                    $total,
+                    $this->ago($since),
+                ])),
+                null,
+                $since && $since->lt(now()->subDay()),
+                $this->resourceUrl(\App\Filament\Marketplace\Resources\ServiceOrderResource::class, 'view', $o->id),
+                $since,
+            );
+            $item['claimable'] = false;
+            $item['kind'] = $toPay ? 'payment' : 'activate';
+            $items[] = $item;
+        }
+
+        return $items;
+    }
+
+    // -------------------------------------------------------------------- docs
+
+    /**
+     * Documentele fiscale ale evenimentelor: cerere de vizare negenerată sau de refăcut,
+     * impozit și PV de distrugere după eveniment. Calcul greu, ținut 10 minute în cache.
+     */
+    private function docItems(): array
+    {
+        $rows = \Illuminate\Support\Facades\Cache::remember('cockpit-docs:' . $this->client->id, 600, function () {
+            $svc = app(\App\Services\Marketplace\OrganizerFiscalDocuments::class);
+            if (! $svc->marketplaceHasTemplates((int) $this->client->id)) {
+                return [];
+            }
+
+            $out = [];
+            foreach ($svc->candidateEvents((int) $this->client->id) as $event) {
+                $issue = $svc->issue($event);
+                if (! $issue) {
+                    continue;
+                }
+                $deadline = $issue['kind'] === 'impozit_pv_missing' ? $svc->taxDeadline($event) : $svc->cerereDeadline($event);
+                [$title] = $svc->noticeText($event, $issue['kind']);
+                $out[] = [
+                    'id' => (int) $event->id,
+                    'kind' => $issue['kind'],
+                    'title' => $title,
+                    'organizer' => $event->marketplaceOrganizer?->name,
+                    'deadline' => $deadline?->toDateString(),
+                ];
+            }
+
+            return $out;
+        });
+
+        $labels = [
+            'cerere_missing' => 'cerere de vizare de generat',
+            'cerere_stale' => 'cerere de vizare de refăcut',
+            'impozit_pv_missing' => 'impozit + PV distrugere de generat',
+        ];
+
+        $items = [];
+        foreach (array_slice($rows, 0, $this->limit) as $r) {
+            $deadline = $r['deadline'] ? \Carbon\Carbon::parse($r['deadline']) : null;
+            $item = $this->item(
+                'docs',
+                $r['id'],
+                $r['title'],
+                implode(' · ', array_filter([
+                    $labels[$r['kind']] ?? $r['kind'],
+                    $deadline ? 'termen ' . $deadline->format('d.m') : null,
+                    $r['organizer'],
+                ])),
+                null,
+                $deadline !== null && $deadline->lte(now()->addDays(3)->endOfDay()),
+                $this->resourceUrl(EventResource::class, 'edit', $r['id']),
+                null,
+            );
+            $item['key'] = 'docs:' . $r['id'] . ':' . $r['kind'];
+            $item['claimable'] = false;
+            $item['kind'] = $r['kind'];
+            $items[] = $item;
+        }
+
+        return $items;
     }
 
     // ------------------------------------------------------------------ claim
@@ -496,7 +648,7 @@ class AttentionService
 
     private function parseKey(string $key): array
     {
-        if (! preg_match('/^(chat|ticket|todo|artist|event|eventchg):(\d+)$/', $key, $m)) {
+        if (! preg_match('/^(chat|ticket|todo|artist|event|eventchg|service|docs):(\d+)(?::[a-z_]+)?$/', $key, $m)) {
             throw new \InvalidArgumentException('Cheie invalidă.');
         }
 

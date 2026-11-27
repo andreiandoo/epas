@@ -95,6 +95,14 @@ class OperatorNotificationJournal
 
     public function visibleTypes(?MarketplaceAdmin $admin): array
     {
+        $types = $this->roleTypes($admin);
+        $scope = \App\Services\OperatorCockpit\DepartmentScope::for($admin)['journal_types'];
+
+        return $scope === null ? $types : array_values(array_intersect($types, $scope));
+    }
+
+    private function roleTypes(?MarketplaceAdmin $admin): array
+    {
         if ($this->isSuperAdmin($admin)) {
             return array_values(array_unique(array_merge(self::ADMIN_TYPES, [MarketplaceNotification::TYPE_ADMIN_USER_ADDED])));
         }

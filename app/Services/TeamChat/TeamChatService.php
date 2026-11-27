@@ -57,6 +57,35 @@ class TeamChatService
      * Grupurile implicite: „Toată echipa” (toți operatorii activi) și câte un grup per
      * departament de suport (membrii departamentului). Idempotent, rulat la fiecare listare.
      */
+    /**
+     * Toți colegii (inclusiv operatorul curent) cu starea online și ultima activitate.
+     */
+    public function presence(MarketplaceAdmin $admin): array
+    {
+        $hasColumn = Schema::hasColumn('marketplace_admins', 'last_seen_at');
+        $people = MarketplaceAdmin::query()
+            ->where('marketplace_client_id', $admin->marketplace_client_id)
+            ->where('status', 'active')
+            ->where(fn ($q) => $q->where('name', 'not like', '%(System)')->orWhere('id', $admin->id))
+            ->orderBy('name')
+            ->get($hasColumn ? ['id', 'name', 'role', 'last_seen_at', 'last_login_at'] : ['id', 'name', 'role', 'last_login_at']);
+
+        $limit = now()->subSeconds(150);
+
+        return $people->map(function ($p) use ($admin, $limit, $hasColumn) {
+            $seen = $hasColumn ? $p->last_seen_at : null;
+            $seen = $seen ?: $p->last_login_at;
+
+            return [
+                'id' => (int) $p->id,
+                'name' => $this->cleanName($p->name),
+                'me' => (int) $p->id === (int) $admin->id,
+                'online' => (int) $p->id === (int) $admin->id || ($hasColumn && $p->last_seen_at && $p->last_seen_at->gte($limit)),
+                'last_seen' => $seen?->toIso8601String(),
+            ];
+        })->sortByDesc(fn ($p) => ($p['online'] ? '1' : '0') . ($p['last_seen'] ?? ''))->values()->all();
+    }
+
     public function ensureDefaultGroups(MarketplaceAdmin $admin): void
     {
         $clientId = (int) $admin->marketplace_client_id;
@@ -194,6 +223,7 @@ class TeamChatService
                     : (str_starts_with((string) $t->system_key, 'dept:') ? 'department' : 'group'))),
                 'partner_id' => $partner ? (int) $partner->id : null,
                 'members' => $t->type === TeamThread::TYPE_DM ? 2 : (int) TeamThreadMember::query()->where('team_thread_id', $t->id)->count(),
+                'member_ids' => TeamThreadMember::query()->where('team_thread_id', $t->id)->pluck('marketplace_admin_id')->map(fn ($id) => (int) $id)->all(),
                 'unread' => $unread,
                 'mentioned' => $mentioned,
                 'muted' => $m->muted_until && $m->muted_until->isFuture(),
@@ -617,10 +647,17 @@ class TeamChatService
 
     private function broadcastMessage(TeamThread $thread, TeamMessage $message, string $action): void
     {
+        $authorName = $message->marketplace_admin_id
+            ? $this->cleanName(MarketplaceAdmin::query()->whereKey($message->marketplace_admin_id)->value('name'))
+            : null;
+
         $this->broadcastToMembers($thread, 'team.message', [
             'thread_id' => (int) $thread->id,
             'message_id' => (int) $message->id,
             'action' => $action,
+            'author_name' => $authorName,
+            'thread_name' => $thread->type === TeamThread::TYPE_DM ? null : (string) $thread->name,
+            'preview' => $action === 'new' ? mb_strimwidth((string) ($message->body ?: 'a trimis un fișier'), 0, 120, '…') : null,
             'author_id' => $message->marketplace_admin_id ? (int) $message->marketplace_admin_id : null,
             'mentions' => array_map('intval', (array) $message->mentions),
             'type' => $thread->type,

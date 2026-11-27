@@ -206,10 +206,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Models\Chat\ChatConversation::class,
             \App\Models\Chat\ChatMessage::class,
             \App\Models\MarketplaceNotification::class,
+            \App\Models\ServiceOrder::class,
         ] as $cockpitModel) {
             $cockpitModel::observe(\App\Observers\OperatorCockpitObserver::class);
         }
         \App\Models\Chat\ChatConversation::observe(\App\Observers\ChatJournalObserver::class);
+        \App\Models\ServiceOrder::observe(\App\Observers\ServiceOrderJournalObserver::class);
         /* Cadourile din aplicatie: intentiile scrise la checkout devin
            transferuri abia cand comanda e platita. Vezi GiftPurchaseService. */
         \App\Models\Order::observe(\App\Observers\GiftIntentOrderObserver::class);

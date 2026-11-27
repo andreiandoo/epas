@@ -429,7 +429,7 @@ class MarketplacePanelProvider extends PanelProvider
                 // New unclaimed chat: two rising notes (attention chime)
                 function playNewChat() {
                     // Cu bara activă, sunetele trec prin preferințele operatorului (și Nu deranja).
-                    if (window.epSound) { window.epSound.play('chat_new'); return; }
+                    if (window.epSound) { window.epSound.play('chat_new'); if (window.epNotify) window.epNotify('chat_new', 'Client nou în chat', 'Un vizitator așteaptă un operator.', 'chat-new', function () { window.location.href = '/marketplace/chat-console'; }); return; }
                     if (!audioUnlocked) return;
                     playNote(660, 0, 0.18);
                     playNote(880, 0.09, 0.18);
@@ -437,7 +437,7 @@ class MarketplacePanelProvider extends PanelProvider
 
                 // New message on a claimed chat: single soft note
                 function playNewMessage() {
-                    if (window.epSound) { window.epSound.play('chat_mine'); return; }
+                    if (window.epSound) { window.epSound.play('chat_mine'); if (window.epNotify) window.epNotify('chat_mine', 'Mesaj nou de la un client', 'Ai un mesaj necitit pe un chat preluat de tine.', 'chat-mine', function () { window.location.href = '/marketplace/chat-console'; }); return; }
                     if (!audioUnlocked) return;
                     playNote(520, 0, 0.14);
                 }

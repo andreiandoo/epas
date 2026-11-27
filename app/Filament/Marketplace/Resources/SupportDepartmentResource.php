@@ -84,6 +84,26 @@ class SupportDepartmentResource extends Resource
                     ->label('Activ')
                     ->default(true),
             ])->columns(2),
+
+            Section::make('Ce primește departamentul în bara de atenție')
+                ->description('Membrii departamentului văd în bara din dreapta doar ce bifezi aici. Nimic bifat înseamnă tot. Un operator din mai multe departamente primește tot ce primesc ele la un loc. Super-adminul vede mereu tot.')
+                ->schema([
+                    Forms\Components\CheckboxList::make('cockpit_scope.categories')
+                        ->label('Acțiuni (pătratele din bară)')
+                        ->options(\App\Services\OperatorCockpit\DepartmentScope::CATEGORIES)
+                        ->columns(1)
+                        ->bulkToggleable(),
+
+                    Forms\Components\CheckboxList::make('cockpit_scope.journal_types')
+                        ->label('Jurnalul zilei (notificări informative)')
+                        ->helperText('Se aplică în plus față de rol: un moderator nu vede deconturile chiar dacă le bifezi aici.')
+                        ->options(fn () => \App\Services\OperatorCockpit\DepartmentScope::journalTypeOptions())
+                        ->columns(2)
+                        ->bulkToggleable()
+                        ->searchable(),
+                ])
+                ->columns(2)
+                ->collapsible(),
         ]);
     }
 

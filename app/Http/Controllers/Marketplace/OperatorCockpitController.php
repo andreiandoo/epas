@@ -120,6 +120,25 @@ class OperatorCockpitController extends Controller
         return ['sounds' => array_intersect_key($sounds, array_flip(['action', 'chat', 'dm', 'group'])), 'dnd_until' => $dnd];
     }
 
+    /**
+     * „Sunt aici”: orice fereastră deschisă din panou trimite asta la un minut.
+     * Scriem cel mult o dată la 45 de secunde per operator.
+     */
+    public function heartbeat(): JsonResponse
+    {
+        $admin = Auth::guard('marketplace_admin')->user();
+        if (! $admin instanceof MarketplaceAdmin || ! \Illuminate\Support\Facades\Schema::hasColumn('marketplace_admins', 'last_seen_at')) {
+            return response()->json(['ok' => false]);
+        }
+
+        \Illuminate\Support\Facades\DB::table('marketplace_admins')
+            ->where('id', $admin->id)
+            ->where(fn ($q) => $q->whereNull('last_seen_at')->orWhere('last_seen_at', '<', now()->subSeconds(45)))
+            ->update(['last_seen_at' => now()]);
+
+        return response()->json(['ok' => true]);
+    }
+
     public function journalRead(Request $request): JsonResponse
     {
         if (! $this->service()) {

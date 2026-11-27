@@ -36,6 +36,8 @@ class TeamChatController extends Controller
                 ->reject(fn ($c) => (int) $c->id === (int) $admin->id)
                 ->map(fn ($c) => ['id' => (int) $c->id, 'name' => $this->chat->cleanName($c->name)])
                 ->values(),
+            // Toată echipa, cu prezența: online = activ în panou în ultimele 2 minute și jumătate.
+            'people' => $this->chat->presence($admin),
         ]);
     }
 

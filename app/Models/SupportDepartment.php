@@ -25,12 +25,14 @@ class SupportDepartment extends Model
         'notify_emails',
         'sort_order',
         'is_active',
+        'cockpit_scope',
     ];
 
     protected $casts = [
         'name' => 'array',
         'description' => 'array',
         'notify_emails' => 'array',
+        'cockpit_scope' => 'array',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];

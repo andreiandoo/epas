@@ -54,6 +54,7 @@ class MarketplaceAdmin extends Authenticatable implements FilamentUser
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'last_seen_at' => 'datetime',
         'permissions' => 'array',
         'settings' => 'array',
         'password' => 'hashed',

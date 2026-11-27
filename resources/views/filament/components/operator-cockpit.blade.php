@@ -2,6 +2,7 @@
 <style>
     #epc-root {
         --epc-chat: #2fd3a6; --epc-ticket: #f2645f; --epc-todo: #f2b53d; --epc-artist: #a98bfa; --epc-event: #4ea8f5;
+        --epc-service: #ff8a4c; --epc-docs: #9bd14b;
         --epc-rail: #ffffff; --epc-drawer: #ffffff; --epc-line: #e3e7ec; --epc-fg: #17202a; --epc-muted: #66717f;
         --epc-hover: #f2f4f7; --epc-seg: #eef1f5; --epc-seg-on: #ffffff; --epc-btn: #17202a; --epc-btn-fg: #ffffff;
         --epc-late: #d63c37; --epc-rail-w: 56px;
@@ -70,7 +71,29 @@
     .epc-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--epc-line); display: grid; gap: 10px; background: var(--epc-rail); }
     .epc-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .epc-title { font-weight: 600; font-size: 15px; }
-    .epc-head-actions { display: flex; gap: 6px; }
+    .epc-head-actions { display: flex; gap: 2px; }
+    .epc-ibtn { width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--epc-muted); cursor: pointer; display: grid; place-items: center; padding: 0; }
+    .epc-ibtn svg { width: 17px; height: 17px; }
+    .epc-ibtn:hover, .epc-ibtn:focus-visible { color: var(--epc-fg); background: var(--epc-hover); outline: none; }
+    .epc-ibtn[aria-pressed="true"] { color: var(--epc-fg); background: var(--epc-hover); }
+    .epc-ibtn[aria-pressed="true"] svg { fill: currentColor; }
+    .epc-jfilter { display: flex; gap: 6px; padding: 10px 12px 2px; }
+    .epc-jfilter button { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--epc-line); background: transparent; color: var(--epc-muted); cursor: pointer; }
+    .epc-jfilter button.is-on { color: var(--epc-fg); border-color: var(--epc-fg); }
+    .epc-jnote { margin: 4px 16px 6px; font-size: 12px; color: var(--epc-muted); }
+    .epc-people { padding: 4px 8px 6px; display: grid; gap: 1px; }
+    .epc-person { display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 6px; border: 0; background: transparent; color: var(--epc-fg); font: inherit; font-size: 13px; text-align: left; cursor: pointer; width: 100%; }
+    .epc-person:hover, .epc-person:focus-visible { background: var(--epc-hover); outline: none; }
+    .epc-person[disabled] { cursor: default; background: transparent; }
+    .epc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--epc-line); }
+    .epc-dot.is-on { background: #2fb67c; box-shadow: 0 0 0 3px color-mix(in srgb, #2fb67c 25%, transparent); }
+    .epc-person span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .epc-person small { color: var(--epc-muted); font-size: 11.5px; white-space: nowrap; }
+    .epc-sect { padding: 10px 16px 4px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--epc-muted); display: flex; justify-content: space-between; }
+    .epc-members { margin: -2px 8px 6px 52px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11.5px; color: var(--epc-muted); }
+    .epc-members span { display: inline-flex; align-items: center; gap: 4px; }
+    .epc-members .epc-dot { width: 6px; height: 6px; box-shadow: none; }
+    .epc-more { border: 0; background: transparent; color: var(--epc-muted); font-size: 11.5px; cursor: pointer; padding: 0; text-decoration: underline; }
     .epc-pill { border: 1px solid var(--epc-line); background: transparent; color: var(--epc-muted); font-size: 12px; font-weight: 500; padding: 4px 9px; border-radius: 6px; cursor: pointer; }
     .epc-pill[aria-pressed="true"] { color: var(--epc-fg); border-color: var(--epc-fg); }
     .epc-pill:focus-visible { outline: 2px solid var(--epc-event); outline-offset: 1px; }
@@ -188,8 +211,12 @@
                     <button type="button" class="epc-tab" role="tab" data-tab="team" aria-selected="false">Echipa <span class="epc-tab-n epc-team-n" hidden></span></button>
                 </div>
                 <div class="epc-head-actions">
-                    <button type="button" class="epc-pill epc-pin" aria-pressed="false">Fixează</button>
-                    <button type="button" class="epc-pill epc-close" aria-label="Închide">Închide</button>
+                    <button type="button" class="epc-ibtn epc-pin" aria-pressed="false" title="Fixează sertarul deschis" aria-label="Fixează sertarul deschis">
+                        <svg fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M15 3l6 6-3 1-4 4 .5 4.5L13 20l-4-4-5 5M9 16l-4-4 1.5-1.5L11 11l4-4 1-3z"/></svg>
+                    </button>
+                    <button type="button" class="epc-ibtn epc-close" title="Închide (Esc)" aria-label="Închide">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                    </button>
                 </div>
             </div>
             <div class="epc-seg" role="group" aria-label="Filtru" data-for="todo">
@@ -216,15 +243,17 @@
     if (window.__epcInit) return;
     window.__epcInit = true;
 
-    var CATS = ['chat', 'ticket', 'todo', 'artist', 'event'];
-    var LABEL = { chat: 'Chat clienți', ticket: 'Tichete suport', todo: 'ToDos', artist: 'Conturi artist în review', event: 'Evenimente de revizuit' };
-    var COLOR = { chat: 'var(--epc-chat)', ticket: 'var(--epc-ticket)', todo: 'var(--epc-todo)', artist: 'var(--epc-artist)', event: 'var(--epc-event)' };
+    var CATS = ['chat', 'ticket', 'todo', 'artist', 'event', 'service', 'docs'];
+    var LABEL = { chat: 'Chat clienți', ticket: 'Tichete suport', todo: 'ToDos', artist: 'Conturi artist în review', event: 'Evenimente de revizuit', service: 'Servicii', docs: 'Documente evenimente' };
+    var COLOR = { chat: 'var(--epc-chat)', ticket: 'var(--epc-ticket)', todo: 'var(--epc-todo)', artist: 'var(--epc-artist)', event: 'var(--epc-event)', service: 'var(--epc-service)', docs: 'var(--epc-docs)' };
     // Iconițe pline per categorie; detaliile interioare se „decupează” cu var(--cut).
     var ICONS = {
         chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3.5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-9.2L6 21.2V17.5H4a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2z"/><path stroke="var(--cut)" stroke-width="1.8" stroke-linecap="round" d="M7 9h10M7 12.5h6"/></svg>',
         ticket: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5h16a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/><path stroke="var(--cut)" stroke-width="1.6" stroke-dasharray="1.6 1.8" d="M15 6.5v11"/></svg>',
         todo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 2.5h6a1.5 1.5 0 0 1 1.5 1.5H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1.5A1.5 1.5 0 0 1 9 2.5z"/><path fill="none" stroke="var(--cut)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 13.5l2.7 2.7L16.5 10"/></svg>',
         artist: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 2.5v13.2a3.3 3.3 0 1 1-2-3V7.4l-8 1.6v8.7a3.3 3.3 0 1 1-2-3V5.3z"/></svg>',
+        service: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 15.5 6.6 18.5l1.2-6L3.3 8.3l6.1-.7z"/></svg>',
+        docs: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path fill="none" stroke="var(--cut)" stroke-width="1.6" stroke-linecap="round" d="M8 12h8M8 15.5h8M8 19h5"/><path fill="var(--cut)" d="M14 2v6h6z" opacity=".55"/></svg>',
         event: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2h2v2h6V2h2v2h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2z"/><path stroke="var(--cut)" stroke-width="1.6" d="M3 9h18"/><path fill="var(--cut)" d="M7 12h3v3H7zM14 12h3v3h-3z"/></svg>'
     };
     var LS_PIN = 'epc_pinned', LS_SEEN = 'epc_seen', LS_KNOWN = 'epc_known';
@@ -242,7 +271,7 @@
     var tbody = root.querySelector('.epc-tbody');
     var sbody = root.querySelector('.epc-sbody');
     var meId = parseInt(root.getAttribute('data-me'), 10) || 0;
-    var team = { threads: [], colleagues: [], loaded: false, form: null, filter: '' };
+    var team = { threads: [], colleagues: [], people: [], loaded: false, form: null, filter: '', open: {} };
     var msg = root.querySelector('.epc-msg');
     var fab = root.querySelector('.epc-fab');
     var pollMs = parseInt(root.getAttribute('data-poll-ms'), 10) || 15000;
@@ -325,7 +354,7 @@
     function renderPin() {
         var p = isPinned();
         pinBtn.setAttribute('aria-pressed', p ? 'true' : 'false');
-        pinBtn.textContent = p ? 'Fixat' : 'Fixează';
+        pinBtn.title = p ? 'Sertarul rămâne deschis. Click ca să se închidă singur.' : 'Fixează sertarul deschis';
     }
     pinBtn.addEventListener('click', function () { lsSet(LS_PIN, isPinned() ? '0' : '1'); renderPin(); });
     root.querySelector('.epc-close').addEventListener('click', function () { lsSet(LS_PIN, '0'); renderPin(); close(); });
@@ -375,11 +404,18 @@
         var tabN = root.querySelector('.epc-tab-n');
         tabN.hidden = !state.journalUnread;
         tabN.textContent = String(state.journalUnread);
-        tabN.title = 'Cer acțiune';
+        tabN.title = state.journalUnread + ' notificări cer acțiune (rambursări, plăți, documente, facturi pe firmă)';
     }
+    var journalFilter = 'all';
     function renderJournal() {
         var html = '', day = null;
-        state.journal.forEach(function (j) {
+        var actionCount = state.journal.filter(function (j) { return j.attention; }).length;
+        html += '<div class="epc-jfilter"><button type="button" data-jf="all" class="' + (journalFilter === 'all' ? 'is-on' : '') + '">Toate</button>'
+            + '<button type="button" data-jf="action" class="' + (journalFilter === 'action' ? 'is-on' : '') + '">Cer acțiune (' + actionCount + ')</button></div>';
+        if (journalFilter === 'action') {
+            html += '<p class="epc-jnote">Cererile de rambursare, cererile de plată, documentele de emis și facturile cerute pe firmă rămân aici până apeși „Văzut”.</p>';
+        }
+        state.journal.filter(function (j) { return journalFilter === 'all' || j.attention; }).forEach(function (j) {
             if (j.day !== day) { day = j.day; html += '<div class="epc-jday">' + esc(day) + '</div>'; }
             var title = j.url
                 ? '<a class="epc-jt" href="' + esc(j.url) + '" title="' + esc(j.title) + '">' + esc(j.title) + '</a>'
@@ -398,6 +434,8 @@
     jbody.addEventListener('click', function (e) {
         var link = e.target.closest('a[href*="chat-console?c="]');
         if (link && openInDock(link.getAttribute('href'))) { e.preventDefault(); return; }
+        var jf = e.target.closest('[data-jf]');
+        if (jf) { journalFilter = jf.getAttribute('data-jf'); renderJournal(); return; }
         var b = e.target.closest('[data-jread]');
         if (!b) return;
         b.disabled = true;
@@ -488,8 +526,9 @@
                 var chip = i.late ? '<span class="epc-chip is-late">întârziat</span>'
                     : (i.mine ? '<span class="epc-chip">al tău</span>' : (i.owner_id ? '<span class="epc-chip">' + esc(i.owner_name || 'preluat') + '</span>' : '<span class="epc-chip">nealocat</span>'));
                 if (!i.late && i.kind === 'changes') chip = '<span class="epc-chip">de aprobat</span>';
+                if (!i.late && (i.category === 'service' || i.category === 'docs')) chip = '';
                 var action = i.claimable === false
-                    ? '<a class="epc-btn is-pri" href="' + esc(i.url) + '">Revizuiește</a>'
+                    ? '<a class="epc-btn is-pri" href="' + esc(i.url) + '">' + (i.kind === 'changes' ? 'Revizuiește' : i.kind === 'payment' ? 'Confirmă plata' : i.kind === 'activate' ? 'Activează' : 'Deschide') + '</a>'
                     : !i.owner_id
                     ? '<button type="button" class="epc-btn is-pri" data-claim="' + esc(i.key) + '" data-url="' + esc(i.url) + '">Preiau</button>'
                     : '<a class="epc-btn" href="' + esc(i.url) + '">Deschide</a>';
@@ -574,7 +613,15 @@
                 var keys = allKeys().filter(function (k) { return k.indexOf('chat:') !== 0; });
                 var known = lsJson(LS_KNOWN);
                 var hadBaseline = lsGet(LS_KNOWN, null) !== null;
-                if (hadBaseline && keys.some(function (k) { return known.indexOf(k) === -1; })) playNew();
+                var freshKeys = hadBaseline ? keys.filter(function (k) { return known.indexOf(k) === -1; }) : [];
+                if (freshKeys.length) {
+                    playNew();
+                    var first = null;
+                    CATS.forEach(function (c) { (state.items[c] || []).forEach(function (i) { if (!first && i.key === freshKeys[0]) first = i; }); });
+                    if (first && window.epNotify) {
+                        window.epNotify('action', LABEL[first.category] + (freshKeys.length > 1 ? ' (+' + (freshKeys.length - 1) + ')' : ''), first.title, 'cockpit-' + first.key, function () { open(); setTab('todo'); });
+                    }
+                }
                 lsSet(LS_KNOWN, JSON.stringify(keys));
 
                 renderTiles();
@@ -630,6 +677,7 @@
                 if (!res || !res.ok) return;
                 team.threads = res.threads || [];
                 team.colleagues = res.colleagues || [];
+                team.people = res.people || [];
                 team.loaded = true;
                 renderTeamRail();
                 if (state.tab === 'team' && !team.form) renderTeamTab();
@@ -682,6 +730,20 @@
                 + '<div class="epc-row"><button type="button" class="epc-btn" data-tf="cancel">Renunță</button><button type="button" class="epc-btn is-pri" data-tf="group-go">Creează grupul</button></div></div>';
         }
 
+        // Toată echipa, cu cine e online acum și când au fost activi ceilalți.
+        var people = team.people.filter(function (p) { return !f || p.name.toLowerCase().indexOf(f) !== -1; });
+        if (people.length) {
+            var onlineCount = team.people.filter(function (p) { return p.online; }).length;
+            html += '<div class="epc-sect"><span>Echipa</span><span>' + onlineCount + ' online</span></div><div class="epc-people">';
+            people.forEach(function (p) {
+                html += '<button type="button" class="epc-person" ' + (p.me ? 'disabled' : 'data-dm="' + p.id + '"') + ' title="' + (p.me ? 'Tu' : 'Scrie-i lui ' + esc(p.name)) + '">'
+                    + '<span class="epc-dot' + (p.online ? ' is-on' : '') + '"></span>'
+                    + '<span>' + esc(p.name) + (p.me ? ' (tu)' : '') + '</span>'
+                    + '<small>' + (p.online ? 'online' : esc(seenAgo(p.last_seen))) + '</small></button>';
+            });
+            html += '</div><div class="epc-sect"><span>Conversații</span></div>';
+        }
+
         var rows = team.threads.filter(function (t) { return !f || t.name.toLowerCase().indexOf(f) !== -1; });
         rows.forEach(function (t) {
             var last = t.last ? ((t.last.mine ? 'Tu: ' : (t.last.author && t.type !== 'dm' ? t.last.author + ': ' : '')) + t.last.text) : (t.type === 'dm' ? 'Începe conversația' : t.members + ' membri');
@@ -691,6 +753,16 @@
                 + '<span class="epc-tl">' + esc(last) + '</span>'
                 + (t.unread ? '<span class="epc-tu' + (t.mentioned || t.type === 'dm' ? ' is-mention' : '') + '">' + (t.mentioned ? '@' : t.unread) + '</span>' : '')
                 + '</button>';
+            if (t.type !== 'dm' && (t.member_ids || []).length) {
+                var byId = {};
+                team.people.forEach(function (p) { byId[p.id] = p; });
+                var members = t.member_ids.map(function (id) { return byId[id]; }).filter(Boolean)
+                    .sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });
+                var shown = team.open[t.id] ? members : members.slice(0, 6);
+                html += '<div class="epc-members">' + shown.map(function (p) {
+                    return '<span><i class="epc-dot' + (p.online ? ' is-on' : '') + '"></i>' + esc(p.me ? 'tu' : p.name.split(' ')[0]) + '</span>';
+                }).join('') + (members.length > shown.length ? '<button type="button" class="epc-more" data-more="' + t.id + '">+' + (members.length - shown.length) + ' membri</button>' : '') + '</div>';
+            }
         });
         if (!rows.length) html += '<p class="epc-empty">' + (team.loaded ? 'Nicio conversație găsită.' : 'Se încarcă…') + '</p>';
         tbody.innerHTML = html;
@@ -704,7 +776,26 @@
         });
     }
 
+    function seenAgo(iso) {
+        if (!iso) return 'nu a intrat încă';
+        var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+        if (mins < 60) return 'acum ' + Math.max(mins, 1) + ' min';
+        var h = Math.round(mins / 60);
+        if (h < 24) return 'acum ' + h + ' h';
+        var d = Math.round(h / 24);
+        return d === 1 ? 'ieri' : 'acum ' + d + ' zile';
+    }
+
     tbody.addEventListener('click', function (e) {
+        var more = e.target.closest('[data-more]');
+        if (more) { team.open[more.getAttribute('data-more')] = true; renderTeamTab(); return; }
+        var person = e.target.closest('[data-dm]');
+        if (person) {
+            teamPost('/marketplace/team-chat/dm', { admin_id: parseInt(person.getAttribute('data-dm'), 10) }).then(function (res) {
+                if (res.ok) { loadTeam(); openTeamThread(res.thread_id); } else showMsg(res.message || 'Nu am putut deschide conversația.');
+            });
+            return;
+        }
         var row = e.target.closest('[data-thread]');
         if (row) { openTeamThread(parseInt(row.getAttribute('data-thread'), 10)); return; }
         var b = e.target.closest('[data-tf]');
@@ -757,7 +848,12 @@
             if (t && t.muted && !mentioned) return;
             var focused = window.epDock && window.epDock.isFocused && window.epDock.isFocused('team:' + d.thread_id);
             if (focused) return;
-            window.epSound.play(mentioned || d.type === 'dm' || d.type === 'help' ? 'dm' : 'group');
+            var kindSnd = mentioned || d.type === 'dm' || d.type === 'help' ? 'dm' : 'group';
+            window.epSound.play(kindSnd);
+            if (window.epNotify) {
+                var title = (d.author_name || 'Un coleg') + (d.thread_name ? ' în ' + d.thread_name : '') + (mentioned ? ' te-a menționat' : '');
+                window.epNotify(kindSnd, title, d.preview || '', 'team-' + d.message_id, function () { openTeamThread(d.thread_id); });
+            }
         });
         window.epRealtime.on('team-user.' + meId, true, 'team.typing', function (d) {
             window.dispatchEvent(new CustomEvent('ep:team-typing', { detail: d }));
@@ -792,8 +888,17 @@
             + '<p class="epc-dnd-state">' + (dnd ? 'Activ până ' + esc(untilTxt) + '. Auzi doar mesajele clienților de pe chat-urile tale.' : 'Oprit. Auzi toate sunetele pornite mai sus.') + '</p>'
             + '<div class="epc-dnd"><button type="button" class="epc-btn" data-dnd="60">1 oră</button><button type="button" class="epc-btn" data-dnd="240">4 ore</button><button type="button" class="epc-btn" data-dnd="-1">Până mâine la 8</button>'
             + (dnd ? '<button type="button" class="epc-btn is-pri" data-dnd="0">Oprește</button>' : '') + '</div>'
+            + '<div><h4>Notificări pe desktop</h4></div>' + desktopHtml()
             + '<p style="color:var(--epc-muted);font-size:12px;margin:0">Browserul pornește sunetele doar după primul click pe pagină.</p></div>';
         sbody.innerHTML = html;
+    }
+    function desktopHtml() {
+        if (!('Notification' in window)) return '<p class="epc-dnd-state">Browserul acesta nu permite notificări.</p>';
+        if (Notification.permission === 'denied') return '<p class="epc-dnd-state">Notificările sunt blocate pentru core.tixello.com. Le poți permite din lacătul de lângă adresă.</p>';
+        if (Notification.permission !== 'granted') return '<div class="epc-opt"><span>Apar în colțul ecranului când panoul e în fundal<small>Ca la WhatsApp. Trebuie să ai măcar un tab deschis.</small></span><button type="button" class="epc-btn is-pri" data-desktop="ask">Activează</button></div>';
+        var on = lsGet(LS_DESKTOP, '1') === '1';
+        return '<div class="epc-opt"><span>Apar în colțul ecranului când panoul e în fundal<small>Respectă sunetele și „Nu deranja” de mai sus.</small></span>'
+            + '<span style="display:flex;gap:6px"><button type="button" class="epc-btn" data-desktop="test">Încearcă</button><button type="button" class="epc-pill" data-desktop="toggle" aria-pressed="' + (on ? 'true' : 'false') + '">' + (on ? 'Pornit' : 'Oprit') + '</button></span></div>';
     }
     function savePrefs(data) {
         return teamPost('/marketplace/cockpit/prefs', data).then(function (res) {
@@ -817,8 +922,37 @@
         }
         var d = e.target.closest('[data-dnd]');
         if (d) savePrefs({ dnd_minutes: parseInt(d.getAttribute('data-dnd'), 10) });
+        var dk = e.target.closest('[data-desktop]');
+        if (dk) {
+            var act = dk.getAttribute('data-desktop');
+            if (act === 'ask') Notification.requestPermission().then(function () { lsSet(LS_DESKTOP, '1'); renderSettings(); });
+            else if (act === 'toggle') { lsSet(LS_DESKTOP, lsGet(LS_DESKTOP, '1') === '1' ? '0' : '1'); renderSettings(); }
+            else if (act === 'test') { try { new Notification('Tixello', { body: 'Așa arată notificările pe desktop.', tag: 'epc-test' }); } catch (err) {} }
+        }
     });
     root.querySelector('.epc-setbtn').addEventListener('click', function () { open(); setTab('settings'); });
+
+    // ================================================================ prezență
+    // „Online” = cel puțin o fereastră a panoului deschisă (chiar și în fundal).
+    function heartbeat() { teamPost('/marketplace/cockpit/heartbeat', {}).catch(function () {}); }
+    heartbeat();
+    setInterval(heartbeat, 60000);
+
+    // ================================================================ notificări pe desktop
+    // Apar ca la WhatsApp când fereastra panoului nu e în față. Fiecare notificare are o etichetă,
+    // ca să nu apară de două ori dacă ai mai multe tab-uri deschise.
+    var LS_DESKTOP = 'epc_desktop';
+    function desktopOn() { return 'Notification' in window && Notification.permission === 'granted' && lsGet(LS_DESKTOP, '1') === '1'; }
+    window.epNotify = function (kind, title, body, tag, onClick) {
+        if (!desktopOn()) return;
+        if (document.visibilityState === 'visible' && document.hasFocus()) return;
+        if (dndActive() && kind !== 'chat_mine') return;
+        if (prefs.sounds[SOUND_PREF[kind]] === false) return;
+        try {
+            var n = new Notification(title, { body: body || '', tag: tag || kind, icon: '/favicon.ico', silent: true });
+            n.onclick = function () { window.focus(); if (onClick) onClick(); n.close(); };
+        } catch (e) {}
+    };
 
     renderPin();
     renderTiles();

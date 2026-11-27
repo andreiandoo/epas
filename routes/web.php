@@ -662,6 +662,8 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         ->name('marketplace.cockpit.snooze');
     Route::post('/cockpit/journal-read', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'journalRead'])
         ->name('marketplace.cockpit.journal-read');
+    Route::post('/cockpit/heartbeat', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'heartbeat'])
+        ->name('marketplace.cockpit.heartbeat');
     Route::post('/cockpit/prefs', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'savePrefs'])
         ->name('marketplace.cockpit.prefs');
 
