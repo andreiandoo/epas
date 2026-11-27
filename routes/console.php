@@ -290,8 +290,8 @@ Schedule::command('chat:purge-transcripts')
     ->dailyAt('04:00')
     ->withoutOverlapping();
 
-// Jurnalul operatorilor marketplace: doar ultimele 3 zile.
-Schedule::command('marketplace-notifications:prune --days=3')
+// Notificări marketplace (operatori + organizatori): doar ultimele 3 zile.
+Schedule::command('marketplace-notifications:prune --days=3 --organizer-days=3')
     ->dailyAt('04:20')
     ->withoutOverlapping();
 
