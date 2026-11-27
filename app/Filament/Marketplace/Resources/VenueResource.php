@@ -63,8 +63,23 @@ class VenueResource extends Resource
             Forms\Components\Hidden::make('marketplace_client_id')
                 ->default($marketplace?->id),
 
-            SC\Grid::make(4)->schema([
-                SC\Group::make()->columnSpan(3)->schema([
+            // CSS strict pentru această pagină (vezi view-ul)
+            SC\View::make('filament.marketplace.venues.styles')->columnSpanFull(),
+
+            SC\Grid::make(['default' => 1, 'xl' => 12, '2xl' => 12])
+                ->extraAttributes(['class' => 'ep-venue-form'])
+                ->schema([
+                    // Navigație secțiuni (doar la editare)
+                    SC\View::make('filament.marketplace.venues.section-nav')
+                        ->visible(fn ($operation) => $operation === 'edit')
+                        ->columnSpan(['default' => 'full', 'xl' => 'full', '2xl' => 2])
+                        ->viewData(fn (?Venue $record) => ['sections' => static::completeness($record)['sections']]),
+
+                    SC\Group::make()
+                        ->columnSpan(fn ($operation) => $operation === 'edit'
+                            ? ['default' => 'full', 'xl' => 8, '2xl' => 7]
+                            : ['default' => 'full', 'xl' => 12, '2xl' => 12])
+                        ->schema([
                     // ============================================================
                     // SEARCH EXISTING VENUES (only on create page)
                     // ============================================================
@@ -253,95 +268,97 @@ class VenueResource extends Resource
                             </div>
                         '))
                         ->columnSpanFull(),
-                    
-                    // Proprietar locație — appears only on edit when the
-                    // venue is linked to a marketplace-created tenant
-                    // (venues.tenant_id → tenants.owner_id → users). Click
-                    // on the owner name jumps to the tenant edit page.
-                    SC\Section::make(__('Proprietar locație'))
-                        ->icon('heroicon-o-building-storefront')
-                        ->columnSpanFull()
-                        ->visible(fn ($record) => $record && $record->tenant_id)
-                        ->extraAttributes(['class' => 'bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/30'])
+
+                    // ============================================================
+                    // IDENTITATE
+                    // ============================================================
+                    SC\Section::make(__('Identitate'))
+                        ->id('s-id')
+                        ->icon('heroicon-o-identification')
                         ->schema([
-                            Forms\Components\Placeholder::make('venue_owner_info')
-                                ->hiddenLabel()
-                                ->content(function ($record) {
-                                    if (!$record?->tenant_id) return new HtmlString('<span class="text-sm text-gray-500">Nu există proprietar linked.</span>');
-                                    $tenant = \App\Models\Tenant::with('owner')->find($record->tenant_id);
-                                    if (!$tenant) return new HtmlString('<span class="text-sm text-gray-500">Tenant #' . $record->tenant_id . ' negăsit.</span>');
-                                    $tenantName = htmlspecialchars($tenant->public_name ?? $tenant->name ?? ('Tenant #' . $tenant->id), ENT_QUOTES);
-                                    $ownerName = htmlspecialchars($tenant->owner?->name ?? '—', ENT_QUOTES);
-                                    $ownerEmail = htmlspecialchars($tenant->owner?->email ?? '—', ENT_QUOTES);
-                                    $editUrl = TenantResource::getUrl('edit', ['record' => $tenant->id]);
-                                    return new HtmlString(
-                                        '<div class="flex flex-col gap-2 py-1">'
-                                        . '<div class="flex items-center gap-3">'
-                                        . '<span class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">Owner:</span>'
-                                        . '<a href="' . $editUrl . '" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">'
-                                        . $ownerName
-                                        . '</a>'
-                                        . '<span class="text-xs text-gray-500 dark:text-gray-400">' . $ownerEmail . '</span>'
-                                        . '</div>'
-                                        . '<div class="flex items-center gap-3">'
-                                        . '<span class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">Cont tenant:</span>'
-                                        . '<a href="' . $editUrl . '" class="text-sm text-primary-600 dark:text-primary-400 hover:underline">'
-                                        . $tenantName
-                                        . '</a>'
-                                        . '</div>'
-                                        . '</div>'
-                                    );
-                                }),
+                            SC\Tabs::make('Name Translations')
+                                ->tabs([
+                                    SC\Tabs\Tab::make('Română')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('name.ro')
+                                                ->label(__('Nume locație (RO)'))
+                                                ->required()
+                                                ->maxLength(255)
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(function ($state, SSet $set) {
+                                                    if ($state) $set('slug', Str::slug($state));
+                                                }),
+                                        ]),
+                                    SC\Tabs\Tab::make('English')
+                                        ->schema([
+                                            Forms\Components\TextInput::make('name.en')
+                                                ->label(__('Venue name (EN)'))
+                                                ->maxLength(255),
+                                        ]),
+                                ])->columnSpanFull(),
+
+                            Forms\Components\TextInput::make('slug')
+                                ->label(__('Adresa paginii (slug)'))
+                                ->required()
+                                ->maxLength(190)
+                                ->unique(ignoreRecord: true)
+                                ->rule('alpha_dash')
+                                ->prefix('/locatie/')
+                                ->placeholder('auto-generated-from-name'),
+
+                            Forms\Components\Select::make('venueCategories')
+                                ->label(__('Categorii locație'))
+                                ->relationship(
+                                    'venueCategories',
+                                    'name',
+                                    fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id)
+                                )
+                                ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
+                                ->multiple()
+                                ->preload()
+                                ->searchable()
+                                ->createOptionForm([
+                                    Forms\Components\TextInput::make('name.ro')
+                                        ->label(__('Nume categorie (RO)'))
+                                        ->required(),
+                                    Forms\Components\TextInput::make('name.en')
+                                        ->label(__('Category name (EN)')),
+                                    Forms\Components\TextInput::make('icon')
+                                        ->label(__('Icon (emoji)'))
+                                        ->placeholder('🎭'),
+                                    Forms\Components\ColorPicker::make('color')
+                                        ->label(__('Culoare')),
+                                ])
+                                ->createOptionUsing(function (array $data) {
+                                    $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
+                                    return MarketplaceVenueCategory::create($data)->id;
+                                })
+                                ->columnSpanFull(),
+
+                            Forms\Components\Toggle::make('is_featured')
+                                ->label(__('Locație promovată'))
+                                ->helperText(__('Va apărea în secțiunea promovată'))
+                                ->default(false),
                         ]),
 
-                    SC\Grid::make(5)->schema([
-                        // NAME & SLUG - EN/RO
-                        SC\Section::make(__('Venue Identity'))
-                            ->icon('heroicon-o-identification')
-                            ->columnSpan(2)
-                            ->schema([
-                                SC\Tabs::make('Name Translations')
-                                    ->tabs([
-                                        SC\Tabs\Tab::make('Română')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('name.ro')
-                                                    ->label(__('Nume locație (RO)'))
-                                                    ->required()
-                                                    ->maxLength(255)
-                                                    ->live(onBlur: true)
-                                                    ->afterStateUpdated(function ($state, SSet $set) {
-                                                        if ($state) $set('slug', Str::slug($state));
-                                                    }),
-                                            ]),
-                                        SC\Tabs\Tab::make('English')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('name.en')
-                                                    ->label(__('Venue name (EN)'))
-                                                    ->maxLength(255),
-                                            ]),
-                                    ])->columnSpanFull(),
-
-                                Forms\Components\TextInput::make('slug')
-                                    ->label(__('Slug'))
-                                    ->required()
-                                    ->maxLength(190)
-                                    ->unique(ignoreRecord: true)
-                                    ->rule('alpha_dash')
-                                    ->placeholder('auto-generated-from-name'),
-                            ]),
-                        // IMAGE & GALLERY
-                        SC\Section::make(__('Media'))
-                            ->icon('heroicon-o-photo')
-                            ->columnSpan(3)
-                            ->schema([
+                    // ============================================================
+                    // IMAGINI
+                    // ============================================================
+                    SC\Section::make(__('Imagini'))
+                        ->id('s-img')
+                        ->icon('heroicon-o-photo')
+                        ->schema([
+                            SC\Grid::make(['default' => 1, 'md' => 3])->schema([
                                 Forms\Components\FileUpload::make('image_url')
                                     ->label(__('Main image'))
+                                    ->helperText(__('Desktop, orizontală'))
                                     ->image()
                                     ->imagePreviewHeight('200')
                                     ->disk('public')
                                     ->directory('venues')
                                     ->visibility('public')
-                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
+                                    ->columnSpan(['md' => 2]),
                                 Forms\Components\FileUpload::make('meta.portrait')
                                     ->label(__('Portret (mobile hero)'))
                                     ->helperText(__('Imagine verticală afișată pe mobile în hero-ul paginii locației'))
@@ -350,72 +367,118 @@ class VenueResource extends Resource
                                     ->disk('public')
                                     ->directory('venues/portraits')
                                     ->visibility('public')
-                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
-                                Forms\Components\FileUpload::make('gallery')
-                                    ->label(__('Gallery'))
-                                    ->image()
-                                    ->multiple()
-                                    ->maxFiles(5)
-                                    ->disk('public')
-                                    ->directory('venues/gallery')
-                                    ->visibility('public')
-                                    ->reorderable()
-                                    ->panelLayout('grid')
-                                    ->imagePreviewHeight('80')
                                     ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
-                                    ->columnSpanFull(),
+                                    ->columnSpan(['md' => 1]),
                             ]),
-                    ]),
+                            Forms\Components\FileUpload::make('gallery')
+                                ->label(__('Gallery'))
+                                ->image()
+                                ->multiple()
+                                ->maxFiles(5)
+                                ->disk('public')
+                                ->directory('venues/gallery')
+                                ->visibility('public')
+                                ->reorderable()
+                                ->panelLayout('grid')
+                                ->imagePreviewHeight('80')
+                                ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
+                                ->columnSpanFull(),
 
-                    // Row 1: Location (3 cols) + Capacity (2 cols) — same row totalling 5
-                    SC\Grid::make(5)->schema([
-                        SC\Section::make(__('Location'))
-                            ->icon('heroicon-o-map-pin')
-                            ->columnSpan(3)
-                            ->schema([
-                                Forms\Components\TextInput::make('address')
-                                    ->label(__('Address'))
-                                    ->maxLength(255)
-                                    ->placeholder(__('Street and number')),
-                                // Canonical județ + localitate pickers (helpers).
-                                // They pre-fill from / write into the free-text
-                                // city/state fields below — see LocationSelectFields.
-                                ...\App\Filament\Support\LocationSelectFields::make(),
-                                Forms\Components\TextInput::make('city')
-                                    ->label(__('City'))
-                                    ->maxLength(120)
-                                    ->placeholder(__('e.g. București')),
-                                Forms\Components\TextInput::make('state')
-                                    ->label(__('State/Region'))
-                                    ->maxLength(120)
-                                    ->placeholder(__('e.g. Ilfov')),
-                                Forms\Components\TextInput::make('country')
-                                    ->label(__('Country'))
-                                    ->maxLength(120)
-                                    ->placeholder(__('e.g. RO')),
-                                Forms\Components\TextInput::make('lat')
-                                    ->label(__('Latitude'))
-                                    ->numeric()
-                                    ->step('0.0000001')
-                                    ->placeholder('44.4268'),
-                                Forms\Components\TextInput::make('lng')
-                                    ->label(__('Longitude'))
-                                    ->numeric()
-                                    ->step('0.0000001')
-                                    ->placeholder('26.1025'),
-                                Forms\Components\TextInput::make('google_maps_url')
-                                    ->label(__('Google Maps Link'))
-                                    ->url()
-                                    ->placeholder('https://maps.google.com/...')
-                                    ->prefixIcon('heroicon-o-map')
-                                    ->suffixAction(
-                                        Action::make('open_google_maps')
-                                            ->icon('heroicon-o-arrow-top-right-on-square')
-                                            ->tooltip(__('Deschide link-ul într-o filă nouă'))
-                                            ->url(fn ($state) => $state ?: null, shouldOpenInNewTab: true)
-                                            ->visible(fn ($state) => filled($state))
-                                    )
-                                    ->columnSpanFull(),
+                            // YouTube URL
+                            Forms\Components\TextInput::make('video_url')
+                                ->label(__('Video de prezentare (YouTube)'))
+                                ->url()
+                                ->placeholder('https://www.youtube.com/watch?v=...')
+                                ->prefixIcon('heroicon-o-play')
+                                ->helperText(__('Link YouTube către un video de prezentare al locației (opțional).'))
+                                ->afterStateHydrated(function (\Filament\Forms\Components\TextInput $component, $state, ?\App\Models\Venue $record) {
+                                    // Ensure video_type gets marked as youtube whenever a URL exists,
+                                    // so existing records created before this simplification still work.
+                                    if ($record && filled($record->video_url) && empty($record->video_type)) {
+                                        $record->forceFill(['video_type' => 'youtube'])->saveQuietly();
+                                    }
+                                })
+                                ->columnSpanFull(),
+
+                            // Keep video_type as a hidden companion so legacy rows stay consistent.
+                            Forms\Components\Hidden::make('video_type')
+                                ->dehydrateStateUsing(fn ($state, \Filament\Schemas\Components\Utilities\Get $get) => filled($get('video_url')) ? 'youtube' : null),
+                        ]),
+
+                    // ============================================================
+                    // LOCATIE
+                    // ============================================================
+                    SC\Section::make(__('Locație'))
+                        ->id('s-loc')
+                        ->icon('heroicon-o-map-pin')
+                        ->schema([
+                            Forms\Components\TextInput::make('address')
+                                ->label(__('Address'))
+                                ->maxLength(255)
+                                ->placeholder(__('Street and number')),
+                            // Canonical județ + localitate pickers (helpers).
+                            // They pre-fill from / write into the free-text
+                            // city/state fields in "Detalii adresă" — see LocationSelectFields.
+                            SC\Grid::make(['default' => 1, 'md' => 2])->schema(
+                                collect(\App\Filament\Support\LocationSelectFields::make())
+                                    ->map(fn ($field) => match ($field->getName()) {
+                                        'geo_county_id' => $field
+                                            ->label(__('Județ'))
+                                            ->helperText(__('Din listă; completează județul oficial în „Detalii adresă”.')),
+                                        'geo_city_id' => $field
+                                            ->label(__('Localitate'))
+                                            ->helperText(__('Din listă; completează orașul oficial în „Detalii adresă”.')),
+                                        default => $field,
+                                    })
+                                    ->all()
+                            ),
+                            SC\Section::make(__('Detalii adresă'))
+                                ->description(__('oraș, regiune, țară, coordonate, link Google Maps'))
+                                ->compact()
+                                ->collapsible()
+                                ->collapsed(fn ($livewire) => ! static::hasErrorsOn($livewire, ['city', 'state', 'country', 'lat', 'lng', 'google_maps_url']))
+                                ->columns(6)
+                                ->schema([
+                                    Forms\Components\TextInput::make('city')
+                                        ->label(__('City'))
+                                        ->maxLength(120)
+                                        ->placeholder(__('e.g. București'))
+                                        ->columnSpan(['default' => 6, 'md' => 2]),
+                                    Forms\Components\TextInput::make('state')
+                                        ->label(__('State/Region'))
+                                        ->maxLength(120)
+                                        ->placeholder(__('e.g. Ilfov'))
+                                        ->columnSpan(['default' => 6, 'md' => 2]),
+                                    Forms\Components\TextInput::make('country')
+                                        ->label(__('Country'))
+                                        ->maxLength(120)
+                                        ->placeholder(__('e.g. RO'))
+                                        ->columnSpan(['default' => 6, 'md' => 2]),
+                                    Forms\Components\TextInput::make('lat')
+                                        ->label(__('Latitude'))
+                                        ->numeric()
+                                        ->step('0.0000001')
+                                        ->placeholder('44.4268')
+                                        ->columnSpan(['default' => 6, 'md' => 3]),
+                                    Forms\Components\TextInput::make('lng')
+                                        ->label(__('Longitude'))
+                                        ->numeric()
+                                        ->step('0.0000001')
+                                        ->placeholder('26.1025')
+                                        ->columnSpan(['default' => 6, 'md' => 3]),
+                                    Forms\Components\TextInput::make('google_maps_url')
+                                        ->label(__('Google Maps Link'))
+                                        ->url()
+                                        ->placeholder('https://maps.google.com/...')
+                                        ->prefixIcon('heroicon-o-map')
+                                        ->suffixAction(
+                                            Action::make('open_google_maps')
+                                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                                ->tooltip(__('Deschide link-ul într-o filă nouă'))
+                                                ->url(fn ($state) => $state ?: null, shouldOpenInNewTab: true)
+                                                ->visible(fn ($state) => filled($state))
+                                        )
+                                        ->columnSpanFull(),
                                 \Filament\Schemas\Components\Actions::make([
                                     Action::make('geocode')
                                         ->label(__('Auto-detect coordinates'))
@@ -483,34 +546,180 @@ class VenueResource extends Resource
                                             }
                                         }),
                                 ])->columnSpanFull(),
-                            ])->columns(2),
-                        SC\Section::make(__('Capacity'))
-                            ->icon('heroicon-o-users')
-                            ->columnSpan(2)
-                            ->schema([
-                                Forms\Components\TextInput::make('capacity_total')
-                                    ->label(__('Total capacity'))
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->placeholder(__('e.g. 12000')),
-                                Forms\Components\TextInput::make('capacity_standing')
-                                    ->label(__('Standing'))
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->placeholder(__('e.g. 8000')),
-                                Forms\Components\TextInput::make('capacity_seated')
-                                    ->label(__('Seated'))
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->placeholder(__('e.g. 4000')),
-                            ]),
-                    ]),
+                                ]),
+                        ]),
 
-                    // Row 2: Google Reviews full-width
+                    // ============================================================
+                    // CAPACITATE
+                    // ============================================================
+                    SC\Section::make(__('Capacitate'))
+                        ->id('s-cap')
+                        ->icon('heroicon-o-users')
+                        ->columns(['default' => 1, 'md' => 3])
+                        ->schema([
+                            Forms\Components\TextInput::make('capacity_total')
+                                ->label(__('Total capacity'))
+                                ->numeric()
+                                ->minValue(0)
+                                ->placeholder(__('e.g. 12000')),
+                            Forms\Components\TextInput::make('capacity_seated')
+                                ->label(__('Seated'))
+                                ->numeric()
+                                ->minValue(0)
+                                ->placeholder(__('e.g. 4000')),
+                            Forms\Components\TextInput::make('capacity_standing')
+                                ->label(__('Standing'))
+                                ->numeric()
+                                ->minValue(0)
+                                ->placeholder(__('e.g. 8000')),
+                        ]),
+
+                    // ============================================================
+                    // CONTACT SI PROGRAM
+                    // ============================================================
+                    SC\Section::make(__('Contact și program'))
+                        ->id('s-contact')
+                        ->icon('heroicon-o-phone')
+                        ->columns(['default' => 1, 'md' => 2])
+                        ->schema([
+                            Forms\Components\TextInput::make('phone')
+                                ->label(__('Phone 1'))
+                                ->maxLength(64)
+                                ->placeholder('+40 ...')
+                                ->prefixIcon('heroicon-o-phone'),
+                            Forms\Components\TextInput::make('phone2')
+                                ->label(__('Phone 2'))
+                                ->maxLength(64)
+                                ->placeholder('+40 ...')
+                                ->prefixIcon('heroicon-o-phone'),
+                            Forms\Components\TextInput::make('email')
+                                ->label(__('Email 1'))
+                                ->email()
+                                ->placeholder(__('contact@example.com'))
+                                ->prefixIcon('heroicon-o-envelope'),
+                            Forms\Components\TextInput::make('website_url')
+                                ->label(__('Website'))
+                                ->url()
+                                ->placeholder('https://...')
+                                ->prefixIcon('heroicon-o-globe-alt'),
+                            Forms\Components\TextInput::make('facebook_url')
+                                ->label(__('Facebook'))
+                                ->url()
+                                ->placeholder('https://facebook.com/...')
+                                ->prefixIcon('heroicon-o-link')
+                                ->columnSpanFull(),
+
+                            // Mai multe contacte: deschis doar dacă are deja valori / erori
+                            SC\Section::make(__('Mai multe contacte'))
+                                ->description(__('Email 2, Instagram, TikTok'))
+                                ->compact()
+                                ->collapsible()
+                                ->collapsed(fn ($livewire, ?Venue $record) => ! ($record && (filled($record->email2) || filled($record->instagram_url) || filled($record->tiktok_url)))
+                                    && ! static::hasErrorsOn($livewire, ['email2', 'instagram_url', 'tiktok_url']))
+                                ->columns(['default' => 1, 'md' => 2])
+                                ->columnSpanFull()
+                                ->schema([
+                                    Forms\Components\TextInput::make('email2')
+                                        ->label(__('Email 2'))
+                                        ->email()
+                                        ->placeholder(__('reservations@example.com'))
+                                        ->prefixIcon('heroicon-o-envelope'),
+                                    Forms\Components\TextInput::make('instagram_url')
+                                        ->label(__('Instagram'))
+                                        ->url()
+                                        ->placeholder('https://instagram.com/...')
+                                        ->prefixIcon('heroicon-o-link'),
+                                    Forms\Components\TextInput::make('tiktok_url')
+                                        ->label(__('TikTok'))
+                                        ->url()
+                                        ->placeholder('https://tiktok.com/@...')
+                                        ->prefixIcon('heroicon-o-link'),
+                                ]),
+
+                            // SCHEDULE
+                            Forms\Components\Textarea::make('schedule')
+                                ->label(__('Program'))
+                                ->placeholder("Luni - Vineri: 10:00 - 22:00\nSâmbătă - Duminică: 12:00 - 24:00")
+                                ->rows(4)
+                                ->columnSpanFull(),
+                        ]),
+
+                    // ============================================================
+                    // FACILITATI (afisate ca bule prin CSS)
+                    // ============================================================
+                    SC\Section::make(__('Facilități'))
+                        ->id('s-fac')
+                        ->description(__('Selectează facilitățile disponibile la această locație'))
+                        ->icon('heroicon-o-wrench-screwdriver')
+                        ->extraAttributes(['class' => 'ep-vf-chips'])
+                        ->schema([
+                            Forms\Components\CheckboxList::make('facilities')
+                                ->label('')
+                                ->options(Venue::getFacilitiesOptions())
+                                ->columns(4)
+                                ->gridDirection('row')
+                                ->searchable()
+                                ->bulkToggleable()
+                                ->columnSpanFull(),
+                        ]),
+
+                    // ============================================================
+                    // DESCRIERE
+                    // ============================================================
+                    SC\Section::make(__('Descriere'))
+                        ->id('s-desc')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            SC\Tabs::make('Description Translations')
+                                ->tabs([
+                                    SC\Tabs\Tab::make('Română')
+                                        ->schema([
+                                            Forms\Components\RichEditor::make('description.ro')
+                                                ->label(__('Descriere (RO)'))
+                                                ->columnSpanFull(),
+                                        ]),
+                                    SC\Tabs\Tab::make('English')
+                                        ->schema([
+                                            Forms\Components\RichEditor::make('description.en')
+                                                ->label(__('Description (EN)'))
+                                                ->columnSpanFull(),
+                                        ]),
+                                ])->columnSpanFull(),
+                        ]),
+
+                    // ============================================================
+                    // CONDITII SI TAXE
+                    // ============================================================
+                    SC\Section::make(__('Condiții și taxe'))
+                        ->id('s-cond')
+                        ->description(__('Condiții specifice locației și taxe aplicabile'))
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Forms\Components\Toggle::make('has_historical_monument_tax')
+                                ->label(__('Taxa de Monument Istoric (2%)'))
+                                ->helperText(__('Dacă este activată, evenimentele din acest venue vor avea automat aplicată taxa de 2% pentru monument istoric.'))
+                                ->default(false),
+
+                            // Condițiile rămân strânse cât timp locația nu are niciuna
+                            SC\Section::make(__('Condiții ale locației'))
+                                ->description(__('Nicio condiție? Deschide pentru a adăuga.'))
+                                ->compact()
+                                ->collapsible()
+                                ->collapsed(fn ($livewire, ?Venue $record) => ! ($record && filled(trim(strip_tags((string) $record->venue_conditions))))
+                                    && ! static::hasErrorsOn($livewire, ['venue_conditions']))
+                                ->schema([
+                                    Forms\Components\RichEditor::make('venue_conditions')
+                                        ->label(__('Condiții locație'))
+                                        ->helperText(__('Condiții specifice care se vor adăuga automat la termenii biletelor evenimentelor din acest venue.'))
+                                        ->columnSpanFull(),
+                                ]),
+                        ]),
+
+                    // RECENZII GOOGLE
                     SC\Section::make(__('Google Reviews'))
+                        ->id('s-rev')
                         ->icon('heroicon-o-star')
                         ->description(__('Rating mediu, număr total de recenzii și 3 recenzii de pe Google. Cachate local — nu se apelează API la fiecare vizualizare. Folosește butonul "Sincronizare recenzii" pentru a re-citi datele din Google.'))
-                        ->columnSpanFull()
                         ->schema([
                             Forms\Components\TextInput::make('google_place_id')
                                 ->label(__('Google Place ID'))
@@ -576,113 +785,11 @@ class VenueResource extends Resource
                             ])->columnSpanFull(),
                         ])->columns(1),
 
-                    // CONTACT & LINKS
-                    SC\Section::make(__('Contact & Links'))
-                        ->icon('heroicon-o-phone')
-                        ->schema([
-                            Forms\Components\TextInput::make('phone')
-                                ->label(__('Phone 1'))
-                                ->maxLength(64)
-                                ->placeholder('+40 ...')
-                                ->prefixIcon('heroicon-o-phone'),
-                            Forms\Components\TextInput::make('phone2')
-                                ->label(__('Phone 2'))
-                                ->maxLength(64)
-                                ->placeholder('+40 ...')
-                                ->prefixIcon('heroicon-o-phone'),
-                            Forms\Components\TextInput::make('email')
-                                ->label(__('Email 1'))
-                                ->email()
-                                ->placeholder(__('contact@example.com'))
-                                ->prefixIcon('heroicon-o-envelope'),
-                            Forms\Components\TextInput::make('email2')
-                                ->label(__('Email 2'))
-                                ->email()
-                                ->placeholder(__('reservations@example.com'))
-                                ->prefixIcon('heroicon-o-envelope'),
-                            Forms\Components\TextInput::make('website_url')
-                                ->label(__('Website'))
-                                ->url()
-                                ->placeholder('https://...')
-                                ->prefixIcon('heroicon-o-globe-alt'),
-                            Forms\Components\TextInput::make('facebook_url')
-                                ->label(__('Facebook'))
-                                ->url()
-                                ->placeholder('https://facebook.com/...')
-                                ->prefixIcon('heroicon-o-link'),
-                            Forms\Components\TextInput::make('instagram_url')
-                                ->label(__('Instagram'))
-                                ->url()
-                                ->placeholder('https://instagram.com/...')
-                                ->prefixIcon('heroicon-o-link'),
-                            Forms\Components\TextInput::make('tiktok_url')
-                                ->label(__('TikTok'))
-                                ->url()
-                                ->placeholder('https://tiktok.com/@...')
-                                ->prefixIcon('heroicon-o-link'),
-                        ])->columns(2),
-
-                    // FACILITIES
-                    SC\Section::make(__('Facilități'))
-                        ->description(__('Selectează facilitățile disponibile la această locație'))
-                        ->icon('heroicon-o-wrench-screwdriver')
-                        ->collapsible()
-                        ->collapsed()
-                        ->schema([
-                            Forms\Components\CheckboxList::make('facilities')
-                                ->label('')
-                                ->options(Venue::getFacilitiesOptions())
-                                ->columns(4)
-                                ->gridDirection('row')
-                                ->searchable()
-                                ->bulkToggleable()
-                                ->columnSpanFull(),
-                        ]),
-
-                    // DESCRIPTION - EN/RO
-                    SC\Section::make(__('Description'))
-                        ->icon('heroicon-o-document-text')
-                        ->schema([
-                            SC\Tabs::make('Description Translations')
-                                ->tabs([
-                                    SC\Tabs\Tab::make('Română')
-                                        ->schema([
-                                            Forms\Components\RichEditor::make('description.ro')
-                                                ->label(__('Descriere (RO)'))
-                                                ->columnSpanFull(),
-                                        ]),
-                                    SC\Tabs\Tab::make('English')
-                                        ->schema([
-                                            Forms\Components\RichEditor::make('description.en')
-                                                ->label(__('Description (EN)'))
-                                                ->columnSpanFull(),
-                                        ]),
-                                ])->columnSpanFull(),
-                        ]),
-
-                    // CONDITIONS & TAXES
-                    SC\Section::make(__('Condiții & Taxe'))
-                        ->description(__('Condiții specifice locației și taxe aplicabile'))
-                        ->icon('heroicon-o-document-text')
-                        ->collapsible()
-                        ->schema([
-                            Forms\Components\RichEditor::make('venue_conditions')
-                                ->label(__('Condiții locație'))
-                                ->helperText(__('Condiții specifice care se vor adăuga automat la termenii biletelor evenimentelor din acest venue.'))
-                                ->columnSpanFull(),
-
-                            Forms\Components\Toggle::make('has_historical_monument_tax')
-                                ->label(__('Taxa de Monument Istoric (2%)'))
-                                ->helperText(__('Dacă este activată, evenimentele din acest venue vor avea automat aplicată taxa de 2% pentru monument istoric.'))
-                                ->default(false),
-                        ]),
-
                     // PARTNER NOTES (internal)
                     SC\Section::make(__('Note interne'))
+                        ->id('s-notes')
                         ->description(__('Note interne despre această locație (nu sunt vizibile public)'))
                         ->icon('heroicon-o-lock-closed')
-                        ->collapsible()
-                        ->collapsed()
                         ->schema([
                             Forms\Components\Textarea::make('partner_notes')
                                 ->label(__('Note'))
@@ -690,93 +797,28 @@ class VenueResource extends Resource
                                 ->rows(4)
                                 ->columnSpanFull(),
                         ]),
-                ]),
 
-                SC\Group::make()->columnSpan(1)->schema([
-                    // STATUS FLAGS
-                    SC\Section::make(__('Status'))
-                        ->icon('heroicon-o-eye')
-                        ->compact()
+                    ]),
+
+                    // Coloana din dreapta (doar la editare)
+                    SC\Group::make()
+                        ->columnSpan(['default' => 'full', 'xl' => 4, '2xl' => 3])
+                        ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
-                            Forms\Components\Toggle::make('is_featured')
-                                ->label(__('Locație promovată'))
-                                ->helperText(__('Va apărea în secțiunea promovată'))
-                                ->default(false),
-                        ]),
-
-                    // VENUE CATEGORIES
-                    SC\Section::make(__('Categorii'))
-                        ->icon('heroicon-o-tag')
+                    // DE COMPLETAT (calculat din înregistrare)
+                    SC\Section::make(__('De completat'))
+                        ->icon('heroicon-o-clipboard-document-check')
                         ->compact()
+                        ->description(fn (?Venue $record) => collect(static::completeness($record)['sections'])->where('done', true)->count() . ' din ' . count(static::completeness($record)['sections']) . ' secțiuni completate')
+                        ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
-                            Forms\Components\Select::make('venueCategories')
-                                ->label(__('Categorii locație'))
-                                ->relationship(
-                                    'venueCategories',
-                                    'name',
-                                    fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id)
-                                )
-                                ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
-                                ->multiple()
-                                ->preload()
-                                ->searchable()
-                                ->createOptionForm([
-                                    Forms\Components\TextInput::make('name.ro')
-                                        ->label(__('Nume categorie (RO)'))
-                                        ->required(),
-                                    Forms\Components\TextInput::make('name.en')
-                                        ->label(__('Category name (EN)')),
-                                    Forms\Components\TextInput::make('icon')
-                                        ->label(__('Icon (emoji)'))
-                                        ->placeholder('🎭'),
-                                    Forms\Components\ColorPicker::make('color')
-                                        ->label(__('Culoare')),
-                                ])
-                                ->createOptionUsing(function (array $data) {
-                                    $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
-                                    return MarketplaceVenueCategory::create($data)->id;
-                                })
-                                ->columnSpanFull(),
+                            SC\View::make('filament.marketplace.venues.todo-list')
+                                ->viewData(fn (?Venue $record) => ['items' => static::completeness($record)['todo']]),
                         ]),
-
-                    // SCHEDULE
-                    SC\Section::make(__('Program'))
-                        ->icon('heroicon-o-clock')
-                        ->compact()
-                        ->schema([
-                            Forms\Components\Textarea::make('schedule')
-                                ->label(__('Program'))
-                                ->placeholder("Luni - Vineri: 10:00 - 22:00\nSâmbătă - Duminică: 12:00 - 24:00")
-                                ->rows(5)
-                                ->columnSpanFull(),
-                        ]),
-
-                    // YouTube URL
-                    Forms\Components\TextInput::make('video_url')
-                        ->label(__('YouTube URL'))
-                        ->url()
-                        ->placeholder('https://www.youtube.com/watch?v=...')
-                        ->prefixIcon('heroicon-o-play')
-                        ->helperText(__('Link YouTube către un video de prezentare al locației (opțional).'))
-                        ->afterStateHydrated(function (\Filament\Forms\Components\TextInput $component, $state, ?\App\Models\Venue $record) {
-                            // Ensure video_type gets marked as youtube whenever a URL exists,
-                            // so existing records created before this simplification still work.
-                            if ($record && filled($record->video_url) && empty($record->video_type)) {
-                                $record->forceFill(['video_type' => 'youtube'])->saveQuietly();
-                            }
-                        })
-                        ->columnSpanFull(),
-
-                    // Keep video_type as a hidden companion so legacy rows stay consistent.
-                    Forms\Components\Hidden::make('video_type')
-                        ->dehydrateStateUsing(fn ($state, \Filament\Schemas\Components\Utilities\Get $get) => filled($get('video_url')) ? 'youtube' : null),
-
-
                     // Statistici (doar pe Edit)
                     SC\Section::make(__('Statistici'))
                         ->icon('heroicon-o-chart-bar')
                         ->compact()
-                        ->collapsed()
                         ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
                             Forms\Components\Placeholder::make('stats')
@@ -812,31 +854,10 @@ class VenueResource extends Resource
                                 }),
                         ]),
 
-                    // Quick Actions (doar pe Edit)
-                    SC\Section::make(__('Acțiuni rapide'))
-                        ->icon('heroicon-o-bolt')
-                        ->compact()
-                        ->visible(fn ($operation) => $operation === 'edit')
-                        ->schema([
-                            SC\Actions::make([
-                                Action::make('view_events')
-                                    ->label(__('Vezi evenimente'))
-                                    ->icon('heroicon-o-calendar')
-                                    ->color('gray')
-                                    ->url(fn (?Venue $record) => $record ? EventResource::getUrl('index', ['tableFilters[venue_id][value]' => $record->id]) : null),
-                                Action::make('create_event')
-                                    ->label(__('Eveniment nou'))
-                                    ->icon('heroicon-o-plus')
-                                    ->color('primary')
-                                    ->url(fn (?Venue $record) => $record ? EventResource::getUrl('create', ['venue_id' => $record->id]) : null),
-                            ]),
-                        ]),
-
                     // Meta Info (doar pe Edit)
                     SC\Section::make(__('Informații'))
                         ->icon('heroicon-o-information-circle')
                         ->compact()
-                        ->collapsed()
                         ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
                             Forms\Components\Placeholder::make('meta_info')
@@ -866,13 +887,159 @@ class VenueResource extends Resource
                                     ");
                                 }),
                         ]),
-                ]),
 
-            ]),
-        
+                    // Proprietar locație — appears only on edit when the
+                    // venue is linked to a marketplace-created tenant
+                    // (venues.tenant_id → tenants.owner_id → users). Click
+                    // on the owner name jumps to the tenant edit page.
+                    SC\Section::make(__('Proprietar locație'))
+                        ->icon('heroicon-o-building-storefront')
+                        ->visible(fn ($record) => $record && $record->tenant_id)
+                        ->extraAttributes(['class' => 'ep-vf-owner'])
+                        ->schema([
+                            Forms\Components\Placeholder::make('venue_owner_info')
+                                ->hiddenLabel()
+                                ->content(function ($record) {
+                                    if (!$record?->tenant_id) return new HtmlString('<span class="text-sm text-gray-500">Nu există proprietar linked.</span>');
+                                    $tenant = \App\Models\Tenant::with('owner')->find($record->tenant_id);
+                                    if (!$tenant) return new HtmlString('<span class="text-sm text-gray-500">Tenant #' . $record->tenant_id . ' negăsit.</span>');
+                                    $tenantName = htmlspecialchars($tenant->public_name ?? $tenant->name ?? ('Tenant #' . $tenant->id), ENT_QUOTES);
+                                    $ownerName = htmlspecialchars($tenant->owner?->name ?? '—', ENT_QUOTES);
+                                    $ownerEmail = htmlspecialchars($tenant->owner?->email ?? '—', ENT_QUOTES);
+                                    $editUrl = TenantResource::getUrl('edit', ['record' => $tenant->id]);
+                                    return new HtmlString(
+                                        '<div class="flex flex-col gap-2 py-1">'
+                                        . '<div class="flex items-center gap-3">'
+                                        . '<span class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">Owner:</span>'
+                                        . '<a href="' . $editUrl . '" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">'
+                                        . $ownerName
+                                        . '</a>'
+                                        . '<span class="text-xs text-gray-500 dark:text-gray-400">' . $ownerEmail . '</span>'
+                                        . '</div>'
+                                        . '<div class="flex items-center gap-3">'
+                                        . '<span class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">Cont tenant:</span>'
+                                        . '<a href="' . $editUrl . '" class="text-sm text-primary-600 dark:text-primary-400 hover:underline">'
+                                        . $tenantName
+                                        . '</a>'
+                                        . '</div>'
+                                        . '</div>'
+                                    );
+                                }),
+                        ]),
+                    ]),
+                ]),
         ])->columns(1);
     }
 
+    /**
+     * Adevărat dacă formularul are erori de validare pe oricare din câmpurile date
+     * (ține deschise secțiunile strânse când o eroare ar fi altfel ascunsă).
+     */
+    protected static function hasErrorsOn($livewire, array $fields): bool
+    {
+        if (! is_object($livewire) || ! method_exists($livewire, 'getErrorBag')) {
+            return false;
+        }
+        $bag = $livewire->getErrorBag();
+        foreach ($fields as $field) {
+            if ($bag->has('data.' . $field)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Ce e completat / de completat la o locație, pentru navigația de secțiuni
+     * și cardul „De completat”. Doar citire din înregistrare.
+     */
+    public static function completeness(?Venue $r): array
+    {
+        $txt = fn ($v) => filled(is_string($v) ? trim(strip_tags($v)) : $v);
+        $anyLang = function ($v) use ($txt) {
+            if (is_array($v)) {
+                foreach ($v as $item) {
+                    if ($txt($item)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            return $txt($v);
+        };
+        $has = fn ($v) => is_array($v) ? count(array_filter($v, fn ($x) => filled($x))) > 0 : filled($v);
+
+        $gallery = $r ? $has($r->gallery) : false;
+        $portrait = $r ? filled($r->meta['portrait'] ?? null) : false;
+        $mainImg = $r ? filled($r->image_url) : false;
+        $address = $r ? (filled($r->address) && filled($r->city)) : false;
+        $coords = $r ? (filled($r->lat) && filled($r->lng)) : false;
+        $capacity = $r ? filled($r->capacity_total) : false;
+        $contact = $r ? (filled($r->phone) || filled($r->phone2) || filled($r->email) || filled($r->email2) || filled($r->website_url) || filled($r->facebook_url) || filled($r->instagram_url) || filled($r->tiktok_url)) : false;
+        $schedule = $r ? filled($r->schedule) : false;
+        $facilities = $r ? $has($r->facilities) : false;
+        $desc = $r ? $anyLang($r->description) : false;
+        $cond = $r ? ($txt($r->venue_conditions) || (bool) $r->has_historical_monument_tax) : false;
+        $place = $r ? filled($r->google_place_id) : false;
+        $notes = $r ? filled($r->partner_notes) : false;
+        $ident = $r ? ($anyLang($r->name) && filled($r->slug)) : false;
+
+        $sections = [
+            ['id' => 's-id', 'label' => 'Identitate', 'done' => $ident],
+            ['id' => 's-img', 'label' => 'Imagini', 'done' => $mainImg],
+            ['id' => 's-loc', 'label' => 'Locație', 'done' => $address],
+            ['id' => 's-cap', 'label' => 'Capacitate', 'done' => $capacity],
+            ['id' => 's-contact', 'label' => 'Contact și program', 'done' => $contact],
+            ['id' => 's-fac', 'label' => 'Facilități', 'done' => $facilities],
+            ['id' => 's-desc', 'label' => 'Descriere', 'done' => $desc],
+            ['id' => 's-cond', 'label' => 'Condiții și taxe', 'done' => $cond],
+            ['id' => 's-rev', 'label' => 'Recenzii Google', 'done' => $place],
+            ['id' => 's-notes', 'label' => 'Note interne', 'done' => $notes],
+        ];
+
+        $todo = [];
+        $add = function (bool $done, string $id, string $label) use (&$todo) {
+            if (! $done) {
+                $todo[] = ['id' => $id, 'label' => $label];
+            }
+        };
+        $add($mainImg, 's-img', 'Imagine principală');
+        $add($portrait, 's-img', 'Imagine portret (mobil)');
+        $add($gallery, 's-img', 'Galerie foto');
+        $add($address, 's-loc', 'Adresă și oraș');
+        $add($coords, 's-loc', 'Coordonate');
+        $add($capacity, 's-cap', 'Capacitate');
+        $add($contact, 's-contact', 'Date de contact');
+        $add($schedule, 's-contact', 'Program');
+        $add($facilities, 's-fac', 'Facilități');
+        $add($desc, 's-desc', 'Descriere');
+        $add($place, 's-rev', 'Recenzii Google (Place ID)');
+
+        return ['sections' => $sections, 'todo' => $todo];
+    }
+
+    /**
+     * Adresa publică a paginii locației (https://{domeniu marketplace}/locatie/{slug}),
+     * aceeași formă ca la MarketplaceVanityUrl; null dacă nu se poate deduce.
+     */
+    public static function publicUrl(?Venue $record): ?string
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (! $marketplace || blank($record?->slug)) {
+            return null;
+        }
+        $domain = $marketplace->domain ?? $marketplace->primary_domain ?? null;
+        if (! $domain) {
+            return null;
+        }
+        $domain = preg_replace('#^https?://#', '', rtrim($domain, '/'));
+        $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+
+        return "{$protocol}://{$domain}/locatie/{$record->slug}";
+    }
     public static function table(Table $table): Table
     {
         $marketplace = static::getMarketplaceClient();
