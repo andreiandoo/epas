@@ -16,6 +16,20 @@ class EditVenue extends EditRecord
 
     protected static string $resource = VenueResource::class;
 
+    /** Scopes the header CSS (venues/styles.blade.php) to this page. */
+    public function getPageClasses(): array
+    {
+        return [...parent::getPageClasses(), 'ep-venue-page'];
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        return [
+            VenueResource::getUrl('index') => __('Locații'),
+            (string) $this->getHeading(),
+        ];
+    }
+
     public function getHeading(): string | Htmlable
     {
         $name = $this->record?->getTranslation('name', 'ro') ?: $this->record?->getTranslation('name', 'en');
@@ -70,7 +84,7 @@ class EditVenue extends EditRecord
             Action::make('create_event')
                 ->label(__('Eveniment nou'))
                 ->icon('heroicon-o-plus')
-                ->color('primary')
+                ->color('gray')
                 ->url(fn () => EventResource::getUrl('create', ['venue_id' => $this->record->id])),
             Action::make('make_partner')
                 ->label(__('Setează ca partener'))

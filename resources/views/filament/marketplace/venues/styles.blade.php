@@ -2,6 +2,16 @@
 <div class="ep-vf-style" aria-hidden="true">
 <style>
 .fi-grid-col:has(> .ep-vf-style){display:none}
+
+/* antet: titlu stanga, actiuni dreapta, rand de detalii mic sub titlu (bate regula globala a paginilor de editare) */
+.fi-resource-edit-record-page.ep-venue-page .fi-header{flex-direction:row!important;flex-wrap:wrap;align-items:center!important;justify-content:space-between;gap:12px 16px}
+.ep-venue-page .fi-header-heading{font-size:26px;line-height:1.2;font-weight:700;letter-spacing:-.01em}
+.ep-venue-page .fi-header-subheading{margin-top:6px;font-size:13px;font-weight:400;color:#6b7280;max-width:none}
+.dark .ep-venue-page .fi-header-subheading{color:#aab3c0}
+.ep-venue-page .fi-header-actions-ctn{margin-inline-start:auto;justify-content:flex-end}
+.ep-venue-page .fi-header-actions-ctn .fi-ac{justify-content:flex-end}
+.ep-venue-page .fi-header-actions-ctn .fi-btn{height:34px;border-radius:8px;font-size:13px}
+.ep-venue-page .fi-header-actions-ctn .fi-btn[class*="fi-color-gray"]:first-child{background:transparent;box-shadow:none}
 .ep-venue-form{--ep-text:#111827;--ep-soft:#4b5563;--ep-muted:#6b7280;--ep-line:#e5e7eb;--ep-hover:#f3f4f6;--ep-on:#eef0f3;--ep-ok:#10b981;--ep-ring:#9ca3af;--ep-link:#2563eb;--ep-chip-bg:rgba(59,130,246,.10);--ep-chip-bd:#3b82f6;--ep-chip-tx:#1d4ed8;--ep-good:#059669}
 .dark .ep-venue-form{--ep-text:#e6e9ee;--ep-soft:#aab3c0;--ep-muted:#8b95a3;--ep-line:#232a35;--ep-hover:#151a21;--ep-on:#171c23;--ep-ok:#10b981;--ep-ring:#6b7480;--ep-link:#7cb4ff;--ep-chip-bg:rgba(59,130,246,.14);--ep-chip-bd:#3b82f6;--ep-chip-tx:#cfe1ff;--ep-good:#34d399}
 

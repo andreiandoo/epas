@@ -47,6 +47,21 @@ trait HasListChrome
         );
     }
 
+    /**
+     * New session keys: Filament remembers each user's column visibility and order
+     * per table, so without this the old (pre-redesign) layout kept showing for
+     * anyone who had opened the page before. Users can still toggle columns.
+     */
+    public function getTableColumnsSessionKey(): string
+    {
+        return 'tables.' . md5(static::class) . '_columns_v2';
+    }
+
+    public function getHasReorderedTableColumnsSessionKey(): string
+    {
+        return 'tables.' . md5(static::class) . '_has_reordered_columns_v2';
+    }
+
     public function getPageClasses(): array
     {
         return [...parent::getPageClasses(), 'ep-lst'];

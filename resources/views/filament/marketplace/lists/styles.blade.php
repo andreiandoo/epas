@@ -46,7 +46,9 @@
 /* antetul tabelului */
 .ep-lst .fi-ta-header-cell{padding-block:10px}
 .ep-lst .fi-ta-header-cell-label,.ep-lst .fi-ta-header-cell .fi-ta-header-cell-sort-btn{font-size:12px;font-weight:500;text-transform:none}
-.ep-lst tr.event-row-active>td,.ep-lst tr.event-row-ended>td{background-color:transparent!important}
+.ep-lst tr.event-row-active>td,.ep-lst tr.event-row-ended>td,.ep-lst tr.event-row-unpublished>td,.ep-lst tr.event-row-cancelled>td,
+.dark .ep-lst tr.event-row-active>td,.dark .ep-lst tr.event-row-ended>td,.dark .ep-lst tr.event-row-unpublished>td,.dark .ep-lst tr.event-row-cancelled>td{background-color:transparent!important}
+.ep-lst .fi-ta-row:hover>td{background-color:var(--l-hover)!important}
 
 /* celule: titlu si rand secundar */
 .ep-lst .ep-sub{margin-top:3px;font-size:12px;color:var(--l-muted)}

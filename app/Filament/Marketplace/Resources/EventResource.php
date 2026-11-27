@@ -6518,12 +6518,12 @@ class EventResource extends Resource
                         if (! $start) {
                             return null;
                         }
-                        $start = $start->copy()->locale('ro');
+                        $start = $start->copy()->locale(app()->getLocale());
                         if (! $end || $end->isSameDay($start)) {
                             return $start->isoFormat('dddd');
                         }
 
-                        return $start->isoFormat('ddd') . '–' . $end->copy()->locale('ro')->isoFormat('ddd');
+                        return $start->isoFormat('ddd') . '–' . $end->copy()->locale(app()->getLocale())->isoFormat('ddd');
                     })
                     ->extraAttributes(['class' => 'ep-nowrap'])
                     ->sortable(query: function ($query, string $direction) {
