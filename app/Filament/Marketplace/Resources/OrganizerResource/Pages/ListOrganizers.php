@@ -344,6 +344,18 @@ class ListOrganizers extends ListRecords
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'suspended'))
                 ->badge(fn () => $base()->where('status', 'suspended')->count())
                 ->badgeColor('danger'),
+            // Same SQL as the Contract filter's "nesemnat": required (created on/after the cutoff) and not signed.
+            'unsigned' => Tab::make(__('Contract nesemnat'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('contract_signed_at')
+                    ->where('created_at', '>=', \App\Models\MarketplaceOrganizer::CONTRACT_SIGNATURE_REQUIRED_FROM))
+                ->badge(fn () => $base()->whereNull('contract_signed_at')
+                    ->where('created_at', '>=', \App\Models\MarketplaceOrganizer::CONTRACT_SIGNATURE_REQUIRED_FROM)->count())
+                ->badgeColor('danger'),
+            // Active and not verified yet: the ones the "Verify" row action applies to.
+            'unverified' => Tab::make(__('Neverificați'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'active')->whereNull('verified_at'))
+                ->badge(fn () => $base()->where('status', 'active')->whereNull('verified_at')->count())
+                ->badgeColor('info'),
             'pf' => Tab::make(__('Persoană fizică'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('person_type', 'pf'))
                 ->badge(fn () => $base()->where('person_type', 'pf')->count())

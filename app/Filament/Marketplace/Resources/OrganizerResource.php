@@ -1539,12 +1539,6 @@ class OrganizerResource extends Resource
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->withCount('panelEvents'))
             ->columns([
-                // Logo + email now live in the name cell; the separate columns stay in "Coloane".
-                Tables\Columns\ImageColumn::make('logo')
-                    ->circular()
-                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&background=10b981&color=fff')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 Tables\Columns\TextColumn::make('name')
                     ->label(__('Nume'))
                     ->searchable(query: fn (Builder $query, string $search) => $query->where(fn (Builder $q) => $q
@@ -1569,11 +1563,6 @@ class OrganizerResource extends Resource
                     })
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('email')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 Tables\Columns\TextColumn::make('person_type')
                     ->label(__('Tip'))
                     ->badge()
@@ -1595,22 +1584,33 @@ class OrganizerResource extends Resource
                     })
                     ->toggleable(),
 
-                // Status in Romanian, with "verificat" next to it (the Verified column stays in "Coloane").
+                // Status in Romanian (+ "verificat") with the contract state as a second pill.
                 Tables\Columns\TextColumn::make('status')
                     ->label(__('Stare'))
-                    ->badge()
-                    ->formatStateUsing(fn (?string $state, MarketplaceOrganizer $record): string => match ($state) {
-                        'active' => __('Activ'),
-                        'pending' => __('În așteptare'),
-                        'suspended' => __('Suspendat'),
-                        default => (string) $state,
-                    } . ($state === 'active' && $record->verified_at ? ' | ' . __('verificat') : ''))
-                    ->color(fn (?string $state): string => match ($state) {
-                        'active' => 'success',
-                        'pending' => 'warning',
-                        'suspended' => 'danger',
-                        default => 'gray',
+                    ->html()
+                    ->state(function (MarketplaceOrganizer $record): HtmlString {
+                        [$label, $tone] = match ($record->status) {
+                            'active' => [__('Activ'), 'ok'],
+                            'pending' => [__('În așteptare'), 'warn'],
+                            'suspended' => [__('Suspendat'), 'bad'],
+                            default => [(string) $record->status, 'mute'],
+                        };
+                        if ($record->status === 'active' && $record->verified_at) {
+                            $label .= ' | ' . __('verificat');
+                        }
+                        $html = '<span class="ep-pill ep-pill--' . $tone . '"><span class="ep-dot"></span>' . e($label) . '</span>';
+
+                        // Same 3 buckets as the Contract column / filter.
+                        [$cLabel, $cTone] = ! $record->isContractSignatureRequired()
+                            ? [__('Contract exceptat'), 'mute']
+                            : ($record->hasSignedContract()
+                                ? [__('Contract semnat'), 'ok']
+                                : [__('Contract nesemnat'), 'bad']);
+                        $html .= ' <span class="ep-pill ep-pill--' . $cTone . '">' . e($cLabel) . '</span>';
+
+                        return new HtmlString('<div class="ep-stare">' . $html . '</div>');
                     })
+                    ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('verified_at')
@@ -1620,10 +1620,9 @@ class OrganizerResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                // Contract signing status (3 buckets). Computed on read —
-                // no DB column. "Exceptat" = organizer created before the
-                // cutoff (CONTRACT_SIGNATURE_REQUIRED_FROM) so they were
-                // grandfathered out of the e-signature requirement.
+                // Contract signing status (3 buckets). Computed on read; now also shown
+                // as a pill in the Stare cell, so this column is hidden by default.
+                // "Exceptat" = created before CONTRACT_SIGNATURE_REQUIRED_FROM.
                 Tables\Columns\TextColumn::make('contract_signed_state')
                     ->label(__('Contract'))
                     ->badge()
@@ -1642,7 +1641,7 @@ class OrganizerResource extends Resource
                         'exceptat' => 'Exceptat',
                         default => $state,
                     })
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 // Live count of the organizer's events in the panel. The cached
                 // total_events column counted the legacy marketplace_events table (0).
@@ -1653,9 +1652,11 @@ class OrganizerResource extends Resource
                     ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('panel_events_count', $direction))
                     ->toggleable(),
 
+                // Gross: sum of completed orders' totals (commission included), see updateStats().
                 Tables\Columns\TextColumn::make('total_revenue')
-                    ->label(__('Revenue'))
+                    ->label(__('Încasări (brut)'))
                     ->money('RON')
+                    ->description(fn (MarketplaceOrganizer $record): string => __('Sold') . ': ' . number_format((float) $record->available_balance, 2, ',', '.') . ' RON')
                     ->sortable()
                     ->toggleable(),
 
@@ -1663,7 +1664,7 @@ class OrganizerResource extends Resource
                     ->label(__('Balance'))
                     ->money('RON')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

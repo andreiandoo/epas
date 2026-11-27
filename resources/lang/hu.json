@@ -7756,5 +7756,10 @@
     "Persoană fizică": "Magánszemély",
     "Persoană juridică": "Jogi személy",
     "Aprobate": "Jóváhagyott",
-    "verificat": "ellenőrzött"
+    "verificat": "ellenőrzött",
+    "Încasări (brut)": "Bevétel (bruttó)",
+    "Contract exceptat": "Szerződés alól mentes",
+    "Contract semnat": "Szerződés aláírva",
+    "Contract nesemnat": "Szerződés aláíratlan",
+    "Neverificați": "Nem ellenőrzött"
 }
