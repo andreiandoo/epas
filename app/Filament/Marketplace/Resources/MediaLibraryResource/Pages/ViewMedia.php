@@ -24,20 +24,20 @@ class ViewMedia extends ViewRecord
     {
         return [
             Actions\Action::make('download')
-                ->label('Descarcă')
+                ->label(__('Descarcă'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('primary')
                 ->url(fn () => $this->record->url)
                 ->openUrlInNewTab(),
 
             Actions\Action::make('copy_url')
-                ->label('Copiază URL')
+                ->label(__('Copiază URL'))
                 ->icon('heroicon-o-clipboard-document')
                 ->color('gray')
                 ->action(function () {
                     Notification::make()
-                        ->title('URL Copiat')
-                        ->body('URL-ul fișierului a fost copiat în clipboard.')
+                        ->title(__('URL Copiat'))
+                        ->body(__('URL-ul fișierului a fost copiat în clipboard.'))
                         ->success()
                         ->send();
                 })
@@ -47,10 +47,10 @@ class ViewMedia extends ViewRecord
                 ]),
 
             Actions\DeleteAction::make()
-                ->label('Șterge')
+                ->label(__('Șterge'))
                 ->requiresConfirmation()
-                ->modalHeading('Șterge Media')
-                ->modalDescription('Sigur dorești să ștergi acest fișier media? Această acțiune nu poate fi anulată.')
+                ->modalHeading(__('Șterge Media'))
+                ->modalDescription(__('Sigur dorești să ștergi acest fișier media? Această acțiune nu poate fi anulată.'))
                 ->modalIcon('heroicon-o-exclamation-triangle'),
         ];
     }

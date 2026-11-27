@@ -21,7 +21,7 @@ class ListMarketplaceTodos extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('TODO nou')
+                ->label(__('TODO nou'))
                 ->icon('heroicon-o-plus'),
         ];
     }

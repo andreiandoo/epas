@@ -126,7 +126,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
         if (!$this->event) {
             Notification::make()
                 ->danger()
-                ->title('Event Not Found')
+                ->title(__('Event Not Found'))
                 ->send();
             $this->redirect(route('filament.marketplace.resources.events.index'));
             return;
@@ -172,32 +172,32 @@ class OrganizerEventAnalytics extends Page implements HasForms
     {
         return [
             Action::make('addGoal')
-                ->label('Add Goal')
+                ->label(__('Add Goal'))
                 ->icon('heroicon-o-flag')
                 ->color('success')
                 ->action(fn () => $this->openGoalModal()),
 
             Action::make('addMilestone')
-                ->label('Add Milestone')
+                ->label(__('Add Milestone'))
                 ->icon('heroicon-o-plus')
                 ->color('primary')
                 ->visible(fn () => $this->eventMode === 'live')
                 ->action(fn () => $this->showMilestoneModal = true),
 
             Action::make('exportReport')
-                ->label('Export')
+                ->label(__('Export'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(fn () => $this->showExportModal = true),
 
             Action::make('scheduleReports')
-                ->label('Schedule Reports')
+                ->label(__('Schedule Reports'))
                 ->icon('heroicon-o-clock')
                 ->color('gray')
                 ->action(fn () => $this->openScheduleModal()),
 
             Action::make('refreshData')
-                ->label('Refresh')
+                ->label(__('Refresh'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
                 ->action(fn () => $this->loadDashboardData()),
@@ -277,14 +277,14 @@ class OrganizerEventAnalytics extends Page implements HasForms
     {
         return [
             Forms\Components\Select::make('type')
-                ->label('Milestone Type')
+                ->label(__('Milestone Type'))
                 ->options(EventMilestone::TYPE_LABELS)
                 ->required()
                 ->live()
                 ->columnSpanFull(),
 
             Forms\Components\TextInput::make('title')
-                ->label('Title')
+                ->label(__('Title'))
                 ->required()
                 ->maxLength(255)
                 ->columnSpanFull(),
@@ -292,45 +292,45 @@ class OrganizerEventAnalytics extends Page implements HasForms
             Forms\Components\Grid::make(2)
                 ->schema([
                     Forms\Components\DatePicker::make('start_date')
-                        ->label('Start Date')
+                        ->label(__('Start Date'))
                         ->required(),
 
                     Forms\Components\DatePicker::make('end_date')
-                        ->label('End Date')
+                        ->label(__('End Date'))
                         ->visible(fn (Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
                 ]),
 
             Forms\Components\TextInput::make('budget')
-                ->label('Budget (RON)')
+                ->label(__('Budget (RON)'))
                 ->numeric()
                 ->minValue(0)
                 ->visible(fn (Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
 
             Forms\Components\TextInput::make('targeting')
-                ->label('Targeting')
-                ->placeholder('e.g., 18-35, Music lovers, Romania')
+                ->label(__('Targeting'))
+                ->placeholder(__('e.g., 18-35, Music lovers, Romania'))
                 ->visible(fn (Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
 
             Forms\Components\Textarea::make('description')
-                ->label('Notes')
+                ->label(__('Notes'))
                 ->rows(2)
                 ->columnSpanFull(),
 
-            SC\Section::make('UTM Parameters')
-                ->description('Auto-generated if left empty')
+            SC\Section::make(__('UTM Parameters'))
+                ->description(__('Auto-generated if left empty'))
                 ->collapsible()
                 ->collapsed()
                 ->schema([
                     Forms\Components\Grid::make(2)
                         ->schema([
                             Forms\Components\TextInput::make('utm_source')
-                                ->label('UTM Source'),
+                                ->label(__('UTM Source')),
                             Forms\Components\TextInput::make('utm_medium')
-                                ->label('UTM Medium'),
+                                ->label(__('UTM Medium')),
                             Forms\Components\TextInput::make('utm_campaign')
-                                ->label('UTM Campaign'),
+                                ->label(__('UTM Campaign')),
                             Forms\Components\TextInput::make('utm_content')
-                                ->label('UTM Content'),
+                                ->label(__('UTM Content')),
                         ]),
                 ]),
         ];
@@ -358,7 +358,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Milestone Created')
+            ->title(__('Milestone Created'))
             ->body("Tracking URL: " . $milestone->generateTrackingUrl(url('/event/' . $this->event->slug)))
             ->send();
 
@@ -498,7 +498,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Goal deleted')
+            ->title(__('Goal deleted'))
             ->send();
     }
 
@@ -515,7 +515,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
     {
         return [
             Forms\Components\Select::make('type')
-                ->label('Goal Type')
+                ->label(__('Goal Type'))
                 ->options([
                     EventGoal::TYPE_REVENUE => 'Revenue Target',
                     EventGoal::TYPE_TICKETS => 'Tickets Target',
@@ -527,7 +527,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
                 ->columnSpanFull(),
 
             Forms\Components\TextInput::make('name')
-                ->label('Goal Name (Optional)')
+                ->label(__('Goal Name (Optional)'))
                 ->maxLength(255)
                 ->columnSpanFull(),
 
@@ -544,33 +544,33 @@ class OrganizerEventAnalytics extends Page implements HasForms
                 ->minValue(0),
 
             Forms\Components\DatePicker::make('deadline')
-                ->label('Deadline (Optional)'),
+                ->label(__('Deadline (Optional)')),
 
-            SC\Section::make('Alerts')
+            SC\Section::make(__('Alerts'))
                 ->schema([
                     Forms\Components\CheckboxList::make('alert_thresholds')
-                        ->label('Alert at milestones')
+                        ->label(__('Alert at milestones'))
                         ->options([
                             25 => '25%',
                             50 => '50%',
                             75 => '75%',
                             90 => '90%',
-                            100 => '100% (Goal achieved!)',
+                            100 => __('100% (Goal achieved!)'),
                         ])
                         ->columns(5),
 
                     Forms\Components\Grid::make(2)
                         ->schema([
                             Forms\Components\Toggle::make('email_alerts')
-                                ->label('Email Alerts'),
+                                ->label(__('Email Alerts')),
                             Forms\Components\Toggle::make('in_app_alerts')
-                                ->label('In-App Alerts'),
+                                ->label(__('In-App Alerts')),
                         ]),
 
                     Forms\Components\TextInput::make('alert_email')
-                        ->label('Alert Email (Optional)')
+                        ->label(__('Alert Email (Optional)'))
                         ->email()
-                        ->helperText('Leave empty to use organizer email'),
+                        ->helperText(__('Leave empty to use organizer email')),
                 ]),
         ];
     }
@@ -587,8 +587,8 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
             Notification::make()
                 ->success()
-                ->title('CSV Export Ready')
-                ->body('Your export has been generated.')
+                ->title(__('CSV Export Ready'))
+                ->body(__('Your export has been generated.'))
                 ->send();
 
             $this->showExportModal = false;
@@ -597,7 +597,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
             report($e);
             Notification::make()
                 ->danger()
-                ->title('Export Failed')
+                ->title(__('Export Failed'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -614,8 +614,8 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
             Notification::make()
                 ->success()
-                ->title('PDF Export Ready')
-                ->body('Your export has been generated.')
+                ->title(__('PDF Export Ready'))
+                ->body(__('Your export has been generated.'))
                 ->send();
 
             $this->showExportModal = false;
@@ -624,7 +624,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
             report($e);
             Notification::make()
                 ->danger()
-                ->title('Export Failed')
+                ->title(__('Export Failed'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -638,7 +638,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
             Notification::make()
                 ->success()
-                ->title('Sales Export Ready')
+                ->title(__('Sales Export Ready'))
                 ->send();
 
             $this->showExportModal = false;
@@ -647,7 +647,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
             report($e);
             Notification::make()
                 ->danger()
-                ->title('Export Failed')
+                ->title(__('Export Failed'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -747,7 +747,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Report schedule deleted')
+            ->title(__('Report schedule deleted'))
             ->send();
     }
 
@@ -769,14 +769,14 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
                 Notification::make()
                     ->success()
-                    ->title('Test report sent')
-                    ->body('Check your email for the report.')
+                    ->title(__('Test report sent'))
+                    ->body(__('Check your email for the report.'))
                     ->send();
             }
         } catch (\Exception $e) {
             Notification::make()
                 ->danger()
-                ->title('Failed to send report')
+                ->title(__('Failed to send report'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -786,73 +786,73 @@ class OrganizerEventAnalytics extends Page implements HasForms
     {
         return [
             Forms\Components\Select::make('frequency')
-                ->label('Frequency')
+                ->label(__('Frequency'))
                 ->options([
-                    'daily' => 'Daily',
-                    'weekly' => 'Weekly',
-                    'monthly' => 'Monthly',
+                    'daily' => __('Daily'),
+                    'weekly' => __('Weekly'),
+                    'monthly' => __('Monthly'),
                 ])
                 ->required()
                 ->live()
                 ->columnSpanFull(),
 
             Forms\Components\Select::make('day_of_week')
-                ->label('Day of Week')
+                ->label(__('Day of Week'))
                 ->options([
-                    0 => 'Sunday',
-                    1 => 'Monday',
-                    2 => 'Tuesday',
-                    3 => 'Wednesday',
-                    4 => 'Thursday',
-                    5 => 'Friday',
-                    6 => 'Saturday',
+                    0 => __('Sunday'),
+                    1 => __('Monday'),
+                    2 => __('Tuesday'),
+                    3 => __('Wednesday'),
+                    4 => __('Thursday'),
+                    5 => __('Friday'),
+                    6 => __('Saturday'),
                 ])
                 ->visible(fn (Get $get) => $get('frequency') === 'weekly'),
 
             Forms\Components\Select::make('day_of_month')
-                ->label('Day of Month')
+                ->label(__('Day of Month'))
                 ->options(array_combine(range(1, 28), range(1, 28)))
                 ->visible(fn (Get $get) => $get('frequency') === 'monthly'),
 
             Forms\Components\TimePicker::make('send_at')
-                ->label('Send At')
+                ->label(__('Send At'))
                 ->seconds(false)
                 ->required(),
 
             Forms\Components\TagsInput::make('recipients')
-                ->label('Recipients')
-                ->placeholder('Add email...')
+                ->label(__('Recipients'))
+                ->placeholder(__('Add email...'))
                 ->required()
                 ->columnSpanFull(),
 
             Forms\Components\CheckboxList::make('sections')
-                ->label('Report Sections')
+                ->label(__('Report Sections'))
                 ->options([
-                    'overview' => 'Overview Stats',
-                    'chart' => 'Performance Chart',
-                    'traffic' => 'Traffic Sources',
-                    'milestones' => 'Campaigns & Milestones',
-                    'goals' => 'Goals Progress',
-                    'top_locations' => 'Top Locations',
-                    'funnel' => 'Conversion Funnel',
+                    'overview' => __('Overview Stats'),
+                    'chart' => __('Performance Chart'),
+                    'traffic' => __('Traffic Sources'),
+                    'milestones' => __('Campaigns & Milestones'),
+                    'goals' => __('Goals Progress'),
+                    'top_locations' => __('Top Locations'),
+                    'funnel' => __('Conversion Funnel'),
                 ])
                 ->columns(3)
                 ->columnSpanFull(),
 
             Forms\Components\Select::make('format')
-                ->label('Attachment Format')
+                ->label(__('Attachment Format'))
                 ->options([
-                    'email' => 'Email Only',
-                    'pdf' => 'Include PDF',
-                    'csv' => 'Include CSV',
+                    'email' => __('Email Only'),
+                    'pdf' => __('Include PDF'),
+                    'csv' => __('Include CSV'),
                 ])
                 ->required(),
 
             Forms\Components\Toggle::make('include_comparison')
-                ->label('Include Period Comparison'),
+                ->label(__('Include Period Comparison')),
 
             Forms\Components\Toggle::make('is_active')
-                ->label('Active'),
+                ->label(__('Active')),
         ];
     }
 

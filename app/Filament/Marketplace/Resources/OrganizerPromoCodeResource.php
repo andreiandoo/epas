@@ -90,10 +90,10 @@ class OrganizerPromoCodeResource extends Resource
                         SC\Grid::make(1)
                             ->columnSpan(2)
                             ->schema([
-                                SC\Section::make('Promo Code Details')
+                                SC\Section::make(__('Promo Code Details'))
                                     ->schema([
                                         Forms\Components\Select::make('marketplace_organizer_id')
-                                            ->label('Organizer')
+                                            ->label(__('Organizer'))
                                             ->options(function () use ($marketplace) {
                                                 return MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
                                                     ->where('status', 'active')
@@ -106,77 +106,77 @@ class OrganizerPromoCodeResource extends Resource
                                             ->afterStateUpdated(fn ($set) => $set('marketplace_event_id', null)),
 
                                         Forms\Components\TextInput::make('code')
-                                            ->label('Promo Code')
-                                            ->placeholder('Leave empty for auto-generated code')
+                                            ->label(__('Promo Code'))
+                                            ->placeholder(__('Leave empty for auto-generated code'))
                                             ->maxLength(50)
-                                            ->helperText('Will be converted to uppercase'),
+                                            ->helperText(__('Will be converted to uppercase')),
 
                                         Forms\Components\TextInput::make('name')
-                                            ->label('Internal Name')
+                                            ->label(__('Internal Name'))
                                             ->required()
                                             ->maxLength(255),
 
                                         Forms\Components\Textarea::make('description')
-                                            ->label('Description')
+                                            ->label(__('Description'))
                                             ->rows(2)
                                             ->maxLength(500),
                                     ])->columns(2),
 
-                                SC\Section::make('Discount Configuration')
+                                SC\Section::make(__('Discount Configuration'))
                                     ->schema([
                                         Forms\Components\Select::make('type')
-                                            ->label('Discount Type')
+                                            ->label(__('Discount Type'))
                                             ->options([
-                                                'percentage' => 'Percentage (%)',
-                                                'fixed' => 'Fixed Amount',
+                                                'percentage' => __('Percentage (%)'),
+                                                'fixed' => __('Fixed Amount'),
                                             ])
                                             ->default('percentage')
                                             ->required()
                                             ->live(),
 
                                         Forms\Components\TextInput::make('value')
-                                            ->label('Discount Value')
+                                            ->label(__('Discount Value'))
                                             ->numeric()
                                             ->required()
                                             ->minValue(0)
                                             ->suffix(fn ($get) => $get('type') === 'percentage' ? '%' : 'RON'),
 
                                         Forms\Components\TextInput::make('max_discount_amount')
-                                            ->label('Maximum Discount')
+                                            ->label(__('Maximum Discount'))
                                             ->numeric()
                                             ->minValue(0)
                                             ->suffix('RON')
-                                            ->helperText('Cap for percentage discounts'),
+                                            ->helperText(__('Cap for percentage discounts')),
 
                                         Forms\Components\TextInput::make('min_purchase_amount')
-                                            ->label('Minimum Purchase')
+                                            ->label(__('Minimum Purchase'))
                                             ->numeric()
                                             ->minValue(0)
                                             ->suffix('RON'),
 
                                         Forms\Components\TextInput::make('min_tickets')
-                                            ->label('Minimum Tickets')
+                                            ->label(__('Minimum Tickets'))
                                             ->numeric()
                                             ->minValue(1)
                                             ->integer(),
                                     ])->columns(3),
 
-                                SC\Section::make('Applicability')
-                                    ->description('Define what this promo code applies to')
+                                SC\Section::make(__('Applicability'))
+                                    ->description(__('Define what this promo code applies to'))
                                     ->schema([
                                         Forms\Components\Select::make('applies_to')
-                                            ->label('Applies To')
+                                            ->label(__('Applies To'))
                                             ->options([
-                                                'all_events' => 'All Organizer Events',
-                                                'specific_event' => 'Specific Event',
-                                                'ticket_type' => 'Specific Ticket Type',
+                                                'all_events' => __('All Organizer Events'),
+                                                'specific_event' => __('Specific Event'),
+                                                'ticket_type' => __('Specific Ticket Type'),
                                             ])
                                             ->default('all_events')
                                             ->required()
                                             ->live(),
 
                                         Forms\Components\Select::make('marketplace_event_id')
-                                            ->label('Event')
+                                            ->label(__('Event'))
                                             ->options(function ($get) use ($marketplace) {
                                                 $organizerId = $get('marketplace_organizer_id');
                                                 if (!$organizerId) {
@@ -200,7 +200,7 @@ class OrganizerPromoCodeResource extends Resource
                                             ->requiredIf('applies_to', 'specific_event'),
 
                                         Forms\Components\Select::make('ticket_type_id')
-                                            ->label('Ticket Type')
+                                            ->label(__('Ticket Type'))
                                             ->options(function ($get) {
                                                 $eventId = $get('marketplace_event_id');
                                                 if (!$eventId) {
@@ -222,48 +222,48 @@ class OrganizerPromoCodeResource extends Resource
                         SC\Grid::make(1)
                             ->columnSpan(1)
                             ->schema([
-                                SC\Section::make('Status & Validity')
+                                SC\Section::make(__('Status & Validity'))
                                     ->schema([
                                         Forms\Components\Select::make('status')
                                             ->options([
-                                                'draft' => 'Draft',
-                                                'active' => 'Active',
-                                                'inactive' => 'Inactive',
-                                                'expired' => 'Expired',
-                                                'exhausted' => 'Exhausted',
+                                                'draft' => __('Draft'),
+                                                'active' => __('Active'),
+                                                'inactive' => __('Inactive'),
+                                                'expired' => __('Expired'),
+                                                'exhausted' => __('Exhausted'),
                                             ])
                                             ->default('draft')
                                             ->required(),
 
                                         Forms\Components\Toggle::make('is_public')
-                                            ->label('Public Code')
-                                            ->helperText('Visible on event pages'),
+                                            ->label(__('Public Code'))
+                                            ->helperText(__('Visible on event pages')),
 
                                         Forms\Components\DateTimePicker::make('starts_at')
-                                            ->label('Starts At'),
+                                            ->label(__('Starts At')),
 
                                         Forms\Components\DateTimePicker::make('expires_at')
-                                            ->label('Expires At'),
+                                            ->label(__('Expires At')),
                                     ]),
 
-                                SC\Section::make('Usage Limits')
+                                SC\Section::make(__('Usage Limits'))
                                     ->schema([
                                         Forms\Components\TextInput::make('usage_limit')
-                                            ->label('Total Usage Limit')
+                                            ->label(__('Total Usage Limit'))
                                             ->numeric()
                                             ->minValue(1)
                                             ->integer()
-                                            ->helperText('Leave empty for unlimited'),
+                                            ->helperText(__('Leave empty for unlimited')),
 
                                         Forms\Components\TextInput::make('usage_limit_per_customer')
-                                            ->label('Per Customer Limit')
+                                            ->label(__('Per Customer Limit'))
                                             ->numeric()
                                             ->minValue(1)
                                             ->integer()
                                             ->default(1),
 
                                         Forms\Components\Placeholder::make('usage_count_display')
-                                            ->label('Times Used')
+                                            ->label(__('Times Used'))
                                             ->content(fn ($record) => $record?->usage_count ?? 0)
                                             ->visible(fn ($record) => $record !== null),
                                     ]),
@@ -277,35 +277,35 @@ class OrganizerPromoCodeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->limit(30),
 
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => $state === 'percentage' ? 'Percent' : 'Fixed'),
 
                 Tables\Columns\TextColumn::make('value')
-                    ->label('Value')
+                    ->label(__('Value'))
                     ->formatStateUsing(fn ($state, $record) =>
                         $record->type === 'percentage' ? "{$state}%" : number_format($state, 2) . ' RON'
                     ),
 
                 Tables\Columns\TextColumn::make('applies_to')
-                    ->label('Applies To')
+                    ->label(__('Applies To'))
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         'all_events' => 'success',
@@ -321,7 +321,7 @@ class OrganizerPromoCodeResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('usage_count')
-                    ->label('Used')
+                    ->label(__('Used'))
                     ->formatStateUsing(fn ($state, $record) =>
                         $record->usage_limit ? "{$state}/{$record->usage_limit}" : $state
                     ),
@@ -335,42 +335,42 @@ class OrganizerPromoCodeResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('expires_at')
-                    ->label('Expires')
+                    ->label(__('Expires'))
                     ->dateTime('M d, Y')
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'active' => 'Active',
-                        'inactive' => 'Inactive',
-                        'expired' => 'Expired',
-                        'exhausted' => 'Exhausted',
+                        'draft' => __('Draft'),
+                        'active' => __('Active'),
+                        'inactive' => __('Inactive'),
+                        'expired' => __('Expired'),
+                        'exhausted' => __('Exhausted'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->relationship('organizer', 'name')
                     ->searchable()
                     ->preload(),
 
                 Tables\Filters\SelectFilter::make('applies_to')
                     ->options([
-                        'all_events' => 'All Events',
-                        'specific_event' => 'Specific Event',
-                        'ticket_type' => 'Ticket Type',
+                        'all_events' => __('All Events'),
+                        'specific_event' => __('Specific Event'),
+                        'ticket_type' => __('Ticket Type'),
                     ]),
 
                 Tables\Filters\TernaryFilter::make('is_public')
-                    ->label('Public'),
+                    ->label(__('Public')),
             ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
 
                 Actions\Action::make('activate')
-                    ->label('Activate')
+                    ->label(__('Activate'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => $record->status !== 'active')
@@ -379,12 +379,12 @@ class OrganizerPromoCodeResource extends Resource
                         $record->activate();
                         Notification::make()
                             ->success()
-                            ->title('Promo code activated')
+                            ->title(__('Promo code activated'))
                             ->send();
                     }),
 
                 Actions\Action::make('deactivate')
-                    ->label('Deactivate')
+                    ->label(__('Deactivate'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn ($record) => $record->status === 'active')
@@ -393,18 +393,18 @@ class OrganizerPromoCodeResource extends Resource
                         $record->deactivate();
                         Notification::make()
                             ->warning()
-                            ->title('Promo code deactivated')
+                            ->title(__('Promo code deactivated'))
                             ->send();
                     }),
 
                 Actions\Action::make('copy_code')
-                    ->label('Copy')
+                    ->label(__('Copy'))
                     ->icon('heroicon-o-clipboard')
                     ->action(function ($record, $livewire) {
                         $livewire->js("navigator.clipboard.writeText('{$record->code}')");
                         Notification::make()
                             ->success()
-                            ->title('Code copied to clipboard')
+                            ->title(__('Code copied to clipboard'))
                             ->send();
                     }),
             ])
@@ -413,14 +413,14 @@ class OrganizerPromoCodeResource extends Resource
                     DeleteBulkAction::make(),
 
                     BulkAction::make('bulk_activate')
-                        ->label('Activate Selected')
+                        ->label(__('Activate Selected'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
                         ->action(fn ($records) => $records->each->activate()),
 
                     BulkAction::make('bulk_deactivate')
-                        ->label('Deactivate Selected')
+                        ->label(__('Deactivate Selected'))
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->requiresConfirmation()

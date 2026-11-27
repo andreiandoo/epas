@@ -127,33 +127,33 @@ class TenantResource extends Resource
         $isEdit = fn (string $operation): bool => $operation === 'edit';
 
         return $schema->schema([
-            SC\Section::make('Detalii venue owner')
-                ->description('Un tenant de tip venue capabil să se autentifice în aplicația AmBilet Android și să scaneze / vândă bilete pentru locațiile linked.')
+            SC\Section::make(__('Detalii venue owner'))
+                ->description(__('Un tenant de tip venue capabil să se autentifice în aplicația AmBilet Android și să scaneze / vândă bilete pentru locațiile linked.'))
                 ->schema([
                     Forms\Components\TextInput::make('public_name')
-                        ->label('Nume public')
+                        ->label(__('Nume public'))
                         ->required()
                         ->maxLength(255)
-                        ->helperText('Cum apare venue owner-ul în interfețe.'),
+                        ->helperText(__('Cum apare venue owner-ul în interfețe.')),
 
                     Forms\Components\Select::make('locale')
-                        ->label('Limbă / Locale')
+                        ->label(__('Limbă / Locale'))
                         ->options([
-                            'ro' => 'Română',
-                            'en' => 'English',
-                            'hu' => 'Magyar',
-                            'de' => 'Deutsch',
-                            'fr' => 'Français',
+                            'ro' => __('Română'),
+                            'en' => __('English'),
+                            'hu' => __('Magyar'),
+                            'de' => __('Deutsch'),
+                            'fr' => __('Français'),
                         ])
                         ->default('ro')
                         ->required(),
                 ])->columns(2),
 
-            SC\Section::make('Locații linked')
-                ->description('Multi-select — locațiile la care venue owner-ul va putea scana / vinde bilete în aplicație. Se afișează toate locațiile din DB (indiferent de marketplace).')
+            SC\Section::make(__('Locații linked'))
+                ->description(__('Multi-select — locațiile la care venue owner-ul va putea scana / vinde bilete în aplicație. Se afișează toate locațiile din DB (indiferent de marketplace).'))
                 ->schema([
                     Forms\Components\Select::make('linked_venue_ids')
-                        ->label('Venues')
+                        ->label(__('Venues'))
                         ->multiple()
                         ->options(function () {
                             // Whole venue catalog — per operator request
@@ -185,11 +185,11 @@ class TenantResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            SC\Section::make('Cont autentificare owner')
-                ->description('User-ul pe care venue owner-ul îl folosește la login. Se creează la salvare cu rolul potrivit pentru aplicația AmBilet.')
+            SC\Section::make(__('Cont autentificare owner'))
+                ->description(__('User-ul pe care venue owner-ul îl folosește la login. Se creează la salvare cu rolul potrivit pentru aplicația AmBilet.'))
                 ->schema([
                     Forms\Components\TextInput::make('owner_first_name')
-                        ->label('Prenume')
+                        ->label(__('Prenume'))
                         ->required($isEdit ? false : true)
                         ->maxLength(255)
                         ->dehydrated(false)
@@ -204,7 +204,7 @@ class TenantResource extends Resource
                         }),
 
                     Forms\Components\TextInput::make('owner_last_name')
-                        ->label('Nume')
+                        ->label(__('Nume'))
                         ->required($isEdit ? false : true)
                         ->maxLength(255)
                         ->dehydrated(false)
@@ -215,19 +215,19 @@ class TenantResource extends Resource
                         }),
 
                     Forms\Components\TextInput::make('owner_email')
-                        ->label('Email login')
+                        ->label(__('Email login'))
                         ->email()
                         ->required($isEdit ? false : true)
                         ->maxLength(255)
                         ->dehydrated(false)
-                        ->helperText('Adresa cu care se autentifică în aplicația AmBilet. Trebuie să fie o adresă nefolosită de niciun alt cont — verificarea se face la salvare.')
+                        ->helperText(__('Adresa cu care se autentifică în aplicația AmBilet. Trebuie să fie o adresă nefolosită de niciun alt cont — verificarea se face la salvare.'))
                         ->afterStateHydrated(function ($component, $record) {
                             $component->state($record?->owner?->email);
                         })
                         ->disabled(fn (string $operation) => $operation === 'edit'),
 
                     Forms\Components\TextInput::make('owner_password')
-                        ->label('Parolă')
+                        ->label(__('Parolă'))
                         ->password()
                         ->revealable()
                         ->required(fn (string $operation) => $operation === 'create')
@@ -237,7 +237,7 @@ class TenantResource extends Resource
                         ->suffixAction(
                             \Filament\Actions\Action::make('generate_password')
                                 ->icon('heroicon-m-arrow-path')
-                                ->tooltip('Generează o parolă sigură de 12 caractere')
+                                ->tooltip(__('Generează o parolă sigură de 12 caractere'))
                                 ->action(function (\Filament\Schemas\Components\Utilities\Set $set) {
                                     // Reveal so the generated value is visible to copy, and
                                     // fill a fresh secure 12-char password on every click.
@@ -264,7 +264,7 @@ class TenantResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('public_name')
-                    ->label('Nume public')
+                    ->label(__('Nume public'))
                     ->searchable()
                     ->sortable(),
 
@@ -274,7 +274,7 @@ class TenantResource extends Resource
                 // stays visually aligned. Eager-loaded via ->with('venues')
                 // on getEloquentQuery to avoid N+1 on the list page.
                 Tables\Columns\TextColumn::make('linked_venues_names')
-                    ->label('Locație')
+                    ->label(__('Locație'))
                     ->getStateUsing(function ($record) {
                         $labels = $record->venues
                             ->map(function ($v) {
@@ -294,17 +294,17 @@ class TenantResource extends Resource
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('owner.email')
-                    ->label('Email owner')
+                    ->label(__('Email owner'))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('venues_count')
-                    ->label('Nr. Locații')
+                    ->label(__('Nr. Locații'))
                     ->counts('venues')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('locale')
-                    ->label('Locale')
+                    ->label(__('Locale'))
                     ->badge(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Creat')
+                    ->label(__('Creat'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
@@ -317,7 +317,7 @@ class TenantResource extends Resource
                 // ambilet_venue_token cookie and clears the URL so the
                 // admin lands fully authenticated as that venue owner.
                 \Filament\Actions\Action::make('login_as_venue_owner')
-                    ->label('Login as')
+                    ->label(__('Login as'))
                     ->icon('heroicon-o-arrow-right-on-rectangle')
                     ->color('success')
                     // Also gate on Route::has() so a stale route cache

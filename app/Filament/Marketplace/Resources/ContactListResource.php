@@ -89,7 +89,7 @@ class ContactListResource extends Resource
 
         return $schema
             ->components([
-                SC\Section::make('List Details')
+                SC\Section::make(__('List Details'))
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -100,14 +100,14 @@ class ContactListResource extends Resource
                             ->maxLength(500),
 
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
+                            ->label(__('Active'))
                             ->default(true),
 
                         Forms\Components\ToggleButtons::make('list_type')
-                            ->label('List Type')
+                            ->label(__('List Type'))
                             ->options([
-                                'manual' => 'Manual',
-                                'dynamic' => 'Dynamic (Rule-based)',
+                                'manual' => __('Manual'),
+                                'dynamic' => __('Dynamic (Rule-based)'),
                             ])
                             ->icons([
                                 'manual' => 'heroicon-o-user-plus',
@@ -121,46 +121,46 @@ class ContactListResource extends Resource
                     ->columns(2),
 
                 // Dynamic Rules Section
-                SC\Section::make('Subscriber Rules')
-                    ->description('Define conditions to automatically add subscribers to this list. All conditions must be met (AND logic).')
+                SC\Section::make(__('Subscriber Rules'))
+                    ->description(__('Define conditions to automatically add subscribers to this list. All conditions must be met (AND logic).'))
                     ->icon('heroicon-o-funnel')
                     ->schema([
                         Forms\Components\Repeater::make('rules')
                             ->label('')
                             ->schema([
                                 Forms\Components\Select::make('type')
-                                    ->label('Condition')
+                                    ->label(__('Condition'))
                                     ->options([
                                         'Newsletter' => [
-                                            'newsletter_subscribed' => 'Subscribed to newsletter',
-                                            'newsletter_unsubscribed' => 'Not subscribed (accepts_marketing=false)',
-                                            'has_actively_unsubscribed' => 'Actively unsubscribed (clicked unsubscribe link)',
-                                            'is_stale_no_opens' => 'Stale: received newsletter but never opened (48h cooldown)',
-                                            'is_stale_no_clicks' => 'Stale: received newsletter but never clicked (96h cooldown)',
+                                            'newsletter_subscribed' => __('Subscribed to newsletter'),
+                                            'newsletter_unsubscribed' => __('Not subscribed (accepts_marketing=false)'),
+                                            'has_actively_unsubscribed' => __('Actively unsubscribed (clicked unsubscribe link)'),
+                                            'is_stale_no_opens' => __('Stale: received newsletter but never opened (48h cooldown)'),
+                                            'is_stale_no_clicks' => __('Stale: received newsletter but never clicked (96h cooldown)'),
                                         ],
                                         'Purchases' => [
-                                            'has_purchases' => 'Has made at least one purchase',
-                                            'has_failed_purchase_attempt' => 'Tried to buy but never succeeded (remarketing)',
-                                            'purchase_count' => 'Number of purchases',
-                                            'purchased_category' => 'Purchased from category',
+                                            'has_purchases' => __('Has made at least one purchase'),
+                                            'has_failed_purchase_attempt' => __('Tried to buy but never succeeded (remarketing)'),
+                                            'purchase_count' => __('Number of purchases'),
+                                            'purchased_category' => __('Purchased from category'),
                                         ],
                                         'Account' => [
-                                            'has_no_account' => 'Has no registered account (guest only)',
-                                            'has_account' => 'Has a registered account',
-                                            'no_account_or_unsubscribed' => 'No account OR not subscribed (re-engagement)',
+                                            'has_no_account' => __('Has no registered account (guest only)'),
+                                            'has_account' => __('Has a registered account'),
+                                            'no_account_or_unsubscribed' => __('No account OR not subscribed (re-engagement)'),
                                         ],
                                         'Support' => [
-                                            'has_refund_request' => 'Has requested refund',
+                                            'has_refund_request' => __('Has requested refund'),
                                         ],
                                         'Location' => [
-                                            'city' => 'Lives in city (manual address field)',
-                                            'lives_in_city' => 'Lives in city (auto-detected from orders)',
-                                            'state' => 'Lives in state/region',
+                                            'city' => __('Lives in city (manual address field)'),
+                                            'lives_in_city' => __('Lives in city (auto-detected from orders)'),
+                                            'state' => __('Lives in state/region'),
                                         ],
                                         'Demographics' => [
-                                            'age_less_than' => 'Age less than',
-                                            'age_equals' => 'Age equals',
-                                            'age_greater_than' => 'Age greater than',
+                                            'age_less_than' => __('Age less than'),
+                                            'age_equals' => __('Age equals'),
+                                            'age_greater_than' => __('Age greater than'),
                                         ],
                                     ])
                                     ->required()
@@ -169,13 +169,13 @@ class ContactListResource extends Resource
 
                                 // Operator for purchase count
                                 Forms\Components\Select::make('operator')
-                                    ->label('Operator')
+                                    ->label(__('Operator'))
                                     ->options([
-                                        'equals' => 'Equals',
-                                        'greater_than' => 'Greater than',
-                                        'less_than' => 'Less than',
-                                        'greater_or_equal' => 'Greater or equal',
-                                        'less_or_equal' => 'Less or equal',
+                                        'equals' => __('Equals'),
+                                        'greater_than' => __('Greater than'),
+                                        'less_than' => __('Less than'),
+                                        'greater_or_equal' => __('Greater or equal'),
+                                        'less_or_equal' => __('Less or equal'),
                                     ])
                                     ->default('greater_or_equal')
                                     ->visible(fn (SGet $get) => in_array($get('type'), ['purchase_count']))
@@ -183,7 +183,7 @@ class ContactListResource extends Resource
 
                                 // Numeric value for purchase count and age
                                 Forms\Components\TextInput::make('value')
-                                    ->label('Value')
+                                    ->label(__('Value'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->visible(fn (SGet $get) => in_array($get('type'), [
@@ -196,7 +196,7 @@ class ContactListResource extends Resource
 
                                 // Category selector
                                 Forms\Components\Select::make('value')
-                                    ->label('Category')
+                                    ->label(__('Category'))
                                     ->options($categories)
                                     ->searchable()
                                     ->visible(fn (SGet $get) => $get('type') === 'purchased_category')
@@ -204,7 +204,7 @@ class ContactListResource extends Resource
 
                                 // City selector
                                 Forms\Components\Select::make('value')
-                                    ->label('City')
+                                    ->label(__('City'))
                                     ->options($cities)
                                     ->searchable()
                                     ->visible(fn (SGet $get) => $get('type') === 'city')
@@ -217,23 +217,23 @@ class ContactListResource extends Resource
                                 // string field above, which targets the
                                 // manual address column.
                                 Forms\Components\Select::make('value')
-                                    ->label('Auto-detected city')
+                                    ->label(__('Auto-detected city'))
                                     ->options($marketplaceCities)
                                     ->searchable()
-                                    ->helperText('Folosește orașul determinat din istoricul de comenzi (rulează customers:detect-cities pe marketplace întâi).')
+                                    ->helperText(__('Folosește orașul determinat din istoricul de comenzi (rulează customers:detect-cities pe marketplace întâi).'))
                                     ->visible(fn (SGet $get) => $get('type') === 'lives_in_city')
                                     ->columnSpan(2),
 
                                 // State selector
                                 Forms\Components\Select::make('value')
-                                    ->label('State/Region')
+                                    ->label(__('State/Region'))
                                     ->options($states)
                                     ->searchable()
                                     ->visible(fn (SGet $get) => $get('type') === 'state')
                                     ->columnSpan(2),
                             ])
                             ->columns(4)
-                            ->addActionLabel('Add Condition')
+                            ->addActionLabel(__('Add Condition'))
                             ->reorderable(false)
                             ->collapsible()
                             ->itemLabel(function (array $state): ?string {
@@ -306,13 +306,13 @@ class ContactListResource extends Resource
                     ->collapsible(),
 
                 // Manual Subscribers Section
-                SC\Section::make('Subscribers')
+                SC\Section::make(__('Subscribers'))
                     ->schema([
                         Forms\Components\Placeholder::make('subscriber_count')
                             ->content(fn ($record) => $record ? $record->activeSubscribers()->count() . ' active subscribers' : '0 subscribers'),
 
                         Forms\Components\Select::make('add_subscribers')
-                            ->label('Add Customers to List')
+                            ->label(__('Add Customers to List'))
                             ->multiple()
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search) {
@@ -332,13 +332,13 @@ class ContactListResource extends Resource
                                     ->get()
                                     ->mapWithKeys(fn ($c) => [$c->id => "{$c->full_name} <{$c->email}>"]);
                             })
-                            ->helperText('Search and select customers to add to this list')
+                            ->helperText(__('Search and select customers to add to this list'))
                             ->visible(fn ($record) => $record !== null),
                     ])
                     ->visible(fn (SGet $get, $record) => $get('list_type') === 'manual' && $record !== null),
 
                 // Info for dynamic lists
-                SC\Section::make('Subscriber Management')
+                SC\Section::make(__('Subscriber Management'))
                     ->schema([
                         Forms\Components\Placeholder::make('subscriber_info')
                             ->label('')
@@ -367,7 +367,7 @@ class ContactListResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('list_type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'dynamic' => 'info',
@@ -381,17 +381,17 @@ class ContactListResource extends Resource
 
                 Tables\Columns\TextColumn::make('subscribers_count')
                     ->counts('subscribers')
-                    ->label('Subscribers'),
+                    ->label(__('Subscribers')),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('last_synced_at')
-                    ->label('Last Sync')
+                    ->label(__('Last Sync'))
                     ->dateTime()
                     ->sortable()
-                    ->placeholder('Never')
+                    ->placeholder(__('Never'))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -401,26 +401,26 @@ class ContactListResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
 
                 Tables\Filters\SelectFilter::make('list_type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->options([
-                        'manual' => 'Manual',
-                        'dynamic' => 'Dynamic',
+                        'manual' => __('Manual'),
+                        'dynamic' => __('Dynamic'),
                     ]),
             ])
             ->recordActions([
                 Action::make('sync')
                     ->icon('heroicon-o-arrow-path')
                     ->color('gray')
-                    ->tooltip('Sync subscribers')
+                    ->tooltip(__('Sync subscribers'))
                     ->requiresConfirmation()
                     ->visible(fn ($record) => $record->isDynamic())
                     ->action(function ($record) {
                         $added = $record->syncSubscribers();
                         \Filament\Notifications\Notification::make()
-                            ->title('Sync Complete')
+                            ->title(__('Sync Complete'))
                             ->body("{$added} new subscribers added.")
                             ->success()
                             ->send();

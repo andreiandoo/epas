@@ -39,7 +39,7 @@ class TicketTypeResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Ticket Type Details')
+                SC\Section::make(__('Ticket Type Details'))
                     ->schema([
                         Forms\Components\Select::make('event_id')
                             ->relationship('event', modifyQueryUsing: function (Builder $query) {
@@ -61,9 +61,9 @@ class TicketTypeResource extends Resource
                             ->prefix('€'),
                         Forms\Components\Select::make('currency')
                             ->options([
-                                'EUR' => 'EUR',
-                                'RON' => 'RON',
-                                'USD' => 'USD',
+                                'EUR' => __('EUR'),
+                                'RON' => __('RON'),
+                                'USD' => __('USD'),
                             ])
                             ->default('EUR'),
                         Forms\Components\TextInput::make('available_quantity')
@@ -83,7 +83,7 @@ class TicketTypeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('event.title')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->formatStateUsing(fn ($record) => $record->event?->getTranslation('title', app()->getLocale()) ?? '-')
                     ->searchable()
                     ->sortable(),
@@ -94,7 +94,7 @@ class TicketTypeResource extends Resource
                     ->money('EUR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('available_quantity')
-                    ->label('Available')
+                    ->label(__('Available'))
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),

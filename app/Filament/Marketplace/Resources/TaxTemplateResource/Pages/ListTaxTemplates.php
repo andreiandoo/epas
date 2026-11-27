@@ -22,33 +22,33 @@ class ListTaxTemplates extends ListRecords
     {
         return [
             Actions\Action::make('contractSettings')
-                ->label('Contract Settings')
+                ->label(__('Contract Settings'))
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
-                ->modalHeading('Contract & Document Settings')
-                ->modalDescription('Configure contract numbering and upload your signature image.')
+                ->modalHeading(__('Contract & Document Settings'))
+                ->modalDescription(__('Configure contract numbering and upload your signature image.'))
                 ->modalWidth('lg')
                 ->form([
-                    Schemas\Components\Section::make('Contract Numbering')
-                        ->description('Set the next contract number. Each generated organizer contract will use this number and auto-increment it.')
+                    Schemas\Components\Section::make(__('Contract Numbering'))
+                        ->description(__('Set the next contract number. Each generated organizer contract will use this number and auto-increment it.'))
                         ->schema([
                             Forms\Components\TextInput::make('next_contract_number')
-                                ->label('Next Contract Number')
+                                ->label(__('Next Contract Number'))
                                 ->numeric()
                                 ->minValue(1)
                                 ->required()
-                                ->helperText('This number will be used for the next generated contract, then auto-incremented.'),
+                                ->helperText(__('This number will be used for the next generated contract, then auto-incremented.')),
                         ]),
-                    Schemas\Components\Section::make('Signature Image')
-                        ->description('Upload a signature image to use in contracts via the {{marketplace_signature_image}} variable.')
+                    Schemas\Components\Section::make(__('Signature Image'))
+                        ->description(__('Upload a signature image to use in contracts via the {{marketplace_signature_image}} variable.'))
                         ->schema([
                             Forms\Components\FileUpload::make('signature_image')
-                                ->label('Signature Image')
+                                ->label(__('Signature Image'))
                                 ->image()
                                 ->disk('public')
                                 ->directory('marketplace-signatures')
                                 ->maxSize(1024) // 1MB
-                                ->helperText('Upload a PNG/JPG signature image (max 1MB). Use {{marketplace_signature_image}} in your template to place it.'),
+                                ->helperText(__('Upload a PNG/JPG signature image (max 1MB). Use {{marketplace_signature_image}} in your template to place it.')),
                         ]),
                 ])
                 ->fillForm(function () {
@@ -76,7 +76,7 @@ class ListTaxTemplates extends ListRecords
                     $marketplace->update($updateData);
 
                     Notification::make()
-                        ->title('Settings saved')
+                        ->title(__('Settings saved'))
                         ->body("Next contract number: {$data['next_contract_number']}")
                         ->success()
                         ->send();

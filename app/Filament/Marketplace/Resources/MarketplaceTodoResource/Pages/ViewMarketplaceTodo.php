@@ -65,20 +65,20 @@ class ViewMarketplaceTodo extends Page
 
         return array_filter([
             Action::make('reply')
-                ->label('Răspunde / Comentează')
+                ->label(__('Răspunde / Comentează'))
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('primary')
                 ->visible(fn () => !$isClosed)
-                ->modalHeading('Comentariu nou')
-                ->modalSubmitActionLabel('Trimite')
+                ->modalHeading(__('Comentariu nou'))
+                ->modalSubmitActionLabel(__('Trimite'))
                 ->modalWidth('3xl')
                 ->form([
                     Forms\Components\RichEditor::make('body')
-                        ->label('Mesaj')
+                        ->label(__('Mesaj'))
                         ->required()
                         ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo']),
                     Forms\Components\FileUpload::make('attachments')
-                        ->label('Imagini (drag & drop)')
+                        ->label(__('Imagini (drag & drop)'))
                         ->multiple()
                         ->image()
                         ->imageEditor()
@@ -99,10 +99,10 @@ class ViewMarketplaceTodo extends Page
                 ->label($this->record->assigned_to_marketplace_admin_id ? 'Reasignează' : 'Asignează')
                 ->icon('heroicon-o-user-plus')
                 ->color('gray')
-                ->modalHeading('Asignează TODO-ul')
+                ->modalHeading(__('Asignează TODO-ul'))
                 ->form([
                     Forms\Components\Select::make('assigned_to_marketplace_admin_id')
-                        ->label('Asignat')
+                        ->label(__('Asignat'))
                         ->options(fn () => MarketplaceAdmin::query()
                             ->where('marketplace_client_id', $this->record->marketplace_client_id)
                             ->orderBy('name')
@@ -119,7 +119,7 @@ class ViewMarketplaceTodo extends Page
                 ->label('Prioritate: ' . ($this->priorityLabel($this->record->priority)))
                 ->icon('heroicon-o-flag')
                 ->color($this->priorityColor($this->record->priority))
-                ->modalHeading('Setează prioritate')
+                ->modalHeading(__('Setează prioritate'))
                 ->form([
                     Forms\Components\Select::make('priority')
                         ->options(MarketplaceTodo::PRIORITY_LABELS)
@@ -132,7 +132,7 @@ class ViewMarketplaceTodo extends Page
                 ->label('Status: ' . (MarketplaceTodo::STATUS_LABELS[$this->record->status] ?? $this->record->status))
                 ->icon('heroicon-o-arrow-path-rounded-square')
                 ->color('gray')
-                ->modalHeading('Schimbă status')
+                ->modalHeading(__('Schimbă status'))
                 ->form([
                     Forms\Components\Select::make('status')
                         ->options(MarketplaceTodo::STATUS_LABELS)
@@ -143,7 +143,7 @@ class ViewMarketplaceTodo extends Page
 
             !$isClosed
                 ? Action::make('resolve')
-                    ->label('Marchează rezolvat')
+                    ->label(__('Marchează rezolvat'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
@@ -152,7 +152,7 @@ class ViewMarketplaceTodo extends Page
 
             $this->record->status === MarketplaceTodo::STATUS_RESOLVED
                 ? Action::make('close')
-                    ->label('Închide definitiv')
+                    ->label(__('Închide definitiv'))
                     ->icon('heroicon-o-archive-box-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -161,13 +161,13 @@ class ViewMarketplaceTodo extends Page
 
             $isClosed
                 ? Action::make('reopen')
-                    ->label('Redeschide')
+                    ->label(__('Redeschide'))
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->action(fn () => $this->reopen())
                 : null,
 
-            EditAction::make()->label('Editează'),
+            EditAction::make()->label(__('Editează')),
         ]);
     }
 
@@ -213,7 +213,7 @@ class ViewMarketplaceTodo extends Page
 
         $this->record->save();
 
-        Notification::make()->title('Comentariu trimis')->success()->send();
+        Notification::make()->title(__('Comentariu trimis'))->success()->send();
     }
 
     protected function assignTo(array $data): void
@@ -233,7 +233,7 @@ class ViewMarketplaceTodo extends Page
         $body = $newName ? "Asignat la: {$newName}" : 'Asignare scoasă';
         $this->logTimelineEvent(MarketplaceTodoComment::EVENT_ASSIGNED, $body);
 
-        Notification::make()->title('Asignare actualizată')->success()->send();
+        Notification::make()->title(__('Asignare actualizată'))->success()->send();
     }
 
     protected function setPriority(array $data): void
@@ -254,7 +254,7 @@ class ViewMarketplaceTodo extends Page
             "Prioritate: {$oldLabel} → {$newLabel}"
         );
 
-        Notification::make()->title('Prioritate actualizată')->success()->send();
+        Notification::make()->title(__('Prioritate actualizată'))->success()->send();
     }
 
     protected function setStatus(array $data): void
@@ -286,7 +286,7 @@ class ViewMarketplaceTodo extends Page
             "Status: {$oldLabel} → {$newLabel}"
         );
 
-        Notification::make()->title('Status actualizat')->success()->send();
+        Notification::make()->title(__('Status actualizat'))->success()->send();
     }
 
     protected function resolve(): void
@@ -296,7 +296,7 @@ class ViewMarketplaceTodo extends Page
         $this->record->last_activity_at = now();
         $this->record->save();
         $this->logTimelineEvent(MarketplaceTodoComment::EVENT_RESOLVED, 'TODO marcat ca rezolvat');
-        Notification::make()->title('TODO rezolvat')->success()->send();
+        Notification::make()->title(__('TODO rezolvat'))->success()->send();
     }
 
     protected function close(): void
@@ -306,7 +306,7 @@ class ViewMarketplaceTodo extends Page
         $this->record->last_activity_at = now();
         $this->record->save();
         $this->logTimelineEvent(MarketplaceTodoComment::EVENT_CLOSED, 'TODO închis definitiv');
-        Notification::make()->title('TODO închis')->success()->send();
+        Notification::make()->title(__('TODO închis'))->success()->send();
     }
 
     protected function reopen(): void
@@ -317,7 +317,7 @@ class ViewMarketplaceTodo extends Page
         $this->record->last_activity_at = now();
         $this->record->save();
         $this->logTimelineEvent(MarketplaceTodoComment::EVENT_REOPENED, 'TODO redeschis');
-        Notification::make()->title('TODO redeschis')->success()->send();
+        Notification::make()->title(__('TODO redeschis'))->success()->send();
     }
 
     protected function logTimelineEvent(string $eventType, string $body): void

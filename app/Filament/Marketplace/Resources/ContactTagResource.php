@@ -39,7 +39,7 @@ class ContactTagResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Tag Details')
+                SC\Section::make(__('Tag Details'))
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -60,7 +60,7 @@ class ContactTagResource extends Resource
                 Tables\Columns\ColorColumn::make('color'),
                 Tables\Columns\TextColumn::make('customers_count')
                     ->counts('customers')
-                    ->label('Contacts'),
+                    ->label(__('Contacts')),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

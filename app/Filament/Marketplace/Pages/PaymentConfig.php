@@ -191,7 +191,7 @@ class PaymentConfig extends Page implements HasForms
         }
 
         Notification::make()
-            ->title('Payment method saved')
+            ->title(__('Payment method saved'))
             ->success()
             ->send();
 

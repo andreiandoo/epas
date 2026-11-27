@@ -58,46 +58,46 @@ class AffiliateResource extends Resource
         return $schema
             ->columns(2)
             ->components([
-                SC\Section::make('Affiliate Information')
+                SC\Section::make(__('Affiliate Information'))
                     ->columns(2)
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Name')
+                            ->label(__('Name'))
                             ->required()
                             ->maxLength(190),
 
                         Forms\Components\TextInput::make('code')
-                            ->label('Affiliate Code')
+                            ->label(__('Affiliate Code'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to auto-generate')
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
                             ->disabled(fn ($record) => $record !== null),
 
                         Forms\Components\TextInput::make('contact_email')
-                            ->label('Contact Email')
+                            ->label(__('Contact Email'))
                             ->email()
                             ->required()
                             ->maxLength(190),
 
                         Forms\Components\Select::make('status')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->options([
-                                'active' => 'Active',
-                                'suspended' => 'Suspended',
-                                'inactive' => 'Inactive',
+                                'active' => __('Active'),
+                                'suspended' => __('Suspended'),
+                                'inactive' => __('Inactive'),
                             ])
                             ->default('active')
                             ->required(),
                     ]),
 
-                SC\Section::make('Commission Settings')
+                SC\Section::make(__('Commission Settings'))
                     ->columns(2)
                     ->schema([
                         Forms\Components\Select::make('commission_type')
-                            ->label('Commission Type')
+                            ->label(__('Commission Type'))
                             ->options([
-                                'percent' => 'Percentage (%)',
-                                'fixed' => 'Fixed Amount (RON)',
+                                'percent' => __('Percentage (%)'),
+                                'fixed' => __('Fixed Amount (RON)'),
                             ])
                             ->default('percent')
                             ->required()
@@ -112,11 +112,11 @@ class AffiliateResource extends Resource
                             ->required(),
                     ]),
 
-                SC\Section::make('Coupon Code')
-                    ->description('Assign a coupon code for coupon-based attribution')
+                SC\Section::make(__('Coupon Code'))
+                    ->description(__('Assign a coupon code for coupon-based attribution'))
                     ->schema([
                         Forms\Components\TextInput::make('coupon_code')
-                            ->label('Coupon Code')
+                            ->label(__('Coupon Code'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'If this coupon is used at checkout, the order will be attributed to this affiliate')
                             ->maxLength(50)
                             ->dehydrated(false)
@@ -129,13 +129,13 @@ class AffiliateResource extends Resource
                     ])
                     ->collapsed(),
 
-                SC\Section::make('Additional Information')
+                SC\Section::make(__('Additional Information'))
                     ->schema([
                         Forms\Components\KeyValue::make('meta')
-                            ->label('Additional Data')
+                            ->label(__('Additional Data'))
                             ->keyLabel('Key')
                             ->valueLabel('Value')
-                            ->addActionLabel('Add field'),
+                            ->addActionLabel(__('Add field')),
                     ])
                     ->collapsed(),
             ]);
@@ -146,25 +146,25 @@ class AffiliateResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable()
                     ->url(fn ($record) => static::getUrl('view', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('contact_email')
-                    ->label('Email')
+                    ->label(__('Email'))
                     ->searchable()
                     ->toggleable(),
 
                 Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->colors([
                         'success' => 'active',
                         'warning' => 'pending',
@@ -173,7 +173,7 @@ class AffiliateResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('commission_display')
-                    ->label('Commission')
+                    ->label(__('Commission'))
                     ->getStateUsing(function ($record) {
                         if ($record->commission_type === 'fixed') {
                             return number_format($record->commission_rate, 2) . ' RON';
@@ -182,12 +182,12 @@ class AffiliateResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('conversions_count')
-                    ->label('Conversions')
+                    ->label(__('Conversions'))
                     ->counts('conversions')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('total_commission')
-                    ->label('Commission Earned')
+                    ->label(__('Commission Earned'))
                     ->getStateUsing(function ($record) {
                         $total = $record->conversions()
                             ->where('status', 'approved')
@@ -197,7 +197,7 @@ class AffiliateResource extends Resource
                     ->color('success'),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label(__('Created'))
                     ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -206,71 +206,71 @@ class AffiliateResource extends Resource
                     ->label('')
                     ->getStateUsing(fn () => '✏️')
                     ->url(fn ($record) => static::getUrl('edit', ['record' => $record]))
-                    ->tooltip('Edit affiliate'),
+                    ->tooltip(__('Edit affiliate')),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'Pending Approval',
-                        'active' => 'Active',
-                        'suspended' => 'Suspended',
-                        'inactive' => 'Inactive',
+                        'pending' => __('Pending Approval'),
+                        'active' => __('Active'),
+                        'suspended' => __('Suspended'),
+                        'inactive' => __('Inactive'),
                     ]),
             ])
             ->recordActions([
                 Action::make('approve')
-                    ->label('Approve')
+                    ->label(__('Approve'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => $record->status === Affiliate::STATUS_PENDING)
                     ->requiresConfirmation()
-                    ->modalHeading('Approve Affiliate')
-                    ->modalDescription('This will activate the affiliate and allow them to start earning commissions.')
+                    ->modalHeading(__('Approve Affiliate'))
+                    ->modalDescription(__('This will activate the affiliate and allow them to start earning commissions.'))
                     ->action(function ($record) {
                         $record->approve();
                         Notification::make()
                             ->success()
-                            ->title('Affiliate approved')
+                            ->title(__('Affiliate approved'))
                             ->body("'{$record->name}' has been approved and can now earn commissions.")
                             ->send();
                     }),
 
                 Action::make('reject')
-                    ->label('Reject')
+                    ->label(__('Reject'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn ($record) => $record->status === Affiliate::STATUS_PENDING)
                     ->requiresConfirmation()
-                    ->modalHeading('Reject Affiliate Application')
-                    ->modalDescription('This will permanently reject the affiliate application.')
+                    ->modalHeading(__('Reject Affiliate Application'))
+                    ->modalDescription(__('This will permanently reject the affiliate application.'))
                     ->action(function ($record) {
                         $record->update(['status' => Affiliate::STATUS_INACTIVE]);
                         Notification::make()
                             ->warning()
-                            ->title('Affiliate rejected')
+                            ->title(__('Affiliate rejected'))
                             ->body("'{$record->name}' application has been rejected.")
                             ->send();
                     }),
 
                 Action::make('suspend')
-                    ->label('Suspend')
+                    ->label(__('Suspend'))
                     ->icon('heroicon-o-pause-circle')
                     ->color('warning')
                     ->visible(fn ($record) => $record->status === Affiliate::STATUS_ACTIVE)
                     ->requiresConfirmation()
-                    ->modalHeading('Suspend Affiliate')
-                    ->modalDescription('This will temporarily suspend the affiliate from earning commissions.')
+                    ->modalHeading(__('Suspend Affiliate'))
+                    ->modalDescription(__('This will temporarily suspend the affiliate from earning commissions.'))
                     ->action(function ($record) {
                         $record->update(['status' => Affiliate::STATUS_SUSPENDED]);
                         Notification::make()
                             ->warning()
-                            ->title('Affiliate suspended')
+                            ->title(__('Affiliate suspended'))
                             ->body("'{$record->name}' has been suspended.")
                             ->send();
                     }),
 
                 Action::make('reactivate')
-                    ->label('Reactivate')
+                    ->label(__('Reactivate'))
                     ->icon('heroicon-o-play-circle')
                     ->color('success')
                     ->visible(fn ($record) => in_array($record->status, [Affiliate::STATUS_SUSPENDED, Affiliate::STATUS_INACTIVE]))
@@ -279,19 +279,19 @@ class AffiliateResource extends Resource
                         $record->update(['status' => Affiliate::STATUS_ACTIVE]);
                         Notification::make()
                             ->success()
-                            ->title('Affiliate reactivated')
+                            ->title(__('Affiliate reactivated'))
                             ->body("'{$record->name}' has been reactivated.")
                             ->send();
                     }),
             ])
             ->toolbarActions([
                 BulkAction::make('bulk_approve')
-                    ->label('Approve Selected')
+                    ->label(__('Approve Selected'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Approve Selected Affiliates')
-                    ->modalDescription('This will approve all selected pending affiliates.')
+                    ->modalHeading(__('Approve Selected Affiliates'))
+                    ->modalDescription(__('This will approve all selected pending affiliates.'))
                     ->action(function ($records) {
                         $count = 0;
                         foreach ($records as $record) {

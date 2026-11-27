@@ -68,10 +68,10 @@ class MarketplaceAdminResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                Section::make('Informații utilizator')
+                Section::make(__('Informații utilizator'))
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Nume complet')
+                            ->label(__('Nume complet'))
                             ->required()
                             ->maxLength(255),
 
@@ -82,7 +82,7 @@ class MarketplaceAdminResource extends Resource
                             ->unique(ignoreRecord: true),
 
                         Forms\Components\TextInput::make('password')
-                            ->label('Parolă')
+                            ->label(__('Parolă'))
                             ->password()
                             ->revealable()
                             ->required(fn (string $operation): bool => $operation === 'create')
@@ -92,12 +92,12 @@ class MarketplaceAdminResource extends Resource
                             ->helperText(fn (string $operation): string => $operation === 'edit' ? 'Lasă gol pentru a păstra parola curentă' : ''),
 
                         Forms\Components\TextInput::make('phone')
-                            ->label('Telefon')
+                            ->label(__('Telefon'))
                             ->tel()
                             ->maxLength(50),
 
                         Forms\Components\Select::make('role')
-                            ->label('Rol')
+                            ->label(__('Rol'))
                             ->options(function () use ($currentAdmin) {
                                 $roles = MarketplaceAdmin::roles();
                                 if (!$currentAdmin?->isSuperAdmin()) {
@@ -110,98 +110,98 @@ class MarketplaceAdminResource extends Resource
                             ->live(),
 
                         Forms\Components\Select::make('status')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->options([
-                                'active' => 'Activ',
-                                'inactive' => 'Inactiv',
-                                'suspended' => 'Suspendat',
+                                'active' => __('Activ'),
+                                'inactive' => __('Inactiv'),
+                                'suspended' => __('Suspendat'),
                             ])
                             ->required()
                             ->default('active')
                             // Changing your own status would lock you out.
                             ->disabled(fn (?MarketplaceAdmin $record): bool => $record !== null && $record->id === $currentAdmin?->id)
-                            ->helperText('Doar utilizatorii activi se pot loga. Un utilizator inactiv sau suspendat rămâne în sistem, cu tot istoricul lui.'),
+                            ->helperText(__('Doar utilizatorii activi se pot loga. Un utilizator inactiv sau suspendat rămâne în sistem, cu tot istoricul lui.')),
 
                         Forms\Components\Select::make('locale')
-                            ->label('Limbă')
+                            ->label(__('Limbă'))
                             ->options([
-                                'en' => 'English',
-                                'ro' => 'Română',
+                                'en' => __('English'),
+                                'ro' => __('Română'),
                             ])
                             ->default('ro'),
 
                         Forms\Components\Select::make('timezone')
-                            ->label('Fus orar')
+                            ->label(__('Fus orar'))
                             ->options([
-                                'Europe/Bucharest' => 'Europe/Bucharest',
-                                'Europe/London' => 'Europe/London',
-                                'UTC' => 'UTC',
+                                'Europe/Bucharest' => __('Europe/Bucharest'),
+                                'Europe/London' => __('Europe/London'),
+                                'UTC' => __('UTC'),
                             ])
                             ->default('Europe/Bucharest'),
 
                         Forms\Components\CheckboxList::make('permissions')
-                            ->label('Permisiuni')
+                            ->label(__('Permisiuni'))
                             ->options(MarketplaceAdmin::availablePermissions())
                             ->columns(2)
                             ->visible(fn ($get) => $get('role') !== 'super_admin')
-                            ->helperText('Super Admins au toate permisiunile automat.'),
+                            ->helperText(__('Super Admins au toate permisiunile automat.')),
                     ])->columns(1),
 
-                Section::make('Date Împuternicit')
-                    ->description('Datele persoanei împuternicite pentru operațiuni fiscale și documente.')
+                Section::make(__('Date Împuternicit'))
+                    ->description(__('Datele persoanei împuternicite pentru operațiuni fiscale și documente.'))
                     ->schema([
                         Forms\Components\TextInput::make('proxy_full_name')
-                            ->label('Nume și prenume')
+                            ->label(__('Nume și prenume'))
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('proxy_role')
-                            ->label('Calitate')
-                            ->placeholder('ex: Administrator, Director, Reprezentant legal')
+                            ->label(__('Calitate'))
+                            ->placeholder(__('ex: Administrator, Director, Reprezentant legal'))
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('proxy_phone')
-                            ->label('Telefon')
+                            ->label(__('Telefon'))
                             ->tel()
                             ->maxLength(20),
 
                         Forms\Components\TextInput::make('proxy_address')
-                            ->label('Adresa')
+                            ->label(__('Adresa'))
                             ->maxLength(500),
 
                         Forms\Components\Select::make('proxy_country')
-                            ->label('Țara')
+                            ->label(__('Țara'))
                             ->options([
-                                'Romania' => 'România',
-                                'Germany' => 'Germania',
-                                'France' => 'Franța',
-                                'Italy' => 'Italia',
-                                'Spain' => 'Spania',
-                                'Austria' => 'Austria',
-                                'Hungary' => 'Ungaria',
-                                'Bulgaria' => 'Bulgaria',
-                                'Moldova' => 'Moldova',
+                                'Romania' => __('România'),
+                                'Germany' => __('Germania'),
+                                'France' => __('Franța'),
+                                'Italy' => __('Italia'),
+                                'Spain' => __('Spania'),
+                                'Austria' => __('Austria'),
+                                'Hungary' => __('Ungaria'),
+                                'Bulgaria' => __('Bulgaria'),
+                                'Moldova' => __('Moldova'),
                             ])
                             ->default('Romania')
                             ->searchable(),
 
                         Forms\Components\TextInput::make('proxy_county')
-                            ->label('Județ')
+                            ->label(__('Județ'))
                             ->maxLength(100),
 
                         Forms\Components\TextInput::make('proxy_city')
-                            ->label('Oraș')
+                            ->label(__('Oraș'))
                             ->maxLength(100)
                             ->live(onBlur: true),
 
                         Forms\Components\Select::make('proxy_sector')
-                            ->label('Sector')
+                            ->label(__('Sector'))
                             ->options([
-                                '1' => 'Sector 1',
-                                '2' => 'Sector 2',
-                                '3' => 'Sector 3',
-                                '4' => 'Sector 4',
-                                '5' => 'Sector 5',
-                                '6' => 'Sector 6',
+                                '1' => __('Sector 1'),
+                                '2' => __('Sector 2'),
+                                '3' => __('Sector 3'),
+                                '4' => __('Sector 4'),
+                                '5' => __('Sector 5'),
+                                '6' => __('Sector 6'),
                             ])
                             ->visible(fn ($get) => in_array(
                                 mb_strtolower(trim($get('proxy_city') ?? '')),
@@ -209,21 +209,21 @@ class MarketplaceAdminResource extends Resource
                             )),
 
                         Forms\Components\TextInput::make('proxy_id_series')
-                            ->label('Serie CI')
-                            ->placeholder('ex: XY')
+                            ->label(__('Serie CI'))
+                            ->placeholder(__('ex: XY'))
                             ->maxLength(10),
 
                         Forms\Components\TextInput::make('proxy_id_number')
-                            ->label('Număr CI')
-                            ->placeholder('ex: 123456')
+                            ->label(__('Număr CI'))
+                            ->placeholder(__('ex: 123456'))
                             ->maxLength(20),
 
                         Forms\Components\TextInput::make('proxy_cnp')
-                            ->label('CNP')
+                            ->label(__('CNP'))
                             ->maxLength(13),
 
                         Forms\Components\FileUpload::make('proxy_id_card_file')
-                            ->label('Buletin / Carte de identitate')
+                            ->label(__('Buletin / Carte de identitate'))
                             ->disk('public')
                             ->directory('proxy-documents')
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
@@ -232,8 +232,8 @@ class MarketplaceAdminResource extends Resource
                             ->openable(),
 
                         Forms\Components\FileUpload::make('proxy_signature_image')
-                            ->label('Semnătură împuternicit')
-                            ->helperText('Imagine PNG/JPG cu semnătura. Va fi folosită automat în documentele generate prin împuternicit.')
+                            ->label(__('Semnătură împuternicit'))
+                            ->helperText(__('Imagine PNG/JPG cu semnătura. Va fi folosită automat în documentele generate prin împuternicit.'))
                             ->disk('public')
                             ->directory('proxy-signatures')
                             ->image()
@@ -286,7 +286,7 @@ class MarketplaceAdminResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('last_login_at')
-                    ->label('Last Login')
+                    ->label(__('Last Login'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(),
@@ -307,9 +307,9 @@ class MarketplaceAdminResource extends Resource
                     }),
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'active' => 'Active',
-                        'inactive' => 'Inactive',
-                        'suspended' => 'Suspended',
+                        'active' => __('Active'),
+                        'inactive' => __('Inactive'),
+                        'suspended' => __('Suspended'),
                     ]),
             ])
             ->recordActions([
@@ -333,13 +333,13 @@ class MarketplaceAdminResource extends Resource
     public static function deactivateAction(): Action
     {
         return Action::make('deactivate')
-            ->label('Dezactivează')
+            ->label(__('Dezactivează'))
             ->icon('heroicon-o-no-symbol')
             ->color('danger')
             ->requiresConfirmation()
-            ->modalHeading('Dezactivezi acest utilizator?')
-            ->modalDescription('Nu se va mai putea loga deloc în platformă și este scos imediat din sesiunile deschise. Contul și istoricul lui rămân neatinse și îl poți reactiva oricând.')
-            ->modalSubmitActionLabel('Dezactivează')
+            ->modalHeading(__('Dezactivezi acest utilizator?'))
+            ->modalDescription(__('Nu se va mai putea loga deloc în platformă și este scos imediat din sesiunile deschise. Contul și istoricul lui rămân neatinse și îl poți reactiva oricând.'))
+            ->modalSubmitActionLabel(__('Dezactivează'))
             ->visible(fn (MarketplaceAdmin $record): bool => $record->isActive() && static::canChangeStatus($record))
             ->action(fn (MarketplaceAdmin $record, $livewire) => static::changeStatus($record, 'inactive', $livewire));
     }
@@ -347,13 +347,13 @@ class MarketplaceAdminResource extends Resource
     public static function activateAction(): Action
     {
         return Action::make('activate')
-            ->label('Reactivează')
+            ->label(__('Reactivează'))
             ->icon('heroicon-o-check-circle')
             ->color('success')
             ->requiresConfirmation()
-            ->modalHeading('Reactivezi acest utilizator?')
-            ->modalDescription('Se va putea loga din nou cu parola pe care o avea.')
-            ->modalSubmitActionLabel('Reactivează')
+            ->modalHeading(__('Reactivezi acest utilizator?'))
+            ->modalDescription(__('Se va putea loga din nou cu parola pe care o avea.'))
+            ->modalSubmitActionLabel(__('Reactivează'))
             ->visible(fn (MarketplaceAdmin $record): bool => !$record->isActive() && static::canChangeStatus($record))
             ->action(fn (MarketplaceAdmin $record, $livewire) => static::changeStatus($record, 'active', $livewire));
     }

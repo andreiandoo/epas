@@ -224,7 +224,7 @@ class ActivityResource extends Resource
         // anywhere in the tab body.
         if (! DBSchema::hasTable('activity_related')) {
             return [
-                SC\Section::make('Migrare lipsă')
+                SC\Section::make(__('Migrare lipsă'))
                     ->schema([
                         Forms\Components\Placeholder::make('migrate_required')
                             ->hiddenLabel()
@@ -239,12 +239,12 @@ class ActivityResource extends Resource
         }
 
         return [
-            SC\Section::make('Activități conectate')
-                ->description('Apar ca recomandări pe pagina publică a activității (cross-sell / upsell). Activitățile aceluiași organizator se conectează automat. Poți adăuga și manual.')
+            SC\Section::make(__('Activități conectate'))
+                ->description(__('Apar ca recomandări pe pagina publică a activității (cross-sell / upsell). Activitățile aceluiași organizator se conectează automat. Poți adăuga și manual.'))
                 ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
                 ->schema([
                     Forms\Components\Select::make('relatedActivities')
-                        ->label('Activități')
+                        ->label(__('Activități'))
                         ->relationship(
                             'relatedActivities',
                             'slug',
@@ -268,7 +268,7 @@ class ActivityResource extends Resource
                         ->preload()
                         ->searchable()
                         ->columnSpanFull()
-                        ->helperText('Activitățile sincronizate automat din organizator au sursa "auto" în pivot. Cele adăugate manual aici primesc "manual".')
+                        ->helperText(__('Activitățile sincronizate automat din organizator au sursa "auto" în pivot. Cele adăugate manual aici primesc "manual".'))
                         ->saveRelationshipsUsing(function ($component, $state) {
                             $record = $component->getRecord();
                             if (! $record) return;
@@ -354,7 +354,7 @@ class ActivityResource extends Resource
                 ])
                 ->columns(1),
 
-            SC\Section::make('Activități conectate')
+            SC\Section::make(__('Activități conectate'))
                 ->visible(fn (?\App\Models\Activity $record) => ! $record || ! $record->exists)
                 ->schema([
                     Forms\Components\Placeholder::make('save_first_for_connections')
@@ -375,37 +375,37 @@ class ActivityResource extends Resource
         $isType = fn (string $type) => fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('product_type') === $type;
 
         return [
-            SC\Section::make('Ce se vinde')
+            SC\Section::make(__('Ce se vinde'))
                 ->schema([
                     Forms\Components\Select::make('product_type')
-                        ->label('Tip produs')
+                        ->label(__('Tip produs'))
                         ->options([
-                            'access' => 'Bilet de acces',
-                            'experience' => 'Serviciu / experiență',
-                            'package' => 'Pachet (acces + servicii)',
+                            'access' => __('Bilet de acces'),
+                            'experience' => __('Serviciu / experiență'),
+                            'package' => __('Pachet (acces + servicii)'),
                         ])
                         ->default('experience')
                         ->required()
                         ->live(),
                     Forms\Components\Select::make('access_kind')
-                        ->label('Acces pentru')
-                        ->options(['person' => 'Persoane', 'vehicle' => 'Vehicule (parcare)', 'camping' => 'Camping / noapte', 'other' => 'Altceva'])
+                        ->label(__('Acces pentru'))
+                        ->options(['person' => __('Persoane'), 'vehicle' => __('Vehicule (parcare)'), 'camping' => __('Camping / noapte'), 'other' => __('Altceva')])
                         ->visible($isType('access')),
                     Forms\Components\Select::make('service_type')
-                        ->label('Tip serviciu')
-                        ->options(['rental' => 'Închiriere', 'guided' => 'Tur / activitate ghidată', 'workshop' => 'Atelier / curs', 'other' => 'Altceva'])
+                        ->label(__('Tip serviciu'))
+                        ->options(['rental' => __('Închiriere'), 'guided' => __('Tur / activitate ghidată'), 'workshop' => __('Atelier / curs'), 'other' => __('Altceva')])
                         ->visible($isType('experience')),
                     Forms\Components\Select::make('location_id')
-                        ->label('Locație')
+                        ->label(__('Locație'))
                         ->options(fn () => \App\Models\ActivityLocation::where('marketplace_client_id', $marketplace?->id)
                             ->orderBy('id')->get()
                             ->mapWithKeys(fn ($l) => [$l->id => ($l->name['ro'] ?? $l->name['en'] ?? $l->slug)])
                             ->toArray())
                         ->searchable()
                         ->live()
-                        ->helperText('Unde se vinde. Experiențele pot exista și fără locație (ex: tur cu punct de întâlnire).'),
+                        ->helperText(__('Unde se vinde. Experiențele pot exista și fără locație (ex: tur cu punct de întâlnire).')),
                     Forms\Components\Select::make('display_category')
-                        ->label('Categorie de afișare pe pagina locației')
+                        ->label(__('Categorie de afișare pe pagina locației'))
                         ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $location = \App\Models\ActivityLocation::find($get('location_id'));
                             return collect((array) ($location?->display_categories ?? []))
@@ -415,72 +415,72 @@ class ActivityResource extends Resource
                         })
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('location_id')),
                     Forms\Components\TextInput::make('icon')
-                        ->label('Iconiță (emoji)')
+                        ->label(__('Iconiță (emoji)'))
                         ->maxLength(16),
                     Forms\Components\TextInput::make('unit_label.ro')
-                        ->label('Unitate de preț')
-                        ->placeholder('persoană / zi')
+                        ->label(__('Unitate de preț'))
+                        ->placeholder(__('persoană / zi'))
                         ->maxLength(60),
                     Forms\Components\Textarea::make('usage_terms.ro')
-                        ->label('Condiții de utilizare')
+                        ->label(__('Condiții de utilizare'))
                         ->rows(2)
                         ->maxLength(1000)
                         ->columnSpanFull(),
                 ])
                 ->columns(2),
 
-            SC\Section::make('Rezervare și capacitate')
+            SC\Section::make(__('Rezervare și capacitate'))
                 ->schema([
                     Forms\Components\Select::make('booking_mode')
-                        ->label('Se rezervă')
-                        ->options(['day' => 'Pe zi (valabil toată ziua)', 'slot' => 'Pe interval orar'])
+                        ->label(__('Se rezervă'))
+                        ->options(['day' => __('Pe zi (valabil toată ziua)'), 'slot' => __('Pe interval orar')])
                         ->default('slot')
                         ->required()
                         ->live(),
                     Forms\Components\Select::make('capacity_mode')
-                        ->label('Capacitatea înseamnă')
+                        ->label(__('Capacitatea înseamnă'))
                         ->options([
-                            'per_slot' => 'Locuri la fiecare oră de start (tururi, ateliere)',
-                            'concurrent' => 'Unități folosite în paralel (bărci, biciclete)',
+                            'per_slot' => __('Locuri la fiecare oră de start (tururi, ateliere)'),
+                            'concurrent' => __('Unități folosite în paralel (bărci, biciclete)'),
                         ])
                         ->default('per_slot')
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('booking_mode') === 'slot'),
                     Forms\Components\TextInput::make('daily_capacity')
-                        ->label('Capacitate pe zi')
+                        ->label(__('Capacitate pe zi'))
                         ->numeric()->minValue(1)
-                        ->helperText('Gol = nelimitat. La biletele pe interval orar e o limită în plus pe zi.'),
+                        ->helperText(__('Gol = nelimitat. La biletele pe interval orar e o limită în plus pe zi.')),
                     Forms\Components\Toggle::make('use_location_schedule')
-                        ->label('Programul locației (sezoane)')
-                        ->helperText('Orele și ultima intrare vin din sezoanele locației.')
+                        ->label(__('Programul locației (sezoane)'))
+                        ->helperText(__('Orele și ultima intrare vin din sezoanele locației.'))
                         ->inline(false),
                     Forms\Components\Select::make('access_requirement')
-                        ->label('Cere bilet de acces în coș')
-                        ->options(['none' => 'Nu', 'any' => 'Da, câte unul pe unitate', 'adult' => 'Da, câte un adult pe unitate'])
+                        ->label(__('Cere bilet de acces în coș'))
+                        ->options(['none' => __('Nu'), 'any' => __('Da, câte unul pe unitate'), 'adult' => __('Da, câte un adult pe unitate')])
                         ->default('none')
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('product_type') !== 'access'),
                     Forms\Components\Toggle::make('requires_vehicle_info')
-                        ->label('Cere numărul de înmatriculare')
+                        ->label(__('Cere numărul de înmatriculare'))
                         ->inline(false),
                     Forms\Components\Toggle::make('pos_only')
-                        ->label('Doar la casă (ascuns online)')
+                        ->label(__('Doar la casă (ascuns online)'))
                         ->inline(false),
                     Forms\Components\Select::make('issuing_company')
-                        ->label('Firma care emite')
-                        ->options(['primary' => 'Firma principală', 'secondary' => 'Firma secundară'])
+                        ->label(__('Firma care emite'))
+                        ->options(['primary' => __('Firma principală'), 'secondary' => __('Firma secundară')])
                         ->default('primary'),
                 ])
                 ->columns(2),
 
-            SC\Section::make('Aprobare')
-                ->description('Produsele trimise de operatori se publică după aprobare. Cele create aici nu au nevoie.')
+            SC\Section::make(__('Aprobare'))
+                ->description(__('Produsele trimise de operatori se publică după aprobare. Cele create aici nu au nevoie.'))
                 ->schema([
                     Forms\Components\Select::make('review_status')
-                        ->label('Stare')
-                        ->options(['draft' => 'Ciornă', 'pending' => 'Trimis spre aprobare', 'approved' => 'Aprobat', 'rejected' => 'Respins'])
-                        ->placeholder('Creat de admin (fără aprobare)')
+                        ->label(__('Stare'))
+                        ->options(['draft' => __('Ciornă'), 'pending' => __('Trimis spre aprobare'), 'approved' => __('Aprobat'), 'rejected' => __('Respins')])
+                        ->placeholder(__('Creat de admin (fără aprobare)'))
                         ->live(),
                     Forms\Components\Textarea::make('rejection_reason')
-                        ->label('Motivul respingerii (îl vede operatorul)')
+                        ->label(__('Motivul respingerii (îl vede operatorul)'))
                         ->rows(2)
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('review_status') === 'rejected'),
                 ])
@@ -566,7 +566,7 @@ class ActivityResource extends Resource
                                     ->key('detalii')
                                     ->icon('heroicon-o-document-text')
                                     ->schema([
-                                        SC\Section::make('Conținut text')
+                                        SC\Section::make(__('Conținut text'))
                                             ->schema([
                                                 SC\Tabs::make('Text Translations')
                                                     ->tabs([
@@ -583,7 +583,7 @@ class ActivityResource extends Resource
                                                             ->extraAttributes(['style' => 'padding: 1.5rem !important; display: flex; flex-direction: column; gap: 1rem;'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.ro')
-                                                                    ->label('Titlu (RO)')
+                                                                    ->label(__('Titlu (RO)'))
                                                                     ->required()
                                                                     ->maxLength(190)
                                                                     ->live(onBlur: true)
@@ -593,15 +593,15 @@ class ActivityResource extends Resource
                                                                         }
                                                                     }),
                                                                 Forms\Components\TextInput::make('subtitle.ro')
-                                                                    ->label('Subtitlu (RO)')
+                                                                    ->label(__('Subtitlu (RO)'))
                                                                     ->maxLength(190),
                                                                 Forms\Components\Textarea::make('short_description.ro')
-                                                                    ->label('Descriere scurtă (RO)')
+                                                                    ->label(__('Descriere scurtă (RO)'))
                                                                     ->rows(2)
                                                                     ->maxLength(280)
-                                                                    ->helperText('Apare în carduri de listing și în meta description.'),
+                                                                    ->helperText(__('Apare în carduri de listing și în meta description.')),
                                                                 Forms\Components\RichEditor::make('description.ro')
-                                                                    ->label('Descriere completă (RO)')
+                                                                    ->label(__('Descriere completă (RO)'))
                                                                     ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                                                     ->columnSpanFull(),
                                                             ]),
@@ -614,17 +614,17 @@ class ActivityResource extends Resource
                                                             ->extraAttributes(['style' => 'padding: 1.5rem !important; display: flex; flex-direction: column; gap: 1rem;'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.en')
-                                                                    ->label('Title (EN)')
+                                                                    ->label(__('Title (EN)'))
                                                                     ->maxLength(190),
                                                                 Forms\Components\TextInput::make('subtitle.en')
-                                                                    ->label('Subtitle (EN)')
+                                                                    ->label(__('Subtitle (EN)'))
                                                                     ->maxLength(190),
                                                                 Forms\Components\Textarea::make('short_description.en')
-                                                                    ->label('Short description (EN)')
+                                                                    ->label(__('Short description (EN)'))
                                                                     ->rows(2)
                                                                     ->maxLength(280),
                                                                 Forms\Components\RichEditor::make('description.en')
-                                                                    ->label('Description (EN)')
+                                                                    ->label(__('Description (EN)'))
                                                                     ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                                                     ->columnSpanFull(),
                                                             ]),
@@ -632,35 +632,35 @@ class ActivityResource extends Resource
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\TextInput::make('slug')
-                                                    ->label('Slug')
+                                                    ->label(__('Slug'))
                                                     ->required()
                                                     ->maxLength(191)
                                                     ->rule('alpha_dash')
-                                                    ->placeholder('auto-generate din titlu RO')
-                                                    ->helperText('URL public: /activitate/{slug}')
+                                                    ->placeholder(__('auto-generate din titlu RO'))
+                                                    ->helperText(__('URL public: /activitate/{slug}'))
                                                     ->columnSpanFull(),
                                             ])
                                             ->columns(1),
 
-                                        SC\Section::make('Media')
-                                            ->description('Imagini afișate pe pagina publică a activității.')
+                                        SC\Section::make(__('Media'))
+                                            ->description(__('Imagini afișate pe pagina publică a activității.'))
                                             ->schema([
                                                 Forms\Components\FileUpload::make('cover_image_url')
-                                                    ->label('Imagine de copertă (card listing)')
+                                                    ->label(__('Imagine de copertă (card listing)'))
                                                     ->image()
                                                     ->disk('public')
                                                     ->directory('activities/covers')
                                                     ->visibility('public'),
 
                                                 Forms\Components\FileUpload::make('hero_image_url')
-                                                    ->label('Imagine hero (pagina activității)')
+                                                    ->label(__('Imagine hero (pagina activității)'))
                                                     ->image()
                                                     ->disk('public')
                                                     ->directory('activities/heroes')
                                                     ->visibility('public'),
 
                                                 Forms\Components\TagsInput::make('gallery')
-                                                    ->label('Galerie (URL-uri imagini)')
+                                                    ->label(__('Galerie (URL-uri imagini)'))
                                                     ->placeholder('https://...')
                                                     ->columnSpanFull(),
                                             ])
@@ -682,32 +682,32 @@ class ActivityResource extends Resource
                                     ->key('locatie')
                                     ->icon('heroicon-o-map-pin')
                                     ->schema([
-                                        SC\Section::make('Organizator & venue')
+                                        SC\Section::make(__('Organizator & venue'))
                                             ->schema([
                                                 Forms\Components\Select::make('marketplace_organizer_id')
-                                                    ->label('Organizator (locație)')
+                                                    ->label(__('Organizator (locație)'))
                                                     ->options($organizerOptions)
                                                     ->searchable()
                                                     ->preload(),
 
                                                 Forms\Components\Select::make('venue_id')
-                                                    ->label('Locație fizică (venue)')
+                                                    ->label(__('Locație fizică (venue)'))
                                                     ->options($venueOptions)
                                                     ->searchable()
                                                     ->preload(),
                                             ])
                                             ->columns(2),
 
-                                        SC\Section::make('Geo & taxonomie')
+                                        SC\Section::make(__('Geo & taxonomie'))
                                             ->schema([
                                                 Forms\Components\Select::make('marketplace_city_id')
-                                                    ->label('Oraș')
+                                                    ->label(__('Oraș'))
                                                     ->options($cityOptions)
                                                     ->searchable()
                                                     ->preload(),
 
                                                 Forms\Components\Select::make('marketplace_category_id')
-                                                    ->label('Categorie principală')
+                                                    ->label(__('Categorie principală'))
                                                     ->options($categoryOptions)
                                                     ->searchable()
                                                     ->preload()
@@ -715,35 +715,35 @@ class ActivityResource extends Resource
                                                     ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('marketplace_subcategory_id', null)),
 
                                                 Forms\Components\Select::make('marketplace_subcategory_id')
-                                                    ->label('Subcategorie')
+                                                    ->label(__('Subcategorie'))
                                                     ->options($subcategoryOptions)
                                                     ->searchable(),
 
                                                 Forms\Components\Textarea::make('meeting_point')
-                                                    ->label('Punct de întâlnire')
+                                                    ->label(__('Punct de întâlnire'))
                                                     ->rows(3)
-                                                    ->placeholder('ex: Recepția mall-ului, etajul 2, lângă scara rulantă')
+                                                    ->placeholder(__('ex: Recepția mall-ului, etajul 2, lângă scara rulantă'))
                                                     ->columnSpanFull(),
                                             ])
                                             ->columns(3),
 
                                         // F2 Nearby + F3 discovery taxonomies.
-                                        SC\Section::make('Coordonate & descoperire')
-                                            ->description('Coordonatele alimentează „În apropiere". Se moștenesc din venue dacă le lași goale. Interesele și tipurile de călători alimentează filtrele și badge-urile GYG.')
+                                        SC\Section::make(__('Coordonate & descoperire'))
+                                            ->description(__('Coordonatele alimentează „În apropiere". Se moștenesc din venue dacă le lași goale. Interesele și tipurile de călători alimentează filtrele și badge-urile GYG.'))
                                             ->schema(array_merge([
                                                 Forms\Components\TextInput::make('latitude')
-                                                    ->label('Latitudine')
+                                                    ->label(__('Latitudine'))
                                                     ->numeric()
                                                     ->step('0.0000001')
-                                                    ->placeholder('ex: 45.6536'),
+                                                    ->placeholder(__('ex: 45.6536')),
                                                 Forms\Components\TextInput::make('longitude')
-                                                    ->label('Longitudine')
+                                                    ->label(__('Longitudine'))
                                                     ->numeric()
                                                     ->step('0.0000001')
-                                                    ->placeholder('ex: 25.6106'),
+                                                    ->placeholder(__('ex: 25.6106')),
                                             ], $discoveryReady ? [
                                                 Forms\Components\Select::make('interests')
-                                                    ->label('Interese')
+                                                    ->label(__('Interese'))
                                                     ->relationship('interests', 'slug', fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id))
                                                     ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? $record->slug) : $record->name)
                                                     ->multiple()
@@ -752,7 +752,7 @@ class ActivityResource extends Resource
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\Select::make('travelerTypes')
-                                                    ->label('Tipuri de călători')
+                                                    ->label(__('Tipuri de călători'))
                                                     ->relationship('travelerTypes', 'slug', fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id))
                                                     ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? $record->slug) : $record->name)
                                                     ->multiple()
@@ -761,7 +761,7 @@ class ActivityResource extends Resource
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\Select::make('attractions')
-                                                    ->label('Atracții asociate')
+                                                    ->label(__('Atracții asociate'))
                                                     ->relationship('attractions', 'slug', fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id))
                                                     ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? $record->slug) : $record->name)
                                                     ->multiple()
@@ -779,11 +779,11 @@ class ActivityResource extends Resource
                                     ->key('program')
                                     ->icon('heroicon-o-clock')
                                     ->schema([
-                                        SC\Section::make('Slot-uri')
-                                            ->description('Cum se generează intervalele rezervabile din programul săptămânal.')
+                                        SC\Section::make(__('Slot-uri'))
+                                            ->description(__('Cum se generează intervalele rezervabile din programul săptămânal.'))
                                             ->schema([
                                                 Forms\Components\TextInput::make('duration_minutes')
-                                                    ->label('Durată sesiune (min)')
+                                                    ->label(__('Durată sesiune (min)'))
                                                     ->numeric()
                                                     ->default(60)
                                                     ->minValue(5)
@@ -791,23 +791,23 @@ class ActivityResource extends Resource
                                                     ->required(),
 
                                                 Forms\Components\TextInput::make('slot_interval_minutes')
-                                                    ->label('Interval start slot-uri (min)')
+                                                    ->label(__('Interval start slot-uri (min)'))
                                                     ->numeric()
                                                     ->default(60)
                                                     ->minValue(5)
                                                     ->maxValue(1440)
                                                     ->required()
-                                                    ->helperText('Ex: 60 = slot la fiecare oră.'),
+                                                    ->helperText(__('Ex: 60 = slot la fiecare oră.')),
 
                                                 Forms\Components\TextInput::make('buffer_minutes')
-                                                    ->label('Buffer între slot-uri (min)')
+                                                    ->label(__('Buffer între slot-uri (min)'))
                                                     ->numeric()
                                                     ->default(0)
                                                     ->minValue(0)
                                                     ->maxValue(120),
 
                                                 Forms\Components\TextInput::make('capacity_per_slot')
-                                                    ->label('Capacitate per slot')
+                                                    ->label(__('Capacitate per slot'))
                                                     ->numeric()
                                                     ->default(1)
                                                     ->minValue(1)
@@ -816,39 +816,39 @@ class ActivityResource extends Resource
                                             ])
                                             ->columns(4),
 
-                                        SC\Section::make('Program săptămânal')
-                                            ->description('Adaugă intervale de funcționare. Mai multe intervale pe aceeași zi sunt OK (ex: 10-14 + 17-22).')
+                                        SC\Section::make(__('Program săptămânal'))
+                                            ->description(__('Adaugă intervale de funcționare. Mai multe intervale pe aceeași zi sunt OK (ex: 10-14 + 17-22).'))
                                             ->schema([
                                                 Forms\Components\Repeater::make('schedules')
                                                     ->relationship()
                                                     ->label(false)
                                                     ->schema([
                                                         Forms\Components\Select::make('day_of_week')
-                                                            ->label('Ziua')
+                                                            ->label(__('Ziua'))
                                                             ->options([
-                                                                1 => 'Luni', 2 => 'Marți', 3 => 'Miercuri',
-                                                                4 => 'Joi', 5 => 'Vineri', 6 => 'Sâmbătă', 7 => 'Duminică',
+                                                                1 => __('Luni'), 2 => __('Marți'), 3 => __('Miercuri'),
+                                                                4 => __('Joi'), 5 => __('Vineri'), 6 => __('Sâmbătă'), 7 => __('Duminică'),
                                                             ])
                                                             ->required(),
                                                         Forms\Components\TimePicker::make('open_time')
-                                                            ->label('Deschis')
+                                                            ->label(__('Deschis'))
                                                             ->seconds(false)
                                                             ->required(),
                                                         Forms\Components\TimePicker::make('close_time')
-                                                            ->label('Închis')
+                                                            ->label(__('Închis'))
                                                             ->seconds(false)
                                                             ->required(),
                                                         Forms\Components\Toggle::make('is_active')
-                                                            ->label('Activ')
+                                                            ->label(__('Activ'))
                                                             ->default(true)
                                                             ->inline(false),
                                                         Forms\Components\TextInput::make('season_start')
-                                                            ->label('Sezon din (LL-ZZ)')
+                                                            ->label(__('Sezon din (LL-ZZ)'))
                                                             ->placeholder('04-01')
                                                             ->regex('/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/')
-                                                            ->helperText('Lună-zi. Gol = tot anul.'),
+                                                            ->helperText(__('Lună-zi. Gol = tot anul.')),
                                                         Forms\Components\TextInput::make('season_end')
-                                                            ->label('Sezon până la (LL-ZZ)')
+                                                            ->label(__('Sezon până la (LL-ZZ)'))
                                                             ->placeholder('10-31')
                                                             ->regex('/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/'),
                                                     ])
@@ -862,12 +862,12 @@ class ActivityResource extends Resource
                                                         $close = $state['close_time'] ?? '';
                                                         return $d ? ($days[$d] ?? '?') . " · {$open} – {$close}" : null;
                                                     })
-                                                    ->addActionLabel('Adaugă interval'),
+                                                    ->addActionLabel(__('Adaugă interval')),
                                             ])
                                             ->columns(1),
 
-                                        SC\Section::make('Excepții (zile speciale)')
-                                            ->description('Override pentru sărbători, închideri ad-hoc, ore speciale.')
+                                        SC\Section::make(__('Excepții (zile speciale)'))
+                                            ->description(__('Override pentru sărbători, închideri ad-hoc, ore speciale.'))
                                             ->collapsed()
                                             ->schema([
                                                 Forms\Components\Repeater::make('scheduleExceptions')
@@ -875,22 +875,22 @@ class ActivityResource extends Resource
                                                     ->label(false)
                                                     ->schema([
                                                         Forms\Components\DatePicker::make('exception_date')
-                                                            ->label('Data')
+                                                            ->label(__('Data'))
                                                             ->required(),
                                                         Forms\Components\Toggle::make('is_closed')
-                                                            ->label('Închis')
+                                                            ->label(__('Închis'))
                                                             ->default(true)
                                                             ->live(),
                                                         Forms\Components\TimePicker::make('open_time')
-                                                            ->label('Deschis (dacă nu e închis)')
+                                                            ->label(__('Deschis (dacă nu e închis)'))
                                                             ->seconds(false)
                                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ! $get('is_closed')),
                                                         Forms\Components\TimePicker::make('close_time')
-                                                            ->label('Închis (dacă nu e închis)')
+                                                            ->label(__('Închis (dacă nu e închis)'))
                                                             ->seconds(false)
                                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ! $get('is_closed')),
                                                         Forms\Components\TextInput::make('reason')
-                                                            ->label('Motiv')
+                                                            ->label(__('Motiv'))
                                                             ->maxLength(190)
                                                             ->columnSpanFull(),
                                                     ])
@@ -901,7 +901,7 @@ class ActivityResource extends Resource
                                                         $closed = ! empty($state['is_closed']);
                                                         return $date ? "{$date} · " . ($closed ? 'închis' : 'program special') : null;
                                                     })
-                                                    ->addActionLabel('Adaugă excepție'),
+                                                    ->addActionLabel(__('Adaugă excepție')),
                                             ])
                                             ->columns(1),
                                     ]),
@@ -913,57 +913,57 @@ class ActivityResource extends Resource
                                     ->key('rezervare')
                                     ->icon('heroicon-o-ticket')
                                     ->schema([
-                                        SC\Section::make('Constraints rezervare')
+                                        SC\Section::make(__('Constraints rezervare'))
                                             ->schema([
                                                 Forms\Components\TextInput::make('min_participants')
-                                                    ->label('Minim participanți / rezervare')
+                                                    ->label(__('Minim participanți / rezervare'))
                                                     ->numeric()
                                                     ->default(1)
                                                     ->minValue(1),
 
                                                 Forms\Components\TextInput::make('max_participants')
-                                                    ->label('Maxim participanți / rezervare')
+                                                    ->label(__('Maxim participanți / rezervare'))
                                                     ->numeric()
                                                     ->default(10)
                                                     ->minValue(1),
 
                                                 Forms\Components\TextInput::make('booking_lead_time_hours')
-                                                    ->label('Timp minim înainte de slot (ore)')
+                                                    ->label(__('Timp minim înainte de slot (ore)'))
                                                     ->numeric()
                                                     ->default(2)
                                                     ->minValue(0)
-                                                    ->helperText('Ex: 2 = nu se poate rezerva cu mai puțin de 2h înainte.'),
+                                                    ->helperText(__('Ex: 2 = nu se poate rezerva cu mai puțin de 2h înainte.')),
 
                                                 Forms\Components\TextInput::make('booking_max_advance_days')
-                                                    ->label('Maxim avans (zile)')
+                                                    ->label(__('Maxim avans (zile)'))
                                                     ->numeric()
                                                     ->default(60)
                                                     ->minValue(1)
-                                                    ->helperText('Cât în avans se poate rezerva.'),
+                                                    ->helperText(__('Cât în avans se poate rezerva.')),
                                             ])
                                             ->columns(4),
 
-                                        SC\Section::make('Conținut pagină')
+                                        SC\Section::make(__('Conținut pagină'))
                                             ->schema([
                                                 Forms\Components\Textarea::make('cancellation_policy')
-                                                    ->label('Politică de anulare')
+                                                    ->label(__('Politică de anulare'))
                                                     ->rows(3)
-                                                    ->placeholder('ex: Anularea cu minim 24h înainte aduce refund integral.')
+                                                    ->placeholder(__('ex: Anularea cu minim 24h înainte aduce refund integral.'))
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\TagsInput::make('included_items')
-                                                    ->label('Incluse')
-                                                    ->placeholder('Acces 60 min, instructor, băutură…')
+                                                    ->label(__('Incluse'))
+                                                    ->placeholder(__('Acces 60 min, instructor, băutură…'))
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\TagsInput::make('not_included')
-                                                    ->label('Neincluse')
-                                                    ->placeholder('Transport, masă…')
+                                                    ->label(__('Neincluse'))
+                                                    ->placeholder(__('Transport, masă…'))
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\TagsInput::make('requirements')
-                                                    ->label('Cerințe')
-                                                    ->placeholder('Minim 14 ani, pantofi sport…')
+                                                    ->label(__('Cerințe'))
+                                                    ->placeholder(__('Minim 14 ani, pantofi sport…'))
                                                     ->columnSpanFull(),
                                             ])
                                             ->columns(1),
@@ -976,28 +976,28 @@ class ActivityResource extends Resource
                                     ->key('seo')
                                     ->icon('heroicon-o-magnifying-glass')
                                     ->schema([
-                                        SC\Section::make('Meta SEO')
-                                            ->description('Apar în <title> și meta description pe pagina publică.')
+                                        SC\Section::make(__('Meta SEO'))
+                                            ->description(__('Apar în <title> și meta description pe pagina publică.'))
                                             ->schema([
                                                 SC\Tabs::make('Meta Translations')
                                                     ->tabs([
                                                         SC\Tabs\Tab::make('Română')
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('seo.title_ro')
-                                                                    ->label('Meta title (RO)')
+                                                                    ->label(__('Meta title (RO)'))
                                                                     ->maxLength(70),
                                                                 Forms\Components\Textarea::make('seo.description_ro')
-                                                                    ->label('Meta description (RO)')
+                                                                    ->label(__('Meta description (RO)'))
                                                                     ->rows(2)
                                                                     ->maxLength(160),
                                                             ]),
                                                         SC\Tabs\Tab::make('English')
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('seo.title_en')
-                                                                    ->label('Meta title (EN)')
+                                                                    ->label(__('Meta title (EN)'))
                                                                     ->maxLength(70),
                                                                 Forms\Components\Textarea::make('seo.description_en')
-                                                                    ->label('Meta description (EN)')
+                                                                    ->label(__('Meta description (EN)'))
                                                                     ->rows(2)
                                                                     ->maxLength(160),
                                                             ]),
@@ -1005,8 +1005,8 @@ class ActivityResource extends Resource
                                                     ->columnSpanFull(),
                                             ]),
 
-                                        SC\Section::make('Corp SEO (rich text)')
-                                            ->description('Body editorial afișat sub conținutul principal — inclus pentru SEO long-tail.')
+                                        SC\Section::make(__('Corp SEO (rich text)'))
+                                            ->description(__('Body editorial afișat sub conținutul principal — inclus pentru SEO long-tail.'))
                                             ->collapsed()
                                             ->schema([
                                                 SC\Tabs::make('SEO Body Translations')
@@ -1014,20 +1014,20 @@ class ActivityResource extends Resource
                                                         SC\Tabs\Tab::make('Română')
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('seo_body_title.ro')
-                                                                    ->label('Titlu corp (RO)')
+                                                                    ->label(__('Titlu corp (RO)'))
                                                                     ->maxLength(190),
                                                                 Forms\Components\RichEditor::make('seo_body.ro')
-                                                                    ->label('Corp text (RO)')
+                                                                    ->label(__('Corp text (RO)'))
                                                                     ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                                                     ->columnSpanFull(),
                                                             ]),
                                                         SC\Tabs\Tab::make('English')
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('seo_body_title.en')
-                                                                    ->label('Body title (EN)')
+                                                                    ->label(__('Body title (EN)'))
                                                                     ->maxLength(190),
                                                                 Forms\Components\RichEditor::make('seo_body.en')
-                                                                    ->label('Body (EN)')
+                                                                    ->label(__('Body (EN)'))
                                                                     ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                                                     ->columnSpanFull(),
                                                             ]),
@@ -1035,18 +1035,18 @@ class ActivityResource extends Resource
                                                     ->columnSpanFull(),
                                             ]),
 
-                                        SC\Section::make('Întrebări frecvente (FAQ)')
-                                            ->description('Apar pe pagină + emise ca FAQPage JSON-LD pentru rich SERP.')
+                                        SC\Section::make(__('Întrebări frecvente (FAQ)'))
+                                            ->description(__('Apar pe pagină + emise ca FAQPage JSON-LD pentru rich SERP.'))
                                             ->schema([
                                                 Forms\Components\Repeater::make('faqs')
                                                     ->label(false)
                                                     ->schema([
                                                         Forms\Components\TextInput::make('q')
-                                                            ->label('Întrebare')
+                                                            ->label(__('Întrebare'))
                                                             ->required()
                                                             ->maxLength(200),
                                                         Forms\Components\Textarea::make('a')
-                                                            ->label('Răspuns')
+                                                            ->label(__('Răspuns'))
                                                             ->required()
                                                             ->rows(3),
                                                     ])
@@ -1055,7 +1055,7 @@ class ActivityResource extends Resource
                                                     ->collapsible()
                                                     ->cloneable()
                                                     ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
-                                                    ->addActionLabel('Adaugă întrebare')
+                                                    ->addActionLabel(__('Adaugă întrebare'))
                                                     ->columnSpanFull(),
                                             ]),
                                     ]),
@@ -1079,7 +1079,7 @@ class ActivityResource extends Resource
                                     ->key('vanzari')
                                     ->icon('heroicon-o-chart-bar')
                                     ->schema([
-                                        SC\Section::make('Sumar rezervări')
+                                        SC\Section::make(__('Sumar rezervări'))
                                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
                                             ->schema([
                                                 Forms\Components\Placeholder::make('sales_summary')
@@ -1144,7 +1144,7 @@ class ActivityResource extends Resource
                                                     }),
                                             ]),
 
-                                        SC\Section::make('Ultimele rezervări')
+                                        SC\Section::make(__('Ultimele rezervări'))
                                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
                                             ->collapsed()
                                             ->schema([
@@ -1205,7 +1205,7 @@ class ActivityResource extends Resource
                                                     }),
                                             ]),
 
-                                        SC\Section::make('Vânzări')
+                                        SC\Section::make(__('Vânzări'))
                                             ->visible(fn (?\App\Models\Activity $record) => ! $record || ! $record->exists)
                                             ->schema([
                                                 Forms\Components\Placeholder::make('save_first_for_sales')
@@ -1221,50 +1221,50 @@ class ActivityResource extends Resource
                                     ->key('audienta')
                                     ->icon('heroicon-o-users')
                                     ->schema([
-                                        SC\Section::make('Caracteristici activitate')
-                                            ->description('Alimentează filtrele de intenție pe pagini de oraș și categorie.')
+                                        SC\Section::make(__('Caracteristici activitate'))
+                                            ->description(__('Alimentează filtrele de intenție pe pagini de oraș și categorie.'))
                                             ->schema([
-                                                Forms\Components\Toggle::make('is_indoor')->label('Indoor'),
-                                                Forms\Components\Toggle::make('is_outdoor')->label('Outdoor'),
-                                                Forms\Components\Toggle::make('is_kid_friendly')->label('Potrivit copiilor'),
-                                                Forms\Components\Toggle::make('is_accessible')->label('Accesibil dizabilități'),
-                                                Forms\Components\Toggle::make('is_weather_sensitive')->label('Depinde de vreme'),
+                                                Forms\Components\Toggle::make('is_indoor')->label(__('Indoor')),
+                                                Forms\Components\Toggle::make('is_outdoor')->label(__('Outdoor')),
+                                                Forms\Components\Toggle::make('is_kid_friendly')->label(__('Potrivit copiilor')),
+                                                Forms\Components\Toggle::make('is_accessible')->label(__('Accesibil dizabilități')),
+                                                Forms\Components\Toggle::make('is_weather_sensitive')->label(__('Depinde de vreme')),
                                             ])
                                             ->columns(5),
 
-                                        SC\Section::make('Audiență & limbi')
+                                        SC\Section::make(__('Audiență & limbi'))
                                             ->schema([
                                                 Forms\Components\TextInput::make('age_min')
-                                                    ->label('Vârsta minimă')
+                                                    ->label(__('Vârsta minimă'))
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->maxValue(99),
 
                                                 Forms\Components\TextInput::make('age_max')
-                                                    ->label('Vârsta maximă')
+                                                    ->label(__('Vârsta maximă'))
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->maxValue(99),
 
                                                 Forms\Components\Select::make('difficulty_level')
-                                                    ->label('Dificultate')
+                                                    ->label(__('Dificultate'))
                                                     ->options([
-                                                        'easy'   => 'Ușor',
-                                                        'medium' => 'Mediu',
-                                                        'hard'   => 'Greu',
-                                                        'expert' => 'Expert',
+                                                        'easy'   => __('Ușor'),
+                                                        'medium' => __('Mediu'),
+                                                        'hard'   => __('Greu'),
+                                                        'expert' => __('Expert'),
                                                     ])
                                                     // Native:false renders Filament's custom dropdown with an X
                                                     // clear button when a value is set. Placeholder appears as
                                                     // a selectable "no value" row at the top of the list, so
                                                     // admin can either click X or pick "Fără dificultate" to
                                                     // reset back to NULL.
-                                                    ->placeholder('Fără dificultate')
+                                                    ->placeholder(__('Fără dificultate'))
                                                     ->native(false),
 
                                                 Forms\Components\TagsInput::make('languages_offered')
-                                                    ->label('Limbi disponibile')
-                                                    ->placeholder('ro, en, hu, de…')
+                                                    ->label(__('Limbi disponibile'))
+                                                    ->placeholder(__('ro, en, hu, de…'))
                                                     ->columnSpanFull(),
                                             ])
                                             ->columns(3),
@@ -1286,7 +1286,7 @@ class ActivityResource extends Resource
                         // sync with EventResource's preview pattern. Delete goes through
                         // a confirm dialog (delete-record Livewire wire) so we don't
                         // accidentally bypass Filament's existing UX.
-                        SC\Section::make('Acțiuni')
+                        SC\Section::make(__('Acțiuni'))
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
                             ->schema([
                                 Forms\Components\Placeholder::make('preview_link')
@@ -1318,21 +1318,21 @@ class ActivityResource extends Resource
                                 // to the list view). Visible only when the record exists.
                                 SC\Actions::make([
                                     \Filament\Actions\Action::make('deleteActivity')
-                                        ->label('Șterge activitatea')
+                                        ->label(__('Șterge activitatea'))
                                         ->icon('heroicon-o-trash')
                                         ->color('danger')
                                         ->size('lg')
                                         ->requiresConfirmation()
-                                        ->modalHeading('Șterge activitatea?')
-                                        ->modalDescription('Această acțiune este ireversibilă. Toate variantele, programul, excepțiile și rezervările asociate vor fi șterse împreună cu activitatea.')
-                                        ->modalSubmitActionLabel('Da, șterge')
+                                        ->modalHeading(__('Șterge activitatea?'))
+                                        ->modalDescription(__('Această acțiune este ireversibilă. Toate variantele, programul, excepțiile și rezervările asociate vor fi șterse împreună cu activitatea.'))
+                                        ->modalSubmitActionLabel(__('Da, șterge'))
                                         ->action(function (?\App\Models\Activity $record) {
                                             if ($record && $record->exists) {
                                                 $record->delete();
                                             }
 
                                             \Filament\Notifications\Notification::make()
-                                                ->title('Activitate ștearsă.')
+                                                ->title(__('Activitate ștearsă.'))
                                                 ->success()
                                                 ->send();
 
@@ -1343,11 +1343,11 @@ class ActivityResource extends Resource
                             ])
                             ->columns(1),
 
-                        SC\Section::make('Status')
+                        SC\Section::make(__('Status'))
                             ->schema([
                                 Forms\Components\Toggle::make('is_published')
-                                    ->label('Publicat')
-                                    ->helperText('Activitățile publicate apar pe site-ul public.')
+                                    ->label(__('Publicat'))
+                                    ->helperText(__('Activitățile publicate apar pe site-ul public.'))
                                     ->onIcon('heroicon-m-eye')
                                     ->offIcon('heroicon-m-eye-slash')
                                     ->default(false),
@@ -1369,16 +1369,16 @@ class ActivityResource extends Resource
                             ])
                             ->columns(1),
 
-                        SC\Section::make('Promovare')
-                            ->description('Cum apare în listing-uri.')
+                        SC\Section::make(__('Promovare'))
+                            ->description(__('Cum apare în listing-uri.'))
                             ->schema([
                                 Forms\Components\Toggle::make('is_featured')
-                                    ->label('Promovat')
+                                    ->label(__('Promovat'))
                                     ->onIcon('heroicon-m-sparkles')
                                     ->offIcon('heroicon-m-sparkles'),
-                                Forms\Components\Toggle::make('is_homepage_featured')->label('Pe homepage'),
-                                Forms\Components\Toggle::make('is_category_featured')->label('Pe pagina categoriei'),
-                                Forms\Components\Toggle::make('is_city_featured')->label('Pe pagina orașului'),
+                                Forms\Components\Toggle::make('is_homepage_featured')->label(__('Pe homepage')),
+                                Forms\Components\Toggle::make('is_category_featured')->label(__('Pe pagina categoriei')),
+                                Forms\Components\Toggle::make('is_city_featured')->label(__('Pe pagina orașului')),
                             ])
                             ->collapsible()
                             ->columns(1),
@@ -1388,7 +1388,7 @@ class ActivityResource extends Resource
                         // email + status badges + commission + activity counts +
                         // total revenue, all in one compact block. Visible only on
                         // edit AND when an organizer is set on the activity.
-                        SC\Section::make('Organizator')
+                        SC\Section::make(__('Organizator'))
                             ->icon('heroicon-o-building-office-2')
                             ->compact()
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && $record->marketplace_organizer_id)
@@ -1478,7 +1478,7 @@ class ActivityResource extends Resource
                             ]),
 
                         // Locație fizică — same compact panel pattern for venue info.
-                        SC\Section::make('Locație fizică')
+                        SC\Section::make(__('Locație fizică'))
                             ->icon('heroicon-o-map-pin')
                             ->compact()
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && $record->venue_id)
@@ -1512,25 +1512,25 @@ class ActivityResource extends Resource
                                     }),
                             ]),
 
-                        SC\Section::make('Statistici')
+                        SC\Section::make(__('Statistici'))
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
                             ->schema([
                                 Forms\Components\Placeholder::make('cheapest_price_display')
-                                    ->label('De la')
+                                    ->label(__('De la'))
                                     ->content(fn (?\App\Models\Activity $record) => $record?->cheapest_price_cents
                                         ? number_format($record->cheapest_price_cents / 100, 0, ',', '.') . ' lei'
                                         : 'Adaugă variante de preț'),
 
                                 Forms\Components\Placeholder::make('views_display')
-                                    ->label('Vizualizări')
+                                    ->label(__('Vizualizări'))
                                     ->content(fn (?\App\Models\Activity $record) => number_format((int) ($record?->views_count ?? 0), 0, ',', '.')),
 
                                 Forms\Components\Placeholder::make('created_at_display')
-                                    ->label('Creat')
+                                    ->label(__('Creat'))
                                     ->content(fn (?\App\Models\Activity $record) => $record?->created_at?->isoFormat('D MMM Y, HH:mm')),
 
                                 Forms\Components\Placeholder::make('updated_at_display')
-                                    ->label('Modificat')
+                                    ->label(__('Modificat'))
                                     ->content(fn (?\App\Models\Activity $record) => $record?->updated_at?->isoFormat('D MMM Y, HH:mm')),
                             ])
                             ->collapsible()
@@ -1555,7 +1555,7 @@ class ActivityResource extends Resource
                     ->size(40),
 
                 Tables\Columns\TextColumn::make("title.{$lang}")
-                    ->label('Titlu')
+                    ->label(__('Titlu'))
                     // Diacritic-insensitive + case-insensitive search across title (RO+EN)
                     // and short_description. On PostgreSQL we use `translate()` to strip
                     // Romanian diacritics from the DB value, then `LOWER` for case folding.
@@ -1597,32 +1597,32 @@ class ActivityResource extends Resource
                     ->limit(60),
 
                 Tables\Columns\TextColumn::make('city.name')
-                    ->label('Oraș')
+                    ->label(__('Oraș'))
                     ->formatStateUsing(fn ($state) => is_array($state) ? ($state[$lang] ?? $state['en'] ?? '-') : ($state ?? '-')),
 
                 Tables\Columns\TextColumn::make('category.name')
-                    ->label('Categorie')
+                    ->label(__('Categorie'))
                     ->formatStateUsing(fn ($state) => is_array($state) ? ($state[$lang] ?? $state['en'] ?? '-') : ($state ?? '-')),
 
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->limit(30),
 
                 Tables\Columns\TextColumn::make('duration_minutes')
-                    ->label('Durată')
+                    ->label(__('Durată'))
                     ->formatStateUsing(fn ($state) => $state ? "{$state} min" : '-'),
 
                 Tables\Columns\TextColumn::make('capacity_per_slot')
-                    ->label('Cap./slot')
+                    ->label(__('Cap./slot'))
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('cheapest_price_cents')
-                    ->label('De la')
+                    ->label(__('De la'))
                     ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 0, ',', '.') . ' lei' : '—')
                     ->alignRight(),
 
                 Tables\Columns\IconColumn::make('is_published')
-                    ->label('Publicat')
+                    ->label(__('Publicat'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_featured')
@@ -1630,10 +1630,10 @@ class ActivityResource extends Resource
                     ->boolean(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_published')->label('Publicat'),
-                Tables\Filters\TernaryFilter::make('is_featured')->label('Promovat'),
+                Tables\Filters\TernaryFilter::make('is_published')->label(__('Publicat')),
+                Tables\Filters\TernaryFilter::make('is_featured')->label(__('Promovat')),
                 Tables\Filters\SelectFilter::make('marketplace_city_id')
-                    ->label('Oraș')
+                    ->label(__('Oraș'))
                     ->options(function () use ($marketplace, $lang) {
                         return MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
                             ->orderBy('sort_order')
@@ -1642,7 +1642,7 @@ class ActivityResource extends Resource
                             ->toArray();
                     }),
                 Tables\Filters\SelectFilter::make('marketplace_category_id')
-                    ->label('Categorie')
+                    ->label(__('Categorie'))
                     ->options(function () use ($marketplace, $lang) {
                         return MarketplaceCategory::where('marketplace_client_id', $marketplace?->id)
                             ->whereNull('parent_id')

@@ -89,31 +89,31 @@ class ArtistAccountResource extends Resource
         return $schema->components([
             SC\Grid::make(4)->schema([
                 SC\Group::make()->columnSpan(3)->schema([
-                    SC\Section::make('Aplicant')
+                    SC\Section::make(__('Aplicant'))
                         ->icon('heroicon-o-user')
                         ->schema([
                             Forms\Components\TextInput::make('first_name')
-                                ->label('Prenume')
+                                ->label(__('Prenume'))
                                 ->disabled(),
                             Forms\Components\TextInput::make('last_name')
-                                ->label('Nume')
+                                ->label(__('Nume'))
                                 ->disabled(),
                             Forms\Components\TextInput::make('email')
-                                ->label('Email')
+                                ->label(__('Email'))
                                 ->disabled(),
                             Forms\Components\TextInput::make('phone')
-                                ->label('Telefon')
+                                ->label(__('Telefon'))
                                 ->disabled(),
                             Forms\Components\TextInput::make('locale')
-                                ->label('Limbă')
+                                ->label(__('Limbă'))
                                 ->disabled(),
                             Forms\Components\Placeholder::make('email_verified_state')
-                                ->label('Email verificat')
+                                ->label(__('Email verificat'))
                                 ->content(fn (?MarketplaceArtistAccount $record) => $record?->isEmailVerified()
                                     ? new \Illuminate\Support\HtmlString('<span style="color:#16a34a;font-weight:600">Da, ' . $record->email_verified_at->translatedFormat('d M Y, H:i') . '</span>')
                                     : new \Illuminate\Support\HtmlString('<span style="color:#dc2626;font-weight:600">Nu</span>')),
                             Forms\Components\Placeholder::make('verification_email_status')
-                                ->label('Email de verificare trimis')
+                                ->label(__('Email de verificare trimis'))
                                 ->content(function (?MarketplaceArtistAccount $record) {
                                     if (!$record) {
                                         return '—';
@@ -154,11 +154,11 @@ class ArtistAccountResource extends Resource
                                 }),
                         ])->columns(2),
 
-                    SC\Section::make('Profil revendicat')
+                    SC\Section::make(__('Profil revendicat'))
                         ->icon('heroicon-o-musical-note')
                         ->schema([
                             Forms\Components\Placeholder::make('artist_link')
-                                ->label('Artist asociat')
+                                ->label(__('Artist asociat'))
                                 ->content(function (?MarketplaceArtistAccount $record) {
                                     if (!$record || !$record->artist_id) {
                                         return new \Illuminate\Support\HtmlString('<span style="color:#94a3b8">— niciun artist linkat —</span>');
@@ -175,13 +175,13 @@ class ArtistAccountResource extends Resource
                                 }),
                         ]),
 
-                    SC\Section::make('Extended Artist')
+                    SC\Section::make(__('Extended Artist'))
                         ->icon('heroicon-o-sparkles')
                         ->visible(fn (?MarketplaceArtistAccount $record) => $record
                             && self::isExtendedArtistMicroserviceActive($record->marketplace_client_id))
                         ->schema([
                             Forms\Components\Placeholder::make('extended_artist_status')
-                                ->label('Status')
+                                ->label(__('Status'))
                                 ->content(function (?MarketplaceArtistAccount $record) {
                                     if (!$record) {
                                         return '—';
@@ -249,11 +249,11 @@ class ArtistAccountResource extends Resource
 
                             SC\Actions::make([
                                 Action::make('extended_artist_activate_inline')
-                                    ->label('Activează Extended Artist')
+                                    ->label(__('Activează Extended Artist'))
                                     ->icon('heroicon-o-sparkles')
                                     ->color('primary')
                                     ->requiresConfirmation()
-                                    ->modalDescription('Acordă manual acces la Extended Artist (Fan CRM, Booking, EPK, Tour Optimizer). Fără facturare, fără expirare.')
+                                    ->modalDescription(__('Acordă manual acces la Extended Artist (Fan CRM, Booking, EPK, Tour Optimizer). Fără facturare, fără expirare.'))
                                     ->visible(function (?MarketplaceArtistAccount $record) {
                                         if (!$record) {
                                             return false;
@@ -265,7 +265,7 @@ class ArtistAccountResource extends Resource
                                         $access = app(ExtendedArtistAccess::class);
                                         $microservice = $access->microservice();
                                         if (!$microservice) {
-                                            Notification::make()->title('Microserviciul Extended Artist nu este definit.')->danger()->send();
+                                            Notification::make()->title(__('Microserviciul Extended Artist nu este definit.'))->danger()->send();
                                             return;
                                         }
 
@@ -287,20 +287,20 @@ class ArtistAccountResource extends Resource
                                         $pivot->save();
 
                                         Notification::make()
-                                            ->title('Extended Artist activat')
-                                            ->body('Artistul are acum acces nelimitat la cele 4 module.')
+                                            ->title(__('Extended Artist activat'))
+                                            ->body(__('Artistul are acum acces nelimitat la cele 4 module.'))
                                             ->success()
                                             ->send();
                                     }),
 
                                 Action::make('extended_artist_deactivate_inline')
-                                    ->label('Dezactivează acces manual')
+                                    ->label(__('Dezactivează acces manual'))
                                     ->icon('heroicon-o-no-symbol')
                                     ->color('danger')
                                     ->outlined()
                                     ->requiresConfirmation()
-                                    ->modalHeading('Dezactivează acces manual?')
-                                    ->modalDescription('Aceasta dezactivează doar accesele acordate de admin. Abonamentele plătite de artist NU pot fi oprite din UI — artistul trebuie să le anuleze din portalul lui.')
+                                    ->modalHeading(__('Dezactivează acces manual?'))
+                                    ->modalDescription(__('Aceasta dezactivează doar accesele acordate de admin. Abonamentele plătite de artist NU pot fi oprite din UI — artistul trebuie să le anuleze din portalul lui.'))
                                     ->visible(function (?MarketplaceArtistAccount $record) {
                                         if (!$record) {
                                             return false;
@@ -313,28 +313,28 @@ class ArtistAccountResource extends Resource
                                     ->action(function (MarketplaceArtistAccount $record) {
                                         $row = $record->extendedArtistActivation();
                                         if (!$row || $row->granted_by !== MarketplaceArtistAccountMicroservice::GRANTED_ADMIN_OVERRIDE) {
-                                            Notification::make()->title('Nu se poate dezactiva (nu e admin override).')->danger()->send();
+                                            Notification::make()->title(__('Nu se poate dezactiva (nu e admin override).'))->danger()->send();
                                             return;
                                         }
                                         $row->update([
                                             'status' => MarketplaceArtistAccountMicroservice::STATUS_CANCELLED,
                                             'cancelled_at' => now(),
                                         ]);
-                                        Notification::make()->title('Extended Artist dezactivat')->success()->send();
+                                        Notification::make()->title(__('Extended Artist dezactivat'))->success()->send();
                                     }),
                             ]),
                         ]),
 
-                    SC\Section::make('Mesaj revendicare')
+                    SC\Section::make(__('Mesaj revendicare'))
                         ->icon('heroicon-o-chat-bubble-left-ellipsis')
                         ->visible(fn (?MarketplaceArtistAccount $record) => !empty($record?->claim_message) || !empty($record?->claim_proof))
                         ->schema([
                             Forms\Components\Textarea::make('claim_message')
-                                ->label('Mesaj de la aplicant')
+                                ->label(__('Mesaj de la aplicant'))
                                 ->disabled()
                                 ->rows(4),
                             Forms\Components\Placeholder::make('claim_proof_links')
-                                ->label('Linkuri de dovadă')
+                                ->label(__('Linkuri de dovadă'))
                                 ->visible(fn (?MarketplaceArtistAccount $record) => !empty($record?->claim_proof))
                                 ->content(function (?MarketplaceArtistAccount $record) {
                                     $proofs = $record?->claim_proof ?? [];
@@ -349,12 +349,12 @@ class ArtistAccountResource extends Resource
                                 }),
                         ]),
 
-                    SC\Section::make('Decizie aprobare')
+                    SC\Section::make(__('Decizie aprobare'))
                         ->icon('heroicon-o-clipboard-document-check')
                         ->visible(fn (?MarketplaceArtistAccount $record) => $record && in_array($record->status, ['active', 'rejected', 'suspended']))
                         ->schema([
                             Forms\Components\Placeholder::make('approved_summary')
-                                ->label('Aprobat')
+                                ->label(__('Aprobat'))
                                 ->visible(fn (?MarketplaceArtistAccount $record) => $record?->approved_at !== null)
                                 ->content(function (?MarketplaceArtistAccount $record) {
                                     if (!$record?->approved_at) {
@@ -364,7 +364,7 @@ class ArtistAccountResource extends Resource
                                     return $record->approved_at->translatedFormat('d M Y, H:i') . ' • de ' . $approver;
                                 }),
                             Forms\Components\Textarea::make('rejection_reason')
-                                ->label('Motiv respingere')
+                                ->label(__('Motiv respingere'))
                                 ->disabled()
                                 ->visible(fn (?MarketplaceArtistAccount $record) => !empty($record?->rejection_reason))
                                 ->rows(3),
@@ -372,7 +372,7 @@ class ArtistAccountResource extends Resource
                 ]),
 
                 SC\Group::make()->columnSpan(1)->schema([
-                    SC\Section::make('Status')
+                    SC\Section::make(__('Status'))
                         ->icon('heroicon-o-flag')
                         ->schema([
                             Forms\Components\Placeholder::make('status_badge')
@@ -391,18 +391,18 @@ class ArtistAccountResource extends Resource
                                 }),
                         ]),
 
-                    SC\Section::make('Cronologie')
+                    SC\Section::make(__('Cronologie'))
                         ->icon('heroicon-o-clock')
                         ->schema([
                             Forms\Components\Placeholder::make('claim_submitted_at_formatted')
-                                ->label('Aplicat la')
+                                ->label(__('Aplicat la'))
                                 ->content(fn (?MarketplaceArtistAccount $record) => $record?->claim_submitted_at?->translatedFormat('d M Y, H:i') ?? '—'),
                             Forms\Components\Placeholder::make('last_login_at_formatted')
-                                ->label('Ultima conectare')
+                                ->label(__('Ultima conectare'))
                                 ->content(fn (?MarketplaceArtistAccount $record) => $record?->last_login_at?->translatedFormat('d M Y, H:i') ?? '—'),
                         ]),
 
-                    SC\Section::make('Detalii tehnice (claim)')
+                    SC\Section::make(__('Detalii tehnice (claim)'))
                         ->icon('heroicon-o-computer-desktop')
                         ->schema([
                             Forms\Components\Placeholder::make('claim_context')
@@ -464,17 +464,17 @@ class ArtistAccountResource extends Resource
                     ->defaultImageUrl(fn ($record) => null)
                     ->size(40),
                 Tables\Columns\TextColumn::make('full_name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable(['first_name', 'last_name'])
                     ->sortable(query: fn (Builder $q, string $direction) => $q->orderBy('last_name', $direction)),
                 Tables\Columns\TextColumn::make('email')
-                    ->label('Email')
+                    ->label(__('Email'))
                     ->searchable()
                     ->icon(fn (MarketplaceArtistAccount $record) => $record->isEmailVerified() ? 'heroicon-m-check-badge' : 'heroicon-m-exclamation-circle')
                     ->iconColor(fn (MarketplaceArtistAccount $record) => $record->isEmailVerified() ? 'success' : 'warning')
                     ->copyable(),
                 Tables\Columns\TextColumn::make('artist.name')
-                    ->label('Profil revendicat')
+                    ->label(__('Profil revendicat'))
                     ->placeholder('—')
                     ->url(fn (MarketplaceArtistAccount $record) => $record->artist_id
                         ? ArtistResource::getUrl('edit', ['record' => $record->artist_id])
@@ -482,7 +482,7 @@ class ArtistAccountResource extends Resource
                     ->openUrlInNewTab()
                     ->limit(35),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->colors([
                         'warning' => 'pending',
@@ -497,40 +497,40 @@ class ArtistAccountResource extends Resource
                         'suspended' => 'Suspendat',
                     ][$state] ?? $state),
                 Tables\Columns\TextColumn::make('claim_submitted_at')
-                    ->label('Aplicat')
+                    ->label(__('Aplicat'))
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->since()
                     ->tooltip(fn (MarketplaceArtistAccount $record) => $record->claim_submitted_at?->translatedFormat('d M Y, H:i')),
                 Tables\Columns\TextColumn::make('approver.name')
-                    ->label('Aprobat de')
+                    ->label(__('Aprobat de'))
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('last_login_at')
-                    ->label('Ultim login')
+                    ->label(__('Ultim login'))
                     ->dateTime('d M Y, H:i')
-                    ->placeholder('niciodată')
+                    ->placeholder(__('niciodată'))
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->options([
-                        'pending' => 'În review',
-                        'active' => 'Activ',
-                        'rejected' => 'Respins',
-                        'suspended' => 'Suspendat',
+                        'pending' => __('În review'),
+                        'active' => __('Activ'),
+                        'rejected' => __('Respins'),
+                        'suspended' => __('Suspendat'),
                     ])
                     ->default('pending'),
                 Tables\Filters\TernaryFilter::make('email_verified')
-                    ->label('Email verificat')
+                    ->label(__('Email verificat'))
                     ->nullable()
                     ->queries(
                         true: fn (Builder $q) => $q->whereNotNull('email_verified_at'),
                         false: fn (Builder $q) => $q->whereNull('email_verified_at'),
                     ),
                 Tables\Filters\TernaryFilter::make('has_artist')
-                    ->label('Cu profil linkat')
+                    ->label(__('Cu profil linkat'))
                     ->nullable()
                     ->queries(
                         true: fn (Builder $q) => $q->whereNotNull('artist_id'),
@@ -542,11 +542,11 @@ class ArtistAccountResource extends Resource
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve_selected')
-                        ->label('Aprobă selectate')
+                        ->label(__('Aprobă selectate'))
                         ->icon('heroicon-o-check')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->modalDescription('Doar conturile cu email verificat vor fi aprobate. Restul vor fi sărite.')
+                        ->modalDescription(__('Doar conturile cu email verificat vor fi aprobate. Restul vor fi sărite.'))
                         ->action(function ($records): void {
                             $service = app(ArtistAccountApprovalService::class);
                             $admin = Auth::guard('marketplace_admin')->user() ?? Auth::user();
@@ -594,30 +594,30 @@ class ArtistAccountResource extends Resource
     {
         return [
             Action::make('verifyEmail')
-                ->label('Confirmă email manual')
+                ->label(__('Confirmă email manual'))
                 ->icon('heroicon-o-envelope')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('Confirmă emailul manual')
-                ->modalDescription('Marchează emailul ca verificat fără ca aplicantul să dea click pe link. Folosește doar când emailul de verificare nu poate ajunge (ex. căsuță plină / soft bounce) și ai confirmat identitatea altfel. Acțiunea e înregistrată pe cont.')
+                ->modalHeading(__('Confirmă emailul manual'))
+                ->modalDescription(__('Marchează emailul ca verificat fără ca aplicantul să dea click pe link. Folosește doar când emailul de verificare nu poate ajunge (ex. căsuță plină / soft bounce) și ai confirmat identitatea altfel. Acțiunea e înregistrată pe cont.'))
                 ->visible(fn (MarketplaceArtistAccount $record) => !$record->isEmailVerified())
                 ->action(function (MarketplaceArtistAccount $record) {
                     $admin = Auth::guard('marketplace_admin')->user() ?? Auth::user();
                     app(ArtistAccountApprovalService::class)->markEmailVerifiedByAdmin($record, $admin);
 
                     Notification::make()
-                        ->title('Email confirmat manual')
-                        ->body('Emailul a fost marcat ca verificat. Acum poți aproba contul.')
+                        ->title(__('Email confirmat manual'))
+                        ->body(__('Emailul a fost marcat ca verificat. Acum poți aproba contul.'))
                         ->success()
                         ->send();
                 }),
 
             Action::make('approve')
-                ->label('Aprobă')
+                ->label(__('Aprobă'))
                 ->icon('heroicon-o-check')
                 ->color('success')
                 ->requiresConfirmation()
-                ->modalHeading('Aprobă cererea')
+                ->modalHeading(__('Aprobă cererea'))
                 ->modalDescription(fn (MarketplaceArtistAccount $record) => $record->isEmailVerified()
                     ? 'Contul va fi marcat activ și aplicantul va primi un email de confirmare.'
                     : 'Atenție: emailul nu este încă verificat. Aprobarea va eșua.')
@@ -628,28 +628,28 @@ class ArtistAccountResource extends Resource
 
                     if (!$service->approve($record, $admin)) {
                         Notification::make()
-                            ->title('Nu s-a putut aproba contul')
-                            ->body('Aplicantul trebuie să-și verifice emailul înainte de aprobare.')
+                            ->title(__('Nu s-a putut aproba contul'))
+                            ->body(__('Aplicantul trebuie să-și verifice emailul înainte de aprobare.'))
                             ->danger()
                             ->send();
                         return;
                     }
 
                     Notification::make()
-                        ->title('Cont aprobat')
-                        ->body('Aplicantul a primit emailul de confirmare.')
+                        ->title(__('Cont aprobat'))
+                        ->body(__('Aplicantul a primit emailul de confirmare.'))
                         ->success()
                         ->send();
                 }),
 
             Action::make('reject')
-                ->label('Respinge')
+                ->label(__('Respinge'))
                 ->icon('heroicon-o-x-mark')
                 ->color('danger')
                 ->visible(fn (MarketplaceArtistAccount $record) => $record->status === 'pending')
                 ->schema([
                     Forms\Components\Textarea::make('reason')
-                        ->label('Motiv (vizibil aplicantului)')
+                        ->label(__('Motiv (vizibil aplicantului)'))
                         ->required()
                         ->rows(4)
                         ->maxLength(2000),
@@ -658,33 +658,33 @@ class ArtistAccountResource extends Resource
                     app(ArtistAccountApprovalService::class)->reject($record, $data['reason']);
 
                     Notification::make()
-                        ->title('Cerere respinsă')
-                        ->body('Aplicantul a fost notificat prin email cu motivul.')
+                        ->title(__('Cerere respinsă'))
+                        ->body(__('Aplicantul a fost notificat prin email cu motivul.'))
                         ->success()
                         ->send();
                 }),
 
             Action::make('suspend')
-                ->label('Suspendă')
+                ->label(__('Suspendă'))
                 ->icon('heroicon-o-no-symbol')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->modalDescription('Suspendarea revocă toate token-urile active. Artistul va trebui să se reconecteze după reactivare.')
+                ->modalDescription(__('Suspendarea revocă toate token-urile active. Artistul va trebui să se reconecteze după reactivare.'))
                 ->visible(fn (MarketplaceArtistAccount $record) => $record->status === 'active')
                 ->action(function (MarketplaceArtistAccount $record) {
                     app(ArtistAccountApprovalService::class)->suspend($record);
-                    Notification::make()->title('Cont suspendat')->success()->send();
+                    Notification::make()->title(__('Cont suspendat'))->success()->send();
                 }),
 
             Action::make('reactivate')
-                ->label('Reactivează')
+                ->label(__('Reactivează'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
                 ->requiresConfirmation()
                 ->visible(fn (MarketplaceArtistAccount $record) => $record->status === 'suspended')
                 ->action(function (MarketplaceArtistAccount $record) {
                     app(ArtistAccountApprovalService::class)->reactivate($record);
-                    Notification::make()->title('Cont reactivat')->success()->send();
+                    Notification::make()->title(__('Cont reactivat'))->success()->send();
                 }),
 
             Action::make('link_artist')
@@ -693,7 +693,7 @@ class ArtistAccountResource extends Resource
                 ->color('info')
                 ->schema([
                     Forms\Components\Select::make('artist_id')
-                        ->label('Profil de artist')
+                        ->label(__('Profil de artist'))
                         ->searchable()
                         ->options(fn () => Artist::query()
                             ->orderBy('name')
@@ -714,27 +714,27 @@ class ArtistAccountResource extends Resource
                             ->pluck('name', 'id')
                             ->toArray())
                         ->getOptionLabelUsing(fn ($value) => Artist::find($value)?->name)
-                        ->helperText('Caută cu sau fără diacritice (ă/â/î/ș/ț).')
+                        ->helperText(__('Caută cu sau fără diacritice (ă/â/î/ș/ț).'))
                         ->required(),
                 ])
                 ->action(function (MarketplaceArtistAccount $record, array $data) {
                     app(ArtistAccountApprovalService::class)->linkArtist($record, (int) $data['artist_id']);
-                    Notification::make()->title('Profil asociat')->success()->send();
+                    Notification::make()->title(__('Profil asociat'))->success()->send();
                 }),
 
             Action::make('unlink_artist')
-                ->label('Dezasociază profil')
+                ->label(__('Dezasociază profil'))
                 ->icon('heroicon-o-link-slash')
                 ->color('gray')
                 ->requiresConfirmation()
                 ->visible(fn (MarketplaceArtistAccount $record) => $record->artist_id !== null)
                 ->action(function (MarketplaceArtistAccount $record) {
                     app(ArtistAccountApprovalService::class)->linkArtist($record, null);
-                    Notification::make()->title('Profil dezasociat')->success()->send();
+                    Notification::make()->title(__('Profil dezasociat'))->success()->send();
                 }),
 
             Action::make('send_password_reset')
-                ->label('Trimite reset parolă')
+                ->label(__('Trimite reset parolă'))
                 ->icon('heroicon-o-key')
                 ->color('warning')
                 ->requiresConfirmation()
@@ -742,7 +742,7 @@ class ArtistAccountResource extends Resource
                 ->action(function (MarketplaceArtistAccount $record) {
                     $client = $record->marketplaceClient;
                     if (!$client) {
-                        Notification::make()->title('Marketplace lipsă')->danger()->send();
+                        Notification::make()->title(__('Marketplace lipsă'))->danger()->send();
                         return;
                     }
 
@@ -789,7 +789,7 @@ class ArtistAccountResource extends Resource
                     );
 
                     Notification::make()
-                        ->title('Email trimis')
+                        ->title(__('Email trimis'))
                         ->body('Linkul de resetare a fost trimis la ' . $record->email)
                         ->success()
                         ->send();
@@ -799,7 +799,7 @@ class ArtistAccountResource extends Resource
             // open the marketplace's artist portal as them (new tab). Mirrors the
             // organizer "Login as Organizer" flow.
             Action::make('loginAs')
-                ->label('Login As')
+                ->label(__('Login As'))
                 ->icon('heroicon-o-arrow-right-end-on-rectangle')
                 ->color('info')
                 ->url(fn (MarketplaceArtistAccount $record) => url('/marketplace/artist-accounts/' . $record->id . '/login-as'))
@@ -809,7 +809,7 @@ class ArtistAccountResource extends Resource
             // Replaces the old ViewAction which (on the View page header) just
             // reopened the same account-detail page.
             Action::make('viewArtistPage')
-                ->label('Vezi pagina artistului')
+                ->label(__('Vezi pagina artistului'))
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('gray')
                 ->visible(fn (MarketplaceArtistAccount $record) => (bool) ($record->artist?->slug))

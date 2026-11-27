@@ -47,7 +47,7 @@ class ListOrganizers extends ListRecords
     {
         return [
             Actions\Action::make('reports')
-                ->label('Rapoarte')
+                ->label(__('Rapoarte'))
                 ->icon('heroicon-o-table-cells')
                 ->color('gray')
                 ->url(\App\Filament\Marketplace\Pages\OrganizerReports::getUrl()),
@@ -55,7 +55,7 @@ class ListOrganizers extends ListRecords
             Actions\CreateAction::make(),
 
             Actions\Action::make('download_template')
-                ->label('Model CSV')
+                ->label(__('Model CSV'))
                 ->icon('heroicon-o-document-arrow-down')
                 ->color('gray')
                 ->action(function () {
@@ -99,12 +99,12 @@ class ListOrganizers extends ListRecords
                 }),
 
             Actions\Action::make('import')
-                ->label('Import CSV')
+                ->label(__('Import CSV'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('warning')
                 ->form([
                     Forms\Components\FileUpload::make('file')
-                        ->label('Fișier CSV')
+                        ->label(__('Fișier CSV'))
                         ->acceptedFileTypes(['text/csv', 'application/csv', 'text/plain', 'application/vnd.ms-excel'])
                         ->required()
                         ->disk('local')
@@ -130,8 +130,8 @@ class ListOrganizers extends ListRecords
 
                     if (!Storage::disk('local')->exists($data['file'])) {
                         Notification::make()
-                            ->title('Import eșuat')
-                            ->body('Fișierul nu a fost găsit.')
+                            ->title(__('Import eșuat'))
+                            ->body(__('Fișierul nu a fost găsit.'))
                             ->danger()
                             ->send();
                         return;
@@ -152,23 +152,23 @@ class ListOrganizers extends ListRecords
                     Storage::disk('local')->delete($data['file']);
 
                     Notification::make()
-                        ->title('Import finalizat')
+                        ->title(__('Import finalizat'))
                         ->body($output)
                         ->success()
                         ->send();
                 }),
 
             Actions\Action::make('export')
-                ->label('Export CSV')
+                ->label(__('Export CSV'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('success')
-                ->modalHeading('Export organizatori în CSV')
-                ->modalDescription('Selectează câmpurile pe care vrei să le incluzi în fișierul CSV. Câmpurile bifate implicit sunt cele mai folosite.')
-                ->modalSubmitActionLabel('Descarcă CSV')
+                ->modalHeading(__('Export organizatori în CSV'))
+                ->modalDescription(__('Selectează câmpurile pe care vrei să le incluzi în fișierul CSV. Câmpurile bifate implicit sunt cele mai folosite.'))
+                ->modalSubmitActionLabel(__('Descarcă CSV'))
                 ->modalWidth('4xl')
                 ->form([
                     Forms\Components\CheckboxList::make('fields')
-                        ->label('Câmpuri de exportat')
+                        ->label(__('Câmpuri de exportat'))
                         ->options(collect(static::getExportableFields())->map(fn ($def) => $def['label'])->toArray())
                         ->default(static::getDefaultExportFields())
                         ->bulkToggleable()
@@ -178,7 +178,7 @@ class ListOrganizers extends ListRecords
                 ->action(function (array $data) {
                     $selectedKeys = $data['fields'] ?? [];
                     if (empty($selectedKeys)) {
-                        Notification::make()->title('Selectează cel puțin un câmp')->warning()->send();
+                        Notification::make()->title(__('Selectează cel puțin un câmp'))->warning()->send();
                         return;
                     }
 
@@ -189,7 +189,7 @@ class ListOrganizers extends ListRecords
                     $user = auth()->user();
                     $marketplaceId = $user?->marketplace_client_id;
                     if (!$marketplaceId) {
-                        Notification::make()->title('Marketplace necunoscut')->danger()->send();
+                        Notification::make()->title(__('Marketplace necunoscut'))->danger()->send();
                         return;
                     }
 

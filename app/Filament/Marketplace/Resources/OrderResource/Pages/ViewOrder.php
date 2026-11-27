@@ -24,7 +24,7 @@ class ViewOrder extends ViewRecord
     {
         return [
             Actions\Action::make('dispute_evidence_pdf')
-                ->label('Dovadă pentru dispute (PDF)')
+                ->label(__('Dovadă pentru dispute (PDF)'))
                 ->icon('heroicon-o-document-arrow-down')
                 ->color('gray')
                 ->url(fn () => route('marketplace.orders.dispute-evidence', ['order' => $this->record->id]), shouldOpenInNewTab: true),
@@ -32,12 +32,12 @@ class ViewOrder extends ViewRecord
             ...$this->companyInvoiceActions(),
 
             Actions\Action::make('retry_refund')
-                ->label('Reîncearcă rambursarea automată')
+                ->label(__('Reîncearcă rambursarea automată'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->visible(fn () => $this->pendingRefund() !== null)
                 ->requiresConfirmation()
-                ->modalHeading('Reîncearcă rambursarea automată')
+                ->modalHeading(__('Reîncearcă rambursarea automată'))
                 ->modalDescription(fn () => 'Trimite din nou cererea ' . $this->pendingRefund()?->reference . ' către procesatorul de plăți.')
                 ->action(function (): void {
                     $refund = $this->pendingRefund();
@@ -48,14 +48,14 @@ class ViewOrder extends ViewRecord
                     if ($result->success) {
                         Notification::make()
                             ->success()
-                            ->title('Rambursare procesată cu succes')
+                            ->title(__('Rambursare procesată cu succes'))
                             ->body($result->refundId ? "Referință: {$result->refundId}" : null)
                             ->send();
                         $this->refreshFormData(['status', 'refund_status', 'refunded_amount']);
                     } else {
                         Notification::make()
                             ->danger()
-                            ->title('Procesatorul a refuzat din nou')
+                            ->title(__('Procesatorul a refuzat din nou'))
                             ->body(new HtmlString(e($result->error ?? '') . '<br><br>Fă rambursarea manual și apoi apasă „Finalizează rambursarea manuală”.'))
                             ->persistent()
                             ->send();
@@ -63,11 +63,11 @@ class ViewOrder extends ViewRecord
                 }),
 
             Actions\Action::make('complete_manual_refund')
-                ->label('Finalizează rambursarea manuală')
+                ->label(__('Finalizează rambursarea manuală'))
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->visible(fn () => $this->pendingRefund() !== null)
-                ->modalHeading('Finalizează rambursarea manuală')
+                ->modalHeading(__('Finalizează rambursarea manuală'))
                 ->modalDescription(fn () => new HtmlString(
                     'Folosește doar după ce banii au fost trimiși efectiv clientului.<br><br>'
                     . app(PaymentRefundService::class)->manualRefundInstructions($this->pendingRefund())
@@ -75,25 +75,25 @@ class ViewOrder extends ViewRecord
                 ->modalWidth('xl')
                 ->form([
                     Forms\Components\Select::make('method')
-                        ->label('Cum ai rambursat')
+                        ->label(__('Cum ai rambursat'))
                         ->options([
-                            'original_payment' => 'Din panoul procesatorului (Netopia / Stripe)',
-                            'bank_transfer' => 'Transfer bancar',
-                            'manual' => 'Altă metodă (numerar etc.)',
+                            'original_payment' => __('Din panoul procesatorului (Netopia / Stripe)'),
+                            'bank_transfer' => __('Transfer bancar'),
+                            'manual' => __('Altă metodă (numerar etc.)'),
                         ])
                         ->default('original_payment')
                         ->required()
                         ->live(),
                     Forms\Components\TextInput::make('reference')
-                        ->label('Referința tranzacției')
-                        ->helperText('ID-ul rambursării din panoul procesatorului sau referința transferului bancar.')
+                        ->label(__('Referința tranzacției'))
+                        ->helperText(__('ID-ul rambursării din panoul procesatorului sau referința transferului bancar.'))
                         ->required(fn (Get $get) => $get('method') !== 'manual')
                         ->maxLength(190),
                     Forms\Components\Toggle::make('notify_customer')
-                        ->label('Trimite clientului emailul de rambursare')
+                        ->label(__('Trimite clientului emailul de rambursare'))
                         ->default(true),
                     Forms\Components\Checkbox::make('confirm_sent')
-                        ->label('Confirm că suma a fost trimisă clientului.')
+                        ->label(__('Confirm că suma a fost trimisă clientului.'))
                         ->accepted()
                         ->required(),
                 ])
@@ -112,36 +112,36 @@ class ViewOrder extends ViewRecord
                     if ($result->success) {
                         Notification::make()
                             ->success()
-                            ->title('Rambursare finalizată')
+                            ->title(__('Rambursare finalizată'))
                             ->body("Cererea {$refund->reference} a fost marcată rambursată.")
                             ->send();
                         $this->refreshFormData(['status', 'refund_status', 'refunded_amount']);
                     } else {
-                        Notification::make()->danger()->title('Eroare')->body($result->error)->send();
+                        Notification::make()->danger()->title(__('Eroare'))->body($result->error)->send();
                     }
                 }),
 
             Actions\Action::make('dismiss_external_refund_notice')
-                ->label('Ignoră notificarea de rambursare')
+                ->label(__('Ignoră notificarea de rambursare'))
                 ->icon('heroicon-o-x-mark')
                 ->color('gray')
                 ->visible(fn () => $this->externalRefundNotice() !== null)
                 ->requiresConfirmation()
-                ->modalDescription('Folosește doar dacă banii NU au fost returnați clientului (notificare greșită sau deja înregistrată).')
+                ->modalDescription(__('Folosește doar dacă banii NU au fost returnați clientului (notificare greșită sau deja înregistrată).'))
                 ->action(function (): void {
                     app(PaymentRefundService::class)->clearExternalRefundNotice($this->record);
-                    Notification::make()->success()->title('Notificarea a fost ignorată')->send();
+                    Notification::make()->success()->title(__('Notificarea a fost ignorată'))->send();
                 }),
 
             Actions\Action::make('refund_order')
-                ->label('Rambursare')
+                ->label(__('Rambursare'))
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('danger')
                 ->visible(fn () => in_array($this->record->status, ['completed', 'paid', 'confirmed'])
                     && ($this->record->refund_status ?? 'none') !== 'full'
                     && $this->record->source !== 'external_import'
                     && $this->pendingRefund() === null)
-                ->modalHeading('Rambursare comandă')
+                ->modalHeading(__('Rambursare comandă'))
                 ->modalWidth('xl')
                 ->form(fn () => $this->getRefundFormSchema())
                 ->action(function (array $data): void {
@@ -149,27 +149,27 @@ class ViewOrder extends ViewRecord
                 }),
 
             Actions\Action::make('change_status')
-                ->label('Change Status')
+                ->label(__('Change Status'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded']) && $this->record->source !== 'external_import')
                 ->form([
                     Forms\Components\Select::make('status')
-                        ->label('New Status')
+                        ->label(__('New Status'))
                         ->options([
-                            'pending' => 'În așteptare',
-                            'paid' => 'Plătită',
-                            'confirmed' => 'Confirmată',
-                            'completed' => 'Finalizată',
-                            'cancelled' => 'Anulată',
-                            'failed' => 'Eșuată',
-                            'expired' => 'Expirată',
+                            'pending' => __('În așteptare'),
+                            'paid' => __('Plătită'),
+                            'confirmed' => __('Confirmată'),
+                            'completed' => __('Finalizată'),
+                            'cancelled' => __('Anulată'),
+                            'failed' => __('Eșuată'),
+                            'expired' => __('Expirată'),
                         ])
                         ->default(fn () => $this->record->status)
-                        ->helperText('Pentru rambursări folosește butonul „Rambursare”: aici se schimbă doar statusul, banii nu pleacă.')
+                        ->helperText(__('Pentru rambursări folosește butonul „Rambursare”: aici se schimbă doar statusul, banii nu pleacă.'))
                         ->required(),
                     Forms\Components\Textarea::make('reason')
-                        ->label('Reason for change (optional)')
+                        ->label(__('Reason for change (optional)'))
                         ->rows(2),
                 ])
                 ->action(function (array $data): void {
@@ -179,7 +179,7 @@ class ViewOrder extends ViewRecord
                     if ($oldStatus === $newStatus) {
                         Notification::make()
                             ->warning()
-                            ->title('No change')
+                            ->title(__('No change'))
                             ->body('Status is already ' . $newStatus)
                             ->send();
                         return;
@@ -199,22 +199,22 @@ class ViewOrder extends ViewRecord
 
                     Notification::make()
                         ->success()
-                        ->title('Status updated')
+                        ->title(__('Status updated'))
                         ->body("Order status changed from {$oldStatus} to {$newStatus}")
                         ->send();
                 }),
 
             Actions\Action::make('transfer_customer')
-                ->label('Transferă către alt client')
+                ->label(__('Transferă către alt client'))
                 ->icon('heroicon-o-arrow-right-circle')
                 ->color('gray')
                 ->visible(fn () => $this->record->source !== 'external_import')
-                ->modalHeading('Transferă comanda către alt client')
-                ->modalDescription('Comanda, biletele și log-urile asociate vor fi mutate atomic. Total-urile ambilor clienți se recalculează automat. Operațiunea e auditată în activity log și în istoricul comenzii.')
+                ->modalHeading(__('Transferă comanda către alt client'))
+                ->modalDescription(__('Comanda, biletele și log-urile asociate vor fi mutate atomic. Total-urile ambilor clienți se recalculează automat. Operațiunea e auditată în activity log și în istoricul comenzii.'))
                 ->modalWidth('xl')
                 ->form([
                     Forms\Components\Select::make('target_customer_id')
-                        ->label('Client destinație')
+                        ->label(__('Client destinație'))
                         ->required()
                         ->searchable()
                         ->getSearchResultsUsing(function (string $search): array {
@@ -242,25 +242,25 @@ class ViewOrder extends ViewRecord
                             if (!$c) return null;
                             return trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? '')) . ' — ' . $c->email;
                         })
-                        ->helperText('Caută după email, nume sau telefon. Doar clienții marketplace-ului curent.'),
+                        ->helperText(__('Caută după email, nume sau telefon. Doar clienții marketplace-ului curent.')),
                     Forms\Components\Textarea::make('reason')
-                        ->label('Motiv transfer')
+                        ->label(__('Motiv transfer'))
                         ->required()
                         ->minLength(3)
                         ->rows(2)
-                        ->placeholder('Ex: cumparator gresit la check-out, cerere client, etc.'),
+                        ->placeholder(__('Ex: cumparator gresit la check-out, cerere client, etc.')),
                     Forms\Components\Toggle::make('rewrite_tickets')
-                        ->label('Rescrie și attendee_name/email pe bilete')
-                        ->helperText('Activează doar dacă noul client este și deținătorul biletelor. Altfel biletele rămân pe numele original.')
+                        ->label(__('Rescrie și attendee_name/email pe bilete'))
+                        ->helperText(__('Activează doar dacă noul client este și deținătorul biletelor. Altfel biletele rămân pe numele original.'))
                         ->default(false),
                 ])
-                ->modalSubmitActionLabel('Transferă')
+                ->modalSubmitActionLabel(__('Transferă'))
                 ->requiresConfirmation()
                 ->action(function (array $data): void {
                     $newCustomer = MarketplaceCustomer::find($data['target_customer_id']);
 
                     if (!$newCustomer) {
-                        Notification::make()->danger()->title('Client destinație inexistent')->send();
+                        Notification::make()->danger()->title(__('Client destinație inexistent'))->send();
                         return;
                     }
 
@@ -275,7 +275,7 @@ class ViewOrder extends ViewRecord
 
                         Notification::make()
                             ->success()
-                            ->title('Comandă transferată')
+                            ->title(__('Comandă transferată'))
                             ->body(
                                 'Mutată către ' . $newCustomer->email
                                 . '. Bilete actualizate: ' . $result['tickets_updated']
@@ -289,7 +289,7 @@ class ViewOrder extends ViewRecord
                     } catch (\Throwable $e) {
                         Notification::make()
                             ->danger()
-                            ->title('Transfer eșuat')
+                            ->title(__('Transfer eșuat'))
                             ->body($e->getMessage())
                             ->persistent()
                             ->send();
@@ -301,9 +301,9 @@ class ViewOrder extends ViewRecord
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('warning')
                 ->visible(fn () => $this->canUndoLastTransfer())
-                ->modalHeading('Anulează ultimul transfer')
+                ->modalHeading(__('Anulează ultimul transfer'))
                 ->modalDescription(fn () => $this->buildUndoTransferDescription())
-                ->modalSubmitActionLabel('Anulează transferul')
+                ->modalSubmitActionLabel(__('Anulează transferul'))
                 ->requiresConfirmation()
                 ->action(function (): void {
                     $previous = $this->resolvePreviousCustomerForUndo();
@@ -311,8 +311,8 @@ class ViewOrder extends ViewRecord
                     if (!$previous) {
                         Notification::make()
                             ->danger()
-                            ->title('Nu mai există client anterior')
-                            ->body('Clientul precedent a fost șters între timp. Folosește transferul manual.')
+                            ->title(__('Nu mai există client anterior'))
+                            ->body(__('Clientul precedent a fost șters între timp. Folosește transferul manual.'))
                             ->send();
                         return;
                     }
@@ -330,7 +330,7 @@ class ViewOrder extends ViewRecord
 
                         Notification::make()
                             ->success()
-                            ->title('Transfer anulat')
+                            ->title(__('Transfer anulat'))
                             ->body('Comanda a revenit la ' . $previous->email)
                             ->send();
 
@@ -338,7 +338,7 @@ class ViewOrder extends ViewRecord
                     } catch (\Throwable $e) {
                         Notification::make()
                             ->danger()
-                            ->title('Anulare eșuată')
+                            ->title(__('Anulare eșuată'))
                             ->body($e->getMessage())
                             ->persistent()
                             ->send();
@@ -492,17 +492,17 @@ class ViewOrder extends ViewRecord
         // For mixed orders we default to 'partial' so the operator sees each
         // ticket's mode annotation before confirming.
         $schema[] = Forms\Components\Select::make('refund_type')
-            ->label('Tip rambursare')
+            ->label(__('Tip rambursare'))
             ->options([
-                'full' => 'Rambursare completă (toate biletele)',
-                'partial' => 'Rambursare parțială (selectează bilete)',
+                'full' => __('Rambursare completă (toate biletele)'),
+                'partial' => __('Rambursare parțială (selectează bilete)'),
             ])
             ->default($profile === 'mixed' ? 'partial' : 'full')
             ->required()
             ->live();
 
         $schema[] = Forms\Components\CheckboxList::make('ticket_ids')
-            ->label('Selectează biletele de rambursat')
+            ->label(__('Selectează biletele de rambursat'))
             ->options($ticketOptions)
             ->helperText($order->tickets()->get(['id', 'meta'])->contains(fn ($t) => \App\Services\Marketplace\BuyXGetYOffer::offerGroup($t) !== null)
                 ? 'Comanda conține o ofertă „Cumperi X primești Y”: oferta se rambursează doar întreagă. Dacă bifezi un bilet din ofertă, celelalte bilete ale ei (inclusiv Invitatia) se adaugă automat.'
@@ -522,7 +522,7 @@ class ViewOrder extends ViewRecord
             ];
 
         $schema[] = Forms\Components\Radio::make('refund_variant')
-            ->label('Tip rambursare')
+            ->label(__('Tip rambursare'))
             ->options($variantOptions)
             ->default($profile === 'included' ? 'with_commission' : 'face_only')
             ->required()
@@ -562,7 +562,7 @@ class ViewOrder extends ViewRecord
             ->live();
 
         $schema[] = Forms\Components\Placeholder::make('refund_summary')
-            ->label('Sumar rambursare')
+            ->label(__('Sumar rambursare'))
             ->content(function (Get $get) use ($order, $tickets, $discountRatio, $commissionByType, $modeByType, $fallbackMode, $profile) {
                 $refundType = $get('refund_type') ?? 'full';
                 $selectedIds = $get('ticket_ids') ?? [];
@@ -663,20 +663,20 @@ class ViewOrder extends ViewRecord
             });
 
         $schema[] = Forms\Components\Select::make('reason_category')
-            ->label('Motiv rambursare')
+            ->label(__('Motiv rambursare'))
             ->options([
-                'event_cancelled' => 'Eveniment anulat',
-                'event_postponed' => 'Eveniment amânat',
-                'personal_reason' => 'Motiv personal client',
-                'duplicate_purchase' => 'Achiziție duplicat',
-                'technical_issue' => 'Problemă tehnică',
-                'other' => 'Alt motiv (specificați mai jos)',
+                'event_cancelled' => __('Eveniment anulat'),
+                'event_postponed' => __('Eveniment amânat'),
+                'personal_reason' => __('Motiv personal client'),
+                'duplicate_purchase' => __('Achiziție duplicat'),
+                'technical_issue' => __('Problemă tehnică'),
+                'other' => __('Alt motiv (specificați mai jos)'),
             ])
             ->live()
             ->nullable();
 
         $schema[] = Forms\Components\Textarea::make('reason')
-            ->label('Detalii suplimentare')
+            ->label(__('Detalii suplimentare'))
             ->rows(2)
             ->nullable()
             ->hidden(fn (Get $get) => $get('reason_category') !== 'other');
@@ -688,7 +688,7 @@ class ViewOrder extends ViewRecord
         $hasExternalNotice = $this->externalRefundNotice() !== null;
 
         $schema[] = Forms\Components\Toggle::make('already_refunded')
-            ->label('Banii au fost deja returnați în afara platformei (ex. din panoul Netopia) — doar înregistrează')
+            ->label(__('Banii au fost deja returnați în afara platformei (ex. din panoul Netopia) — doar înregistrează'))
             ->helperText($hasExternalNotice
                 ? 'Procesatorul a raportat deja o rambursare pe această comandă, așa că aici se poate doar înregistra. Dacă trebuie trimiși bani în plus prin procesator, apasă întâi „Ignoră notificarea de rambursare”.'
                 : 'Procesatorul NU mai este apelat. Biletele se anulează, stocul se eliberează și decontul ține cont de rambursare. Suma aleasă mai sus trebuie să fie cea returnată efectiv.')
@@ -698,11 +698,11 @@ class ViewOrder extends ViewRecord
             ->live();
 
         $schema[] = Forms\Components\Select::make('external_method')
-            ->label('Cum s-au returnat banii')
+            ->label(__('Cum s-au returnat banii'))
             ->options([
-                'original_payment' => 'Din panoul procesatorului (Netopia / Stripe)',
-                'bank_transfer' => 'Transfer bancar',
-                'manual' => 'Altă metodă (numerar etc.)',
+                'original_payment' => __('Din panoul procesatorului (Netopia / Stripe)'),
+                'bank_transfer' => __('Transfer bancar'),
+                'manual' => __('Altă metodă (numerar etc.)'),
             ])
             ->default('original_payment')
             ->visible(fn (Get $get) => (bool) $get('already_refunded'))
@@ -710,19 +710,19 @@ class ViewOrder extends ViewRecord
             ->live();
 
         $schema[] = Forms\Components\TextInput::make('external_reference')
-            ->label('Referința tranzacției')
-            ->helperText('ID-ul rambursării din panoul procesatorului sau referința transferului.')
+            ->label(__('Referința tranzacției'))
+            ->helperText(__('ID-ul rambursării din panoul procesatorului sau referința transferului.'))
             ->maxLength(190)
             ->visible(fn (Get $get) => (bool) $get('already_refunded'))
             ->required(fn (Get $get) => (bool) $get('already_refunded') && $get('external_method') !== 'manual');
 
         $schema[] = Forms\Components\Toggle::make('external_notify')
-            ->label('Trimite clientului emailul de rambursare')
+            ->label(__('Trimite clientului emailul de rambursare'))
             ->default(false)
             ->visible(fn (Get $get) => (bool) $get('already_refunded'));
 
         $schema[] = Forms\Components\Checkbox::make('external_confirm')
-            ->label('Confirm că suma a fost deja trimisă clientului.')
+            ->label(__('Confirm că suma a fost deja trimisă clientului.'))
             ->visible(fn (Get $get) => (bool) $get('already_refunded'))
             ->accepted(fn (Get $get) => (bool) $get('already_refunded'))
             ->required(fn (Get $get) => (bool) $get('already_refunded'));
@@ -746,10 +746,10 @@ class ViewOrder extends ViewRecord
         return [
             Actions\ActionGroup::make([
                 Actions\Action::make('company_invoice_request')
-                    ->label('Facturează pe persoană juridică')
+                    ->label(__('Facturează pe persoană juridică'))
                     ->icon('heroicon-o-building-office')
                     ->visible(fn () => $enabled() && $rows()->isEmpty())
-                    ->modalHeading('Factură pe persoană juridică')
+                    ->modalHeading(__('Factură pe persoană juridică'))
                     ->modalDescription(function () use ($service) {
                         $reason = $service->ineligibleReason($this->record);
 
@@ -766,78 +766,78 @@ class ViewOrder extends ViewRecord
                     ->form([
                         Forms\Components\Hidden::make('verified_cui'),
                         Forms\Components\TextInput::make('cui')
-                            ->label('CUI firmă')
-                            ->placeholder('RO12345678')
-                            ->helperText('Apasă lupa pentru datele de la ANAF. Dacă firma nu e găsită, completează manual câmpurile de mai jos.')
+                            ->label(__('CUI firmă'))
+                            ->placeholder(__('RO12345678'))
+                            ->helperText(__('Apasă lupa pentru datele de la ANAF. Dacă firma nu e găsită, completează manual câmpurile de mai jos.'))
                             ->required()
                             ->maxLength(20)
                             ->suffixAction(
                                 Actions\Action::make('anaf_lookup')
                                     ->icon('heroicon-o-magnifying-glass')
-                                    ->tooltip('Caută la ANAF')
+                                    ->tooltip(__('Caută la ANAF'))
                                     ->action(function (Get $get, Set $set) use ($service): void {
                                         $set('verified_cui', null);
                                         try {
                                             $company = $service->lookupCompany((string) $get('cui'));
                                         } catch (\InvalidArgumentException $e) {
-                                            Notification::make()->warning()->title('Firma nu a putut fi preluată de la ANAF')->body($e->getMessage() . ' Poți completa datele manual.')->send();
+                                            Notification::make()->warning()->title(__('Firma nu a putut fi preluată de la ANAF'))->body($e->getMessage() . ' Poți completa datele manual.')->send();
                                             return;
                                         }
                                         foreach (['name', 'reg_com', 'address', 'city', 'county', 'vat_payer'] as $field) {
                                             $set($field, $company[$field]);
                                         }
                                         $set('verified_cui', $company['cui']);
-                                        Notification::make()->success()->title('Date preluate de la ANAF')->body($company['name'])->send();
+                                        Notification::make()->success()->title(__('Date preluate de la ANAF'))->body($company['name'])->send();
                                     })
                             ),
                         Forms\Components\TextInput::make('name')
-                            ->label('Denumire firmă')
+                            ->label(__('Denumire firmă'))
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('reg_com')
-                            ->label('Nr. Registrul Comerțului')
-                            ->placeholder('J40/1234/2020')
+                            ->label(__('Nr. Registrul Comerțului'))
+                            ->placeholder(__('J40/1234/2020'))
                             ->maxLength(50),
                         Forms\Components\TextInput::make('address')
-                            ->label('Adresă')
+                            ->label(__('Adresă'))
                             ->required()
                             ->maxLength(500),
                         Forms\Components\TextInput::make('city')
-                            ->label('Localitate')
+                            ->label(__('Localitate'))
                             ->required()
                             ->maxLength(120),
                         Forms\Components\TextInput::make('county')
-                            ->label('Județ')
+                            ->label(__('Județ'))
                             ->required()
                             ->maxLength(120),
                         Forms\Components\Toggle::make('vat_payer')
-                            ->label('Plătitoare de TVA'),
+                            ->label(__('Plătitoare de TVA')),
                     ])
-                    ->modalSubmitActionLabel('Emite facturile')
+                    ->modalSubmitActionLabel(__('Emite facturile'))
                     ->action(function (array $data) use ($service, $actor): void {
                         try {
                             $company = $service->companyFromOperator($data);
                             $created = $service->requestForPaidOrder($this->record, $company['cui'], 'admin', $actor(), $company);
                             Notification::make()->success()
-                                ->title('Cererea de factură a fost înregistrată')
+                                ->title(__('Cererea de factură a fost înregistrată'))
                                 ->body(count($created) . ' factur' . (count($created) === 1 ? 'ă' : 'i') . ' de emis. Factura platformei pleacă automat la client în câteva minute.')
                                 ->send();
                         } catch (\InvalidArgumentException $e) {
-                            Notification::make()->danger()->title('Nu se poate factura pe firmă')->body($e->getMessage())->send();
+                            Notification::make()->danger()->title(__('Nu se poate factura pe firmă'))->body($e->getMessage())->send();
                         }
                     }),
 
                 Actions\Action::make('company_invoice_status')
-                    ->label('Facturi pe firmă')
+                    ->label(__('Facturi pe firmă'))
                     ->icon('heroicon-o-document-text')
                     ->visible(fn () => $rows()->isNotEmpty())
-                    ->modalHeading('Facturi pe persoană juridică')
+                    ->modalHeading(__('Facturi pe persoană juridică'))
                     ->modalContent(fn () => new HtmlString($this->companyInvoiceTable($rows())))
                     ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Închide'),
+                    ->modalCancelActionLabel(__('Închide')),
 
                 Actions\Action::make('company_invoice_retry')
-                    ->label('Reia emiterea facturii platformei')
+                    ->label(__('Reia emiterea facturii platformei'))
                     ->icon('heroicon-o-arrow-path')
                     ->visible(fn () => $rows()->contains(fn ($r) => $r->isMarketplace() && !$r->sent_to_customer_at))
                     ->requiresConfirmation()
@@ -846,25 +846,25 @@ class ViewOrder extends ViewRecord
                         try {
                             $service->issueMarketplaceInvoice($row);
                             $row->update(['last_error' => null]);
-                            Notification::make()->success()->title('Factura a fost emisă și trimisă clientului')->send();
+                            Notification::make()->success()->title(__('Factura a fost emisă și trimisă clientului'))->send();
                         } catch (\Throwable $e) {
                             $row->update(['last_error' => mb_substr($e->getMessage(), 0, 1000)]);
-                            Notification::make()->danger()->title('Emiterea a eșuat')->body($e->getMessage())->send();
+                            Notification::make()->danger()->title(__('Emiterea a eșuat'))->body($e->getMessage())->send();
                         }
                     }),
 
                 Actions\Action::make('company_invoice_upload')
-                    ->label('Încarcă factura organizatorului')
+                    ->label(__('Încarcă factura organizatorului'))
                     ->icon('heroicon-o-arrow-up-tray')
                     ->visible(fn () => $rows()->contains(fn ($r) => !$r->isMarketplace() && in_array($r->status, ['requested', 'uploaded'], true)))
                     ->form(fn () => [
                         Forms\Components\Select::make('row_id')
-                            ->label('Organizator')
+                            ->label(__('Organizator'))
                             ->options($rows()->filter(fn ($r) => !$r->isMarketplace() && in_array($r->status, ['requested', 'uploaded'], true))
                                 ->mapWithKeys(fn ($r) => [$r->id => ($r->organizer?->company_name ?: $r->organizer?->name ?: 'Organizator') . ' - ' . number_format((float) $r->amount, 2, ',', '.') . ' ' . $r->currency . ' (' . $r->statusLabel() . ')']))
                             ->required(),
                         Forms\Components\FileUpload::make('file')
-                            ->label('Factura (PDF)')
+                            ->label(__('Factura (PDF)'))
                             ->disk('local')
                             ->directory('company-invoices/tmp')
                             ->acceptedFileTypes(['application/pdf'])
@@ -872,27 +872,27 @@ class ViewOrder extends ViewRecord
                             ->storeFileNamesIn('file_name')
                             ->required(),
                     ])
-                    ->modalDescription('Factura pleacă imediat pe email la client, ca și cum ar fi încărcat-o organizatorul.')
+                    ->modalDescription(__('Factura pleacă imediat pe email la client, ca și cum ar fi încărcat-o organizatorul.'))
                     ->action(function (array $data) use ($service, $actor): void {
                         $row = \App\Models\OrderCompanyInvoice::where('order_id', $this->record->id)->find($data['row_id']);
                         $disk = \Illuminate\Support\Facades\Storage::disk('local');
                         if (!$row || !$disk->exists($data['file'])) {
-                            Notification::make()->danger()->title('Fișierul nu a fost găsit')->send();
+                            Notification::make()->danger()->title(__('Fișierul nu a fost găsit'))->send();
                             return;
                         }
                         $file = new \Illuminate\Http\UploadedFile($disk->path($data['file']), $data['file_name'] ?? 'factura.pdf', 'application/pdf', null, true);
                         try {
                             $service->storeOrganizerUpload($row, $file, $actor());
-                            Notification::make()->success()->title('Factura a fost trimisă clientului')->send();
+                            Notification::make()->success()->title(__('Factura a fost trimisă clientului'))->send();
                         } catch (\Throwable $e) {
-                            Notification::make()->danger()->title('Factura a fost salvată, dar trimiterea a eșuat')->body($e->getMessage())->send();
+                            Notification::make()->danger()->title(__('Factura a fost salvată, dar trimiterea a eșuat'))->body($e->getMessage())->send();
                         } finally {
                             $disk->delete($data['file']);
                         }
                     }),
 
                 Actions\Action::make('company_invoice_resend')
-                    ->label('Retrimite facturile clientului')
+                    ->label(__('Retrimite facturile clientului'))
                     ->icon('heroicon-o-envelope')
                     ->visible(fn () => $rows()->contains(fn ($r) => $r->hasDocument()))
                     ->requiresConfirmation()
@@ -914,7 +914,7 @@ class ViewOrder extends ViewRecord
                             ->send();
                     }),
             ])
-                ->label('Factură pe firmă')
+                ->label(__('Factură pe firmă'))
                 ->icon('heroicon-o-building-office-2')
                 ->color('gray')
                 ->button()
@@ -1027,7 +1027,7 @@ class ViewOrder extends ViewRecord
         } else {
             $ticketIds = $data['ticket_ids'] ?? [];
             if (empty($ticketIds)) {
-                Notification::make()->warning()->title('Selectează cel puțin un bilet.')->send();
+                Notification::make()->warning()->title(__('Selectează cel puțin un bilet.'))->send();
                 return;
             }
             $result = $refundService->processTicketLevelRefund($order, $ticketIds, $refundCommission, $reason, $reasonCategory, $external);
@@ -1044,7 +1044,7 @@ class ViewOrder extends ViewRecord
         } elseif ($result->requiresManual) {
             Notification::make()
                 ->danger()
-                ->title('Procesatorul a refuzat rambursarea — banii NU au plecat')
+                ->title(__('Procesatorul a refuzat rambursarea — banii NU au plecat'))
                 ->body(new HtmlString(
                     e($result->error ?? '') . '<br><br>Biletele sunt încă valide. Urmează pașii din caseta roșie de sus a paginii.'
                 ))
@@ -1053,7 +1053,7 @@ class ViewOrder extends ViewRecord
         } else {
             Notification::make()
                 ->danger()
-                ->title('Eroare la rambursare')
+                ->title(__('Eroare la rambursare'))
                 ->body($result->error ?? 'A apărut o eroare neașteptată.')
                 ->persistent()
                 ->send();

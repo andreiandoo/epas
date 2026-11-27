@@ -16,7 +16,7 @@ class ListTenants extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Adaugă venue owner'),
+                ->label(__('Adaugă venue owner')),
         ];
     }
 }

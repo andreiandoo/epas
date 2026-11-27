@@ -631,7 +631,7 @@ class EventResource extends Resource
                                                 }
                                             }),
                                         Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
+                                            ->label(__('Slug'))
                                             ->maxLength(190)
                                             ->rule('alpha_dash')
                                             // Slugs must be lowercase — the ambilet /bilete/{slug}
@@ -1037,7 +1037,7 @@ class EventResource extends Resource
                                     ->label($t('Adresă', 'Address'))
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('website_url')
-                                    ->label('Website')
+                                    ->label(__('Website'))
                                     ->url()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('facebook_url')
@@ -1117,10 +1117,10 @@ class EventResource extends Resource
                                 Forms\Components\Select::make('online_capacity_hint')
                                     ->label($t('Capacitate provider (opțional)', 'Provider capacity (optional)'))
                                     ->options([
-                                        100  => '100 participanți (Zoom Basic / Pro)',
-                                        300  => '300 participanți (Zoom Business)',
-                                        500  => '500 participanți (Zoom Enterprise)',
-                                        1000 => '1000 participanți (Zoom Enterprise Plus)',
+                                        100  => __('100 participanți (Zoom Basic / Pro)'),
+                                        300  => __('300 participanți (Zoom Business)'),
+                                        500  => __('500 participanți (Zoom Enterprise)'),
+                                        1000 => __('1000 participanți (Zoom Enterprise Plus)'),
                                     ])
                                     ->helperText($t(
                                         'Setează planul tău Zoom ca să te avertizăm dacă vinzi mai multe bilete decât încap în meeting.',
@@ -2153,7 +2153,7 @@ class EventResource extends Resource
                             ])->columns(1),
 
                         // MEDIA - only visible when at least one image is uploaded (use header action to upload)
-                        SC\Section::make('Media')
+                        SC\Section::make(__('Media'))
                             ->visible(fn (?Event $record) => $record && (!empty($record->poster_url) || !empty($record->hero_image_url)))
                             ->schema([
                                 Forms\Components\Placeholder::make('poster_preview')
@@ -2361,7 +2361,7 @@ class EventResource extends Resource
                                                 }
                                             }),
                                         Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
+                                            ->label(__('Slug'))
                                             ->maxLength(100)
                                             ->rule('alpha_dash'),
                                     ])
@@ -2439,7 +2439,7 @@ class EventResource extends Resource
 
                                 // Dynamic tax display based on selected event types
                                 Forms\Components\Placeholder::make('applicable_taxes')
-                                    ->label('Taxe aplicabile')
+                                    ->label(__('Taxe aplicabile'))
                                     ->columnSpanFull()
                                     ->visible(fn (SGet $get) => !empty($get('eventTypes')) || !empty($get('manifestation_type')))
                                     ->content(function (SGet $get) use ($marketplace) {
@@ -3206,7 +3206,7 @@ class EventResource extends Resource
                                                             $set('sku', Str::upper(Str::slug($state, '-')));
                                                         }),
                                                     Forms\Components\TextInput::make('sku')
-                                                        ->label('SKU')
+                                                        ->label(__('SKU'))
                                                         ->inlineLabel($il)
                                                         ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty')),
                                                     Forms\Components\TextInput::make('price_max')
@@ -3782,7 +3782,7 @@ class EventResource extends Resource
                                                     ->schema([
                                                         Forms\Components\TextInput::make('id')
                                                             ->label($t('ID (slug)', 'ID (slug)'))
-                                                            ->placeholder('30m, 1h, 1zi')
+                                                            ->placeholder(__('30m, 1h, 1zi'))
                                                             ->maxLength(32)
                                                             ->helperText($t('Identificator stabil — folosit la check-in/raportare. Doar litere mici, cifre, liniuțe.', 'Stable identifier — used in check-in/reporting. Lowercase, digits, dashes only.'))
                                                             ->columnSpan(3),
@@ -4091,14 +4091,14 @@ class EventResource extends Resource
                                                             ->columnSpan(1),
                                                         Forms\Components\TextInput::make('series_start')
                                                             ->hiddenLabel()
-                                                            ->placeholder('Serie start')
+                                                            ->placeholder(__('Serie start'))
                                                             ->disabled()
                                                             ->dehydrated(true)
                                                             ->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])
                                                             ->columnSpan(2),
                                                         Forms\Components\TextInput::make('series_end')
                                                             ->hiddenLabel()
-                                                            ->placeholder('Serie end')
+                                                            ->placeholder(__('Serie end'))
                                                             ->disabled()
                                                             ->dehydrated(true)
                                                             ->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])
@@ -5129,7 +5129,7 @@ class EventResource extends Resource
 
                             ]), // End Tabs component
                         // SEO - sectiune de sine statatoare sub tab-uri (fost tab SEO).
-                        SC\Section::make('SEO')
+                        SC\Section::make(__('SEO'))
                 ->schema([
                     Forms\Components\Select::make('seo_presets')
                         ->label($t('Adaugă chei SEO din șablon', 'Add SEO keys from template'))
@@ -6337,7 +6337,7 @@ class EventResource extends Resource
                     }),
 
                 Tables\Columns\IconColumn::make('seating_layout_id')
-                    ->label('Seating')
+                    ->label(__('Seating'))
                     ->boolean()
                     ->trueIcon('heroicon-o-map')
                     ->falseIcon('heroicon-o-minus')
@@ -6347,7 +6347,7 @@ class EventResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('general_quota')
-                    ->label('Cap.')
+                    ->label(__('Cap.'))
                     ->getStateUsing(function ($record) {
                         if ($record->general_quota === null) return '—';
                         $nonIndepIds = $record->ticketTypes
@@ -6377,7 +6377,7 @@ class EventResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->searchable(query: function ($query, string $search): void {
                         $term = '%' . mb_strtolower($search) . '%';
                         if (\DB::getDriverName() === 'pgsql') {
@@ -6401,7 +6401,7 @@ class EventResource extends Resource
                         ? \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
                         : null),
                 Tables\Columns\TextColumn::make('venue_id')
-                    ->label('Venue')
+                    ->label(__('Venue'))
                     ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
                     ->limit(20)
                     ->tooltip(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()))
@@ -6409,12 +6409,12 @@ class EventResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplace_city_id')
-                    ->label('Oraș')
+                    ->label(__('Oraș'))
                     ->formatStateUsing(fn ($state, $record) => $record->marketplaceCity?->getTranslation('name', app()->getLocale()) ?? '-')
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('event_date')
-                    ->label('Event Date')
+                    ->label(__('Event Date'))
                     ->getStateUsing(function ($record) {
                         // Range: show interval
                         if ($record->duration_mode === 'range') {
@@ -6466,18 +6466,18 @@ class EventResource extends Resource
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('eventTypes_display')
-                    ->label('Categorie')
+                    ->label(__('Categorie'))
                     ->badge()
                     ->getStateUsing(fn (Event $record) => $record->eventTypes->map(fn($t) => $t->getTranslation('name', app()->getLocale()))->implode(', '))
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('eventGenres_display')
-                    ->label('Gen')
+                    ->label(__('Gen'))
                     ->badge()
                     ->color('info')
                     ->getStateUsing(fn (Event $record) => $record->eventGenres->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->implode(', '))
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('manifestation_type')
-                    ->label('Tip manifestare')
+                    ->label(__('Tip manifestare'))
                     ->formatStateUsing(fn ($state) => match($state) {
                         'muzicala' => 'Muzicală',
                         'artistica' => 'Artistică',
@@ -6493,12 +6493,12 @@ class EventResource extends Resource
                     ])
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('artists_display')
-                    ->label('Artiști')
+                    ->label(__('Artiști'))
                     ->getStateUsing(fn (Event $record) => $record->artists->pluck('name')->implode(', ') ?: '-')
                     ->wrap()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status_display')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->getStateUsing(function ($record) {
                         // Determine event end date based on duration mode
                         $endDate = null;
@@ -6558,7 +6558,7 @@ class EventResource extends Resource
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
-                    ->label('Publicat')
+                    ->label(__('Publicat'))
                     ->trueIcon('heroicon-o-eye')
                     ->falseIcon('heroicon-o-eye-slash')
                     ->trueColor('success')
@@ -6566,15 +6566,15 @@ class EventResource extends Resource
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_cancelled')
                     ->boolean()
-                    ->label('Cancelled')
+                    ->label(__('Cancelled'))
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_sold_out')
                     ->boolean()
-                    ->label('Sold Out')
+                    ->label(__('Sold Out'))
                     ->toggleable(),
                 // tics.ro: pe câte alte platforme se mai vinde (snapshot local, sincronizat din oră în oră).
                 Tables\Columns\TextColumn::make('ticsListing.other_active_count')
-                    ->label('Alte platforme')
+                    ->label(__('Alte platforme'))
                     ->badge()
                     ->placeholder('—')
                     ->formatStateUsing(fn ($state) => (int) $state > 0 ? (string) (int) $state : '0')
@@ -6590,43 +6590,43 @@ class EventResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_published')
-                    ->label('Publicat'),
+                    ->label(__('Publicat')),
                 Tables\Filters\TernaryFilter::make('is_cancelled')
-                    ->label('Anulat'),
+                    ->label(__('Anulat')),
                 Tables\Filters\TernaryFilter::make('is_sold_out')
-                    ->label('Sold out'),
+                    ->label(__('Sold out')),
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->relationship('marketplaceOrganizer', 'name'),
                 Tables\Filters\Filter::make('has_pending_changes')
-                    ->label('Modificări în așteptare')
+                    ->label(__('Modificări în așteptare'))
                     ->query(fn ($query) => $query->where('pending_changes_status', 'pending'))
                     ->toggle(),
                 Tables\Filters\Filter::make('tics_other_platforms')
-                    ->label('Se vinde și pe alte platforme (tics.ro)')
+                    ->label(__('Se vinde și pe alte platforme (tics.ro)'))
                     ->query(fn ($query) => $query->whereHas('ticsListing', fn ($q) => $q->where('other_active_count', '>', 0)))
                     ->visible(fn () => app(\App\Services\Tics\TicsListingsService::class)->platformFor($marketplace?->id) !== null)
                     ->toggle(),
                 Tables\Filters\Filter::make('tics_exclusive_conflict')
-                    ->label('Contract exclusiv, dar vândut și în altă parte')
+                    ->label(__('Contract exclusiv, dar vândut și în altă parte'))
                     ->query(fn ($query) => $query
                         ->whereHas('ticsListing', fn ($q) => $q->where('other_active_count', '>', 0))
                         ->whereHas('marketplaceOrganizer', fn ($q) => $q->where('work_mode', 'exclusive')))
                     ->visible(fn () => app(\App\Services\Tics\TicsListingsService::class)->platformFor($marketplace?->id) !== null)
                     ->toggle(),
             ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
-            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label('Filtre')->icon('heroicon-o-funnel')->button())
+            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Filtre'))->icon('heroicon-o-funnel')->button())
             ->actions([
                 // Organizer live edits that landed as pending (organizer without
                 // allow_live_edits). Approving applies them to the live event;
                 // rejecting discards them. Only shown when something is pending.
                 Action::make('approvePendingChanges')
-                    ->label('Aprobă modificări')
+                    ->label(__('Aprobă modificări'))
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
-                    ->modalHeading('Modificări trimise de organizator')
-                    ->modalDescription('Doar câmpurile schimbate de organizator. La aprobare se aplică pe evenimentul live numai acestea.')
+                    ->modalHeading(__('Modificări trimise de organizator'))
+                    ->modalDescription(__('Doar câmpurile schimbate de organizator. La aprobare se aplică pe evenimentul live numai acestea.'))
                     ->modalWidth(\Filament\Support\Enums\Width::SixExtraLarge)
                     ->stickyModalHeader()
                     ->stickyModalFooter()
@@ -6634,30 +6634,30 @@ class EventResource extends Resource
                         'event' => $record,
                         'diff' => app(\App\Services\Marketplace\EventLiveEditService::class)->diffPending($record),
                     ]))
-                    ->modalSubmitActionLabel('Aprobă și publică')
-                    ->modalCancelActionLabel('Anulează')
+                    ->modalSubmitActionLabel(__('Aprobă și publică'))
+                    ->modalCancelActionLabel(__('Anulează'))
                     ->extraModalFooterActions(fn (Action $action) => [
                         $action->makeModalSubmitAction('rejectFromDiff', arguments: ['reject' => true])
-                            ->label('Respinge')
+                            ->label(__('Respinge'))
                             ->color('danger'),
                     ])
                     ->action(function (Event $record, array $arguments) {
                         $svc = app(\App\Services\Marketplace\EventLiveEditService::class);
                         if ($arguments['reject'] ?? false) {
                             $svc->rejectPending($record);
-                            \Filament\Notifications\Notification::make()->title('Modificările au fost respinse.')->send();
+                            \Filament\Notifications\Notification::make()->title(__('Modificările au fost respinse.'))->send();
                             return;
                         }
                         $svc->approvePending($record);
-                        \Filament\Notifications\Notification::make()->success()->title('Modificările au fost publicate.')->send();
+                        \Filament\Notifications\Notification::make()->success()->title(__('Modificările au fost publicate.'))->send();
                     }),
                 Action::make('rejectPendingChanges')
-                    ->label('Respinge modificări')
+                    ->label(__('Respinge modificări'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
-                    ->modalHeading('Respinge modificările organizatorului')
-                    ->modalDescription('Evenimentul live rămâne neschimbat. Acestea sunt modificările care se renunță.')
+                    ->modalHeading(__('Respinge modificările organizatorului'))
+                    ->modalDescription(__('Evenimentul live rămâne neschimbat. Acestea sunt modificările care se renunță.'))
                     ->modalWidth(\Filament\Support\Enums\Width::SixExtraLarge)
                     ->stickyModalHeader()
                     ->stickyModalFooter()
@@ -6665,11 +6665,11 @@ class EventResource extends Resource
                         'event' => $record,
                         'diff' => app(\App\Services\Marketplace\EventLiveEditService::class)->diffPending($record),
                     ]))
-                    ->modalSubmitActionLabel('Respinge')
-                    ->modalCancelActionLabel('Anulează')
+                    ->modalSubmitActionLabel(__('Respinge'))
+                    ->modalCancelActionLabel(__('Anulează'))
                     ->action(function (Event $record) {
                         app(\App\Services\Marketplace\EventLiveEditService::class)->rejectPending($record);
-                        \Filament\Notifications\Notification::make()->title('Modificările au fost respinse.')->send();
+                        \Filament\Notifications\Notification::make()->title(__('Modificările au fost respinse.'))->send();
                     }),
                 Action::make('view_on_site')
                     ->label('')
@@ -6700,9 +6700,9 @@ class EventResource extends Resource
                 Action::make('editTitle')
                     ->label('')
                     ->icon('heroicon-o-pencil-square')
-                    ->modalHeading('Editează titlul')
+                    ->modalHeading(__('Editează titlul'))
                     ->modalWidth('md')
-                    ->modalSubmitActionLabel('Salvează')
+                    ->modalSubmitActionLabel(__('Salvează'))
                     ->extraAttributes(['class' => '!hidden'])
                     ->fillForm(fn (Event $record) => [
                         'title_ro' => $record->getTranslation('title', 'ro'),
@@ -6710,11 +6710,11 @@ class EventResource extends Resource
                     ])
                     ->form([
                         Forms\Components\TextInput::make('title_ro')
-                            ->label('Titlu (RO)')
+                            ->label(__('Titlu (RO)'))
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('title_en')
-                            ->label('Title (EN)')
+                            ->label(__('Title (EN)'))
                             ->maxLength(255),
                     ])
                     ->action(function (Event $record, array $data): void {
@@ -6728,18 +6728,18 @@ class EventResource extends Resource
 
                         \Filament\Notifications\Notification::make()
                             ->success()
-                            ->title('Titlu actualizat')
+                            ->title(__('Titlu actualizat'))
                             ->send();
                     }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('assign_venue')
-                        ->label('Alocă venue')
+                        ->label(__('Alocă venue'))
                         ->icon('heroicon-o-map-pin')
                         ->form([
                             Forms\Components\Select::make('venue_id')
-                                ->label('Venue')
+                                ->label(__('Venue'))
                                 ->searchable()
                                 ->preload()
                                 ->required()
@@ -6804,7 +6804,7 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('bulk_publish')
-                        ->label('Publică')
+                        ->label(__('Publică'))
                         ->icon('heroicon-o-eye')
                         ->color('success')
                         ->requiresConfirmation()
@@ -6814,7 +6814,7 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('bulk_unpublish')
-                        ->label('Depublică')
+                        ->label(__('Depublică'))
                         ->icon('heroicon-o-eye-slash')
                         ->color('warning')
                         ->requiresConfirmation()
@@ -6824,15 +6824,15 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('change_status')
-                        ->label('Schimbă status')
+                        ->label(__('Schimbă status'))
                         ->icon('heroicon-o-arrow-path')
                         ->form([
                             Forms\Components\Select::make('status')
-                                ->label('Status')
+                                ->label(__('Status'))
                                 ->options([
-                                    'active' => 'Activ',
-                                    'cancelled' => 'Anulat',
-                                    'ended' => 'Încheiat',
+                                    'active' => __('Activ'),
+                                    'cancelled' => __('Anulat'),
+                                    'ended' => __('Încheiat'),
                                 ])
                                 ->required(),
                         ])
@@ -6848,11 +6848,11 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('change_organizer')
-                        ->label('Schimbă organizator')
+                        ->label(__('Schimbă organizator'))
                         ->icon('heroicon-o-user-group')
                         ->form([
                             Forms\Components\Select::make('marketplace_organizer_id')
-                                ->label('Organizator')
+                                ->label(__('Organizator'))
                                 ->searchable()
                                 ->preload()
                                 ->required()
@@ -6871,11 +6871,11 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('assign_category')
-                        ->label('Setează categorie')
+                        ->label(__('Setează categorie'))
                         ->icon('heroicon-o-tag')
                         ->form([
                             Forms\Components\Select::make('marketplace_event_category_id')
-                                ->label('Categorie eveniment')
+                                ->label(__('Categorie eveniment'))
                                 ->options(function () use ($marketplace, $marketplaceLanguage) {
                                     return MarketplaceEventCategory::query()
                                         ->where('marketplace_client_id', $marketplace?->id)
@@ -6894,7 +6894,7 @@ class EventResource extends Resource
                                 ->required(),
 
                             Forms\Components\Select::make('event_types')
-                                ->label('Tipuri eveniment (opțional, override)')
+                                ->label(__('Tipuri eveniment (opțional, override)'))
                                 ->options(function () {
                                     return EventType::whereNotNull('parent_id')
                                         ->get()
@@ -6904,10 +6904,10 @@ class EventResource extends Resource
                                 ->multiple()
                                 ->preload()
                                 ->searchable()
-                                ->helperText('Lasă gol pentru a folosi tipurile din categorie'),
+                                ->helperText(__('Lasă gol pentru a folosi tipurile din categorie')),
 
                             Forms\Components\Select::make('event_genres')
-                                ->label('Genuri eveniment (opțional)')
+                                ->label(__('Genuri eveniment (opțional)'))
                                 ->options(function () {
                                     return EventGenre::all()
                                         ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())])
@@ -6943,18 +6943,18 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('assign_manifestation_type')
-                        ->label('Setează tip manifestare')
+                        ->label(__('Setează tip manifestare'))
                         ->icon('heroicon-o-sparkles')
                         ->form([
                             Forms\Components\Select::make('manifestation_type')
-                                ->label('Tip manifestare')
+                                ->label(__('Tip manifestare'))
                                 ->options([
-                                    'muzicala' => 'Muzicală',
-                                    'artistica' => 'Artistică',
-                                    'teatrala' => 'Teatrală',
-                                    'standup' => 'Stand-up',
-                                    'sportiva' => 'Sportivă',
-                                    'altele' => 'Altele',
+                                    'muzicala' => __('Muzicală'),
+                                    'artistica' => __('Artistică'),
+                                    'teatrala' => __('Teatrală'),
+                                    'standup' => __('Stand-up'),
+                                    'sportiva' => __('Sportivă'),
+                                    'altele' => __('Altele'),
                                 ])
                                 ->required(),
                         ])
@@ -6966,11 +6966,11 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('assign_genres')
-                        ->label('Setează genuri eveniment')
+                        ->label(__('Setează genuri eveniment'))
                         ->icon('heroicon-o-puzzle-piece')
                         ->form([
                             Forms\Components\Select::make('genre_ids')
-                                ->label('Genuri eveniment')
+                                ->label(__('Genuri eveniment'))
                                 ->options(function () {
                                     return EventGenre::all()
                                         ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())])
@@ -6991,11 +6991,11 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     BulkAction::make('assign_artists')
-                        ->label('Setează artiști')
+                        ->label(__('Setează artiști'))
                         ->icon('heroicon-o-musical-note')
                         ->form([
                             Forms\Components\Select::make('artist_ids')
-                                ->label('Artiști')
+                                ->label(__('Artiști'))
                                 ->options(function () use ($marketplace) {
                                     $artistCountries = self::expandCountryVariants($marketplace?->settings['artist_countries'] ?? []);
                                     return Artist::withoutGlobalScopes()
@@ -7068,7 +7068,7 @@ class EventResource extends Resource
                         ->deselectRecordsAfterCompletion(),
 
                     DeleteBulkAction::make()
-                        ->modalDescription('Se șterg doar evenimentele nepublicate, fără comenzi, bilete, deconturi sau sub-evenimente. Celelalte rămân.')
+                        ->modalDescription(__('Se șterg doar evenimentele nepublicate, fără comenzi, bilete, deconturi sau sub-evenimente. Celelalte rămân.'))
                         ->action(fn (Collection $records) => \App\Support\Marketplace\SafeBulkDelete::run(
                             $records,
                             fn (Event $event) => $event->getTranslation('title') ?: "#{$event->id}"

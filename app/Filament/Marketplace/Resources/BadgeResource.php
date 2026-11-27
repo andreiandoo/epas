@@ -56,40 +56,40 @@ class BadgeResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Basic Information')
+                SC\Section::make(__('Basic Information'))
                     ->schema([
                         Forms\Components\TextInput::make('name.en')
-                            ->label('Name (English)')
+                            ->label(__('Name (English)'))
                             ->required(),
 
                         Forms\Components\TextInput::make('name.ro')
-                            ->label('Name (Romanian)')
+                            ->label(__('Name (Romanian)'))
                             ->required(),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->unique(ignoreRecord: true)
-                            ->helperText('Auto-generated if left empty'),
+                            ->helperText(__('Auto-generated if left empty')),
 
                         Forms\Components\Textarea::make('description.en')
-                            ->label('Description (English)')
+                            ->label(__('Description (English)'))
                             ->rows(2),
 
                         Forms\Components\Textarea::make('description.ro')
-                            ->label('Description (Romanian)')
+                            ->label(__('Description (Romanian)'))
                             ->rows(2),
 
                         Forms\Components\FileUpload::make('icon_url')
-                            ->label('Icon Image')
+                            ->label(__('Icon Image'))
                             ->image()
                             ->directory('badges'),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Badge Color')
+                            ->label(__('Badge Color'))
                             ->default('#6366F1'),
                     ])->columns(2),
 
-                SC\Section::make('Category & Rarity')
+                SC\Section::make(__('Category & Rarity'))
                     ->schema([
                         Forms\Components\Select::make('category')
                             ->options(Badge::CATEGORIES)
@@ -97,55 +97,55 @@ class BadgeResource extends Resource
                             ->required(),
 
                         Forms\Components\Select::make('rarity_level')
-                            ->label('Rarity')
+                            ->label(__('Rarity'))
                             ->options(Badge::RARITIES)
                             ->default(1)
                             ->required(),
                     ])->columns(2),
 
-                SC\Section::make('Rewards')
-                    ->description('XP and bonus points awarded when badge is earned')
+                SC\Section::make(__('Rewards'))
+                    ->description(__('XP and bonus points awarded when badge is earned'))
                     ->schema([
                         Forms\Components\TextInput::make('xp_reward')
-                            ->label('XP Reward')
+                            ->label(__('XP Reward'))
                             ->numeric()
                             ->default(0)
-                            ->helperText('Experience points awarded'),
+                            ->helperText(__('Experience points awarded')),
 
                         Forms\Components\TextInput::make('bonus_points')
-                            ->label('Bonus Points')
+                            ->label(__('Bonus Points'))
                             ->numeric()
                             ->default(0)
-                            ->helperText('Loyalty points awarded'),
+                            ->helperText(__('Loyalty points awarded')),
                     ])->columns(2),
 
-                SC\Section::make('Conditions')
-                    ->description('Define conditions for automatic badge awarding')
+                SC\Section::make(__('Conditions'))
+                    ->description(__('Define conditions for automatic badge awarding'))
                     ->schema([
                         Forms\Components\Repeater::make('conditions.rules')
-                            ->label('Rules')
+                            ->label(__('Rules'))
                             ->schema([
                                 Forms\Components\Select::make('metric')
                                     ->options([
-                                        'events_attended' => 'Events Attended',
-                                        'reviews_submitted' => 'Reviews Submitted',
-                                        'referrals_converted' => 'Referrals Converted',
-                                        'total_badges_earned' => 'Total Badges Earned',
-                                        'current_level' => 'Current Level',
-                                        'total_xp' => 'Total XP',
-                                        'orders_count' => 'Orders Count',
-                                        'total_spent' => 'Total Spent',
-                                        'first_purchase' => 'First Purchase',
+                                        'events_attended' => __('Events Attended'),
+                                        'reviews_submitted' => __('Reviews Submitted'),
+                                        'referrals_converted' => __('Referrals Converted'),
+                                        'total_badges_earned' => __('Total Badges Earned'),
+                                        'current_level' => __('Current Level'),
+                                        'total_xp' => __('Total XP'),
+                                        'orders_count' => __('Orders Count'),
+                                        'total_spent' => __('Total Spent'),
+                                        'first_purchase' => __('First Purchase'),
                                     ])
                                     ->required(),
 
                                 Forms\Components\Select::make('operator')
                                     ->options([
-                                        '>=' => 'Greater than or equal',
-                                        '>' => 'Greater than',
-                                        '=' => 'Equal to',
-                                        '<' => 'Less than',
-                                        '<=' => 'Less than or equal',
+                                        '>=' => __('Greater than or equal'),
+                                        '>' => __('Greater than'),
+                                        '=' => __('Equal to'),
+                                        '<' => __('Less than'),
+                                        '<=' => __('Less than or equal'),
                                     ])
                                     ->default('>=')
                                     ->required(),
@@ -156,26 +156,26 @@ class BadgeResource extends Resource
                             ])
                             ->columns(3)
                             ->defaultItems(0)
-                            ->helperText('All conditions must be met for badge to be awarded'),
+                            ->helperText(__('All conditions must be met for badge to be awarded')),
                     ]),
 
-                SC\Section::make('Display Settings')
+                SC\Section::make(__('Display Settings'))
                     ->schema([
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
+                            ->label(__('Active'))
                             ->default(true),
 
                         Forms\Components\Toggle::make('is_featured')
-                            ->label('Featured')
+                            ->label(__('Featured'))
                             ->default(false),
 
                         Forms\Components\Toggle::make('is_secret')
-                            ->label('Secret Badge')
+                            ->label(__('Secret Badge'))
                             ->default(false)
-                            ->helperText('Hidden until earned'),
+                            ->helperText(__('Hidden until earned')),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
                     ])->columns(4),
@@ -187,19 +187,19 @@ class BadgeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('icon_url')
-                    ->label('Icon')
+                    ->label(__('Icon'))
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('category_label')
-                    ->label('Category')
+                    ->label(__('Category'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('rarity_name')
-                    ->label('Rarity')
+                    ->label(__('Rarity'))
                     ->badge()
                     ->color(fn ($record) => match ($record->rarity_level) {
                         1 => 'gray',
@@ -211,33 +211,33 @@ class BadgeResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('xp_reward')
-                    ->label('XP')
+                    ->label(__('XP'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('bonus_points')
-                    ->label('Points')
+                    ->label(__('Points'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('earned_count')
-                    ->label('Earned By')
+                    ->label(__('Earned By'))
                     ->suffix(' customers'),
 
                 Tables\Columns\IconColumn::make('is_secret')
-                    ->label('Secret')
+                    ->label(__('Secret'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('category')
                     ->options(Badge::CATEGORIES),
                 Tables\Filters\SelectFilter::make('rarity_level')
-                    ->label('Rarity')
+                    ->label(__('Rarity'))
                     ->options(Badge::RARITIES),
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
             ])
             ->recordActions([
                 EditAction::make(),

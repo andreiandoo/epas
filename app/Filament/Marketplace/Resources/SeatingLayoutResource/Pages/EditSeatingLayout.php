@@ -16,13 +16,13 @@ class EditSeatingLayout extends EditRecord
     {
         return [
             Actions\Action::make('designer')
-                ->label('Deschide Designer')
+                ->label(__('Deschide Designer'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
                 ->url(fn () => static::getResource()::getUrl('designer', ['record' => $this->getRecord()])),
 
             Actions\Action::make('preview')
-                ->label('Preview')
+                ->label(__('Preview'))
                 ->icon('heroicon-o-eye')
                 ->color('info')
                 ->url(fn () => static::getResource()::getUrl('preview', ['record' => $this->getRecord()])),

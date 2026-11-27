@@ -239,8 +239,8 @@ class CreateTenant extends CreateRecord
     protected function getCreatedNotification(): ?Notification
     {
         return Notification::make()
-            ->title('Venue owner creat')
-            ->body('Cont creat + locațiile linked. I s-a trimis un email cu link de setare a parolei (valabil 48h) și lista a ce poate face.')
+            ->title(__('Venue owner creat'))
+            ->body(__('Cont creat + locațiile linked. I s-a trimis un email cu link de setare a parolei (valabil 48h) și lista a ce poate face.'))
             ->success();
     }
 }

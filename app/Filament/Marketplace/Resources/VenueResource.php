@@ -68,16 +68,16 @@ class VenueResource extends Resource
                     // ============================================================
                     // SEARCH EXISTING VENUES (only on create page)
                     // ============================================================
-                    SC\Section::make('Caută locații existente')
-                        ->description('Caută în toate locațiile din sistem. Dacă găsești locația dorită, o poți adăuga ca partener în loc să creezi una nouă.')
+                    SC\Section::make(__('Caută locații existente'))
+                        ->description(__('Caută în toate locațiile din sistem. Dacă găsești locația dorită, o poți adăuga ca partener în loc să creezi una nouă.'))
                         ->icon('heroicon-o-magnifying-glass')
                         ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30', 'style' => 'overflow: visible;'])
                         ->visible(fn ($operation) => $operation === 'create')
                         ->columnSpanFull()
                         ->schema([
                             Forms\Components\Select::make('search_existing_venue')
-                                ->label('Caută o locație existentă')
-                                ->placeholder('Scrie numele sau orașul pentru a căuta...')
+                                ->label(__('Caută o locație existentă'))
+                                ->placeholder(__('Scrie numele sau orașul pentru a căuta...'))
                                 ->searchable()
                                 ->prefixIcon('heroicon-o-magnifying-glass')
                                 ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
@@ -208,15 +208,15 @@ class VenueResource extends Resource
                                     })
                                     ->requiresConfirmation()
                                     ->modalHeading(fn () => 'Preia locația în biblioteca ' . ($marketplace?->public_name ?? $marketplace?->name ?? 'marketplace'))
-                                    ->modalDescription('Această locație va fi adăugată în lista ta de locații partenere. Vei putea să o folosești pentru evenimentele tale.')
+                                    ->modalDescription(__('Această locație va fi adăugată în lista ta de locații partenere. Vei putea să o folosești pentru evenimentele tale.'))
                                     ->action(function (SGet $get) use ($marketplace) {
                                         $venueId = $get('search_existing_venue');
                                         $venue = Venue::find($venueId);
 
                                         if (!$venue) {
                                             Notification::make()
-                                                ->title('Eroare')
-                                                ->body('Locația nu a fost găsită.')
+                                                ->title(__('Eroare'))
+                                                ->body(__('Locația nu a fost găsită.'))
                                                 ->danger()
                                                 ->send();
                                             return;
@@ -230,7 +230,7 @@ class VenueResource extends Resource
                                         ]);
 
                                         Notification::make()
-                                            ->title('Locație adăugată')
+                                            ->title(__('Locație adăugată'))
                                             ->body('"' . $venueName . '" a fost adăugată ca partener. Vei fi redirecționat către lista de locații.')
                                             ->success()
                                             ->send();
@@ -258,7 +258,7 @@ class VenueResource extends Resource
                     // venue is linked to a marketplace-created tenant
                     // (venues.tenant_id → tenants.owner_id → users). Click
                     // on the owner name jumps to the tenant edit page.
-                    SC\Section::make('Proprietar locație')
+                    SC\Section::make(__('Proprietar locație'))
                         ->icon('heroicon-o-building-storefront')
                         ->columnSpanFull()
                         ->visible(fn ($record) => $record && $record->tenant_id)
@@ -296,7 +296,7 @@ class VenueResource extends Resource
 
                     SC\Grid::make(5)->schema([
                         // NAME & SLUG - EN/RO
-                        SC\Section::make('Venue Identity')
+                        SC\Section::make(__('Venue Identity'))
                             ->icon('heroicon-o-identification')
                             ->columnSpan(2)
                             ->schema([
@@ -305,7 +305,7 @@ class VenueResource extends Resource
                                         SC\Tabs\Tab::make('Română')
                                             ->schema([
                                                 Forms\Components\TextInput::make('name.ro')
-                                                    ->label('Nume locație (RO)')
+                                                    ->label(__('Nume locație (RO)'))
                                                     ->required()
                                                     ->maxLength(255)
                                                     ->live(onBlur: true)
@@ -316,13 +316,13 @@ class VenueResource extends Resource
                                         SC\Tabs\Tab::make('English')
                                             ->schema([
                                                 Forms\Components\TextInput::make('name.en')
-                                                    ->label('Venue name (EN)')
+                                                    ->label(__('Venue name (EN)'))
                                                     ->maxLength(255),
                                             ]),
                                     ])->columnSpanFull(),
 
                                 Forms\Components\TextInput::make('slug')
-                                    ->label('Slug')
+                                    ->label(__('Slug'))
                                     ->required()
                                     ->maxLength(190)
                                     ->unique(ignoreRecord: true)
@@ -330,12 +330,12 @@ class VenueResource extends Resource
                                     ->placeholder('auto-generated-from-name'),
                             ]),
                         // IMAGE & GALLERY
-                        SC\Section::make('Media')
+                        SC\Section::make(__('Media'))
                             ->icon('heroicon-o-photo')
                             ->columnSpan(3)
                             ->schema([
                                 Forms\Components\FileUpload::make('image_url')
-                                    ->label('Main image')
+                                    ->label(__('Main image'))
                                     ->image()
                                     ->imagePreviewHeight('200')
                                     ->disk('public')
@@ -343,8 +343,8 @@ class VenueResource extends Resource
                                     ->visibility('public')
                                     ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('meta.portrait')
-                                    ->label('Portret (mobile hero)')
-                                    ->helperText('Imagine verticală afișată pe mobile în hero-ul paginii locației')
+                                    ->label(__('Portret (mobile hero)'))
+                                    ->helperText(__('Imagine verticală afișată pe mobile în hero-ul paginii locației'))
                                     ->image()
                                     ->imagePreviewHeight('200')
                                     ->disk('public')
@@ -352,7 +352,7 @@ class VenueResource extends Resource
                                     ->visibility('public')
                                     ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('gallery')
-                                    ->label('Gallery')
+                                    ->label(__('Gallery'))
                                     ->image()
                                     ->multiple()
                                     ->maxFiles(5)
@@ -369,56 +369,56 @@ class VenueResource extends Resource
 
                     // Row 1: Location (3 cols) + Capacity (2 cols) — same row totalling 5
                     SC\Grid::make(5)->schema([
-                        SC\Section::make('Location')
+                        SC\Section::make(__('Location'))
                             ->icon('heroicon-o-map-pin')
                             ->columnSpan(3)
                             ->schema([
                                 Forms\Components\TextInput::make('address')
-                                    ->label('Address')
+                                    ->label(__('Address'))
                                     ->maxLength(255)
-                                    ->placeholder('Street and number'),
+                                    ->placeholder(__('Street and number')),
                                 // Canonical județ + localitate pickers (helpers).
                                 // They pre-fill from / write into the free-text
                                 // city/state fields below — see LocationSelectFields.
                                 ...\App\Filament\Support\LocationSelectFields::make(),
                                 Forms\Components\TextInput::make('city')
-                                    ->label('City')
+                                    ->label(__('City'))
                                     ->maxLength(120)
-                                    ->placeholder('e.g. București'),
+                                    ->placeholder(__('e.g. București')),
                                 Forms\Components\TextInput::make('state')
-                                    ->label('State/Region')
+                                    ->label(__('State/Region'))
                                     ->maxLength(120)
-                                    ->placeholder('e.g. Ilfov'),
+                                    ->placeholder(__('e.g. Ilfov')),
                                 Forms\Components\TextInput::make('country')
-                                    ->label('Country')
+                                    ->label(__('Country'))
                                     ->maxLength(120)
-                                    ->placeholder('e.g. RO'),
+                                    ->placeholder(__('e.g. RO')),
                                 Forms\Components\TextInput::make('lat')
-                                    ->label('Latitude')
+                                    ->label(__('Latitude'))
                                     ->numeric()
                                     ->step('0.0000001')
                                     ->placeholder('44.4268'),
                                 Forms\Components\TextInput::make('lng')
-                                    ->label('Longitude')
+                                    ->label(__('Longitude'))
                                     ->numeric()
                                     ->step('0.0000001')
                                     ->placeholder('26.1025'),
                                 Forms\Components\TextInput::make('google_maps_url')
-                                    ->label('Google Maps Link')
+                                    ->label(__('Google Maps Link'))
                                     ->url()
                                     ->placeholder('https://maps.google.com/...')
                                     ->prefixIcon('heroicon-o-map')
                                     ->suffixAction(
                                         Action::make('open_google_maps')
                                             ->icon('heroicon-o-arrow-top-right-on-square')
-                                            ->tooltip('Deschide link-ul într-o filă nouă')
+                                            ->tooltip(__('Deschide link-ul într-o filă nouă'))
                                             ->url(fn ($state) => $state ?: null, shouldOpenInNewTab: true)
                                             ->visible(fn ($state) => filled($state))
                                     )
                                     ->columnSpanFull(),
                                 \Filament\Schemas\Components\Actions::make([
                                     Action::make('geocode')
-                                        ->label('Auto-detect coordinates')
+                                        ->label(__('Auto-detect coordinates'))
                                         ->icon('heroicon-o-map-pin')
                                         ->color('info')
                                         ->action(function (SGet $get, SSet $set) {
@@ -428,7 +428,7 @@ class VenueResource extends Resource
 
                                             if (empty($city)) {
                                                 Notification::make()
-                                                    ->title('City is required for geocoding')
+                                                    ->title(__('City is required for geocoding'))
                                                     ->warning()
                                                     ->send();
                                                 return;
@@ -442,8 +442,8 @@ class VenueResource extends Resource
 
                                             if (empty($apiKey)) {
                                                 Notification::make()
-                                                    ->title('Google Maps API key not configured')
-                                                    ->body('Please add your API key in Settings > Connections')
+                                                    ->title(__('Google Maps API key not configured'))
+                                                    ->body(__('Please add your API key in Settings > Connections'))
                                                     ->danger()
                                                     ->send();
                                                 return;
@@ -463,20 +463,20 @@ class VenueResource extends Resource
                                                     $set('lng', $location['lng']);
 
                                                     Notification::make()
-                                                        ->title('Coordinates detected')
+                                                        ->title(__('Coordinates detected'))
                                                         ->body("Lat: {$location['lat']}, Lng: {$location['lng']}")
                                                         ->success()
                                                         ->send();
                                                 } else {
                                                     Notification::make()
-                                                        ->title('Could not find coordinates')
-                                                        ->body('Try adding more address details')
+                                                        ->title(__('Could not find coordinates'))
+                                                        ->body(__('Try adding more address details'))
                                                         ->warning()
                                                         ->send();
                                                 }
                                             } catch (\Exception $e) {
                                                 Notification::make()
-                                                    ->title('Geocoding failed')
+                                                    ->title(__('Geocoding failed'))
                                                     ->body($e->getMessage())
                                                     ->danger()
                                                     ->send();
@@ -484,44 +484,44 @@ class VenueResource extends Resource
                                         }),
                                 ])->columnSpanFull(),
                             ])->columns(2),
-                        SC\Section::make('Capacity')
+                        SC\Section::make(__('Capacity'))
                             ->icon('heroicon-o-users')
                             ->columnSpan(2)
                             ->schema([
                                 Forms\Components\TextInput::make('capacity_total')
-                                    ->label('Total capacity')
+                                    ->label(__('Total capacity'))
                                     ->numeric()
                                     ->minValue(0)
-                                    ->placeholder('e.g. 12000'),
+                                    ->placeholder(__('e.g. 12000')),
                                 Forms\Components\TextInput::make('capacity_standing')
-                                    ->label('Standing')
+                                    ->label(__('Standing'))
                                     ->numeric()
                                     ->minValue(0)
-                                    ->placeholder('e.g. 8000'),
+                                    ->placeholder(__('e.g. 8000')),
                                 Forms\Components\TextInput::make('capacity_seated')
-                                    ->label('Seated')
+                                    ->label(__('Seated'))
                                     ->numeric()
                                     ->minValue(0)
-                                    ->placeholder('e.g. 4000'),
+                                    ->placeholder(__('e.g. 4000')),
                             ]),
                     ]),
 
                     // Row 2: Google Reviews full-width
-                    SC\Section::make('Google Reviews')
+                    SC\Section::make(__('Google Reviews'))
                         ->icon('heroicon-o-star')
-                        ->description('Rating mediu, număr total de recenzii și 3 recenzii de pe Google. Cachate local — nu se apelează API la fiecare vizualizare. Folosește butonul "Sincronizare recenzii" pentru a re-citi datele din Google.')
+                        ->description(__('Rating mediu, număr total de recenzii și 3 recenzii de pe Google. Cachate local — nu se apelează API la fiecare vizualizare. Folosește butonul "Sincronizare recenzii" pentru a re-citi datele din Google.'))
                         ->columnSpanFull()
                         ->schema([
                             Forms\Components\TextInput::make('google_place_id')
-                                ->label('Google Place ID')
+                                ->label(__('Google Place ID'))
                                 ->maxLength(255)
-                                ->placeholder('ChIJ...')
+                                ->placeholder(__('ChIJ...'))
                                 ->helperText(new HtmlString(
                                     'Copiază Place ID-ul de la <a href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;">Google Place ID Finder</a>. Apoi salvează și folosește butonul de sincronizare.'
                                 ))
                                 ->columnSpanFull(),
                             Forms\Components\Placeholder::make('google_reviews_preview')
-                                ->label('Stare cache')
+                                ->label(__('Stare cache'))
                                 ->content(function (?Venue $record) {
                                     if (!$record || empty($record->google_place_id)) {
                                         return new HtmlString('<span style="color:#6b7280;">Setează Place ID și salvează pentru a putea sincroniza.</span>');
@@ -545,11 +545,11 @@ class VenueResource extends Resource
                                 ->columnSpanFull(),
                             SC\Actions::make([
                                 Action::make('sync_google_reviews')
-                                    ->label('Sincronizare recenzii Google')
+                                    ->label(__('Sincronizare recenzii Google'))
                                     ->icon('heroicon-o-arrow-path')
                                     ->color('primary')
                                     ->requiresConfirmation()
-                                    ->modalDescription('Se va face un apel către Google Places API pentru a aduce ratingul, numărul de recenzii și primele recenzii disponibile. Continui?')
+                                    ->modalDescription(__('Se va face un apel către Google Places API pentru a aduce ratingul, numărul de recenzii și primele recenzii disponibile. Continui?'))
                                     ->visible(fn (?Venue $record) => $record && !empty($record->google_place_id))
                                     ->action(function (Venue $record) {
                                         try {
@@ -566,7 +566,7 @@ class VenueResource extends Resource
                                                 ->send();
                                         } catch (\Throwable $e) {
                                             Notification::make()
-                                                ->title('Eroare la sincronizare')
+                                                ->title(__('Eroare la sincronizare'))
                                                 ->body($e->getMessage())
                                                 ->danger()
                                                 ->persistent()
@@ -577,54 +577,54 @@ class VenueResource extends Resource
                         ])->columns(1),
 
                     // CONTACT & LINKS
-                    SC\Section::make('Contact & Links')
+                    SC\Section::make(__('Contact & Links'))
                         ->icon('heroicon-o-phone')
                         ->schema([
                             Forms\Components\TextInput::make('phone')
-                                ->label('Phone 1')
+                                ->label(__('Phone 1'))
                                 ->maxLength(64)
                                 ->placeholder('+40 ...')
                                 ->prefixIcon('heroicon-o-phone'),
                             Forms\Components\TextInput::make('phone2')
-                                ->label('Phone 2')
+                                ->label(__('Phone 2'))
                                 ->maxLength(64)
                                 ->placeholder('+40 ...')
                                 ->prefixIcon('heroicon-o-phone'),
                             Forms\Components\TextInput::make('email')
-                                ->label('Email 1')
+                                ->label(__('Email 1'))
                                 ->email()
-                                ->placeholder('contact@example.com')
+                                ->placeholder(__('contact@example.com'))
                                 ->prefixIcon('heroicon-o-envelope'),
                             Forms\Components\TextInput::make('email2')
-                                ->label('Email 2')
+                                ->label(__('Email 2'))
                                 ->email()
-                                ->placeholder('reservations@example.com')
+                                ->placeholder(__('reservations@example.com'))
                                 ->prefixIcon('heroicon-o-envelope'),
                             Forms\Components\TextInput::make('website_url')
-                                ->label('Website')
+                                ->label(__('Website'))
                                 ->url()
                                 ->placeholder('https://...')
                                 ->prefixIcon('heroicon-o-globe-alt'),
                             Forms\Components\TextInput::make('facebook_url')
-                                ->label('Facebook')
+                                ->label(__('Facebook'))
                                 ->url()
                                 ->placeholder('https://facebook.com/...')
                                 ->prefixIcon('heroicon-o-link'),
                             Forms\Components\TextInput::make('instagram_url')
-                                ->label('Instagram')
+                                ->label(__('Instagram'))
                                 ->url()
                                 ->placeholder('https://instagram.com/...')
                                 ->prefixIcon('heroicon-o-link'),
                             Forms\Components\TextInput::make('tiktok_url')
-                                ->label('TikTok')
+                                ->label(__('TikTok'))
                                 ->url()
                                 ->placeholder('https://tiktok.com/@...')
                                 ->prefixIcon('heroicon-o-link'),
                         ])->columns(2),
 
                     // FACILITIES
-                    SC\Section::make('Facilități')
-                        ->description('Selectează facilitățile disponibile la această locație')
+                    SC\Section::make(__('Facilități'))
+                        ->description(__('Selectează facilitățile disponibile la această locație'))
                         ->icon('heroicon-o-wrench-screwdriver')
                         ->collapsible()
                         ->collapsed()
@@ -640,7 +640,7 @@ class VenueResource extends Resource
                         ]),
 
                     // DESCRIPTION - EN/RO
-                    SC\Section::make('Description')
+                    SC\Section::make(__('Description'))
                         ->icon('heroicon-o-document-text')
                         ->schema([
                             SC\Tabs::make('Description Translations')
@@ -648,45 +648,45 @@ class VenueResource extends Resource
                                     SC\Tabs\Tab::make('Română')
                                         ->schema([
                                             Forms\Components\RichEditor::make('description.ro')
-                                                ->label('Descriere (RO)')
+                                                ->label(__('Descriere (RO)'))
                                                 ->columnSpanFull(),
                                         ]),
                                     SC\Tabs\Tab::make('English')
                                         ->schema([
                                             Forms\Components\RichEditor::make('description.en')
-                                                ->label('Description (EN)')
+                                                ->label(__('Description (EN)'))
                                                 ->columnSpanFull(),
                                         ]),
                                 ])->columnSpanFull(),
                         ]),
 
                     // CONDITIONS & TAXES
-                    SC\Section::make('Condiții & Taxe')
-                        ->description('Condiții specifice locației și taxe aplicabile')
+                    SC\Section::make(__('Condiții & Taxe'))
+                        ->description(__('Condiții specifice locației și taxe aplicabile'))
                         ->icon('heroicon-o-document-text')
                         ->collapsible()
                         ->schema([
                             Forms\Components\RichEditor::make('venue_conditions')
-                                ->label('Condiții locație')
-                                ->helperText('Condiții specifice care se vor adăuga automat la termenii biletelor evenimentelor din acest venue.')
+                                ->label(__('Condiții locație'))
+                                ->helperText(__('Condiții specifice care se vor adăuga automat la termenii biletelor evenimentelor din acest venue.'))
                                 ->columnSpanFull(),
 
                             Forms\Components\Toggle::make('has_historical_monument_tax')
-                                ->label('Taxa de Monument Istoric (2%)')
-                                ->helperText('Dacă este activată, evenimentele din acest venue vor avea automat aplicată taxa de 2% pentru monument istoric.')
+                                ->label(__('Taxa de Monument Istoric (2%)'))
+                                ->helperText(__('Dacă este activată, evenimentele din acest venue vor avea automat aplicată taxa de 2% pentru monument istoric.'))
                                 ->default(false),
                         ]),
 
                     // PARTNER NOTES (internal)
-                    SC\Section::make('Note interne')
-                        ->description('Note interne despre această locație (nu sunt vizibile public)')
+                    SC\Section::make(__('Note interne'))
+                        ->description(__('Note interne despre această locație (nu sunt vizibile public)'))
                         ->icon('heroicon-o-lock-closed')
                         ->collapsible()
                         ->collapsed()
                         ->schema([
                             Forms\Components\Textarea::make('partner_notes')
-                                ->label('Note')
-                                ->placeholder('Note despre parteneriat, contracte, etc.')
+                                ->label(__('Note'))
+                                ->placeholder(__('Note despre parteneriat, contracte, etc.'))
                                 ->rows(4)
                                 ->columnSpanFull(),
                         ]),
@@ -694,23 +694,23 @@ class VenueResource extends Resource
 
                 SC\Group::make()->columnSpan(1)->schema([
                     // STATUS FLAGS
-                    SC\Section::make('Status')
+                    SC\Section::make(__('Status'))
                         ->icon('heroicon-o-eye')
                         ->compact()
                         ->schema([
                             Forms\Components\Toggle::make('is_featured')
-                                ->label('Locație promovată')
-                                ->helperText('Va apărea în secțiunea promovată')
+                                ->label(__('Locație promovată'))
+                                ->helperText(__('Va apărea în secțiunea promovată'))
                                 ->default(false),
                         ]),
 
                     // VENUE CATEGORIES
-                    SC\Section::make('Categorii')
+                    SC\Section::make(__('Categorii'))
                         ->icon('heroicon-o-tag')
                         ->compact()
                         ->schema([
                             Forms\Components\Select::make('venueCategories')
-                                ->label('Categorii locație')
+                                ->label(__('Categorii locație'))
                                 ->relationship(
                                     'venueCategories',
                                     'name',
@@ -722,15 +722,15 @@ class VenueResource extends Resource
                                 ->searchable()
                                 ->createOptionForm([
                                     Forms\Components\TextInput::make('name.ro')
-                                        ->label('Nume categorie (RO)')
+                                        ->label(__('Nume categorie (RO)'))
                                         ->required(),
                                     Forms\Components\TextInput::make('name.en')
-                                        ->label('Category name (EN)'),
+                                        ->label(__('Category name (EN)')),
                                     Forms\Components\TextInput::make('icon')
-                                        ->label('Icon (emoji)')
+                                        ->label(__('Icon (emoji)'))
                                         ->placeholder('🎭'),
                                     Forms\Components\ColorPicker::make('color')
-                                        ->label('Culoare'),
+                                        ->label(__('Culoare')),
                                 ])
                                 ->createOptionUsing(function (array $data) {
                                     $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
@@ -740,12 +740,12 @@ class VenueResource extends Resource
                         ]),
 
                     // SCHEDULE
-                    SC\Section::make('Program')
+                    SC\Section::make(__('Program'))
                         ->icon('heroicon-o-clock')
                         ->compact()
                         ->schema([
                             Forms\Components\Textarea::make('schedule')
-                                ->label('Program')
+                                ->label(__('Program'))
                                 ->placeholder("Luni - Vineri: 10:00 - 22:00\nSâmbătă - Duminică: 12:00 - 24:00")
                                 ->rows(5)
                                 ->columnSpanFull(),
@@ -753,11 +753,11 @@ class VenueResource extends Resource
 
                     // YouTube URL
                     Forms\Components\TextInput::make('video_url')
-                        ->label('YouTube URL')
+                        ->label(__('YouTube URL'))
                         ->url()
                         ->placeholder('https://www.youtube.com/watch?v=...')
                         ->prefixIcon('heroicon-o-play')
-                        ->helperText('Link YouTube către un video de prezentare al locației (opțional).')
+                        ->helperText(__('Link YouTube către un video de prezentare al locației (opțional).'))
                         ->afterStateHydrated(function (\Filament\Forms\Components\TextInput $component, $state, ?\App\Models\Venue $record) {
                             // Ensure video_type gets marked as youtube whenever a URL exists,
                             // so existing records created before this simplification still work.
@@ -773,7 +773,7 @@ class VenueResource extends Resource
 
 
                     // Statistici (doar pe Edit)
-                    SC\Section::make('Statistici')
+                    SC\Section::make(__('Statistici'))
                         ->icon('heroicon-o-chart-bar')
                         ->compact()
                         ->collapsed()
@@ -813,19 +813,19 @@ class VenueResource extends Resource
                         ]),
 
                     // Quick Actions (doar pe Edit)
-                    SC\Section::make('Acțiuni rapide')
+                    SC\Section::make(__('Acțiuni rapide'))
                         ->icon('heroicon-o-bolt')
                         ->compact()
                         ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
                             SC\Actions::make([
                                 Action::make('view_events')
-                                    ->label('Vezi evenimente')
+                                    ->label(__('Vezi evenimente'))
                                     ->icon('heroicon-o-calendar')
                                     ->color('gray')
                                     ->url(fn (?Venue $record) => $record ? EventResource::getUrl('index', ['tableFilters[venue_id][value]' => $record->id]) : null),
                                 Action::make('create_event')
-                                    ->label('Eveniment nou')
+                                    ->label(__('Eveniment nou'))
                                     ->icon('heroicon-o-plus')
                                     ->color('primary')
                                     ->url(fn (?Venue $record) => $record ? EventResource::getUrl('create', ['venue_id' => $record->id]) : null),
@@ -833,7 +833,7 @@ class VenueResource extends Resource
                         ]),
 
                     // Meta Info (doar pe Edit)
-                    SC\Section::make('Informații')
+                    SC\Section::make(__('Informații'))
                         ->icon('heroicon-o-information-circle')
                         ->compact()
                         ->collapsed()
@@ -881,12 +881,12 @@ class VenueResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
-                    ->label('Imagine')
+                    ->label(__('Imagine'))
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make("name.{$lang}")
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search) use ($lang): void {
                         $term = '%' . mb_strtolower($search) . '%';
                         if (DB::getDriverName() === 'pgsql') {
@@ -900,27 +900,27 @@ class VenueResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('city')
-                    ->label('Oraș')
+                    ->label(__('Oraș'))
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('capacity_total')
-                    ->label('Capacitate')
+                    ->label(__('Capacitate'))
                     ->sortable()
                     ->numeric()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('venueCategories.name')
-                    ->label('Categorii')
+                    ->label(__('Categorii'))
                     ->badge()
                     ->separator(',')
                     ->getStateUsing(fn ($record) => $record->venueCategories->map(fn ($c) => $c->icon . ' ' . ($c->getTranslation('name', 'ro') ?? $c->getTranslation('name', 'en')))->join(', '))
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_partner')
-                    ->label('Partener')
+                    ->label(__('Partener'))
                     ->boolean()
                     ->toggleable(),
                 // Owner = venues.tenant_id → tenants.owner_id set (see "Proprietar locație" on edit)
                 Tables\Columns\IconColumn::make('has_owner')
-                    ->label('Owner')
+                    ->label(__('Owner'))
                     ->state(fn ($record) => (bool) $record->tenant?->owner_id)
                     ->boolean()
                     ->tooltip(fn ($record) => $record->tenant?->owner
@@ -931,27 +931,27 @@ class VenueResource extends Resource
             ->modifyQueryUsing(fn (Builder $query) => $query->with('tenant.owner'))
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_partner')
-                    ->label('Partener')
-                    ->placeholder('Toate')
-                    ->trueLabel('Doar partenere')
-                    ->falseLabel('Doar ne-partenere'),
+                    ->label(__('Partener'))
+                    ->placeholder(__('Toate'))
+                    ->trueLabel(__('Doar partenere'))
+                    ->falseLabel(__('Doar ne-partenere')),
                 Tables\Filters\SelectFilter::make('venueCategories')
-                    ->label('Categorie')
+                    ->label(__('Categorie'))
                     ->relationship('venueCategories', 'name')
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->icon . ' ' . ($record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en')))
                     ->preload()
                     ->multiple(),
             ], layout: \Filament\Tables\Enums\FiltersLayout::Dropdown)
-            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label('Filtre')->icon('heroicon-o-funnel')->button())
+            ->filtersTriggerAction(fn (\Filament\Actions\Action $action) => $action->label(__('Filtre'))->icon('heroicon-o-funnel')->button())
             ->actions([])
             ->bulkActions([
                 \Filament\Actions\BulkAction::make('make_partner')
-                    ->label('Setează ca partener')
+                    ->label(__('Setează ca partener'))
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Setează locațiile selectate ca partener')
-                    ->modalDescription('Toate locațiile selectate vor fi marcate ca partenere.')
+                    ->modalHeading(__('Setează locațiile selectate ca partener'))
+                    ->modalDescription(__('Toate locațiile selectate vor fi marcate ca partenere.'))
                     ->deselectRecordsAfterCompletion()
                     ->action(function (\Illuminate\Support\Collection $records) use ($marketplace) {
                         foreach ($records as $venue) {

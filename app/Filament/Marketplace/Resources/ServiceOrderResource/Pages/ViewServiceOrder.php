@@ -24,21 +24,21 @@ class ViewServiceOrder extends ViewRecord
             // a recovery button for any organizer-side desync (toggle was
             // turned off manually, etc.). Idempotent on the model side.
             Action::make('reactivate_tracking')
-                ->label('Re-rulează activate()')
+                ->label(__('Re-rulează activate()'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->visible(fn (ServiceOrder $record): bool =>
                     $record->service_type === ServiceOrder::TYPE_TRACKING
                     && $record->payment_status === ServiceOrder::PAYMENT_PAID)
                 ->requiresConfirmation()
-                ->modalHeading('Re-rulează activate() pe acest tracking order?')
-                ->modalDescription('Va seta service_settings.tracking_enabled=true pe organizator + upsert TrackingIntegration pentru fiecare platformă cumpărată. Idempotent: nu rescrie pixel ID-uri deja completate.')
+                ->modalHeading(__('Re-rulează activate() pe acest tracking order?'))
+                ->modalDescription(__('Va seta service_settings.tracking_enabled=true pe organizator + upsert TrackingIntegration pentru fiecare platformă cumpărată. Idempotent: nu rescrie pixel ID-uri deja completate.'))
                 ->action(function (ServiceOrder $record): void {
                     $record->activate();
                     Notification::make()
                         ->success()
-                        ->title('activate() rulat')
-                        ->body('Verifică tabelul Status pixel-uri de mai jos.')
+                        ->title(__('activate() rulat'))
+                        ->body(__('Verifică tabelul Status pixel-uri de mai jos.'))
                         ->send();
                 }),
 
@@ -46,7 +46,7 @@ class ViewServiceOrder extends ViewRecord
             // still missing a pixel ID. Only visible while there's actually
             // something for the organizer to do.
             Action::make('request_pixel_ids')
-                ->label('Cere pixel ID de la organizator')
+                ->label(__('Cere pixel ID de la organizator'))
                 ->icon('heroicon-o-envelope')
                 ->color('primary')
                 ->visible(function (ServiceOrder $record): bool {
@@ -64,20 +64,20 @@ class ViewServiceOrder extends ViewRecord
                     return false;
                 })
                 ->requiresConfirmation()
-                ->modalHeading('Trimite reminder organizator')
-                ->modalDescription('Organizatorul va primi o notificare cu link către pagina comenzii unde poate completa pixel ID-urile lipsă.')
+                ->modalHeading(__('Trimite reminder organizator'))
+                ->modalDescription(__('Organizatorul va primi o notificare cu link către pagina comenzii unde poate completa pixel ID-urile lipsă.'))
                 ->action(function (ServiceOrder $record): void {
                     try {
                         OrganizerNotificationService::notifyServiceOrderStatus($record, 'started');
                         Notification::make()
                             ->success()
-                            ->title('Reminder trimis')
-                            ->body('Notificarea a fost adăugată în contul organizatorului.')
+                            ->title(__('Reminder trimis'))
+                            ->body(__('Notificarea a fost adăugată în contul organizatorului.'))
                             ->send();
                     } catch (\Throwable $e) {
                         Notification::make()
                             ->danger()
-                            ->title('Eroare la trimitere')
+                            ->title(__('Eroare la trimitere'))
                             ->body($e->getMessage())
                             ->send();
                     }

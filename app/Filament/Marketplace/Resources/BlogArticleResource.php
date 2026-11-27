@@ -197,10 +197,10 @@ class BlogArticleResource extends Resource
                             ->columnSpan(2)
                             ->schema([
                                 // Article Content Section
-                                SC\Section::make('Article Content')
+                                SC\Section::make(__('Article Content'))
                                     ->schema([
                                         Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
-                                            ->label('Title')
+                                            ->label(__('Title'))
                                             ->required()
                                             ->maxLength(255)
                                             ->live(onBlur: true)
@@ -218,20 +218,20 @@ class BlogArticleResource extends Resource
                                             }),
 
                                         Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
+                                            ->label(__('Slug'))
                                             ->required()
                                             ->maxLength(255)
                                             ->rule('alpha_dash'),
 
                                         Forms\Components\TextInput::make("subtitle.{$marketplaceLanguage}")
-                                            ->label('Subtitle')
+                                            ->label(__('Subtitle'))
                                             ->maxLength(255)
                                             ->columnSpanFull(),
 
                                         Forms\Components\Textarea::make("excerpt.{$marketplaceLanguage}")
-                                            ->label('Excerpt')
+                                            ->label(__('Excerpt'))
                                             ->rows(2)
-                                            ->helperText('Short summary for previews and SEO')
+                                            ->helperText(__('Short summary for previews and SEO'))
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($marketplaceLanguage) {
                                                 if ($state) {
@@ -247,7 +247,7 @@ class BlogArticleResource extends Resource
                                             ->columnSpanFull(),
 
                                         Forms\Components\RichEditor::make("content.{$marketplaceLanguage}")
-                                            ->label('Content')
+                                            ->label(__('Content'))
                                             ->required()
                                             ->toolbarButtons([
                                                 'blockquote',
@@ -268,8 +268,8 @@ class BlogArticleResource extends Resource
                                     ])->columns(2),
 
                                 // SEO Section
-                                SC\Section::make('SEO & Meta Tags')
-                                    ->description('Search engine optimization settings')
+                                SC\Section::make(__('SEO & Meta Tags'))
+                                    ->description(__('Search engine optimization settings'))
                                     ->schema([
                                         SC\Tabs::make('SEO Tabs')
                                             ->tabs([
@@ -277,69 +277,69 @@ class BlogArticleResource extends Resource
                                                     ->icon('heroicon-o-magnifying-glass-circle')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('focus_keyword')
-                                                            ->label('Keyword principal')
+                                                            ->label(__('Keyword principal'))
                                                             ->live(onBlur: true)
                                                             ->maxLength(255)
-                                                            ->helperText('Un singur cuvânt/frază pe care vrei să o ranking-uiești (ex: „escape room București”).'),
+                                                            ->helperText(__('Un singur cuvânt/frază pe care vrei să o ranking-uiești (ex: „escape room București”).')),
 
                                                         Forms\Components\Textarea::make('secondary_keywords')
-                                                            ->label('Keywords secundare')
+                                                            ->label(__('Keywords secundare'))
                                                             ->live(onBlur: true)
                                                             ->rows(2)
-                                                            ->helperText('Mai multe cuvinte/fraze, separate prin virgulă.'),
+                                                            ->helperText(__('Mai multe cuvinte/fraze, separate prin virgulă.')),
 
                                                         Forms\Components\Textarea::make('longtail_phrases')
-                                                            ->label('Long-tail phrases')
+                                                            ->label(__('Long-tail phrases'))
                                                             ->live(onBlur: true)
                                                             ->rows(2)
-                                                            ->helperText('Fraze lungi (întrebări, intenții), separate prin virgulă.'),
+                                                            ->helperText(__('Fraze lungi (întrebări, intenții), separate prin virgulă.')),
 
                                                         Forms\Components\Placeholder::make('seo_analysis')
-                                                            ->label('Analiză SEO (live)')
+                                                            ->label(__('Analiză SEO (live)'))
                                                             ->content(fn (\Filament\Schemas\Components\Utilities\Get $get) => static::seoAnalysis($get, $marketplaceLanguage)),
                                                     ])->columns(1),
 
                                                 SC\Tabs\Tab::make('Basic SEO')
                                                     ->schema([
                                                         Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
-                                                            ->label('Meta Title')
+                                                            ->label(__('Meta Title'))
                                                             ->live(onBlur: true)
                                                             ->maxLength(60)
-                                                            ->helperText('Recommended: 50-60 characters. Auto-fills from title.'),
+                                                            ->helperText(__('Recommended: 50-60 characters. Auto-fills from title.')),
 
                                                         Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
-                                                            ->label('Meta Description')
+                                                            ->label(__('Meta Description'))
                                                             ->live(onBlur: true)
                                                             ->rows(2)
                                                             ->maxLength(160)
-                                                            ->helperText('Recommended: 150-160 characters. Auto-fills from excerpt.'),
+                                                            ->helperText(__('Recommended: 150-160 characters. Auto-fills from excerpt.')),
 
                                                         Forms\Components\TextInput::make('canonical_url')
-                                                            ->label('Canonical URL')
+                                                            ->label(__('Canonical URL'))
                                                             ->url()
                                                             ->maxLength(500)
-                                                            ->helperText('Leave empty to use the article URL'),
+                                                            ->helperText(__('Leave empty to use the article URL')),
 
                                                         Forms\Components\Toggle::make('no_index')
-                                                            ->label('Hide from Search Engines')
-                                                            ->helperText('When enabled, search engines will not index this article'),
+                                                            ->label(__('Hide from Search Engines'))
+                                                            ->helperText(__('When enabled, search engines will not index this article')),
                                                     ])->columns(1),
 
                                                 SC\Tabs\Tab::make('Open Graph')
                                                     ->schema([
                                                         Forms\Components\TextInput::make("og_title.{$marketplaceLanguage}")
-                                                            ->label('OG Title')
+                                                            ->label(__('OG Title'))
                                                             ->maxLength(60)
-                                                            ->helperText('Title for social media sharing'),
+                                                            ->helperText(__('Title for social media sharing')),
 
                                                         Forms\Components\Textarea::make("og_description.{$marketplaceLanguage}")
-                                                            ->label('OG Description')
+                                                            ->label(__('OG Description'))
                                                             ->rows(2)
                                                             ->maxLength(200)
-                                                            ->helperText('Description for social media sharing'),
+                                                            ->helperText(__('Description for social media sharing')),
 
                                                         Forms\Components\FileUpload::make('og_image_url')
-                                                            ->label('OG Image')
+                                                            ->label(__('OG Image'))
                                                             ->image()
                                                             ->disk('public')
                                                             ->directory('blog-og-images')
@@ -347,13 +347,13 @@ class BlogArticleResource extends Resource
                                                             ->imageCropAspectRatio('1.91:1')
                                                             ->imageResizeTargetWidth('1200')
                                                             ->imageResizeTargetHeight('630')
-                                                            ->helperText('Image for social sharing (1200x630px recommended)'),
+                                                            ->helperText(__('Image for social sharing (1200x630px recommended)')),
 
                                                         Forms\Components\Select::make('twitter_card')
-                                                            ->label('Twitter Card Type')
+                                                            ->label(__('Twitter Card Type'))
                                                             ->options([
-                                                                'summary' => 'Summary',
-                                                                'summary_large_image' => 'Summary with Large Image',
+                                                                'summary' => __('Summary'),
+                                                                'summary_large_image' => __('Summary with Large Image'),
                                                             ])
                                                             ->default('summary_large_image'),
                                                     ])->columns(1),
@@ -361,31 +361,31 @@ class BlogArticleResource extends Resource
                                                 SC\Tabs\Tab::make('Schema.org')
                                                     ->schema([
                                                         Forms\Components\Select::make('schema_markup.type')
-                                                            ->label('Schema Type')
+                                                            ->label(__('Schema Type'))
                                                             ->options([
-                                                                'Article' => 'Article',
-                                                                'BlogPosting' => 'Blog Posting',
-                                                                'NewsArticle' => 'News Article',
-                                                                'TechArticle' => 'Tech Article',
+                                                                'Article' => __('Article'),
+                                                                'BlogPosting' => __('Blog Posting'),
+                                                                'NewsArticle' => __('News Article'),
+                                                                'TechArticle' => __('Tech Article'),
                                                             ])
                                                             ->default('BlogPosting'),
 
                                                         Forms\Components\TextInput::make('schema_markup.author_name')
-                                                            ->label('Author Name')
+                                                            ->label(__('Author Name'))
                                                             ->maxLength(100),
 
                                                         Forms\Components\TextInput::make('schema_markup.author_url')
-                                                            ->label('Author URL')
+                                                            ->label(__('Author URL'))
                                                             ->url()
                                                             ->maxLength(255),
 
                                                         Forms\Components\TextInput::make('schema_markup.publisher_name')
-                                                            ->label('Publisher Name')
+                                                            ->label(__('Publisher Name'))
                                                             ->maxLength(100)
                                                             ->default(fn () => $marketplace->name ?? ''),
 
                                                         Forms\Components\TextInput::make('schema_markup.publisher_logo')
-                                                            ->label('Publisher Logo URL')
+                                                            ->label(__('Publisher Logo URL'))
                                                             ->url()
                                                             ->maxLength(500),
                                                     ])->columns(1),
@@ -393,22 +393,22 @@ class BlogArticleResource extends Resource
                                                 SC\Tabs\Tab::make('Advanced')
                                                     ->schema([
                                                         Forms\Components\Select::make('language')
-                                                            ->label('Content Language')
+                                                            ->label(__('Content Language'))
                                                             ->options([
-                                                                'en' => 'English',
-                                                                'ro' => 'Romanian',
-                                                                'de' => 'German',
-                                                                'fr' => 'French',
-                                                                'es' => 'Spanish',
-                                                                'it' => 'Italian',
+                                                                'en' => __('English'),
+                                                                'ro' => __('Romanian'),
+                                                                'de' => __('German'),
+                                                                'fr' => __('French'),
+                                                                'es' => __('Spanish'),
+                                                                'it' => __('Italian'),
                                                             ])
                                                             ->default($marketplaceLanguage),
 
                                                         Forms\Components\TextInput::make('reading_time_minutes')
-                                                            ->label('Reading Time (minutes)')
+                                                            ->label(__('Reading Time (minutes)'))
                                                             ->numeric()
                                                             ->minValue(1)
-                                                            ->helperText('Leave empty for auto-calculation'),
+                                                            ->helperText(__('Leave empty for auto-calculation')),
                                                     ])->columns(1),
                                             ])
                                             ->columnSpanFull(),
@@ -417,26 +417,26 @@ class BlogArticleResource extends Resource
                                 // FAQs Section — moved last, after SEO. Optional
                                 // per-guide FAQ list; if empty the public guide
                                 // renders a fallback set. Emitted as FAQPage JSON-LD.
-                                SC\Section::make('Întrebări frecvente (FAQ)')
-                                    ->description('Opțional. Dacă lași gol, ghidul afișează un set FAQ de fallback. Apar și ca FAQPage JSON-LD pentru SEO.')
+                                SC\Section::make(__('Întrebări frecvente (FAQ)'))
+                                    ->description(__('Opțional. Dacă lași gol, ghidul afișează un set FAQ de fallback. Apar și ca FAQPage JSON-LD pentru SEO.'))
                                     ->collapsed()
                                     ->schema([
                                         Forms\Components\Repeater::make('faqs')
                                             ->label('')
                                             ->schema([
                                                 Forms\Components\TextInput::make('q')
-                                                    ->label('Întrebare')
+                                                    ->label(__('Întrebare'))
                                                     ->required()
                                                     ->maxLength(255)
                                                     ->columnSpanFull(),
                                                 Forms\Components\Textarea::make('a')
-                                                    ->label('Răspuns')
+                                                    ->label(__('Răspuns'))
                                                     ->required()
                                                     ->rows(3)
                                                     ->columnSpanFull(),
                                             ])
                                             ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
-                                            ->addActionLabel('Adaugă întrebare')
+                                            ->addActionLabel(__('Adaugă întrebare'))
                                             ->reorderable()
                                             ->collapsible()
                                             ->defaultItems(0),
@@ -451,39 +451,39 @@ class BlogArticleResource extends Resource
                                 // always visible while editing. Generates an
                                 // [activities ...] shortcode to paste into Content.
                                 // Helper fields are dehydrated(false) — not saved.
-                                SC\Section::make('Bloc de activități (shortcode)')
-                                    ->description('Configurează un bloc, copiază shortcode-ul și lipește-l în Content.')
+                                SC\Section::make(__('Bloc de activități (shortcode)'))
+                                    ->description(__('Configurează un bloc, copiază shortcode-ul și lipește-l în Content.'))
                                     ->icon('heroicon-o-squares-2x2')
                                     ->extraAttributes(['style' => 'position: sticky; top: 5rem; z-index: 5;'])
                                     ->schema([
                                         Forms\Components\Select::make('_ab_mode')
-                                            ->label('Mod')
+                                            ->label(__('Mod'))
                                             ->dehydrated(false)
                                             ->live()
                                             ->default('auto')
                                             ->selectablePlaceholder(false)
                                             ->options([
-                                                'auto'   => 'Automat (categorie + oraș)',
-                                                'manual' => 'Manual (activități alese)',
+                                                'auto'   => __('Automat (categorie + oraș)'),
+                                                'manual' => __('Manual (activități alese)'),
                                             ]),
                                         Forms\Components\Select::make('_ab_style')
-                                            ->label('Stil carduri')
+                                            ->label(__('Stil carduri'))
                                             ->dehydrated(false)
                                             ->live()
                                             ->default('small')
                                             ->selectablePlaceholder(false)
                                             ->options([
-                                                'small' => 'Small — verticale',
-                                                'large' => 'Large — pătrate',
-                                                'long'  => 'Long — orizontale',
+                                                'small' => __('Small — verticale'),
+                                                'large' => __('Large — pătrate'),
+                                                'long'  => __('Long — orizontale'),
                                             ]),
 
                                         Forms\Components\Select::make('_ab_city')
-                                            ->label('Oraș')
+                                            ->label(__('Oraș'))
                                             ->dehydrated(false)
                                             ->live()
                                             ->searchable()
-                                            ->placeholder('Toate orașele')
+                                            ->placeholder(__('Toate orașele'))
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual')
                                             ->options(function () use ($marketplace) {
                                                 try {
@@ -503,11 +503,11 @@ class BlogArticleResource extends Resource
                                                 }
                                             }),
                                         Forms\Components\Select::make('_ab_category')
-                                            ->label('Categorie')
+                                            ->label(__('Categorie'))
                                             ->dehydrated(false)
                                             ->live()
                                             ->searchable()
-                                            ->placeholder('Toate categoriile')
+                                            ->placeholder(__('Toate categoriile'))
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual')
                                             ->options(function () use ($marketplace) {
                                                 try {
@@ -527,7 +527,7 @@ class BlogArticleResource extends Resource
                                                 }
                                             }),
                                         Forms\Components\TextInput::make('_ab_limit')
-                                            ->label('Număr carduri')
+                                            ->label(__('Număr carduri'))
                                             ->dehydrated(false)
                                             ->live(onBlur: true)
                                             ->numeric()
@@ -537,7 +537,7 @@ class BlogArticleResource extends Resource
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual'),
 
                                         Forms\Components\Select::make('_ab_ids')
-                                            ->label('Activități alese (în ordine)')
+                                            ->label(__('Activități alese (în ordine)'))
                                             ->dehydrated(false)
                                             ->live()
                                             ->multiple()
@@ -558,7 +558,7 @@ class BlogArticleResource extends Resource
                                             }),
 
                                         Forms\Components\Placeholder::make('_ab_shortcode')
-                                            ->label('Shortcode generat')
+                                            ->label(__('Shortcode generat'))
                                             ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
                                                 $code = static::buildActivitiesShortcode($get);
                                                 $js = htmlspecialchars(json_encode($code), ENT_QUOTES, 'UTF-8');
@@ -576,10 +576,10 @@ class BlogArticleResource extends Resource
                                     ]),
 
                                 // Organization Section
-                                SC\Section::make('Organization')
+                                SC\Section::make(__('Organization'))
                                     ->schema([
                                         Forms\Components\Select::make('category_id')
-                                            ->label('Category')
+                                            ->label(__('Category'))
                                             ->options(function () use ($marketplace, $marketplaceLanguage) {
                                                 return BlogCategory::where('marketplace_client_id', $marketplace?->id)
                                                     ->get()
@@ -593,25 +593,25 @@ class BlogArticleResource extends Resource
 
                                         Forms\Components\Select::make('status')
                                             ->options([
-                                                'draft' => 'Draft',
-                                                'published' => 'Published',
-                                                'scheduled' => 'Scheduled',
-                                                'archived' => 'Archived',
+                                                'draft' => __('Draft'),
+                                                'published' => __('Published'),
+                                                'scheduled' => __('Scheduled'),
+                                                'archived' => __('Archived'),
                                             ])
                                             ->default('draft')
                                             ->required(),
 
                                         Forms\Components\DateTimePicker::make('published_at')
-                                            ->label('Publish Date')
-                                            ->helperText('Leave empty to publish immediately'),
+                                            ->label(__('Publish Date'))
+                                            ->helperText(__('Leave empty to publish immediately')),
 
                                         Forms\Components\Toggle::make('is_featured')
-                                            ->label('Featured Article')
-                                            ->helperText('Show on homepage/featured section'),
+                                            ->label(__('Featured Article'))
+                                            ->helperText(__('Show on homepage/featured section')),
 
                                         Forms\Components\Select::make('event_id')
-                                            ->label('Linked Event')
-                                            ->placeholder('Select an event to promote...')
+                                            ->label(__('Linked Event'))
+                                            ->placeholder(__('Select an event to promote...'))
                                             ->options(function () use ($marketplace, $marketplaceLanguage) {
                                                 return Event::where('marketplace_client_id', $marketplace?->id)
                                                     ->orderBy('created_at', 'desc')
@@ -627,11 +627,11 @@ class BlogArticleResource extends Resource
                                             })
                                             ->searchable()
                                             ->nullable()
-                                            ->helperText('Promotes this event in the article (shows a CTA button)'),
+                                            ->helperText(__('Promotes this event in the article (shows a CTA button)')),
 
                                         Forms\Components\Select::make('activity_ids')
-                                            ->label('Linked Activities')
-                                            ->placeholder('Selectează activități de promovat...')
+                                            ->label(__('Linked Activities'))
+                                            ->placeholder(__('Selectează activități de promovat...'))
                                             ->multiple()
                                             ->options(function () use ($marketplace, $marketplaceLanguage) {
                                                 if (! class_exists(\App\Models\Activity::class)) {
@@ -651,14 +651,14 @@ class BlogArticleResource extends Resource
                                             })
                                             ->searchable()
                                             ->nullable()
-                                            ->helperText('Activitățile apar ca recomandări (carduri „Vezi bilete") în ghid'),
+                                            ->helperText(__('Activitățile apar ca recomandări (carduri „Vezi bilete") în ghid')),
                                     ]),
 
                                 // Featured Image Section
-                                SC\Section::make('Featured Image')
+                                SC\Section::make(__('Featured Image'))
                                     ->schema([
                                         Forms\Components\FileUpload::make('featured_image_url')
-                                            ->label('Image')
+                                            ->label(__('Image'))
                                             ->image()
                                             ->disk('public')
                                             ->directory('blog-images')
@@ -667,13 +667,13 @@ class BlogArticleResource extends Resource
                                             ->imageCropAspectRatio('16:9')
                                             ->imageResizeTargetWidth('1200')
                                             ->imageResizeTargetHeight('630')
-                                            ->helperText('Drag & drop or click to upload. Recommended: 1200x630px')
+                                            ->helperText(__('Drag & drop or click to upload. Recommended: 1200x630px'))
                                             ->columnSpanFull(),
 
                                         Forms\Components\TextInput::make('featured_image_alt')
-                                            ->label('Alt Text')
+                                            ->label(__('Alt Text'))
                                             ->maxLength(255)
-                                            ->helperText('Describe the image for accessibility'),
+                                            ->helperText(__('Describe the image for accessibility')),
                                     ]),
                             ]),
                     ]),
@@ -688,19 +688,19 @@ class BlogArticleResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('featured_image_url')
-                    ->label('Image')
+                    ->label(__('Image'))
                     ->disk('public')
                     ->circular(false)
                     ->size(50),
 
                 Tables\Columns\TextColumn::make("title.{$marketplaceLanguage}")
-                    ->label('Title')
+                    ->label(__('Title'))
                     ->searchable()
                     ->sortable()
                     ->limit(50),
 
                 Tables\Columns\TextColumn::make('category.name')
-                    ->label('Category')
+                    ->label(__('Category'))
                     ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
                             return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
@@ -717,15 +717,15 @@ class BlogArticleResource extends Resource
                     ]),
 
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Featured')
+                    ->label(__('Featured'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('view_count')
-                    ->label('Views')
+                    ->label(__('Views'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('published_at')
-                    ->label('Published')
+                    ->label(__('Published'))
                     ->dateTime('M d, Y')
                     ->sortable(),
 
@@ -737,18 +737,18 @@ class BlogArticleResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'published' => 'Published',
-                        'scheduled' => 'Scheduled',
-                        'archived' => 'Archived',
+                        'draft' => __('Draft'),
+                        'published' => __('Published'),
+                        'scheduled' => __('Scheduled'),
+                        'archived' => __('Archived'),
                     ]),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                    ->label(__('Featured')),
             ])
             ->recordActions([
                 EditAction::make(),
                 Actions\Action::make('publish')
-                    ->label('Publish')
+                    ->label(__('Publish'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (BlogArticle $record) => $record->status !== 'published')
@@ -757,7 +757,7 @@ class BlogArticleResource extends Resource
             ->toolbarActions([
                 BulkActionGroup::make([
                     Actions\BulkAction::make('publish')
-                        ->label('Publish selected')
+                        ->label(__('Publish selected'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()

@@ -63,7 +63,7 @@ class ImportExternalTickets extends Page
     {
         return [
             Actions\Action::make('back')
-                ->label('Înapoi la Eveniment')
+                ->label(__('Înapoi la Eveniment'))
                 ->icon('heroicon-o-arrow-left')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('edit', ['record' => $this->record])),
@@ -96,13 +96,13 @@ class ImportExternalTickets extends Page
     public function uploadCsv(): void
     {
         if (!$this->csv_file) {
-            Notification::make()->title('Selectează un fișier CSV')->danger()->send();
+            Notification::make()->title(__('Selectează un fișier CSV'))->danger()->send();
             return;
         }
 
         $path = storage_path('app/public/' . $this->csv_file);
         if (!file_exists($path)) {
-            Notification::make()->title('Fișierul nu a fost găsit')->danger()->send();
+            Notification::make()->title(__('Fișierul nu a fost găsit'))->danger()->send();
             return;
         }
 
@@ -145,13 +145,13 @@ class ImportExternalTickets extends Page
     public function runImport(): void
     {
         if (!$this->col_barcode) {
-            Notification::make()->title('Selectează coloana pentru codul biletului (barcode)')->danger()->send();
+            Notification::make()->title(__('Selectează coloana pentru codul biletului (barcode)'))->danger()->send();
             return;
         }
 
         $path = storage_path('app/public/' . $this->csv_file);
         if (!file_exists($path)) {
-            Notification::make()->title('Fișierul CSV nu mai există')->danger()->send();
+            Notification::make()->title(__('Fișierul CSV nu mai există'))->danger()->send();
             return;
         }
 

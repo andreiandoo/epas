@@ -173,24 +173,24 @@ class ViewSupportTicket extends Page
 
         return array_filter([
             Action::make('reply')
-                ->label('Răspunde')
+                ->label(__('Răspunde'))
                 ->icon('heroicon-o-paper-airplane')
                 ->color('primary')
                 ->visible(fn () => !$isClosed)
-                ->modalHeading('Răspunde la tichet')
-                ->modalSubmitActionLabel('Trimite')
+                ->modalHeading(__('Răspunde la tichet'))
+                ->modalSubmitActionLabel(__('Trimite'))
                 ->form([
                     Forms\Components\Textarea::make('body')
-                        ->label('Mesaj')
+                        ->label(__('Mesaj'))
                         ->required()
                         ->rows(5)
                         ->maxLength(10000),
                     Forms\Components\Toggle::make('is_internal_note')
-                        ->label('Notă internă (vizibil doar staff)')
+                        ->label(__('Notă internă (vizibil doar staff)'))
                         ->default(false)
-                        ->helperText('Organizatorul nu va vedea acest mesaj.'),
+                        ->helperText(__('Organizatorul nu va vedea acest mesaj.')),
                     Forms\Components\FileUpload::make('attachments')
-                        ->label('Atașamente (jpg/png/pdf, max 3 MB)')
+                        ->label(__('Atașamente (jpg/png/pdf, max 3 MB)'))
                         ->multiple()
                         ->maxFiles((int) config('support.attachments.max_per_message', 5))
                         ->maxSize((int) config('support.attachments.max_size_kb', 3072))
@@ -203,13 +203,13 @@ class ViewSupportTicket extends Page
                 ->action(fn (array $data) => $this->postReply($data)),
 
             Action::make('moveDepartment')
-                ->label('Mută la alt departament')
+                ->label(__('Mută la alt departament'))
                 ->icon('heroicon-o-arrow-right-circle')
                 ->color('gray')
-                ->modalHeading('Mută tichetul')
+                ->modalHeading(__('Mută tichetul'))
                 ->form([
                     Forms\Components\Select::make('support_department_id')
-                        ->label('Departament')
+                        ->label(__('Departament'))
                         ->options(fn () => SupportDepartment::query()
                             ->where('marketplace_client_id', $this->record->marketplace_client_id)
                             ->orderBy('sort_order')
@@ -219,7 +219,7 @@ class ViewSupportTicket extends Page
                         ->required()
                         ->default($this->record->support_department_id),
                     Forms\Components\Textarea::make('reason')
-                        ->label('Motiv (opțional, va apărea ca notă internă)')
+                        ->label(__('Motiv (opțional, va apărea ca notă internă)'))
                         ->rows(2),
                 ])
                 ->action(fn (array $data) => $this->moveDepartment($data)),
@@ -228,11 +228,11 @@ class ViewSupportTicket extends Page
                 ->label($this->record->assigned_to_marketplace_admin_id ? 'Reasignează' : 'Asignează')
                 ->icon('heroicon-o-user-plus')
                 ->color('gray')
-                ->modalHeading('Asignează tichetul')
+                ->modalHeading(__('Asignează tichetul'))
                 ->form([
                     Forms\Components\Select::make('assigned_to_marketplace_admin_id')
-                        ->label('Asignat')
-                        ->helperText('Lista include doar membrii echipei alocați departamentului curent. Pentru a adăuga alți utilizatori, editează departamentul.')
+                        ->label(__('Asignat'))
+                        ->helperText(__('Lista include doar membrii echipei alocați departamentului curent. Pentru a adăuga alți utilizatori, editează departamentul.'))
                         ->options(function () {
                             $deptAdmins = $this->record->department?->admins()
                                 ->orderBy('name')
@@ -262,14 +262,14 @@ class ViewSupportTicket extends Page
                 ->label('Prioritate: ' . $this->priorityLabel($this->record->priority))
                 ->icon('heroicon-o-flag')
                 ->color($this->priorityColor($this->record->priority))
-                ->modalHeading('Setează prioritate')
+                ->modalHeading(__('Setează prioritate'))
                 ->form([
                     Forms\Components\Select::make('priority')
                         ->options([
-                            'low' => 'Scăzută',
-                            'normal' => 'Normală',
-                            'high' => 'Ridicată',
-                            'urgent' => 'Urgentă',
+                            'low' => __('Scăzută'),
+                            'normal' => __('Normală'),
+                            'high' => __('Ridicată'),
+                            'urgent' => __('Urgentă'),
                         ])
                         ->required()
                         ->default($this->record->priority),
@@ -278,7 +278,7 @@ class ViewSupportTicket extends Page
 
             !$isClosed
                 ? Action::make('resolve')
-                    ->label('Marchează rezolvat')
+                    ->label(__('Marchează rezolvat'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
@@ -287,7 +287,7 @@ class ViewSupportTicket extends Page
 
             $this->record->status === SupportTicket::STATUS_RESOLVED
                 ? Action::make('close')
-                    ->label('Închide definitiv')
+                    ->label(__('Închide definitiv'))
                     ->icon('heroicon-o-archive-box-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -296,7 +296,7 @@ class ViewSupportTicket extends Page
 
             $isClosed
                 ? Action::make('reopen')
-                    ->label('Redeschide')
+                    ->label(__('Redeschide'))
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->action(fn () => $this->reopen())
@@ -382,7 +382,7 @@ class ViewSupportTicket extends Page
             ]);
         }
 
-        Notification::make()->title('Tichet mutat')->success()->send();
+        Notification::make()->title(__('Tichet mutat'))->success()->send();
     }
 
     protected function assignTo(array $data): void
@@ -412,7 +412,7 @@ class ViewSupportTicket extends Page
             'is_internal_note' => false,
         ]);
 
-        Notification::make()->title('Asignare actualizată')->success()->send();
+        Notification::make()->title(__('Asignare actualizată'))->success()->send();
     }
 
     protected function setPriority(array $data): void
@@ -420,7 +420,7 @@ class ViewSupportTicket extends Page
         $this->record->priority = $data['priority'];
         $this->record->last_activity_at = now();
         $this->record->save();
-        Notification::make()->title('Prioritate actualizată')->success()->send();
+        Notification::make()->title(__('Prioritate actualizată'))->success()->send();
     }
 
     protected function resolve(): void
@@ -430,7 +430,7 @@ class ViewSupportTicket extends Page
         $this->record->last_activity_at = now();
         $this->record->save();
         $this->logTimelineEvent(SupportTicketMessage::EVENT_RESOLVED, 'Tichet marcat ca rezolvat');
-        Notification::make()->title('Tichet marcat ca rezolvat')->success()->send();
+        Notification::make()->title(__('Tichet marcat ca rezolvat'))->success()->send();
     }
 
     protected function close(): void
@@ -440,7 +440,7 @@ class ViewSupportTicket extends Page
         $this->record->last_activity_at = now();
         $this->record->save();
         $this->logTimelineEvent(SupportTicketMessage::EVENT_CLOSED, 'Tichet închis definitiv');
-        Notification::make()->title('Tichet închis')->success()->send();
+        Notification::make()->title(__('Tichet închis'))->success()->send();
     }
 
     protected function reopen(): void
@@ -451,7 +451,7 @@ class ViewSupportTicket extends Page
         $this->record->last_activity_at = now();
         $this->record->save();
         $this->logTimelineEvent(SupportTicketMessage::EVENT_REOPENED, 'Tichet redeschis');
-        Notification::make()->title('Tichet redeschis')->success()->send();
+        Notification::make()->title(__('Tichet redeschis'))->success()->send();
     }
 
     /**

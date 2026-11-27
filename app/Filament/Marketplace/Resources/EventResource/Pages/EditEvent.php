@@ -155,14 +155,14 @@ class EditEvent extends EditRecord
         // MarketplacePanelProvider. No Livewire round-trip, so unsaved form
         // changes stay untouched.
         $actions[] = Actions\Action::make('page_manual')
-            ->label('Manual pagină')
+            ->label(__('Manual pagină'))
             ->icon('heroicon-o-book-open')
             ->color('gray')
             ->alpineClickHandler("window.dispatchEvent(new CustomEvent('ep-manual:open'))");
 
         if ($hasInvitations) {
             $actions[] = Actions\Action::make('invitations')
-                ->label('Create Invitations')
+                ->label(__('Create Invitations'))
                 ->icon('heroicon-o-envelope')
                 ->color('warning')
                 ->url(fn () => route('filament.marketplace.pages.invitations') . '?event=' . $this->record->id);
@@ -183,7 +183,7 @@ class EditEvent extends EditRecord
         ]));
         $couponUrl = \App\Filament\Marketplace\Resources\CouponCodeResource::getUrl('create') . '?' . $params;
         $actions[] = Actions\Action::make('coupon_codes')
-            ->label('Coduri reducere')
+            ->label(__('Coduri reducere'))
             ->icon('heroicon-o-tag')
             ->color('gray')
             ->url($couponUrl)
@@ -193,7 +193,7 @@ class EditEvent extends EditRecord
         $newsletterUrl = \App\Filament\Marketplace\Resources\NewsletterResource::getUrl('create')
             . '?event=' . $this->record->id;
         $actions[] = Actions\Action::make('newsletter')
-            ->label('Newsletter')
+            ->label(__('Newsletter'))
             ->icon('heroicon-o-megaphone')
             ->color('gray')
             ->url($newsletterUrl);
@@ -204,7 +204,7 @@ class EditEvent extends EditRecord
         // Daily Capacities (leisure venue only)
         if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
             $actions[] = Actions\Action::make('daily_capacities')
-                ->label('Capacitate Zilnică')
+                ->label(__('Capacitate Zilnică'))
                 ->icon('heroicon-o-calendar-days')
                 ->color('warning')
                 ->url(fn () => EventResource::getUrl('daily-capacities', ['record' => $this->record]));
@@ -212,13 +212,13 @@ class EditEvent extends EditRecord
 
         // Duplicate action
         $actions[] = Actions\Action::make('duplicate')
-            ->label('Duplică')
+            ->label(__('Duplică'))
             ->icon('heroicon-o-document-duplicate')
             ->color('gray')
             ->requiresConfirmation()
-            ->modalHeading('Duplică evenimentul')
-            ->modalDescription('Sigur vrei să duplici acest eveniment? Se va crea o copie draft fără bilete vândute.')
-            ->modalSubmitActionLabel('Duplică')
+            ->modalHeading(__('Duplică evenimentul'))
+            ->modalDescription(__('Sigur vrei să duplici acest eveniment? Se va crea o copie draft fără bilete vândute.'))
+            ->modalSubmitActionLabel(__('Duplică'))
             ->action(function () {
                 $record = $this->record;
 
@@ -307,7 +307,7 @@ class EditEvent extends EditRecord
 
                 $displayTitle = $newEvent->getTranslation('title') ?? 'Eveniment';
                 Notification::make()
-                    ->title('Eveniment duplicat')
+                    ->title(__('Eveniment duplicat'))
                     ->body("Evenimentul \"{$displayTitle}\" a fost creat.")
                     ->success()
                     ->send();
@@ -320,7 +320,7 @@ class EditEvent extends EditRecord
                 $blocker = $this->record->deletionBlocker();
 
                 if ($blocker) {
-                    Notification::make()->title('Evenimentul nu poate fi șters')->body($blocker)->danger()->send();
+                    Notification::make()->title(__('Evenimentul nu poate fi șters'))->body($blocker)->danger()->send();
                     $action->cancel();
                 }
             });
@@ -650,7 +650,7 @@ class EditEvent extends EditRecord
 
                 Notification::make()
                     ->success()
-                    ->title('Imaginile au fost salvate')
+                    ->title(__('Imaginile au fost salvate'))
                     ->send();
 
                 // Refresh the page to show updated images
@@ -2484,7 +2484,7 @@ class EditEvent extends EditRecord
 
         $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
         if (!$admin) {
-            Notification::make()->title('Neautorizat')->danger()->send();
+            Notification::make()->title(__('Neautorizat'))->danger()->send();
             return;
         }
 
@@ -2499,7 +2499,7 @@ class EditEvent extends EditRecord
             );
         } catch (\Throwable $e) {
             Notification::make()
-                ->title('Nu s-a putut genera decontul')
+                ->title(__('Nu s-a putut genera decontul'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
@@ -2521,7 +2521,7 @@ class EditEvent extends EditRecord
         Cache::forget("leisure_decont_v2_{$event->id}_{$periodFrom}");
 
         Notification::make()
-            ->title('Decont generat')
+            ->title(__('Decont generat'))
             ->body("Decontul {$payout->reference} a fost creat.")
             ->success()
             ->send();

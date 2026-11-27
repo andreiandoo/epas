@@ -30,12 +30,12 @@ class ListOrganizerDocuments extends ListRecords
 
         return [
             Actions\Action::make('create_document')
-                ->label('Adaugă document')
+                ->label(__('Adaugă document'))
                 ->icon('heroicon-o-plus')
                 ->color('primary')
                 ->form([
                     Forms\Components\Select::make('tax_template_id')
-                        ->label('Tip document (template)')
+                        ->label(__('Tip document (template)'))
                         ->options(function () use ($marketplace) {
                             return MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace?->id)
                                 ->where('is_active', true)
@@ -49,7 +49,7 @@ class ListOrganizerDocuments extends ListRecords
                         }),
 
                     Forms\Components\Select::make('organizer_id')
-                        ->label('Organizator')
+                        ->label(__('Organizator'))
                         ->options(function () use ($marketplace) {
                             return MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
                                 ->orderBy('company_name')
@@ -66,7 +66,7 @@ class ListOrganizerDocuments extends ListRecords
                         }),
 
                     Forms\Components\Select::make('event_ids')
-                        ->label('Evenimente')
+                        ->label(__('Evenimente'))
                         ->multiple()
                         ->options(function (SGet $get) {
                             $organizerId = $get('organizer_id');
@@ -92,21 +92,21 @@ class ListOrganizerDocuments extends ListRecords
                         ->searchable()
                         ->required()
                         ->visible(fn (SGet $get) => $get('organizer_id'))
-                        ->helperText('Selectează unul sau mai multe evenimente'),
+                        ->helperText(__('Selectează unul sau mai multe evenimente')),
                 ])
-                ->modalHeading('Generare document nou')
-                ->modalSubmitActionLabel('Generează')
+                ->modalHeading(__('Generare document nou'))
+                ->modalSubmitActionLabel(__('Generează'))
                 ->modalWidth('lg')
                 ->action(function (array $data) use ($marketplace) {
                     $template = MarketplaceTaxTemplate::find($data['tax_template_id']);
                     if (!$template) {
-                        Notification::make()->title('Eroare')->body('Template-ul nu a fost găsit.')->danger()->send();
+                        Notification::make()->title(__('Eroare'))->body(__('Template-ul nu a fost găsit.'))->danger()->send();
                         return;
                     }
 
                     $organizer = MarketplaceOrganizer::find($data['organizer_id']);
                     if (!$organizer) {
-                        Notification::make()->title('Eroare')->body('Organizatorul nu a fost găsit.')->danger()->send();
+                        Notification::make()->title(__('Eroare'))->body(__('Organizatorul nu a fost găsit.'))->danger()->send();
                         return;
                     }
 
@@ -115,14 +115,14 @@ class ListOrganizerDocuments extends ListRecords
                         ->get();
 
                     if ($events->isEmpty()) {
-                        Notification::make()->title('Eroare')->body('Nu s-au găsit evenimentele selectate.')->danger()->send();
+                        Notification::make()->title(__('Eroare'))->body(__('Nu s-au găsit evenimentele selectate.'))->danger()->send();
                         return;
                     }
 
                     // Validate: all events belong to same organizer
                     $differentOrganizers = $events->pluck('marketplace_organizer_id')->unique();
                     if ($differentOrganizers->count() > 1 || $differentOrganizers->first() != $data['organizer_id']) {
-                        Notification::make()->title('Eroare')->body('Toate evenimentele trebuie să aparțină aceluiași organizator.')->danger()->send();
+                        Notification::make()->title(__('Eroare'))->body(__('Toate evenimentele trebuie să aparțină aceluiași organizator.'))->danger()->send();
                         return;
                     }
 
@@ -138,7 +138,7 @@ class ListOrganizerDocuments extends ListRecords
 
                         if ($venueNames->count() > 1) {
                             Notification::make()
-                                ->title('Eroare')
+                                ->title(__('Eroare'))
                                 ->body('Toate evenimentele trebuie să aibă aceeași locație. Locații găsite: ' . $venueNames->implode(', '))
                                 ->danger()
                                 ->send();
@@ -150,7 +150,7 @@ class ListOrganizerDocuments extends ListRecords
                     if ($template->by_proxy && !$organizer->proxy_admin_id) {
                         $editUrl = \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $organizer->id]) . '?tab=date-legale';
                         Notification::make()
-                            ->title('Împuternicit nesetat')
+                            ->title(__('Împuternicit nesetat'))
                             ->body(new HtmlString(
                                 'Acest template se generează prin împuternicit, dar organizatorul <strong>' . e($organizer->name ?? $organizer->company_name) . '</strong> nu are unul setat. '
                                 . '<a href="' . $editUrl . '" target="_blank" style="text-decoration:underline;font-weight:bold;">Setează împuternicit →</a>'
@@ -285,7 +285,7 @@ class ListOrganizerDocuments extends ListRecords
                     ]);
 
                     Notification::make()
-                        ->title('Document generat')
+                        ->title(__('Document generat'))
                         ->body("Documentul \"{$template->name}\" a fost generat cu succes.")
                         ->success()
                         ->send();

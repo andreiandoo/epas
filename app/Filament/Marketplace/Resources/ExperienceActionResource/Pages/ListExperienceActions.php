@@ -21,7 +21,7 @@ class ListExperienceActions extends ListRecords
         return [
             Actions\CreateAction::make(),
             Actions\Action::make('create_defaults')
-                ->label('Create Default Actions')
+                ->label(__('Create Default Actions'))
                 ->action(function () {
                     $marketplaceClientId = static::getMarketplaceClientId();
                     if ($marketplaceClientId) {

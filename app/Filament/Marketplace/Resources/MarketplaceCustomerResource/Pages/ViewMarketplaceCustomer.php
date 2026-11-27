@@ -127,7 +127,7 @@ class ViewMarketplaceCustomer extends ViewRecord
     {
         return [
             \Filament\Actions\Action::make('edit')
-                ->label('Editează')
+                ->label(__('Editează'))
                 ->icon('heroicon-o-pencil-square')
                 ->url(fn () => MarketplaceCustomerResource::getUrl('edit', ['record' => $this->record])),
         ];

@@ -57,7 +57,7 @@ class OrganizerInvoiceResource extends Resource
         return $form
             ->columns(1)
             ->schema([
-                Section::make('Detalii factură')
+                Section::make(__('Detalii factură'))
                     ->schema([
                         Forms\Components\Placeholder::make('invoice_details_view')
                             ->label('')
@@ -320,12 +320,12 @@ class OrganizerInvoiceResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('number')
-                    ->label('Număr')
+                    ->label(__('Număr'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizator / Eveniment / Perioadă')
+                    ->label(__('Organizator / Eveniment / Perioadă'))
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         // Original organizer-name search + the two lookups
                         // that used to live on the standalone Eveniment/Decont
@@ -426,7 +426,7 @@ class OrganizerInvoiceResource extends Resource
                 //   - proforma:   sent as proforma (no fiscala yet)
                 //   - fiscala:    sent as fiscala (regardless of prior proforma)
                 Tables\Columns\TextColumn::make('accounting_state')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->badge()
                     ->state(function ($record): string {
                         $meta = $record->meta ?? [];
@@ -452,7 +452,7 @@ class OrganizerInvoiceResource extends Resource
                 // from meta.accounting.invoice_number so operators can spot-
                 // check without opening the invoice.
                 Tables\Columns\TextColumn::make('oblio_number')
-                    ->label('Nr. Oblio')
+                    ->label(__('Nr. Oblio'))
                     ->state(function ($record): ?string {
                         $meta = $record->meta ?? [];
                         return $meta['accounting']['invoice_number']
@@ -474,7 +474,7 @@ class OrganizerInvoiceResource extends Resource
                 // butonul „Verifică status Oblio”), nu prin cron. Facturile
                 // nedeschise de la emitere apar „Neverificată”.
                 Tables\Columns\TextColumn::make('oblio_void_state')
-                    ->label('Stare Oblio')
+                    ->label(__('Stare Oblio'))
                     ->badge()
                     ->state(function (Invoice $record): ?string {
                         if ($record->isStornoedInOblio()) return 'stornoed';
@@ -514,7 +514,7 @@ class OrganizerInvoiceResource extends Resource
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('issue_date')
-                    ->label('Data emiterii')
+                    ->label(__('Data emiterii'))
                     ->date('d.m.Y')
                     ->sortable(),
 
@@ -522,22 +522,22 @@ class OrganizerInvoiceResource extends Resource
                 // (line 3) to reduce horizontal scroll on the invoices list.
 
                 Tables\Columns\TextColumn::make('subtotal')
-                    ->label('Subtotal')
+                    ->label(__('Subtotal'))
                     ->money(fn (Invoice $record) => $record->currency ?? 'RON')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('vat_amount')
-                    ->label('TVA')
+                    ->label(__('TVA'))
                     ->money(fn (Invoice $record) => $record->currency ?? 'RON'),
 
                 Tables\Columns\TextColumn::make('amount')
-                    ->label('Total')
+                    ->label(__('Total'))
                     ->money(fn (Invoice $record) => $record->currency ?? 'RON')
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'paid' => 'success',
@@ -553,24 +553,24 @@ class OrganizerInvoiceResource extends Resource
             ->defaultSort('issue_date', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->relationship('organizer', 'name')
                     ->searchable()
                     ->preload(),
 
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->options([
-                        'outstanding' => 'Neachitată',
-                        'paid' => 'Achitată',
+                        'outstanding' => __('Neachitată'),
+                        'paid' => __('Achitată'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('accounting_state')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->options([
-                        'nevalidata' => 'Nevalidată',
-                        'proforma' => 'Proforma',
-                        'fiscala' => 'Fiscală',
+                        'nevalidata' => __('Nevalidată'),
+                        'proforma' => __('Proforma'),
+                        'fiscala' => __('Fiscală'),
                     ])
                     ->query(function (\Illuminate\Database\Eloquent\Builder $q, array $data) {
                         $value = $data['value'] ?? null;
@@ -592,20 +592,20 @@ class OrganizerInvoiceResource extends Resource
             ->actions([
                 EditAction::make(),
                 Action::make('preview')
-                    ->label('Preview')
+                    ->label(__('Preview'))
                     ->icon('heroicon-o-eye')
                     ->modalHeading(fn (Invoice $record) => "Factură #{$record->number}")
                     ->modalContent(function (Invoice $record) {
                         return new HtmlString(static::renderInvoiceHtml($record));
                     })
                     ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Închide'),
+                    ->modalCancelActionLabel(__('Închide')),
                 DeleteAction::make()
                     ->before(function (DeleteAction $action, Invoice $record) {
                         $blocker = $record->deletionBlocker();
 
                         if ($blocker) {
-                            Notification::make()->title('Factura nu poate fi ștearsă')->body($blocker)->danger()->send();
+                            Notification::make()->title(__('Factura nu poate fi ștearsă'))->body($blocker)->danger()->send();
                             $action->cancel();
                         }
                     }),
@@ -613,11 +613,11 @@ class OrganizerInvoiceResource extends Resource
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->label('Șterge selectate')
+                        ->label(__('Șterge selectate'))
                         ->requiresConfirmation()
-                        ->modalHeading('Șterge facturile selectate')
-                        ->modalDescription('Facturile achitate sau emise în contabilitate rămân. Celelalte se șterg definitiv.')
-                        ->modalSubmitActionLabel('Șterge')
+                        ->modalHeading(__('Șterge facturile selectate'))
+                        ->modalDescription(__('Facturile achitate sau emise în contabilitate rămân. Celelalte se șterg definitiv.'))
+                        ->modalSubmitActionLabel(__('Șterge'))
                         ->action(fn (Collection $records) => SafeBulkDelete::run(
                             $records,
                             fn (Invoice $invoice) => "#{$invoice->number}"

@@ -57,7 +57,7 @@ class MarketplaceCustomerResource extends Resource
 
             SC\Grid::make(4)->schema([
                 SC\Group::make()->columnSpan(3)->schema([
-                    SC\Section::make('Account Information')
+                    SC\Section::make(__('Account Information'))
                         ->icon('heroicon-o-user-circle')
                         ->schema([
                             Forms\Components\TextInput::make('email')
@@ -73,111 +73,111 @@ class MarketplaceCustomerResource extends Resource
 
                             Forms\Components\Select::make('status')
                                 ->options([
-                                    'active' => 'Active',
-                                    'suspended' => 'Suspended',
+                                    'active' => __('Active'),
+                                    'suspended' => __('Suspended'),
                                 ])
                                 ->required()
                                 ->default('active'),
 
                             Forms\Components\Toggle::make('email_verified_at')
-                                ->label('Email Verified')
+                                ->label(__('Email Verified'))
                                 ->formatStateUsing(fn ($state) => $state !== null)
                                 ->dehydrateStateUsing(fn ($state) => $state ? now() : null)
-                                ->helperText('Mark if email is manually verified'),
+                                ->helperText(__('Mark if email is manually verified')),
 
                             Forms\Components\Toggle::make('accepts_marketing')
-                                ->label('Accepts Marketing')
-                                ->helperText('Customer has consented to marketing communications'),
+                                ->label(__('Accepts Marketing'))
+                                ->helperText(__('Customer has consented to marketing communications')),
                         ])->columns(2),
 
-                    SC\Section::make('Personal Details')
+                    SC\Section::make(__('Personal Details'))
                         ->icon('heroicon-o-user')
                         ->schema([
                             Forms\Components\TextInput::make('first_name')
-                                ->label('First Name')
+                                ->label(__('First Name'))
                                 ->required()
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('last_name')
-                                ->label('Last Name')
+                                ->label(__('Last Name'))
                                 ->required()
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('phone')
-                                ->label('Phone')
+                                ->label(__('Phone'))
                                 ->tel()
                                 ->maxLength(50),
 
                             Forms\Components\DatePicker::make('birth_date')
-                                ->label('Birth Date'),
+                                ->label(__('Birth Date')),
 
                             Forms\Components\Select::make('gender')
                                 ->options([
-                                    'male' => 'Male',
-                                    'female' => 'Female',
-                                    'other' => 'Other',
+                                    'male' => __('Male'),
+                                    'female' => __('Female'),
+                                    'other' => __('Other'),
                                 ]),
 
                             Forms\Components\Select::make('locale')
-                                ->label('Language')
+                                ->label(__('Language'))
                                 ->options([
-                                    'en' => 'English',
-                                    'ro' => 'Romanian',
-                                    'de' => 'German',
-                                    'fr' => 'French',
-                                    'es' => 'Spanish',
+                                    'en' => __('English'),
+                                    'ro' => __('Romanian'),
+                                    'de' => __('German'),
+                                    'fr' => __('French'),
+                                    'es' => __('Spanish'),
                                 ]),
 
                             Forms\Components\TextInput::make('new_password')
-                                ->label('New Password')
+                                ->label(__('New Password'))
                                 ->password()
                                 ->revealable()
                                 ->minLength(8)
                                 ->dehydrated(false)
-                                ->helperText('Leave empty to keep current password. A new password also applies to the organizer / venue account with the same email.'),
+                                ->helperText(__('Leave empty to keep current password. A new password also applies to the organizer / venue account with the same email.')),
 
                             Forms\Components\TextInput::make('new_password_confirmation')
-                                ->label('Confirm Password')
+                                ->label(__('Confirm Password'))
                                 ->password()
                                 ->revealable()
                                 ->dehydrated(false)
                                 ->same('new_password'),
                         ])->columns(2),
 
-                    SC\Section::make('Address')
+                    SC\Section::make(__('Address'))
                         ->icon('heroicon-o-map-pin')
                         ->collapsible()
                         ->schema([
                             Forms\Components\TextInput::make('address')
-                                ->label('Street Address')
+                                ->label(__('Street Address'))
                                 ->maxLength(255)
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('city')
-                                ->label('City')
+                                ->label(__('City'))
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('state')
-                                ->label('State/Province')
+                                ->label(__('State/Province'))
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('postal_code')
-                                ->label('Postal Code')
+                                ->label(__('Postal Code'))
                                 ->maxLength(20),
 
                             Forms\Components\TextInput::make('country')
-                                ->label('Country Code')
+                                ->label(__('Country Code'))
                                 ->maxLength(2)
-                                ->helperText('ISO 2-letter code (e.g., RO, US, DE)'),
+                                ->helperText(__('ISO 2-letter code (e.g., RO, US, DE)')),
                         ])->columns(2)
                         ->collapsed(),
 
                     // Auto-detected city from order history. Separate from
                     // the user-editable Address section above — this one is
                     // read-only and driven by customers:detect-cities.
-                    SC\Section::make('Oraș detectat (din comenzi)')
+                    SC\Section::make(__('Oraș detectat (din comenzi)'))
                         ->icon('heroicon-o-map')
-                        ->description('Determinat automat din istoricul de comenzi — ce orașe a frecventat pentru evenimente.')
+                        ->description(__('Determinat automat din istoricul de comenzi — ce orașe a frecventat pentru evenimente.'))
                         ->collapsible()
                         ->visibleOn('edit')
                         ->schema([
@@ -243,47 +243,47 @@ class MarketplaceCustomerResource extends Resource
                         ])
                         ->collapsed(false),
 
-                    SC\Section::make('Notification Preferences')
+                    SC\Section::make(__('Notification Preferences'))
                         ->icon('heroicon-o-bell')
-                        ->description('User notification settings')
+                        ->description(__('User notification settings'))
                         ->collapsible()
                         ->visibleOn('edit')
                         ->schema([
                             Forms\Components\Toggle::make('settings.notification_preferences.reminders')
-                                ->label('Event Reminders')
-                                ->helperText('Receive reminder 24h before events')
+                                ->label(__('Event Reminders'))
+                                ->helperText(__('Receive reminder 24h before events'))
                                 ->default(true),
 
                             Forms\Components\Toggle::make('settings.notification_preferences.newsletter')
-                                ->label('Newsletter & Offers')
-                                ->helperText('Receive information about new events and special offers')
+                                ->label(__('Newsletter & Offers'))
+                                ->helperText(__('Receive information about new events and special offers'))
                                 ->default(true),
 
                             Forms\Components\Toggle::make('settings.notification_preferences.favorites')
-                                ->label('Favorite Updates')
-                                ->helperText('Receive notifications when favorite events are approaching')
+                                ->label(__('Favorite Updates'))
+                                ->helperText(__('Receive notifications when favorite events are approaching'))
                                 ->default(true),
 
                             Forms\Components\Toggle::make('settings.notification_preferences.history')
-                                ->label('Browsing History')
-                                ->helperText('Save viewed events for personalized recommendations')
+                                ->label(__('Browsing History'))
+                                ->helperText(__('Save viewed events for personalized recommendations'))
                                 ->default(true),
 
                             Forms\Components\Toggle::make('settings.notification_preferences.marketing')
-                                ->label('Marketing Cookies')
-                                ->helperText('Allow display of personalized ads')
+                                ->label(__('Marketing Cookies'))
+                                ->helperText(__('Allow display of personalized ads'))
                                 ->default(false),
                         ])->columns(2),
 
-                    SC\Section::make('Favorites')
+                    SC\Section::make(__('Favorites'))
                         ->icon('heroicon-o-heart')
-                        ->description('Favorite events, artists, and venues')
+                        ->description(__('Favorite events, artists, and venues'))
                         ->collapsible()
                         ->collapsed()
                         ->visibleOn('edit')
                         ->schema([
                             Forms\Components\Placeholder::make('watchlist_events_list')
-                                ->label('Watchlist Events')
+                                ->label(__('Watchlist Events'))
                                 ->content(function ($record) {
                                     if (!$record) {
                                         return '-';
@@ -315,7 +315,7 @@ class MarketplaceCustomerResource extends Resource
                                 }),
 
                             Forms\Components\Placeholder::make('favorite_artists_list')
-                                ->label('Favorite Artists')
+                                ->label(__('Favorite Artists'))
                                 ->content(function ($record) {
                                     if (!$record) {
                                         return '-';
@@ -341,7 +341,7 @@ class MarketplaceCustomerResource extends Resource
                                 }),
 
                             Forms\Components\Placeholder::make('favorite_venues_list')
-                                ->label('Favorite Venues')
+                                ->label(__('Favorite Venues'))
                                 ->content(function ($record) {
                                     if (!$record) {
                                         return '-';
@@ -382,7 +382,7 @@ class MarketplaceCustomerResource extends Resource
                         ]),
 
                     // Statistics (doar pe Edit)
-                    SC\Section::make('Statistics')
+                    SC\Section::make(__('Statistics'))
                         ->icon('heroicon-o-chart-bar')
                         ->compact()
                         ->visibleOn('edit')
@@ -393,7 +393,7 @@ class MarketplaceCustomerResource extends Resource
                         ]),
 
                     // Saved Payment Methods (doar pe Edit)
-                    SC\Section::make('Payment Methods')
+                    SC\Section::make(__('Payment Methods'))
                         ->icon('heroicon-o-credit-card')
                         ->compact()
                         ->collapsible()
@@ -405,35 +405,35 @@ class MarketplaceCustomerResource extends Resource
                         ]),
 
                     // Quick Actions (doar pe Edit) - stacked vertically with fullWidth
-                    SC\Section::make('Quick Actions')
+                    SC\Section::make(__('Quick Actions'))
                         ->icon('heroicon-o-bolt')
                         ->compact()
                         ->visibleOn('edit')
                         ->schema([
                             SC\Actions::make([
                                 Action::make('view_orders')
-                                    ->label('View Orders')
+                                    ->label(__('View Orders'))
                                     ->icon('heroicon-o-shopping-bag')
                                     ->color('gray')
                                     ->url(fn ($record) => OrderResource::getUrl('index', ['customer' => $record->id])),
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('view_tickets')
-                                    ->label('View Tickets')
+                                    ->label(__('View Tickets'))
                                     ->icon('heroicon-o-ticket')
                                     ->color('gray')
                                     ->url(fn ($record) => TicketResource::getUrl('index', ['customer' => $record->id])),
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('send_email')
-                                    ->label('Send Email')
+                                    ->label(__('Send Email'))
                                     ->icon('heroicon-o-envelope')
                                     ->color('success')
                                     ->url(fn ($record) => "mailto:{$record->email}"),
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('suspend')
-                                    ->label('Suspend User')
+                                    ->label(__('Suspend User'))
                                     ->icon('heroicon-o-x-circle')
                                     ->color('danger')
                                     ->requiresConfirmation()
@@ -442,7 +442,7 @@ class MarketplaceCustomerResource extends Resource
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('reactivate')
-                                    ->label('Reactivate User')
+                                    ->label(__('Reactivate User'))
                                     ->icon('heroicon-o-arrow-path')
                                     ->color('success')
                                     ->visible(fn ($record) => $record->status === 'suspended')
@@ -451,7 +451,7 @@ class MarketplaceCustomerResource extends Resource
                         ])->columns(1),
 
                     // Meta Info (doar pe Edit, collapsed)
-                    SC\Section::make('Meta Info')
+                    SC\Section::make(__('Meta Info'))
                         ->icon('heroicon-o-information-circle')
                         ->compact()
                         ->collapsible()
@@ -472,7 +472,7 @@ class MarketplaceCustomerResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('full_name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable(['first_name', 'last_name'])
                     ->sortable()
                     ->formatStateUsing(function ($state, $record) {
@@ -492,7 +492,7 @@ class MarketplaceCustomerResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('email_verified_at')
-                    ->label('Verified')
+                    ->label(__('Verified'))
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-circle')
@@ -500,7 +500,7 @@ class MarketplaceCustomerResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('is_guest')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->boolean()
                     ->trueIcon('heroicon-o-user')
                     ->falseIcon('heroicon-o-user-circle')
@@ -520,25 +520,25 @@ class MarketplaceCustomerResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_orders')
-                    ->label('Orders')
+                    ->label(__('Orders'))
                     ->sortable()
                     ->alignCenter()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_spent')
-                    ->label('Spent')
+                    ->label(__('Spent'))
                     ->money('RON')
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('last_login_at')
-                    ->label('Last Login')
+                    ->label(__('Last Login'))
                     ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Registered')
+                    ->label(__('Registered'))
                     ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -550,40 +550,40 @@ class MarketplaceCustomerResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'active' => 'Active',
-                        'suspended' => 'Suspended',
+                        'active' => __('Active'),
+                        'suspended' => __('Suspended'),
                     ]),
 
                 Tables\Filters\TernaryFilter::make('email_verified')
-                    ->label('Email Verified')
+                    ->label(__('Email Verified'))
                     ->queries(
                         true: fn (Builder $query) => $query->whereNotNull('email_verified_at'),
                         false: fn (Builder $query) => $query->whereNull('email_verified_at'),
                     ),
 
                 Tables\Filters\TernaryFilter::make('is_guest')
-                    ->label('Account Type')
-                    ->trueLabel('Guest Only')
-                    ->falseLabel('Registered Only')
+                    ->label(__('Account Type'))
+                    ->trueLabel(__('Guest Only'))
+                    ->falseLabel(__('Registered Only'))
                     ->queries(
                         true: fn (Builder $query) => $query->whereNull('password'),
                         false: fn (Builder $query) => $query->whereNotNull('password'),
                     ),
 
                 Tables\Filters\TernaryFilter::make('has_orders')
-                    ->label('Has Orders')
+                    ->label(__('Has Orders'))
                     ->queries(
                         true: fn (Builder $query) => $query->where('total_orders', '>', 0),
                         false: fn (Builder $query) => $query->where('total_orders', 0),
                     ),
 
                 Tables\Filters\TernaryFilter::make('accepts_marketing')
-                    ->label('Marketing Consent'),
+                    ->label(__('Marketing Consent')),
 
                 Tables\Filters\TernaryFilter::make('imported')
-                    ->label('Importat AmBilet')
-                    ->trueLabel('Doar importați')
-                    ->falseLabel('Doar noi')
+                    ->label(__('Importat AmBilet'))
+                    ->trueLabel(__('Doar importați'))
+                    ->falseLabel(__('Doar noi'))
                     ->queries(
                         true: fn (Builder $query) => $query->whereRaw(
                             DB::getDriverName() === 'pgsql'
@@ -603,7 +603,7 @@ class MarketplaceCustomerResource extends Resource
             ])
             ->recordActions([
                 Action::make('login_as')
-                    ->label('Login as')
+                    ->label(__('Login as'))
                     ->icon('heroicon-o-arrow-right-on-rectangle')
                     ->color('warning')
                     ->url(fn ($record) => url('/marketplace/marketplace-customers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),

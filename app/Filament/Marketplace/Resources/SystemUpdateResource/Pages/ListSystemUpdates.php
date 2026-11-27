@@ -15,7 +15,7 @@ class ListSystemUpdates extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make()->label('Adaugă noutate'),
+            CreateAction::make()->label(__('Adaugă noutate')),
         ];
     }
 }

@@ -62,10 +62,10 @@ class TravelerTypeResource extends Resource
         return $schema->schema([
             Forms\Components\Hidden::make('marketplace_client_id')->default($marketplace?->id),
 
-            SC\Section::make('Tip de călător')
+            SC\Section::make(__('Tip de călător'))
                 ->schema([
                     Forms\Components\TextInput::make("name.{$lang}")
-                        ->label('Nume')
+                        ->label(__('Nume'))
                         ->required()
                         ->maxLength(120)
                         ->live(onBlur: true)
@@ -75,21 +75,21 @@ class TravelerTypeResource extends Resource
                             }
                         }),
                     Forms\Components\TextInput::make('name.en')
-                        ->label('Nume (EN)')
+                        ->label(__('Nume (EN)'))
                         ->maxLength(120),
                     Forms\Components\TextInput::make('slug')
-                        ->label('Slug')
+                        ->label(__('Slug'))
                         ->required()
                         ->maxLength(191)
                         ->rule('alpha_dash')
-                        ->helperText('Folosit în URL și în filtre.'),
+                        ->helperText(__('Folosit în URL și în filtre.')),
                     SC\Grid::make(3)->schema([
-                        Forms\Components\TextInput::make('icon_emoji')->label('Emoji')->maxLength(8)->placeholder('👨‍👩‍👧'),
-                        Forms\Components\TextInput::make('color')->label('Culoare (hex)')->maxLength(16)->placeholder('#1E4A3D'),
-                        Forms\Components\TextInput::make('sort_order')->label('Ordine')->numeric()->default(0),
+                        Forms\Components\TextInput::make('icon_emoji')->label(__('Emoji'))->maxLength(8)->placeholder('👨‍👩‍👧'),
+                        Forms\Components\TextInput::make('color')->label(__('Culoare (hex)'))->maxLength(16)->placeholder('#1E4A3D'),
+                        Forms\Components\TextInput::make('sort_order')->label(__('Ordine'))->numeric()->default(0),
                     ]),
-                    Forms\Components\Textarea::make("description.{$lang}")->label('Descriere')->rows(2),
-                    Forms\Components\Toggle::make('is_visible')->label('Vizibil')->default(true),
+                    Forms\Components\Textarea::make("description.{$lang}")->label(__('Descriere'))->rows(2),
+                    Forms\Components\Toggle::make('is_visible')->label(__('Vizibil'))->default(true),
                 ])->columns(2),
         ]);
     }
@@ -103,13 +103,13 @@ class TravelerTypeResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('icon_emoji')->label('')->width('3rem'),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->getStateUsing(fn (TravelerType $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->name['en'] ?? $r->slug) : $r->name)
                     ->searchable(query: fn (Builder $q, string $search) => $q->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%'])),
-                Tables\Columns\TextColumn::make('slug')->label('Slug')->color('gray'),
-                Tables\Columns\TextColumn::make('activities_count')->label('Activități')->counts('activities')->badge(),
-                Tables\Columns\TextColumn::make('sort_order')->label('Ordine')->sortable(),
-                Tables\Columns\ToggleColumn::make('is_visible')->label('Vizibil'),
+                Tables\Columns\TextColumn::make('slug')->label(__('Slug'))->color('gray'),
+                Tables\Columns\TextColumn::make('activities_count')->label(__('Activități'))->counts('activities')->badge(),
+                Tables\Columns\TextColumn::make('sort_order')->label(__('Ordine'))->sortable(),
+                Tables\Columns\ToggleColumn::make('is_visible')->label(__('Vizibil')),
             ])
             ->defaultSort('sort_order')
             ->recordActions([EditAction::make(), DeleteAction::make()])

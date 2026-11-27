@@ -38,7 +38,7 @@ class CreateOrganizer extends CreateRecord
             ->applyToAll($this->record->marketplace_client_id, $this->record->email, $password, $this->record), []);
         if ($updated) {
             Notification::make()
-                ->title('Parola a fost aplicată și celorlalte conturi')
+                ->title(__('Parola a fost aplicată și celorlalte conturi'))
                 ->body(AccountPasswordSync::appliedNotice($updated))
                 ->success()
                 ->send();

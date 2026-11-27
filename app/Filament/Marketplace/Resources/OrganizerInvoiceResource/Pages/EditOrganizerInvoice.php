@@ -102,12 +102,12 @@ class EditOrganizerInvoice extends EditRecord
                     ->send();
             } elseif ($applied === 'live' && !$silentUnchanged) {
                 Notification::make()
-                    ->title('Factura este activă în Oblio')
+                    ->title(__('Factura este activă în Oblio'))
                     ->success()
                     ->send();
             } elseif ($applied === 'unknown' && !$silentUnchanged) {
                 Notification::make()
-                    ->title('Status Oblio necunoscut')
+                    ->title(__('Status Oblio necunoscut'))
                     ->body($result['message'] ?? 'Verificare eșuată — reîncearcă mai târziu.')
                     ->warning()
                     ->send();
@@ -121,7 +121,7 @@ class EditOrganizerInvoice extends EditRecord
             ]);
             if (!$silentUnchanged) {
                 Notification::make()
-                    ->title('Nu s-a putut verifica status Oblio')
+                    ->title(__('Nu s-a putut verifica status Oblio'))
                     ->body($e->getMessage())
                     ->warning()
                     ->send();
@@ -138,7 +138,7 @@ class EditOrganizerInvoice extends EditRecord
         // of the spec). If someone flipped the state after the button was
         // rendered, the action() itself refuses too.
         $markPaid = Actions\Action::make('markPaid')
-            ->label('Marchează Achitată')
+            ->label(__('Marchează Achitată'))
             ->icon('heroicon-o-check-circle')
             ->color('success')
             ->requiresConfirmation()
@@ -146,13 +146,13 @@ class EditOrganizerInvoice extends EditRecord
             ->action(function () {
                 if ($this->record->isVoidedInOblio()) {
                     Notification::make()->danger()
-                        ->title('Nu se poate marca achitată')
+                        ->title(__('Nu se poate marca achitată'))
                         ->body('Factura este ' . $this->record->oblioVoidLabel() . '.')
                         ->send();
                     return;
                 }
                 $this->record->markAsPaid('manual');
-                Notification::make()->success()->title('Factură marcată ca achitată.')->send();
+                Notification::make()->success()->title(__('Factură marcată ca achitată.'))->send();
                 $this->fillForm();
             });
 
@@ -218,7 +218,7 @@ class EditOrganizerInvoice extends EditRecord
                     default => 'gray',
                 };
             })
-            ->modalHeading('Status eFactura')
+            ->modalHeading(__('Status eFactura'))
             ->modalContent(function () {
                 $queue = $this->record->anafQueue;
                 if (!$queue) return new HtmlString('<p>Factura nu a fost trimisă în eFactura.</p>');
@@ -252,15 +252,15 @@ class EditOrganizerInvoice extends EditRecord
                 return new HtmlString($html);
             })
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel('Închide')
+            ->modalCancelActionLabel(__('Închide'))
             ->visible(fn () => $this->record->anafQueue !== null);
 
         // ── Grup "Trimite" (toate acțiunile outbound) ──
         $email = Actions\Action::make('email')
-            ->label('Trimite factura pe email')
+            ->label(__('Trimite factura pe email'))
             ->icon('heroicon-o-envelope')
             ->requiresConfirmation()
-            ->modalHeading('Trimite factura pe email')
+            ->modalHeading(__('Trimite factura pe email'))
             ->modalDescription(function () {
                 $organizer = $this->record->organizer;
                 $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
@@ -271,11 +271,11 @@ class EditOrganizerInvoice extends EditRecord
             });
 
         $sendProforma = Actions\Action::make('sendProforma')
-            ->label('Trimite Proformă')
+            ->label(__('Trimite Proformă'))
             ->icon('heroicon-o-document-duplicate')
             ->color('info')
             ->requiresConfirmation()
-            ->modalHeading('Trimite factură proformă')
+            ->modalHeading(__('Trimite factură proformă'))
             ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca PROFORMĂ în software-ul de contabilitate.")
             ->visible(function () {
                 $meta = $this->record->meta ?? [];
@@ -368,7 +368,7 @@ class EditOrganizerInvoice extends EditRecord
         // when the operator just deleted/storno-ed in Oblio and doesn't
         // want to reload the whole page.
         $checkOblioStatus = Actions\Action::make('checkOblioStatus')
-            ->label('Verifică status Oblio')
+            ->label(__('Verifică status Oblio'))
             ->icon('heroicon-o-magnifying-glass')
             ->color('gray')
             ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['external_ref']))
@@ -382,11 +382,11 @@ class EditOrganizerInvoice extends EditRecord
         // whenever the invoice is live at Oblio — you can't rewrite the
         // content of a document that still exists there.
         $regenerateContent = Actions\Action::make('regenerateContent')
-            ->label('Regenerează factură')
+            ->label(__('Regenerează factură'))
             ->icon('heroicon-o-arrow-path-rounded-square')
             ->color('warning')
             ->requiresConfirmation()
-            ->modalHeading('Regenerează conținutul facturii')
+            ->modalHeading(__('Regenerează conținutul facturii'))
             ->modalDescription(fn () => "Se vor reface articolele + sumele din decontul {$this->record->payout?->reference} pe baza vânzărilor curente. Factura NU va fi trimisă automat la Oblio — după regenerare folosește 'Retrimite Factură Fiscală'.")
             ->visible(fn () => !$this->record->hasLiveOblioInvoice() && $this->record->marketplace_payout_id
                 && empty($this->record->meta['supplement_of']))
@@ -397,7 +397,7 @@ class EditOrganizerInvoice extends EditRecord
                     $new = $diff['new'];
                     $delta = $new['amount'] - $old['amount'];
                     Notification::make()
-                        ->title('Factură regenerată')
+                        ->title(__('Factură regenerată'))
                         ->body(sprintf(
                             'Articole: %d → %d · Total: %s → %s RON (%s%s)',
                             $old['items_count'],
@@ -412,7 +412,7 @@ class EditOrganizerInvoice extends EditRecord
                     $this->redirect(OrganizerInvoiceResource::getUrl('edit', ['record' => $this->record]));
                 } catch (\Throwable $e) {
                     Notification::make()
-                        ->title('Regenerarea a eșuat')
+                        ->title(__('Regenerarea a eșuat'))
                         ->body($e->getMessage())
                         ->danger()
                         ->send();
@@ -425,11 +425,11 @@ class EditOrganizerInvoice extends EditRecord
         // reference is archived). If Oblio refuses the cancel (e.g. already
         // in SPV), the operator makes a storno in Oblio and presses again.
         $correctInOblio = Actions\Action::make('correctInOblio')
-            ->label('Corectează în Oblio')
+            ->label(__('Corectează în Oblio'))
             ->icon('heroicon-o-arrow-path')
             ->color('danger')
             ->requiresConfirmation()
-            ->modalHeading('Corectează factura în Oblio')
+            ->modalHeading(__('Corectează factura în Oblio'))
             ->modalDescription(fn () => ($this->record->hasLiveOblioInvoice()
                     ? 'Factura ' . ($this->record->meta['accounting']['invoice_number'] ?? $this->record->meta['accounting']['external_ref'] ?? '') . ' va fi ANULATĂ în Oblio, '
                     : 'Factura e deja ' . ($this->record->oblioVoidLabel() ?? 'anulată') . ' în Oblio; ')
@@ -457,7 +457,7 @@ class EditOrganizerInvoice extends EditRecord
                     );
                     if (!$cancel['success']) {
                         Notification::make()
-                            ->title('Oblio nu a anulat factura')
+                            ->title(__('Oblio nu a anulat factura'))
                             ->body($cancel['message'] . ' — fă storno în Oblio, apoi apasă din nou „Corectează în Oblio”.')
                             ->danger()->persistent()->send();
 
@@ -466,8 +466,8 @@ class EditOrganizerInvoice extends EditRecord
                     $this->autoCheckOblioStatus('correct', silentUnchanged: true);
                     if ($this->record->hasLiveOblioInvoice()) {
                         Notification::make()
-                            ->title('Factura apare tot activă în Oblio')
-                            ->body('Verifică în Oblio și apasă din nou.')
+                            ->title(__('Factura apare tot activă în Oblio'))
+                            ->body(__('Verifică în Oblio și apasă din nou.'))
                             ->warning()->send();
 
                         return;
@@ -478,7 +478,7 @@ class EditOrganizerInvoice extends EditRecord
                 try {
                     $diff = $this->record->rebuildFromPayout();
                 } catch (\Throwable $e) {
-                    Notification::make()->title('Regenerarea a eșuat')->body($e->getMessage())->danger()->persistent()->send();
+                    Notification::make()->title(__('Regenerarea a eșuat'))->body($e->getMessage())->danger()->persistent()->send();
 
                     return;
                 }
@@ -502,7 +502,7 @@ class EditOrganizerInvoice extends EditRecord
                         $this->record->update(['status' => 'paid', 'paid_at' => $paidAt ?? now()]);
                     }
                     Notification::make()
-                        ->title('Factură corectată')
+                        ->title(__('Factură corectată'))
                         ->body(sprintf('Total %s → %s RON · nou în Oblio: %s',
                             number_format($diff['old']['amount'], 2),
                             number_format($diff['new']['amount'], 2),
@@ -513,11 +513,11 @@ class EditOrganizerInvoice extends EditRecord
             });
 
         $sendEfactura = Actions\Action::make('sendEfactura')
-            ->label('Trimite în eFactura')
+            ->label(__('Trimite în eFactura'))
             ->icon('heroicon-o-paper-airplane')
             ->color('info')
             ->requiresConfirmation()
-            ->modalHeading('Trimite factura în eFactura')
+            ->modalHeading(__('Trimite factura în eFactura'))
             ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă către ANAF prin sistemul eFactura.")
             ->visible(function () {
                 // Show only if marketplace has eFactura active AND invoice not already sent
@@ -532,11 +532,11 @@ class EditOrganizerInvoice extends EditRecord
             });
 
         $emailAccountingPdf = Actions\Action::make('emailAccountingPdf')
-            ->label('Trimite PDF contabilitate pe email')
+            ->label(__('Trimite PDF contabilitate pe email'))
             ->icon('heroicon-o-envelope')
             ->color('info')
             ->requiresConfirmation()
-            ->modalHeading('Trimite PDF-ul din contabilitate pe email')
+            ->modalHeading(__('Trimite PDF-ul din contabilitate pe email'))
             ->modalDescription(function () {
                 $organizer = $this->record->organizer;
                 $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
@@ -554,7 +554,7 @@ class EditOrganizerInvoice extends EditRecord
 
         // ── Grup "Documente" (PDF-uri de vizualizat / regenerat) ──
         $viewProformaPdf = Actions\Action::make('viewProformaPdf')
-            ->label('PDF Proformă')
+            ->label(__('PDF Proformă'))
             ->icon('heroicon-o-document-duplicate')
             ->color('gray')
             // Prin ruta noastră, ca PDF-ul să aibă numele AmBilet la salvare.
@@ -563,7 +563,7 @@ class EditOrganizerInvoice extends EditRecord
             ->visible(fn () => !empty(($this->record->meta ?? [])['accounting_proforma']['pdf_url']));
 
         $viewAccountingPdf = Actions\Action::make('viewAccountingPdf')
-            ->label('PDF Factură Fiscală')
+            ->label(__('PDF Factură Fiscală'))
             ->icon('heroicon-o-document-text')
             ->color('gray')
             ->url(fn () => url('/marketplace/organizer-invoices/' . $this->record->id . '/pdf?inline=1'))
@@ -571,7 +571,7 @@ class EditOrganizerInvoice extends EditRecord
             ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['pdf_url']));
 
         $refreshAccountingPdf = Actions\Action::make('refreshAccountingPdf')
-            ->label('Actualizează PDF')
+            ->label(__('Actualizează PDF'))
             ->icon('heroicon-o-arrow-path')
             ->color('gray')
             ->visible(function () {
@@ -584,15 +584,15 @@ class EditOrganizerInvoice extends EditRecord
 
         // ── Overflow (rar + distructiv) ──
         $delete = Actions\DeleteAction::make()
-            ->label('Șterge factura')
+            ->label(__('Șterge factura'))
             ->requiresConfirmation()
-            ->modalHeading('Șterge factura')
+            ->modalHeading(__('Șterge factura'))
             ->modalDescription(fn () => "Factura #{$this->record->number} va fi ștearsă. Această acțiune nu poate fi anulată.")
             ->before(function (Actions\DeleteAction $action) {
                 $blocker = $this->record->deletionBlocker();
 
                 if ($blocker) {
-                    \Filament\Notifications\Notification::make()->title('Factura nu poate fi ștearsă')->body($blocker)->danger()->send();
+                    \Filament\Notifications\Notification::make()->title(__('Factura nu poate fi ștearsă'))->body($blocker)->danger()->send();
                     $action->cancel();
                 }
             })
@@ -611,7 +611,7 @@ class EditOrganizerInvoice extends EditRecord
                 $sendEfactura,
                 $emailAccountingPdf,
             ])
-                ->label('Trimite ▾')
+                ->label(__('Trimite ▾'))
                 ->icon('heroicon-o-paper-airplane')
                 ->button(),
             Actions\ActionGroup::make([
@@ -622,14 +622,14 @@ class EditOrganizerInvoice extends EditRecord
                 $regenerateContent,
                 $correctInOblio,
             ])
-                ->label('Documente ▾')
+                ->label(__('Documente ▾'))
                 ->icon('heroicon-o-document-text')
                 ->color('gray')
                 ->button(),
             Actions\ActionGroup::make([
                 $delete,
             ])
-                ->label('Mai multe')
+                ->label(__('Mai multe'))
                 ->icon('heroicon-o-ellipsis-vertical')
                 ->color('gray')
                 ->button(),
@@ -640,7 +640,7 @@ class EditOrganizerInvoice extends EditRecord
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) {
-            Notification::make()->danger()->title('Marketplace negăsit.')->send();
+            Notification::make()->danger()->title(__('Marketplace negăsit.'))->send();
             return;
         }
 
@@ -650,7 +650,7 @@ class EditOrganizerInvoice extends EditRecord
 
         if (!empty($validationErrors)) {
             Notification::make()->danger()
-                ->title('Date incomplete pentru eFactura')
+                ->title(__('Date incomplete pentru eFactura'))
                 ->body(implode("\n", $validationErrors))
                 ->send();
             return;
@@ -685,7 +685,7 @@ class EditOrganizerInvoice extends EditRecord
                 }
 
                 Notification::make()->success()
-                    ->title('Factură trimisă în eFactura')
+                    ->title(__('Factură trimisă în eFactura'))
                     ->body($result['message'])
                     ->send();
             } else {
@@ -694,14 +694,14 @@ class EditOrganizerInvoice extends EditRecord
                     $errorMsg .= ': ' . implode(', ', $result['errors']);
                 }
                 Notification::make()->danger()
-                    ->title('Eroare la trimiterea în eFactura')
+                    ->title(__('Eroare la trimiterea în eFactura'))
                     ->body($errorMsg)
                     ->send();
             }
         } catch (\Throwable $e) {
             \Log::error("eFactura submission failed: {$e->getMessage()}");
             Notification::make()->danger()
-                ->title('Eroare la trimiterea în eFactura')
+                ->title(__('Eroare la trimiterea în eFactura'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -711,7 +711,7 @@ class EditOrganizerInvoice extends EditRecord
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) {
-            Notification::make()->danger()->title('Marketplace negăsit.')->send();
+            Notification::make()->danger()->title(__('Marketplace negăsit.'))->send();
             return;
         }
 
@@ -828,7 +828,7 @@ class EditOrganizerInvoice extends EditRecord
 
         if (!empty($errors)) {
             Notification::make()->danger()
-                ->title('Date incomplete pentru contabilitate')
+                ->title(__('Date incomplete pentru contabilitate'))
                 ->body(implode("\n", $errors))
                 ->send();
             return;
@@ -1037,7 +1037,7 @@ class EditOrganizerInvoice extends EditRecord
         } catch (\Throwable $e) {
             \Log::error("Accounting submission failed: {$e->getMessage()}");
             Notification::make()->danger()
-                ->title('Eroare la trimiterea în contabilitate')
+                ->title(__('Eroare la trimiterea în contabilitate'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -1047,7 +1047,7 @@ class EditOrganizerInvoice extends EditRecord
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) {
-            Notification::make()->danger()->title('Marketplace negăsit.')->send();
+            Notification::make()->danger()->title(__('Marketplace negăsit.'))->send();
             return;
         }
 
@@ -1076,13 +1076,13 @@ class EditOrganizerInvoice extends EditRecord
         if ($updated) {
             $invoice->update(['meta' => $meta]);
             Notification::make()->success()
-                ->title('PDF actualizat')
-                ->body('Link-urile PDF au fost preluate cu succes.')
+                ->title(__('PDF actualizat'))
+                ->body(__('Link-urile PDF au fost preluate cu succes.'))
                 ->send();
         } else {
             Notification::make()->warning()
-                ->title('PDF indisponibil')
-                ->body('PDF-urile nu sunt încă disponibile. Încercați din nou mai târziu.')
+                ->title(__('PDF indisponibil'))
+                ->body(__('PDF-urile nu sunt încă disponibile. Încercați din nou mai târziu.'))
                 ->send();
         }
     }
@@ -1091,13 +1091,13 @@ class EditOrganizerInvoice extends EditRecord
     {
         $organizer = $invoice->organizer;
         if (!$organizer) {
-            Notification::make()->danger()->title('Organizator negăsit.')->send();
+            Notification::make()->danger()->title(__('Organizator negăsit.'))->send();
             return;
         }
 
         $email = $organizer->billing_email ?? $organizer->email;
         if (!$email) {
-            Notification::make()->danger()->title('Organizatorul nu are adresă de email.')->send();
+            Notification::make()->danger()->title(__('Organizatorul nu are adresă de email.'))->send();
             return;
         }
 
@@ -1106,14 +1106,14 @@ class EditOrganizerInvoice extends EditRecord
         $pdfUrl = $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
 
         if (!$pdfUrl) {
-            Notification::make()->danger()->title('PDF-ul nu este disponibil.')->send();
+            Notification::make()->danger()->title(__('PDF-ul nu este disponibil.'))->send();
             return;
         }
 
         $marketplace = static::getMarketplaceClient();
         // Facturi = tranzacțional → providerul tranzacțional cu fallback runtime la primary.
         if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
-            Notification::make()->danger()->title('SMTP nu este configurat.')->send();
+            Notification::make()->danger()->title(__('SMTP nu este configurat.'))->send();
             return;
         }
 
@@ -1152,7 +1152,7 @@ class EditOrganizerInvoice extends EditRecord
 
             if (!$result['success']) {
                 Notification::make()->danger()
-                    ->title('Eroare la trimitere')
+                    ->title(__('Eroare la trimitere'))
                     ->body($result['error'] ?? 'Trimiterea a eșuat')
                     ->send();
                 return;
@@ -1160,13 +1160,13 @@ class EditOrganizerInvoice extends EditRecord
 
             $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
             Notification::make()->success()
-                ->title('Email trimis')
+                ->title(__('Email trimis'))
                 ->body("PDF-ul facturii a fost trimis la {$email}{$suffix}")
                 ->send();
         } catch (\Throwable $e) {
             \Log::error("Failed to send accounting PDF email: {$e->getMessage()}");
             Notification::make()->danger()
-                ->title('Eroare la trimitere')
+                ->title(__('Eroare la trimitere'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -1176,20 +1176,20 @@ class EditOrganizerInvoice extends EditRecord
     {
         $organizer = $invoice->organizer;
         if (!$organizer) {
-            Notification::make()->danger()->title('Organizator negăsit.')->send();
+            Notification::make()->danger()->title(__('Organizator negăsit.'))->send();
             return;
         }
 
         $email = $organizer->billing_email ?? $organizer->email;
         if (!$email) {
-            Notification::make()->danger()->title('Organizatorul nu are adresă de email.')->send();
+            Notification::make()->danger()->title(__('Organizatorul nu are adresă de email.'))->send();
             return;
         }
 
         $marketplace = static::getMarketplaceClient();
         // Facturi = tranzacțional → providerul tranzacțional cu fallback runtime la primary.
         if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
-            Notification::make()->danger()->title('SMTP nu este configurat.')->send();
+            Notification::make()->danger()->title(__('SMTP nu este configurat.'))->send();
             return;
         }
 
@@ -1210,7 +1210,7 @@ class EditOrganizerInvoice extends EditRecord
 
             if (!$result['success']) {
                 Notification::make()->danger()
-                    ->title('Eroare la trimitere')
+                    ->title(__('Eroare la trimitere'))
                     ->body($result['error'] ?? 'Trimiterea a eșuat')
                     ->send();
                 return;
@@ -1218,13 +1218,13 @@ class EditOrganizerInvoice extends EditRecord
 
             $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
             Notification::make()->success()
-                ->title('Email trimis')
+                ->title(__('Email trimis'))
                 ->body("Factura a fost trimisă la {$email}{$suffix}")
                 ->send();
         } catch (\Throwable $e) {
             \Log::error("Failed to send invoice email: {$e->getMessage()}");
             Notification::make()->danger()
-                ->title('Eroare la trimitere')
+                ->title(__('Eroare la trimitere'))
                 ->body($e->getMessage())
                 ->send();
         }

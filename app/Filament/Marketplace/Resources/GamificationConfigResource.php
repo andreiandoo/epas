@@ -68,15 +68,15 @@ class GamificationConfigResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Recompense automate')
-                    ->description('Când e pornit, punctele funcționează singure: se câștigă la fiecare comandă plătită (creditate după activitate), de ziua de naștere și la invitații, se folosesc la checkout și expiră. Reducerea din puncte e plătită de marketplace, nu de organizator.')
+                SC\Section::make(__('Recompense automate'))
+                    ->description(__('Când e pornit, punctele funcționează singure: se câștigă la fiecare comandă plătită (creditate după activitate), de ziua de naștere și la invitații, se folosesc la checkout și expiră. Reducerea din puncte e plătită de marketplace, nu de organizator.'))
                     ->schema([
                         Forms\Components\Toggle::make('auto_rewards_enabled')
-                            ->label('Pornește recompensele automate')
+                            ->label(__('Pornește recompensele automate'))
                             ->default(false),
 
                         Forms\Components\Placeholder::make('loyalty_rule_preview')
-                            ->label('Cum arată pentru client')
+                            ->label(__('Cum arată pentru client'))
                             ->content(function (callable $get) {
                                 $value = (float) ($get('point_value') ?: 0.01);
                                 $pct = (float) ($get('earn_percentage') ?: 0);
@@ -89,7 +89,7 @@ class GamificationConfigResource extends Resource
                             }),
 
                         Forms\Components\Placeholder::make('loyalty_report')
-                            ->label('Costul programului')
+                            ->label(__('Costul programului'))
                             ->visible(fn ($record) => $record !== null && $record->marketplace_client_id)
                             ->content(function ($record) {
                                 if (!$record) {
@@ -119,11 +119,11 @@ class GamificationConfigResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(2),
 
-                SC\Section::make('Point Value Configuration')
-                    ->description('Configure how points are valued and earned')
+                SC\Section::make(__('Point Value Configuration'))
+                    ->description(__('Configure how points are valued and earned'))
                     ->schema([
                         Forms\Components\TextInput::make('point_value')
-                            ->label('Point Value')
+                            ->label(__('Point Value'))
                             ->numeric()
                             ->step(0.01)
                             ->default(0.01)
@@ -133,16 +133,16 @@ class GamificationConfigResource extends Resource
 
                         Forms\Components\Select::make('currency')
                             ->options([
-                                'RON' => 'RON',
-                                'EUR' => 'EUR',
-                                'USD' => 'USD',
-                                'GBP' => 'GBP',
+                                'RON' => __('RON'),
+                                'EUR' => __('EUR'),
+                                'USD' => __('USD'),
+                                'GBP' => __('GBP'),
                             ])
                             ->default('RON')
                             ->required(),
 
                         Forms\Components\TextInput::make('earn_percentage')
-                            ->label('Earn Percentage')
+                            ->label(__('Earn Percentage'))
                             ->numeric()
                             ->step(0.01)
                             ->minValue(0)
@@ -152,36 +152,36 @@ class GamificationConfigResource extends Resource
                             ->afterLabel(static::info('Procentul din valoarea biletelor dat înapoi în puncte. Ex.: 0,5 = la 100 lei, 50 de puncte (0,50 lei) când 1 punct = 0,01 lei.')),
 
                         Forms\Components\Toggle::make('earn_on_subtotal')
-                            ->label('Earn on Subtotal')
+                            ->label(__('Earn on Subtotal'))
                             ->default(true)
                             ->afterLabel(static::info('Calculate points based on subtotal (vs total with fees)')),
 
                         Forms\Components\TextInput::make('min_order_for_earning')
-                            ->label('Minimum Order')
+                            ->label(__('Minimum Order'))
                             ->numeric()
                             ->step(0.01)
                             ->default(0)
                             ->afterLabel(static::info('Minimum order value to earn points (e.g., 10.00)')),
 
                         Forms\Components\TextInput::make('points_confirm_days')
-                            ->label('Zile până la creditare')
+                            ->label(__('Zile până la creditare'))
                             ->numeric()
                             ->minValue(0)
                             ->default(2)
                             ->afterLabel(static::info('Punctele unei comenzi intră în cont la atâtea zile după activitate (până atunci sunt „în așteptare”; un retur le anulează).')),
                     ])->columns(3),
 
-                SC\Section::make('Redemption Settings')
-                    ->description('Configure how points can be redeemed')
+                SC\Section::make(__('Redemption Settings'))
+                    ->description(__('Configure how points can be redeemed'))
                     ->schema([
                         Forms\Components\TextInput::make('min_redeem_points')
-                            ->label('Minimum Points to Redeem')
+                            ->label(__('Minimum Points to Redeem'))
                             ->numeric()
                             ->default(100)
                             ->required(),
 
                         Forms\Components\TextInput::make('max_redeem_percentage')
-                            ->label('Max Redemption (%)')
+                            ->label(__('Max Redemption (%)'))
                             ->numeric()
                             ->step(0.01)
                             ->live(onBlur: true)
@@ -190,115 +190,115 @@ class GamificationConfigResource extends Resource
                             ->afterLabel(static::info('Maximum percentage of order that can be paid with points')),
 
                         Forms\Components\TextInput::make('max_redeem_points_per_order')
-                            ->label('Max Points Per Order')
+                            ->label(__('Max Points Per Order'))
                             ->numeric()
                             ->nullable()
                             ->afterLabel(static::info('Leave empty for no limit')),
                     ])->columns(3),
 
-                SC\Section::make('Bonus Points')
-                    ->description('Configure bonus points for special actions')
+                SC\Section::make(__('Bonus Points'))
+                    ->description(__('Configure bonus points for special actions'))
                     ->schema([
                         Forms\Components\TextInput::make('birthday_bonus_points')
-                            ->label('Birthday Bonus')
+                            ->label(__('Birthday Bonus'))
                             ->numeric()
                             ->default(100),
 
                         Forms\Components\TextInput::make('signup_bonus_points')
-                            ->label('Signup Bonus')
+                            ->label(__('Signup Bonus'))
                             ->numeric()
                             ->default(50)
                             ->afterLabel(static::info('Nu se acordă de recompensele automate (un cont nou nu primește puncte înainte să cumpere).')),
 
                         Forms\Components\TextInput::make('referral_bonus_points')
-                            ->label('Referral Bonus (Referrer)')
+                            ->label(__('Referral Bonus (Referrer)'))
                             ->numeric()
                             ->default(200)
                             ->afterLabel(static::info('Points awarded to the person who refers')),
 
                         Forms\Components\TextInput::make('referred_bonus_points')
-                            ->label('Referral Bonus (Referred)')
+                            ->label(__('Referral Bonus (Referred)'))
                             ->numeric()
                             ->default(100)
                             ->afterLabel(static::info('Points awarded to the new customer')),
 
                         Forms\Components\TextInput::make('referral_min_order')
-                            ->label('Comandă minimă pentru invitație (lei)')
+                            ->label(__('Comandă minimă pentru invitație (lei)'))
                             ->numeric()
                             ->step(0.01)
                             ->default(0)
                             ->afterLabel(static::info('Bonusurile de invitație se acordă când prima comandă a prietenului, de cel puțin atât, e confirmată (în 30 de zile de la înscriere).')),
 
                         Forms\Components\TextInput::make('referral_max_per_year')
-                            ->label('Invitații răsplătite pe an')
+                            ->label(__('Invitații răsplătite pe an'))
                             ->numeric()
                             ->minValue(0)
                             ->default(10)
                             ->afterLabel(static::info('Câți prieteni pot aduce bonus unui client într-un an. 0 = fără limită.')),
                     ])->columns(3),
 
-                SC\Section::make('Expiration Settings')
+                SC\Section::make(__('Expiration Settings'))
                     ->schema([
                         Forms\Components\TextInput::make('points_expire_days')
-                            ->label('Points Expire After (days)')
+                            ->label(__('Points Expire After (days)'))
                             ->numeric()
                             ->nullable()
                             ->afterLabel(static::info('Leave empty if points never expire')),
 
                         Forms\Components\Toggle::make('expire_on_inactivity')
-                            ->label('Expire on Inactivity')
+                            ->label(__('Expire on Inactivity'))
                             ->default(false),
 
                         Forms\Components\TextInput::make('inactivity_days')
-                            ->label('Inactivity Period (days)')
+                            ->label(__('Inactivity Period (days)'))
                             ->numeric()
                             ->default(365)
                             ->visible(fn (callable $get) => $get('expire_on_inactivity')),
                     ])->columns(3),
 
-                SC\Section::make('Display Settings')
+                SC\Section::make(__('Display Settings'))
                     ->schema([
                         Forms\Components\TextInput::make('points_name')
-                            ->label('Points Name (plural)')
+                            ->label(__('Points Name (plural)'))
                             ->default('puncte')
                             ->required(),
 
                         Forms\Components\TextInput::make('points_name_singular')
-                            ->label('Points Name (singular)')
+                            ->label(__('Points Name (singular)'))
                             ->default('punct')
                             ->required(),
 
                         Forms\Components\Select::make('icon')
                             ->options([
-                                'star' => 'Star',
-                                'sparkles' => 'Sparkles',
-                                'gift' => 'Gift',
-                                'currency-dollar' => 'Dollar',
-                                'trophy' => 'Trophy',
-                                'heart' => 'Heart',
+                                'star' => __('Star'),
+                                'sparkles' => __('Sparkles'),
+                                'gift' => __('Gift'),
+                                'currency-dollar' => __('Dollar'),
+                                'trophy' => __('Trophy'),
+                                'heart' => __('Heart'),
                             ])
                             ->default('star'),
                     ])->columns(3),
 
-                SC\Section::make('Customer Tiers')
-                    ->description('Define customer loyalty tiers (optional)')
+                SC\Section::make(__('Customer Tiers'))
+                    ->description(__('Define customer loyalty tiers (optional)'))
                     ->schema([
                         Forms\Components\Repeater::make('tiers')
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->label('Tier Name')
+                                    ->label(__('Tier Name'))
                                     ->required(),
                                 Forms\Components\TextInput::make('min_points')
-                                    ->label('Minimum Points')
+                                    ->label(__('Minimum Points'))
                                     ->numeric()
                                     ->required(),
                                 Forms\Components\TextInput::make('multiplier')
-                                    ->label('Points Multiplier')
+                                    ->label(__('Points Multiplier'))
                                     ->numeric()
                                     ->default(1.0)
                                     ->afterLabel(static::info('e.g., 1.5 for 50% bonus')),
                                 Forms\Components\TextInput::make('color')
-                                    ->label('Badge Color')
+                                    ->label(__('Badge Color'))
                                     ->default('#6366f1'),
                             ])
                             ->columns(4)
@@ -308,7 +308,7 @@ class GamificationConfigResource extends Resource
                     ]),
 
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->default(true),
             ]);
     }
@@ -318,32 +318,32 @@ class GamificationConfigResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('earn_percentage')
-                    ->label('Earn %')
+                    ->label(__('Earn %'))
                     ->suffix('%'),
 
                 Tables\Columns\TextColumn::make('point_value')
-                    ->label('Point Value')
+                    ->label(__('Point Value'))
                     ->formatStateUsing(fn ($state, $record) => number_format($state, 2) . ' ' . ($record->currency ?? 'RON')),
 
                 Tables\Columns\TextColumn::make('min_redeem_points')
-                    ->label('Min Redeem'),
+                    ->label(__('Min Redeem')),
 
                 Tables\Columns\TextColumn::make('max_redeem_percentage')
-                    ->label('Max Redeem %')
+                    ->label(__('Max Redeem %'))
                     ->suffix('%'),
 
                 Tables\Columns\TextColumn::make('birthday_bonus_points')
-                    ->label('Birthday'),
+                    ->label(__('Birthday')),
 
                 Tables\Columns\TextColumn::make('referral_bonus_points')
-                    ->label('Referral'),
+                    ->label(__('Referral')),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Last Updated')
+                    ->label(__('Last Updated'))
                     ->dateTime()
                     ->sortable(),
             ])

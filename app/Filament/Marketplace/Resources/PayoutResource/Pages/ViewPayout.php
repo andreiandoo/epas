@@ -56,7 +56,7 @@ class ViewPayout extends ViewRecord
                 ->icon('heroicon-o-exclamation-triangle')
                 ->color('danger')
                 ->visible(fn () => !empty($drift['drifted']))
-                ->modalHeading('Snapshot bilete învechit față de vânzările reale')
+                ->modalHeading(__('Snapshot bilete învechit față de vânzările reale'))
                 ->modalDescription(function () use ($drift) {
                     $rows = '';
                     foreach (($drift['diffs'] ?? []) as $d) {
@@ -92,18 +92,18 @@ class ViewPayout extends ViewRecord
                     );
                 })
                 ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Închide');
+                ->modalCancelActionLabel(__('Închide'));
     }
 
     public function editTicketSelectionAction(): Actions\Action
     {
         return Actions\Action::make('editTicketSelection')
-                ->label('Editează bilete decontate')
+                ->label(__('Editează bilete decontate'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
                 ->visible(fn () => in_array($this->record->status, ['pending', 'approved', 'processing'])
                     && !empty($this->record->event_id))
-                ->modalHeading('Editează biletele incluse în decont')
+                ->modalHeading(__('Editează biletele incluse în decont'))
                 ->modalDescription(new \Illuminate\Support\HtmlString(
                     'Setezi exact ce bilete intră în acest decont. Sumele payout-ului se recalculează din bilete.<br>'
                     . '<strong>Live preview</strong>: pe măsură ce schimbi qty-uri vezi totalul jos. '
@@ -166,7 +166,7 @@ class ViewPayout extends ViewRecord
                     // Snapshot of the payout's currently-stored amounts so the
                     // operator can compare against the live preview below.
                     \Filament\Forms\Components\Placeholder::make('current_state')
-                        ->label('Stare curentă (înainte de modificări)')
+                        ->label(__('Stare curentă (înainte de modificări)'))
                         ->content(fn () => new \Illuminate\Support\HtmlString(
                             '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
                             . '<div style="padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;"><div style="font-size:10px;color:#888;text-transform:uppercase;">Brut salvat</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . number_format((float) $this->record->gross_amount, 2) . ' RON</div></div>'
@@ -179,8 +179,8 @@ class ViewPayout extends ViewRecord
                     // desired amount + redistribute button on one row
                     \Filament\Schemas\Components\Grid::make(3)->schema([
                         \Filament\Forms\Components\TextInput::make('net_amount')
-                            ->label('Sumă netă dorită')
-                            ->helperText('Modifică pentru a redistribui — apoi apasă pe Distribuie proporțional.')
+                            ->label(__('Sumă netă dorită'))
+                            ->helperText(__('Modifică pentru a redistribui — apoi apasă pe Distribuie proporțional.'))
                             ->numeric()
                             ->minValue(0)
                             ->suffix('RON')
@@ -188,14 +188,14 @@ class ViewPayout extends ViewRecord
                             ->columnSpan(2),
                         \Filament\Schemas\Components\Actions::make([
                             \Filament\Actions\Action::make('distribute_proportionally')
-                                ->label('Distribuie proporțional')
+                                ->label(__('Distribuie proporțional'))
                                 ->icon('heroicon-o-arrows-right-left')
                                 ->color('primary')
                                 ->size('sm')
                                 ->action(function (\Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {
                                     $target = (float) ($get('net_amount') ?? 0);
                                     if ($target <= 0) {
-                                        Notification::make()->title('Sumă invalidă')->body('Introdu mai întâi suma netă dorită.')->warning()->send();
+                                        Notification::make()->title(__('Sumă invalidă'))->body(__('Introdu mai întâi suma netă dorită.'))->warning()->send();
                                         return;
                                     }
                                     $tickets = $get('payout_tickets') ?? [];
@@ -215,7 +215,7 @@ class ViewPayout extends ViewRecord
                                         $currentNet += $g - $c;
                                     }
                                     if ($currentNet <= 0.01) {
-                                        Notification::make()->title('Nu pot scala')->body('Cantitățile actuale sumează 0; setează măcar un qty înainte de redistribuire.')->warning()->send();
+                                        Notification::make()->title(__('Nu pot scala'))->body(__('Cantitățile actuale sumează 0; setează măcar un qty înainte de redistribuire.'))->warning()->send();
                                         return;
                                     }
                                     $scale = $target / $currentNet;
@@ -224,7 +224,7 @@ class ViewPayout extends ViewRecord
                                     }
                                     unset($t);
                                     $set('payout_tickets', $tickets);
-                                    Notification::make()->title('Scalat')->body('Factor: ' . number_format($scale, 3) . '. Verifică cantitățile noi în preview-ul de mai jos.')->success()->send();
+                                    Notification::make()->title(__('Scalat'))->body('Factor: ' . number_format($scale, 3) . '. Verifică cantitățile noi în preview-ul de mai jos.')->success()->send();
                                 }),
 
                             // Pull every ticket sold on the event that isn't already
@@ -233,23 +233,23 @@ class ViewPayout extends ViewRecord
                             // tickets (e.g. after a recalc accidentally narrowed the
                             // slice, or when picking up newly-sold tickets).
                             \Filament\Actions\Action::make('fill_remaining_tickets')
-                                ->label('Adu biletele rămase')
+                                ->label(__('Adu biletele rămase'))
                                 ->icon('heroicon-o-arrow-down-tray')
                                 ->color('gray')
                                 ->size('sm')
                                 ->requiresConfirmation()
-                                ->modalHeading('Înlocuiește biletele cu cele rămase neîncasate?')
-                                ->modalDescription('Lista actuală din repeater va fi înlocuită cu toate biletele de pe acest eveniment care NU sunt deja incluse în alt decont (POS / external_import / test_order excluse). Cantitățile se setează la maximul rămas.')
-                                ->modalSubmitActionLabel('Da, înlocuiește')
+                                ->modalHeading(__('Înlocuiește biletele cu cele rămase neîncasate?'))
+                                ->modalDescription(__('Lista actuală din repeater va fi înlocuită cu toate biletele de pe acest eveniment care NU sunt deja incluse în alt decont (POS / external_import / test_order excluse). Cantitățile se setează la maximul rămas.'))
+                                ->modalSubmitActionLabel(__('Da, înlocuiește'))
                                 ->action(function (\Filament\Schemas\Components\Utilities\Set $set) {
                                     $event = $this->record->event;
                                     if (!$event) {
-                                        Notification::make()->title('Lipsește evenimentul')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                                        Notification::make()->title(__('Lipsește evenimentul'))->body(__('Decontul nu este legat de un eveniment.'))->danger()->send();
                                         return;
                                     }
                                     $items = \App\Models\MarketplacePayout::buildRemainingTicketsItems($event, $this->record->id);
                                     if (empty($items)) {
-                                        Notification::make()->title('Nimic de adus')->body('Toate biletele vândute pe acest eveniment sunt deja incluse în alte deconturi.')->warning()->send();
+                                        Notification::make()->title(__('Nimic de adus'))->body(__('Toate biletele vândute pe acest eveniment sunt deja incluse în alte deconturi.'))->warning()->send();
                                         return;
                                     }
                                     $set('payout_tickets', $items);
@@ -259,7 +259,7 @@ class ViewPayout extends ViewRecord
                                     $discountTotal = \App\Models\MarketplacePayout::sumDiscountFromItems($items);
                                     $set('discount_amount', number_format($discountTotal, 2, '.', ''));
                                     $totalQty = array_sum(array_column($items, 'qty'));
-                                    Notification::make()->title('Bilete adăugate')->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . number_format($discountTotal, 2) . ' RON discount aduse în listă. Verifică suma netă și apasă Salvează.')->success()->send();
+                                    Notification::make()->title(__('Bilete adăugate'))->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . number_format($discountTotal, 2) . ' RON discount aduse în listă. Verifică suma netă și apasă Salvează.')->success()->send();
                                 }),
 
                             // Snapshot the event state AS OF a chosen date:
@@ -269,25 +269,25 @@ class ViewPayout extends ViewRecord
                             // back-filling a decont generated offline at a past
                             // date and aligning the system with that history.
                             \Filament\Actions\Action::make('fill_tickets_as_of_date')
-                                ->label('Adu la dată')
+                                ->label(__('Adu la dată'))
                                 ->icon('heroicon-o-clock')
                                 ->color('gray')
                                 ->size('sm')
-                                ->modalHeading('Calculează decontul la o dată din trecut')
-                                ->modalDescription('Repeater-ul de bilete + lista de rambursări se vor înlocui cu starea evenimentului la data aleasă (excluzând ce e deja în alte deconturi). Util pentru a recrea în sistem un decont făcut offline la o dată anterioară.')
-                                ->modalSubmitActionLabel('Calculează')
+                                ->modalHeading(__('Calculează decontul la o dată din trecut'))
+                                ->modalDescription(__('Repeater-ul de bilete + lista de rambursări se vor înlocui cu starea evenimentului la data aleasă (excluzând ce e deja în alte deconturi). Util pentru a recrea în sistem un decont făcut offline la o dată anterioară.'))
+                                ->modalSubmitActionLabel(__('Calculează'))
                                 ->form([
                                     \Filament\Forms\Components\DatePicker::make('cutoff_date')
-                                        ->label('Data limită (inclusiv)')
+                                        ->label(__('Data limită (inclusiv)'))
                                         ->required()
                                         ->default(fn () => $this->record->created_at?->format('Y-m-d') ?? now()->format('Y-m-d'))
                                         ->maxDate(now())
-                                        ->helperText('Vânzările și rambursările făcute până la sfârșitul acestei zile vor fi incluse.'),
+                                        ->helperText(__('Vânzările și rambursările făcute până la sfârșitul acestei zile vor fi incluse.')),
                                 ])
                                 ->action(function (array $data, \Filament\Schemas\Components\Utilities\Set $set) {
                                     $event = $this->record->event;
                                     if (!$event) {
-                                        Notification::make()->title('Lipsește evenimentul')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                                        Notification::make()->title(__('Lipsește evenimentul'))->body(__('Decontul nu este legat de un eveniment.'))->danger()->send();
                                         return;
                                     }
                                     $cutoff = \Carbon\Carbon::parse($data['cutoff_date']);
@@ -295,7 +295,7 @@ class ViewPayout extends ViewRecord
                                     $refundIds = \App\Models\MarketplacePayout::getRefundIdsAsOfDate($event, $cutoff, $this->record->id);
 
                                     if (empty($items) && empty($refundIds)) {
-                                        Notification::make()->title('Nimic la data aleasă')->body('Nu există bilete sau rambursări noi până la ' . $cutoff->format('d.m.Y') . ' care să nu fie deja în alt decont.')->warning()->send();
+                                        Notification::make()->title(__('Nimic la data aleasă'))->body('Nu există bilete sau rambursări noi până la ' . $cutoff->format('d.m.Y') . ' care să nu fie deja în alt decont.')->warning()->send();
                                         return;
                                     }
 
@@ -314,8 +314,8 @@ class ViewPayout extends ViewRecord
                     ]),
 
                     \Filament\Forms\Components\Repeater::make('payout_tickets')
-                        ->label('Bilete incluse')
-                        ->helperText('Modifică cantitățile per tip de bilet. Rândurile cu qty=0 se elimină la salvare.')
+                        ->label(__('Bilete incluse'))
+                        ->helperText(__('Modifică cantitățile per tip de bilet. Rândurile cu qty=0 se elimină la salvare.'))
                         ->extraAttributes(['class' => 'ep-inline-actions'])
                         ->schema([
                             \Filament\Forms\Components\Hidden::make('ticket_type_id'),
@@ -360,7 +360,7 @@ class ViewPayout extends ViewRecord
                     // deja legate + cele nelegate intrate până la data decontului).
                     // Se scad doar cele ale biletelor plătite într-un decont anterior.
                     \Filament\Forms\Components\Placeholder::make('auto_refunds_summary')
-                        ->label('Rambursări incluse automat în acest decont')
+                        ->label(__('Rambursări incluse automat în acest decont'))
                         ->content(function () {
                             $event = $this->record->event;
                             if (!$event) return '';
@@ -461,7 +461,7 @@ class ViewPayout extends ViewRecord
                 ->action(function (array $data) {
                     $event = $this->record->event;
                     if (!$event) {
-                        Notification::make()->title('Eroare')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                        Notification::make()->title(__('Eroare'))->body(__('Decontul nu este legat de un eveniment.'))->danger()->send();
                         return;
                     }
                     $event->loadMissing('ticketTypes');
@@ -471,7 +471,7 @@ class ViewPayout extends ViewRecord
                     $includedRefundIds = $this->autoRefundIdsForRecord();
 
                     if (empty($payoutTickets)) {
-                        Notification::make()->title('Lista de bilete goală')->body('Adaugă cel puțin un rând cu qty > 0.')->warning()->send();
+                        Notification::make()->title(__('Lista de bilete goală'))->body(__('Adaugă cel puțin un rând cu qty > 0.'))->warning()->send();
                         return;
                     }
 
@@ -495,7 +495,7 @@ class ViewPayout extends ViewRecord
                     );
 
                     if (empty($built['rows'])) {
-                        Notification::make()->title('Rezultat gol')->body('După scalare, niciun rând nu mai are qty > 0. Anulat.')->warning()->send();
+                        Notification::make()->title(__('Rezultat gol'))->body(__('După scalare, niciun rând nu mai are qty > 0. Anulat.'))->warning()->send();
                         return;
                     }
 
@@ -541,7 +541,7 @@ class ViewPayout extends ViewRecord
                     });
 
                     Notification::make()
-                        ->title('Bilete decontate actualizate')
+                        ->title(__('Bilete decontate actualizate'))
                         ->body('Net: ' . number_format($newAmount, 2) . ' RON · ' . count($built['rows']) . ' tipuri de bilete · regenerează documentul PDF manual dacă e nevoie.')
                         ->success()
                         ->send();
@@ -553,11 +553,11 @@ class ViewPayout extends ViewRecord
     public function recalcBreakdownAction(): Actions\Action
     {
         return Actions\Action::make('recalcBreakdown')
-                ->label('Recalculează snapshot bilete')
+                ->label(__('Recalculează snapshot bilete'))
                 ->icon('heroicon-o-arrow-path-rounded-square')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalDescription('Se va înlocui snapshot-ul actual cu valorile recalculate din vânzările reale (preț plătit per bilet, comision, discounturi, asigurări) și se vor actualiza sumele payout-ului + balanța organizatorului. Documentele de decont/factură generate trebuie regenerate manual după recalcul.')
+                ->modalDescription(__('Se va înlocui snapshot-ul actual cu valorile recalculate din vânzările reale (preț plătit per bilet, comision, discounturi, asigurări) și se vor actualiza sumele payout-ului + balanța organizatorului. Documentele de decont/factură generate trebuie regenerate manual după recalcul.'))
                 ->visible(fn () => in_array($this->record->status, ['pending', 'approved', 'processing'])
                     && !empty($this->record->event_id))
                 ->action(function () {
@@ -569,9 +569,9 @@ class ViewPayout extends ViewRecord
 
                     if (!($result['ok'] ?? false)) {
                         if (($result['reason'] ?? null) === 'no_event') {
-                            Notification::make()->title('Eroare')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                            Notification::make()->title(__('Eroare'))->body(__('Decontul nu este legat de un eveniment.'))->danger()->send();
                         } else {
-                            Notification::make()->title('Nu s-au găsit vânzări')->body('Nu există bilete valide în perioada decontului pentru a recalcula snapshot-ul.')->warning()->send();
+                            Notification::make()->title(__('Nu s-au găsit vânzări'))->body(__('Nu există bilete valide în perioada decontului pentru a recalcula snapshot-ul.'))->warning()->send();
                         }
                         return;
                     }
@@ -582,7 +582,7 @@ class ViewPayout extends ViewRecord
                         : ($delta < 0 ? '+' . number_format(abs($delta), 2) . ' RON rezervați suplimentar' : 'fără ajustare de balanță');
 
                     Notification::make()
-                        ->title('Snapshot recalculat')
+                        ->title(__('Snapshot recalculat'))
                         ->body("Sumă netă: " . number_format($result['amount'], 2) . " RON · comision: " . number_format($result['commission'], 2) . " RON · {$deltaLabel}.")
                         ->success()
                         ->send();
@@ -594,7 +594,7 @@ class ViewPayout extends ViewRecord
     public function approvePayoutStepAction(): Actions\Action
     {
         return Actions\Action::make('approvePayoutStep')
-            ->label('Aprobă decontul')
+            ->label(__('Aprobă decontul'))
             ->icon('heroicon-o-check')
             ->color('success')
             ->requiresConfirmation()
@@ -630,11 +630,11 @@ class ViewPayout extends ViewRecord
         return [
             // ========== GENERATE DECONT (when none exists) ==========
             Actions\Action::make('generate_decont')
-                ->label('Generează Decont')
+                ->label(__('Generează Decont'))
                 ->icon('heroicon-o-document-text')
                 ->color('info')
                 ->requiresConfirmation()
-                ->modalDescription('Se va genera documentul de decont pentru acest payout.')
+                ->modalDescription(__('Se va genera documentul de decont pentru acest payout.'))
                 ->visible(fn () => $this->record->decontDocument === null && in_array($this->record->status, ['approved', 'processing', 'completed']) && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
                     $this->runDecontGeneration(isRegeneration: false);
@@ -643,26 +643,26 @@ class ViewPayout extends ViewRecord
             // ========== DECONT ACTIONS (when decont exists) ==========
             Actions\ActionGroup::make([
                 Actions\Action::make('view_decont')
-                    ->label('Vezi decont')
+                    ->label(__('Vezi decont'))
                     ->icon('heroicon-o-eye')
                     ->url(fn () => OrganizerDocumentResource::getUrl('view', ['record' => $this->record->decontDocument]))
                     ->openUrlInNewTab(),
 
                 Actions\Action::make('download_decont')
-                    ->label('Descarcă decont')
+                    ->label(__('Descarcă decont'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->visible(fn () => $this->record->decontDocument?->file_path !== null)
                     ->url(fn () => $this->record->decontDocument?->download_url, shouldOpenInNewTab: true),
 
                 Actions\Action::make('regenerate_decont')
-                    ->label('Regenerează decont')
+                    ->label(__('Regenerează decont'))
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->modalDescription('Decontul existent va fi șters și regenerat.')
+                    ->modalDescription(__('Decontul existent va fi șters și regenerat.'))
                     ->action(fn () => $this->regenerateDecontDocument()),
             ])
-                ->label('Decont')
+                ->label(__('Decont'))
                 ->icon('heroicon-o-document-text')
                 ->color('info')
                 ->button()
@@ -675,12 +675,12 @@ class ViewPayout extends ViewRecord
             // actions let the admin notify the organizer manually when
             // the decont is ready to share.
             Actions\Action::make('send_decont_email')
-                ->label('Trimite decont prin email')
+                ->label(__('Trimite decont prin email'))
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
                 ->form([
                     Forms\Components\TextInput::make('email')
-                        ->label('Adresa email destinatar')
+                        ->label(__('Adresa email destinatar'))
                         ->email()
                         ->required()
                         ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
@@ -691,25 +691,25 @@ class ViewPayout extends ViewRecord
                 ->visible(fn () => $this->record->decontDocument !== null && !in_array($this->record->status, ['rejected', 'cancelled'])),
 
             Actions\Action::make('notify_organizer_inapp')
-                ->label('Notifică organizator (in-app)')
+                ->label(__('Notifică organizator (in-app)'))
                 ->icon('heroicon-o-bell-alert')
                 ->color('gray')
                 ->requiresConfirmation()
-                ->modalHeading('Notifică organizator')
-                ->modalDescription('Se va crea o notificare în panoul organizatorului ("Document generat: Decont Drepturi"). Nu se trimite email — pentru email folosește acțiunea separată.')
+                ->modalHeading(__('Notifică organizator'))
+                ->modalDescription(__('Se va crea o notificare în panoul organizatorului ("Document generat: Decont Drepturi"). Nu se trimite email — pentru email folosește acțiunea separată.'))
                 ->action(function () {
                     try {
                         \App\Services\OrganizerNotificationService::notifyDocumentGenerated($this->record->decontDocument);
-                        Notification::make()->title('Notificare in-app trimisă')->success()->send();
+                        Notification::make()->title(__('Notificare in-app trimisă'))->success()->send();
                     } catch (\Throwable $e) {
-                        Notification::make()->title('Eroare')->body($e->getMessage())->danger()->send();
+                        Notification::make()->title(__('Eroare'))->body($e->getMessage())->danger()->send();
                     }
                 })
                 ->visible(fn () => $this->record->decontDocument !== null && !in_array($this->record->status, ['rejected', 'cancelled'])),
 
             // ========== GENERATE INVOICE (when decont exists but no invoice) ==========
             Actions\Action::make('generate_invoice')
-                ->label('Generează factură')
+                ->label(__('Generează factură'))
                 ->icon('heroicon-o-document-plus')
                 ->color('warning')
                 ->requiresConfirmation()
@@ -856,8 +856,8 @@ class ViewPayout extends ViewRecord
                     // regardless of the recipient/mode combination.
                     if ($commissionSubtotal <= 0.005) {
                         Notification::make()
-                            ->title('Nu există comisioane de facturat')
-                            ->body('Decontul nu are comisioane online sau reținute din rambursări care să justifice o factură.')
+                            ->title(__('Nu există comisioane de facturat'))
+                            ->body(__('Decontul nu are comisioane online sau reținute din rambursări care să justifice o factură.'))
                             ->warning()
                             ->send();
                         return;
@@ -975,14 +975,14 @@ class ViewPayout extends ViewRecord
 
             Actions\ActionGroup::make([
                 Actions\Action::make('view_invoice')
-                    ->label('Vezi factura')
+                    ->label(__('Vezi factura'))
                     ->icon('heroicon-o-eye')
                     ->visible(fn () => $this->record->invoice !== null)
                     ->url(fn () => OrganizerInvoiceResource::getUrl('edit', ['record' => $this->record->invoice]))
                     ->openUrlInNewTab(),
 
                 Actions\Action::make('download_invoice')
-                    ->label('Descarca factura')
+                    ->label(__('Descarca factura'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->visible(function () {
                         $inv = $this->record->invoice;
@@ -1025,7 +1025,7 @@ class ViewPayout extends ViewRecord
                     }),
 
                 Actions\Action::make('send_invoice')
-                    ->label('Trimite factura')
+                    ->label(__('Trimite factura'))
                     ->icon('heroicon-o-envelope')
                     ->visible(function () {
                         $inv = $this->record->invoice;
@@ -1035,7 +1035,7 @@ class ViewPayout extends ViewRecord
                     })
                     ->form([
                         Forms\Components\TextInput::make('email')
-                            ->label('Adresa email')
+                            ->label(__('Adresa email'))
                             ->email()
                             ->required()
                             ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
@@ -1044,7 +1044,7 @@ class ViewPayout extends ViewRecord
                         $this->sendInvoiceByEmail($this->record->invoice, $data['email']);
                     }),
             ])
-                ->label('Factura')
+                ->label(__('Factura'))
                 ->icon('heroicon-o-document-currency-dollar')
                 ->color('success')
                 ->button()
@@ -1064,7 +1064,7 @@ class ViewPayout extends ViewRecord
             // it disappears everywhere; the other decont gets a "Vezi factura
             // organizator" link below instead.
             Actions\Action::make('generate_invoice_organizer')
-                ->label('Generează factură organizator')
+                ->label(__('Generează factură organizator'))
                 ->icon('heroicon-o-receipt-percent')
                 ->color('warning')
                 ->requiresConfirmation()
@@ -1123,14 +1123,14 @@ class ViewPayout extends ViewRecord
 
             Actions\ActionGroup::make([
                 Actions\Action::make('view_invoice_pos')
-                    ->label('Vezi factura')
+                    ->label(__('Vezi factura'))
                     ->icon('heroicon-o-eye')
                     ->visible(fn () => $this->record->posInvoice !== null)
                     ->url(fn () => OrganizerInvoiceResource::getUrl('edit', ['record' => $this->record->posInvoice]))
                     ->openUrlInNewTab(),
 
                 Actions\Action::make('download_invoice_pos')
-                    ->label('Descarcă factura')
+                    ->label(__('Descarcă factura'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->visible(function () {
                         $inv = $this->record->posInvoice;
@@ -1172,7 +1172,7 @@ class ViewPayout extends ViewRecord
                     }),
 
                 Actions\Action::make('send_invoice_pos')
-                    ->label('Trimite factura')
+                    ->label(__('Trimite factura'))
                     ->icon('heroicon-o-envelope')
                     ->visible(function () {
                         $inv = $this->record->posInvoice;
@@ -1182,7 +1182,7 @@ class ViewPayout extends ViewRecord
                     })
                     ->form([
                         Forms\Components\TextInput::make('email')
-                            ->label('Adresa email')
+                            ->label(__('Adresa email'))
                             ->email()
                             ->required()
                             ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
@@ -1191,7 +1191,7 @@ class ViewPayout extends ViewRecord
                         $this->sendInvoiceByEmail($this->record->posInvoice, $data['email']);
                     }),
             ])
-                ->label('Factură organizator')
+                ->label(__('Factură organizator'))
                 ->icon('heroicon-o-receipt-percent')
                 ->color('warning')
                 ->button()
@@ -1212,12 +1212,12 @@ class ViewPayout extends ViewRecord
         $marketplace = $payout->marketplaceClient;
 
         if (!$organizer || !$marketplace) {
-            Notification::make()->title('Lipsesc datele organizatorului/marketplace')->danger()->send();
+            Notification::make()->title(__('Lipsesc datele organizatorului/marketplace'))->danger()->send();
             return;
         }
 
         if (!$payout->event) {
-            Notification::make()->title('Decontul nu este legat de un eveniment')->warning()->send();
+            Notification::make()->title(__('Decontul nu este legat de un eveniment'))->warning()->send();
             return;
         }
 
@@ -1579,7 +1579,7 @@ class ViewPayout extends ViewRecord
                 'error' => $e->getMessage(),
             ]);
             Notification::make()
-                ->title('Eroare la generarea decontului')
+                ->title(__('Eroare la generarea decontului'))
                 ->body($e->getMessage())
                 ->danger()
                 ->persistent()
@@ -1598,7 +1598,7 @@ class ViewPayout extends ViewRecord
         if ($decont) {
             Notification::make()
                 ->title($isRegeneration ? 'Decont regenerat' : 'Decont generat')
-                ->body('Notificare automată suprimată. Folosește "Trimite decont prin email" sau "Notifică organizator" când vrei să anunți organizatorul.')
+                ->body(__('Notificare automată suprimată. Folosește "Trimite decont prin email" sau "Notifică organizator" când vrei să anunți organizatorul.'))
                 ->success()
                 ->send();
             $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
@@ -1608,7 +1608,7 @@ class ViewPayout extends ViewRecord
         // Decont generation silently failed — diagnose why so the admin knows.
         $reason = $this->diagnoseDecontFailure();
         Notification::make()
-            ->title('Decontul NU a fost generat')
+            ->title(__('Decontul NU a fost generat'))
             ->body($reason)
             ->danger()
             ->persistent()
@@ -1681,7 +1681,7 @@ class ViewPayout extends ViewRecord
             $filePath = Storage::disk('public')->path($document->file_path);
 
             if (!file_exists($filePath)) {
-                Notification::make()->title('Fișierul nu a fost găsit')->danger()->send();
+                Notification::make()->title(__('Fișierul nu a fost găsit'))->danger()->send();
                 return;
             }
 
@@ -1689,7 +1689,7 @@ class ViewPayout extends ViewRecord
             // Deconturile sunt tranzacționale → providerul tranzacțional cu
             // fallback runtime la primary dacă SMTP-ul tranzacțional eșuează.
             if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
-                Notification::make()->title('Mail-ul nu este configurat')->body('Configurează SMTP/Brevo în Settings > Emails.')->danger()->send();
+                Notification::make()->title(__('Mail-ul nu este configurat'))->body(__('Configurează SMTP/Brevo în Settings > Emails.'))->danger()->send();
                 return;
             }
 
@@ -1733,7 +1733,7 @@ class ViewPayout extends ViewRecord
             $result = $marketplace->sendTransactionalEmail($symfonyEmail);
 
             if (!$result['success']) {
-                Notification::make()->title('Eroare la trimitere')->body($result['error'] ?? 'Trimiterea a eșuat')->danger()->send();
+                Notification::make()->title(__('Eroare la trimitere'))->body($result['error'] ?? 'Trimiterea a eșuat')->danger()->send();
                 return;
             }
 
@@ -1758,7 +1758,7 @@ class ViewPayout extends ViewRecord
             $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
             Notification::make()->title("{$docType} trimis la {$email}{$suffix}")->success()->send();
         } catch (\Exception $e) {
-            Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
+            Notification::make()->title(__('Eroare la trimitere'))->body($e->getMessage())->danger()->send();
         }
     }
 
@@ -1771,7 +1771,7 @@ class ViewPayout extends ViewRecord
             $marketplace = $this->record->marketplaceClient;
             // Facturile sunt tranzacționale → providerul tranzacțional cu fallback runtime la primary.
             if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
-                Notification::make()->title('Mail-ul nu este configurat')->danger()->send();
+                Notification::make()->title(__('Mail-ul nu este configurat'))->danger()->send();
                 return;
             }
 
@@ -1813,7 +1813,7 @@ class ViewPayout extends ViewRecord
             $result = $marketplace->sendTransactionalEmail($symfonyEmail);
 
             if (!$result['success']) {
-                Notification::make()->title('Eroare la trimitere')->body($result['error'] ?? 'Trimiterea a eșuat')->danger()->send();
+                Notification::make()->title(__('Eroare la trimitere'))->body($result['error'] ?? 'Trimiterea a eșuat')->danger()->send();
                 return;
             }
 
@@ -1838,7 +1838,7 @@ class ViewPayout extends ViewRecord
             $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
             Notification::make()->title("Factură trimisă la {$email}{$suffix}")->success()->send();
         } catch (\Exception $e) {
-            Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
+            Notification::make()->title(__('Eroare la trimitere'))->body($e->getMessage())->danger()->send();
         }
     }
 
@@ -1897,7 +1897,7 @@ class ViewPayout extends ViewRecord
     {
         $marketplace = $this->record->marketplaceClient;
         if (!$marketplace) {
-            Notification::make()->danger()->title('Marketplace negăsit.')->send();
+            Notification::make()->danger()->title(__('Marketplace negăsit.'))->send();
             return;
         }
 
@@ -1928,7 +1928,7 @@ class ViewPayout extends ViewRecord
 
         if (!empty($errors)) {
             Notification::make()->danger()
-                ->title('Date incomplete pentru contabilitate')
+                ->title(__('Date incomplete pentru contabilitate'))
                 ->body(implode("\n", $errors))
                 ->send();
             return;
@@ -2028,7 +2028,7 @@ class ViewPayout extends ViewRecord
             $result = $service->issueMarketplaceInvoice($marketplace->id, $invoice->number, $invoiceData);
 
             if (!($result['success'] ?? false)) {
-                Notification::make()->danger()->title('Eroare la trimitere')->send();
+                Notification::make()->danger()->title(__('Eroare la trimitere'))->send();
                 return;
             }
 
@@ -2058,11 +2058,11 @@ class ViewPayout extends ViewRecord
                 $msg .= ' — PDF disponibil.';
             }
 
-            Notification::make()->success()->title('Factură trimisă')->body($msg)->send();
+            Notification::make()->success()->title(__('Factură trimisă'))->body($msg)->send();
         } catch (\Throwable $e) {
             \Log::error("Accounting submission failed: {$e->getMessage()}");
             Notification::make()->danger()
-                ->title('Eroare la trimiterea în contabilitate')
+                ->title(__('Eroare la trimiterea în contabilitate'))
                 ->body($e->getMessage())
                 ->send();
         }

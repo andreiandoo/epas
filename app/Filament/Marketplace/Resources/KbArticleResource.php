@@ -89,13 +89,13 @@ class KbArticleResource extends Resource
                             ->columnSpan(2)
                             ->schema([
                                 // Type selection at the top
-                                SC\Section::make('Article Type')
+                                SC\Section::make(__('Article Type'))
                                     ->schema([
                                         Forms\Components\Radio::make('type')
                                             ->label('')
                                             ->options([
-                                                'article' => 'Article - Full article with title and content',
-                                                'faq' => 'FAQ - Question and answer format',
+                                                'article' => __('Article - Full article with title and content'),
+                                                'faq' => __('FAQ - Question and answer format'),
                                             ])
                                             ->default('article')
                                             ->required()
@@ -103,15 +103,15 @@ class KbArticleResource extends Resource
                                             ->inline(),
 
                                         Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
+                                            ->label(__('Slug'))
                                             ->required()
                                             ->maxLength(255)
                                             ->rule('alpha_dash')
-                                            ->helperText('URL-friendly identifier'),
+                                            ->helperText(__('URL-friendly identifier')),
                                     ])->columns(2),
 
                                 // Article Content Section with Language Tabs (for type = article)
-                                SC\Section::make('Article Content')
+                                SC\Section::make(__('Article Content'))
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('type') === 'article')
                                     ->schema([
                                         SC\Tabs::make('Article Languages')
@@ -120,7 +120,7 @@ class KbArticleResource extends Resource
                                                     ->icon('heroicon-o-flag')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('title.ro')
-                                                            ->label('Title (RO)')
+                                                            ->label(__('Title (RO)'))
                                                             ->required()
                                                             ->maxLength(255)
                                                             ->live(onBlur: true)
@@ -134,7 +134,7 @@ class KbArticleResource extends Resource
                                                             }),
 
                                                         Forms\Components\RichEditor::make('content.ro')
-                                                            ->label('Content (RO)')
+                                                            ->label(__('Content (RO)'))
                                                             ->required()
                                                             ->toolbarButtons($toolbarButtons),
                                                     ]),
@@ -143,7 +143,7 @@ class KbArticleResource extends Resource
                                                     ->icon('heroicon-o-globe-alt')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('title.en')
-                                                            ->label('Title (EN)')
+                                                            ->label(__('Title (EN)'))
                                                             ->maxLength(255)
                                                             ->live(onBlur: true)
                                                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
@@ -153,7 +153,7 @@ class KbArticleResource extends Resource
                                                             }),
 
                                                         Forms\Components\RichEditor::make('content.en')
-                                                            ->label('Content (EN)')
+                                                            ->label(__('Content (EN)'))
                                                             ->toolbarButtons($toolbarButtons),
                                                     ]),
                                             ])
@@ -161,7 +161,7 @@ class KbArticleResource extends Resource
                                     ]),
 
                                 // FAQ Content Section with Language Tabs (for type = faq)
-                                SC\Section::make('FAQ Content')
+                                SC\Section::make(__('FAQ Content'))
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('type') === 'faq')
                                     ->schema([
                                         SC\Tabs::make('FAQ Languages')
@@ -170,7 +170,7 @@ class KbArticleResource extends Resource
                                                     ->icon('heroicon-o-flag')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('question.ro')
-                                                            ->label('Question (RO)')
+                                                            ->label(__('Question (RO)'))
                                                             ->required()
                                                             ->maxLength(500)
                                                             ->live(onBlur: true)
@@ -181,7 +181,7 @@ class KbArticleResource extends Resource
                                                             }),
 
                                                         Forms\Components\RichEditor::make('content.ro')
-                                                            ->label('Answer (RO)')
+                                                            ->label(__('Answer (RO)'))
                                                             ->required()
                                                             ->toolbarButtons($toolbarButtons),
                                                     ]),
@@ -190,11 +190,11 @@ class KbArticleResource extends Resource
                                                     ->icon('heroicon-o-globe-alt')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('question.en')
-                                                            ->label('Question (EN)')
+                                                            ->label(__('Question (EN)'))
                                                             ->maxLength(500),
 
                                                         Forms\Components\RichEditor::make('content.en')
-                                                            ->label('Answer (EN)')
+                                                            ->label(__('Answer (EN)'))
                                                             ->toolbarButtons($toolbarButtons),
                                                     ]),
                                             ])
@@ -202,7 +202,7 @@ class KbArticleResource extends Resource
                                     ]),
 
                                 // SEO Section with Language Tabs
-                                SC\Section::make('SEO')
+                                SC\Section::make(__('SEO'))
                                     ->collapsed()
                                     ->schema([
                                         SC\Tabs::make('SEO Languages')
@@ -210,11 +210,11 @@ class KbArticleResource extends Resource
                                                 SC\Tabs\Tab::make('Română (RO)')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('meta_title.ro')
-                                                            ->label('Meta Title (RO)')
+                                                            ->label(__('Meta Title (RO)'))
                                                             ->maxLength(70),
 
                                                         Forms\Components\Textarea::make('meta_description.ro')
-                                                            ->label('Meta Description (RO)')
+                                                            ->label(__('Meta Description (RO)'))
                                                             ->rows(2)
                                                             ->maxLength(160),
                                                     ]),
@@ -222,11 +222,11 @@ class KbArticleResource extends Resource
                                                 SC\Tabs\Tab::make('English (EN)')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('meta_title.en')
-                                                            ->label('Meta Title (EN)')
+                                                            ->label(__('Meta Title (EN)'))
                                                             ->maxLength(70),
 
                                                         Forms\Components\Textarea::make('meta_description.en')
-                                                            ->label('Meta Description (EN)')
+                                                            ->label(__('Meta Description (EN)'))
                                                             ->rows(2)
                                                             ->maxLength(160),
                                                     ]),
@@ -240,10 +240,10 @@ class KbArticleResource extends Resource
                             ->columnSpan(1)
                             ->schema([
                                 // Organization Section
-                                SC\Section::make('Organization')
+                                SC\Section::make(__('Organization'))
                                     ->schema([
                                         Forms\Components\Select::make('kb_category_id')
-                                            ->label('Category')
+                                            ->label(__('Category'))
                                             ->options(function () use ($marketplace, $marketplaceLanguage) {
                                                 return KbCategory::where('marketplace_client_id', $marketplace?->id)
                                                     ->orderBy('sort_order')
@@ -258,62 +258,62 @@ class KbArticleResource extends Resource
                                             ->required(),
 
                                         Forms\Components\TextInput::make('sort_order')
-                                            ->label('Sort Order')
+                                            ->label(__('Sort Order'))
                                             ->numeric()
                                             ->default(0),
 
                                         Forms\Components\Toggle::make('is_visible')
-                                            ->label('Visible')
+                                            ->label(__('Visible'))
                                             ->default(true),
 
                                         Forms\Components\Toggle::make('is_featured')
-                                            ->label('Featured')
-                                            ->helperText('Show on homepage/featured section'),
+                                            ->label(__('Featured'))
+                                            ->helperText(__('Show on homepage/featured section')),
 
                                         Forms\Components\Toggle::make('is_popular')
-                                            ->label('Popular')
-                                            ->helperText('Mark as popular topic'),
+                                            ->label(__('Popular'))
+                                            ->helperText(__('Mark as popular topic')),
                                     ]),
 
                                 // Appearance Section
-                                SC\Section::make('Appearance')
+                                SC\Section::make(__('Appearance'))
                                     ->collapsed()
                                     ->schema([
                                         Forms\Components\Select::make('icon')
-                                            ->label('Icon')
+                                            ->label(__('Icon'))
                                             ->options([
-                                                'heroicon-o-ticket' => 'Ticket',
-                                                'heroicon-o-calendar' => 'Calendar',
-                                                'heroicon-o-user' => 'User',
-                                                'heroicon-o-cog-6-tooth' => 'Settings',
-                                                'heroicon-o-credit-card' => 'Credit Card',
-                                                'heroicon-o-document-text' => 'Document',
-                                                'heroicon-o-question-mark-circle' => 'Question',
-                                                'heroicon-o-information-circle' => 'Information',
-                                                'heroicon-o-bell' => 'Bell',
-                                                'heroicon-o-envelope' => 'Envelope',
-                                                'heroicon-o-shield-check' => 'Shield',
-                                                'heroicon-o-lock-closed' => 'Lock',
+                                                'heroicon-o-ticket' => __('Ticket'),
+                                                'heroicon-o-calendar' => __('Calendar'),
+                                                'heroicon-o-user' => __('User'),
+                                                'heroicon-o-cog-6-tooth' => __('Settings'),
+                                                'heroicon-o-credit-card' => __('Credit Card'),
+                                                'heroicon-o-document-text' => __('Document'),
+                                                'heroicon-o-question-mark-circle' => __('Question'),
+                                                'heroicon-o-information-circle' => __('Information'),
+                                                'heroicon-o-bell' => __('Bell'),
+                                                'heroicon-o-envelope' => __('Envelope'),
+                                                'heroicon-o-shield-check' => __('Shield'),
+                                                'heroicon-o-lock-closed' => __('Lock'),
                                             ])
                                             ->searchable()
-                                            ->placeholder('Select an icon'),
+                                            ->placeholder(__('Select an icon')),
 
                                         Forms\Components\TagsInput::make('tags')
-                                            ->label('Tags')
-                                            ->placeholder('Add tags...'),
+                                            ->label(__('Tags'))
+                                            ->placeholder(__('Add tags...')),
                                     ]),
 
                                 // Stats Section (only on edit)
-                                SC\Section::make('Statistics')
+                                SC\Section::make(__('Statistics'))
                                     ->collapsed()
                                     ->visible(fn ($record) => $record !== null)
                                     ->schema([
                                         Forms\Components\Placeholder::make('view_count_display')
-                                            ->label('Views')
+                                            ->label(__('Views'))
                                             ->content(fn ($record) => $record?->view_count ?? 0),
 
                                         Forms\Components\Placeholder::make('helpfulness_display')
-                                            ->label('Helpfulness')
+                                            ->label(__('Helpfulness'))
                                             ->content(function ($record) {
                                                 if (!$record) return '-';
                                                 $score = $record->helpfulness_score;
@@ -334,7 +334,7 @@ class KbArticleResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'article' => 'info',
@@ -344,7 +344,7 @@ class KbArticleResource extends Resource
                     ->formatStateUsing(fn (string $state): string => strtoupper($state)),
 
                 Tables\Columns\TextColumn::make('display_title')
-                    ->label('Title/Question')
+                    ->label(__('Title/Question'))
                     ->searchable(query: function (Builder $query, string $search) use ($marketplaceLanguage): Builder {
                         return $query->where(function ($q) use ($search, $marketplaceLanguage) {
                             $isPgsql = DB::getDriverName() === 'pgsql';
@@ -375,7 +375,7 @@ class KbArticleResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('category.name')
-                    ->label('Category')
+                    ->label(__('Category'))
                     ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
                             return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
@@ -384,28 +384,28 @@ class KbArticleResource extends Resource
                     }),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Featured')
+                    ->label(__('Featured'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_popular')
-                    ->label('Popular')
+                    ->label(__('Popular'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('view_count')
-                    ->label('Views')
+                    ->label(__('Views'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('helpfulness_score')
-                    ->label('Helpful %')
+                    ->label(__('Helpful %'))
                     ->formatStateUsing(fn ($state) => $state !== null ? "{$state}%" : '-')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
@@ -417,11 +417,11 @@ class KbArticleResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
                     ->options([
-                        'article' => 'Article',
-                        'faq' => 'FAQ',
+                        'article' => __('Article'),
+                        'faq' => __('FAQ'),
                     ]),
                 Tables\Filters\SelectFilter::make('kb_category_id')
-                    ->label('Category')
+                    ->label(__('Category'))
                     ->options(function () use ($marketplace, $marketplaceLanguage) {
                         return KbCategory::where('marketplace_client_id', $marketplace?->id)
                             ->get()
@@ -431,11 +431,11 @@ class KbArticleResource extends Resource
                             });
                     }),
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                    ->label(__('Featured')),
                 Tables\Filters\TernaryFilter::make('is_popular')
-                    ->label('Popular'),
+                    ->label(__('Popular')),
             ])
             ->recordActions([
                 EditAction::make(),

@@ -21,12 +21,12 @@ class EditEmailTemplate extends EditRecord
     {
         return [
             Actions\Action::make('send_test')
-                ->label('Trimite Test')
+                ->label(__('Trimite Test'))
                 ->icon('heroicon-o-paper-airplane')
                 ->color('info')
                 ->form([
                     Forms\Components\TextInput::make('test_email')
-                        ->label('Email destinatar')
+                        ->label(__('Email destinatar'))
                         ->email()
                         ->required()
                         ->default(fn () => auth()->user()?->email ?? ''),
@@ -81,8 +81,8 @@ class EditEmailTemplate extends EditRecord
                         $transport = $marketplace->getSmtpTransport();
                         if (!$transport) {
                             Notification::make()
-                                ->title('SMTP nu este configurat')
-                                ->body('Configurează SMTP-ul în setările marketplace-ului.')
+                                ->title(__('SMTP nu este configurat'))
+                                ->body(__('Configurează SMTP-ul în setările marketplace-ului.'))
                                 ->danger()
                                 ->send();
                             return;
@@ -104,24 +104,24 @@ class EditEmailTemplate extends EditRecord
                         $transport->send($email);
 
                         Notification::make()
-                            ->title('Email de test trimis!')
+                            ->title(__('Email de test trimis!'))
                             ->body('Verifică inbox-ul pentru ' . $data['test_email'])
                             ->success()
                             ->send();
                     } catch (\Exception $e) {
                         Notification::make()
-                            ->title('Eroare la trimitere')
+                            ->title(__('Eroare la trimitere'))
                             ->body($e->getMessage())
                             ->danger()
                             ->send();
                     }
                 }),
             Actions\Action::make('preview')
-                ->label('Previzualizare')
+                ->label(__('Previzualizare'))
                 ->icon('heroicon-o-eye')
                 ->color('gray')
                 ->modalContent(fn () => view('filament.marketplace.email-preview', ['template' => $this->record]))
-                ->modalHeading('Email Preview')
+                ->modalHeading(__('Email Preview'))
                 ->modalSubmitAction(false),
             Actions\DeleteAction::make(),
         ];

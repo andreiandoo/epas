@@ -50,62 +50,62 @@ class TaxTemplateResource extends Resource
     {
         return $schema
             ->components([
-                Section::make('Template Details')
+                Section::make(__('Template Details'))
                     ->icon('heroicon-o-document')
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Template Name')
+                            ->label(__('Template Name'))
                             ->required()
                             ->maxLength(255),
 
                         Forms\Components\Select::make('type')
-                            ->label('Template Type')
+                            ->label(__('Template Type'))
                             ->options(MarketplaceTaxTemplate::TYPES)
                             ->required()
                             ->default('invoice'),
 
                         Forms\Components\Select::make('trigger')
-                            ->label('Build Template Trigger')
+                            ->label(__('Build Template Trigger'))
                             ->options(MarketplaceTaxTemplate::TRIGGERS)
-                            ->placeholder('Select when to generate this template')
-                            ->helperText('When should this template be automatically generated?'),
+                            ->placeholder(__('Select when to generate this template'))
+                            ->helperText(__('When should this template be automatically generated?')),
 
                         Forms\Components\Toggle::make('is_default')
-                            ->label('Default Template')
-                            ->helperText('Make this the default template for its type'),
+                            ->label(__('Default Template'))
+                            ->helperText(__('Make this the default template for its type')),
 
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
+                            ->label(__('Active'))
                             ->default(true),
 
                         Forms\Components\Toggle::make('by_proxy')
-                            ->label('Prin împuternicit')
+                            ->label(__('Prin împuternicit'))
                             ->default(false),
 
                         Forms\Components\Select::make('page_orientation')
-                            ->label('Orientare pagină')
+                            ->label(__('Orientare pagină'))
                             ->options([
-                                'portrait' => 'Portrait (vertical)',
-                                'landscape' => 'Landscape (orizontal)',
+                                'portrait' => __('Portrait (vertical)'),
+                                'landscape' => __('Landscape (orizontal)'),
                             ])
                             ->default('portrait')
                             ->live()
-                            ->helperText('Orientarea paginii A4 pentru generarea PDF-ului'),
+                            ->helperText(__('Orientarea paginii A4 pentru generarea PDF-ului')),
 
                         Forms\Components\Textarea::make('description')
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(2)
                             ->columnSpanFull(),
                     ])
                     ->columns(3),
 
-                Section::make('Taxe generale aplicabile')
-                    ->description('Selectează care taxe generale (timbru, etc.) se aplică automat în acest template. Doar taxele care au "Event Type" potrivit cu tipul evenimentului vor fi calculate efectiv.')
+                Section::make(__('Taxe generale aplicabile'))
+                    ->description(__('Selectează care taxe generale (timbru, etc.) se aplică automat în acest template. Doar taxele care au "Event Type" potrivit cu tipul evenimentului vor fi calculate efectiv.'))
                     ->icon('heroicon-o-receipt-percent')
                     ->collapsible()
                     ->schema([
                         Forms\Components\Select::make('general_tax_ids')
-                            ->label('Taxe aplicabile')
+                            ->label(__('Taxe aplicabile'))
                             ->options(function () {
                                 return \App\Models\Tax\GeneralTax::where('is_active', true)
                                     ->orderBy('priority')
@@ -118,12 +118,12 @@ class TaxTemplateResource extends Resource
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->helperText('Variabile generate: {{music_stamp_value}} (suma totală taxe), {{taxable_income}}, {{tax_due}}.'),
+                            ->helperText(__('Variabile generate: {{music_stamp_value}} (suma totală taxe), {{taxable_income}}, {{tax_due}}.')),
                     ]),
 
-                Section::make('Available Variables')
+                Section::make(__('Available Variables'))
                     ->icon('heroicon-o-variable')
-                    ->description('Click to copy a variable to clipboard. Paste it into the HTML content below.')
+                    ->description(__('Click to copy a variable to clipboard. Paste it into the HTML content below.'))
                     ->schema([
                         Forms\Components\Placeholder::make('variables_info')
                             ->label('')
@@ -154,11 +154,11 @@ class TaxTemplateResource extends Resource
                     ->collapsible()
                     ->collapsed(),
 
-                Section::make('Page 1 - HTML Content')
+                Section::make(__('Page 1 - HTML Content'))
                     ->icon('heroicon-o-code-bracket')
                     ->schema([
                         Forms\Components\Toggle::make('page1_source_mode')
-                            ->label('Edit HTML Source Code')
+                            ->label(__('Edit HTML Source Code'))
                             ->default(false)
                             ->formatStateUsing(fn ($record) => $record?->html_content && str_contains($record->html_content, 'style="'))
                             ->live()
@@ -167,10 +167,10 @@ class TaxTemplateResource extends Resource
                                     $set('html_content_source', $get('html_content'));
                                 }
                             })
-                            ->helperText('Auto-enabled when content has inline CSS. Prevents style stripping.'),
+                            ->helperText(__('Auto-enabled when content has inline CSS. Prevents style stripping.')),
 
                         Forms\Components\RichEditor::make('html_content')
-                            ->label('Page 1 HTML Template (WYSIWYG)')
+                            ->label(__('Page 1 HTML Template (WYSIWYG)'))
                             ->columnSpanFull()
                             ->dehydrated(true)
                             ->fileAttachmentsDisk('public')
@@ -192,31 +192,31 @@ class TaxTemplateResource extends Resource
                                 'underline',
                                 'undo',
                             ])
-                            ->helperText('Use the variables above in your HTML. You can also upload images using the attach button.')
+                            ->helperText(__('Use the variables above in your HTML. You can also upload images using the attach button.'))
                             ->visible(fn ($get) => !$get('page1_source_mode')),
 
                         Forms\Components\Textarea::make('html_content_source')
-                            ->label('Page 1 HTML Template (Source Code)')
+                            ->label(__('Page 1 HTML Template (Source Code)'))
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
-                            ->helperText('Edit raw HTML code with inline CSS. Click outside textarea to refresh preview.')
+                            ->helperText(__('Edit raw HTML code with inline CSS. Click outside textarea to refresh preview.'))
                             ->formatStateUsing(fn ($record) => $record?->html_content)
                             ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page1_source_mode')),
                     ]),
 
-                Section::make('Page 2 - HTML Content (Optional)')
+                Section::make(__('Page 2 - HTML Content (Optional)'))
                     ->icon('heroicon-o-document-duplicate')
-                    ->description('Add a second page if your template needs multiple pages (e.g., one portrait, one landscape)')
+                    ->description(__('Add a second page if your template needs multiple pages (e.g., one portrait, one landscape)'))
                     ->schema([
                         Forms\Components\Select::make('page_2_orientation')
-                            ->label('Page 2 Orientation')
+                            ->label(__('Page 2 Orientation'))
                             ->options(MarketplaceTaxTemplate::ORIENTATIONS)
-                            ->placeholder('Select orientation for page 2'),
+                            ->placeholder(__('Select orientation for page 2')),
 
                         Forms\Components\Toggle::make('page2_source_mode')
-                            ->label('Edit HTML Source Code')
+                            ->label(__('Edit HTML Source Code'))
                             ->default(false)
                             ->formatStateUsing(fn ($record) => $record?->html_content_page_2 && str_contains($record->html_content_page_2, 'style="'))
                             ->live()
@@ -225,10 +225,10 @@ class TaxTemplateResource extends Resource
                                     $set('html_content_page_2_source', $get('html_content_page_2'));
                                 }
                             })
-                            ->helperText('Auto-enabled when content has inline CSS. Prevents style stripping.'),
+                            ->helperText(__('Auto-enabled when content has inline CSS. Prevents style stripping.')),
 
                         Forms\Components\RichEditor::make('html_content_page_2')
-                            ->label('Page 2 HTML Template (WYSIWYG)')
+                            ->label(__('Page 2 HTML Template (WYSIWYG)'))
                             ->columnSpanFull()
                             ->dehydrated(true)
                             ->fileAttachmentsDisk('public')
@@ -250,15 +250,15 @@ class TaxTemplateResource extends Resource
                                 'underline',
                                 'undo',
                             ])
-                            ->helperText('Leave empty if you only need one page. You can also upload images using the attach button.')
+                            ->helperText(__('Leave empty if you only need one page. You can also upload images using the attach button.'))
                             ->visible(fn ($get) => !$get('page2_source_mode')),
 
                         Forms\Components\Textarea::make('html_content_page_2_source')
-                            ->label('Page 2 HTML Template (Source Code)')
+                            ->label(__('Page 2 HTML Template (Source Code)'))
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
-                            ->helperText('Edit raw HTML code with inline CSS. Click outside textarea to refresh preview.')
+                            ->helperText(__('Edit raw HTML code with inline CSS. Click outside textarea to refresh preview.'))
                             ->formatStateUsing(fn ($record) => $record?->html_content_page_2)
                             ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page2_source_mode')),
@@ -266,7 +266,7 @@ class TaxTemplateResource extends Resource
                     ->collapsible()
                     ->collapsed(),
 
-                Section::make('Preview')
+                Section::make(__('Preview'))
                     ->icon('heroicon-o-eye')
                     ->schema([
                         Forms\Components\Placeholder::make('preview')
@@ -322,12 +322,12 @@ class TaxTemplateResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => MarketplaceTaxTemplate::TYPES[$state] ?? ucfirst($state))
                     ->color(fn (string $state): string => match ($state) {
@@ -339,7 +339,7 @@ class TaxTemplateResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('trigger')
-                    ->label('Trigger')
+                    ->label(__('Trigger'))
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => $state ? (MarketplaceTaxTemplate::TRIGGERS[$state] ?? ucfirst($state)) : '-')
                     ->color(fn (?string $state): string => match ($state) {
@@ -350,45 +350,45 @@ class TaxTemplateResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('page_orientation')
-                    ->label('Orientation')
+                    ->label(__('Orientation'))
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => $state === 'landscape' ? 'Landscape' : 'Portrait')
                     ->color(fn (?string $state): string => $state === 'landscape' ? 'warning' : 'info')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('description')
-                    ->label('Description')
+                    ->label(__('Description'))
                     ->limit(50)
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('is_default')
-                    ->label('Default')
+                    ->label(__('Default'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('by_proxy')
-                    ->label('Împuternicit')
+                    ->label(__('Împuternicit'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Last Modified')
+                    ->label(__('Last Modified'))
                     ->dateTime('d M Y, H:i')
                     ->sortable(),
             ])
             ->defaultSort('updated_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->options(MarketplaceTaxTemplate::TYPES),
 
                 Tables\Filters\TernaryFilter::make('is_default')
-                    ->label('Default'),
+                    ->label(__('Default')),
 
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
             ])
             ->recordActions([
                 EditAction::make(),

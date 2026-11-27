@@ -151,85 +151,85 @@ class AccountingConfig extends Page implements HasForms
         return $form
             ->schema([
                 Forms\Components\Select::make('provider')
-                    ->label('Provider contabilitate')
+                    ->label(__('Provider contabilitate'))
                     ->options([
-                        'oblio' => 'Oblio.eu',
-                        'smartbill' => 'SmartBill',
-                        'fgo' => 'FGO',
-                        'keez' => 'Keez',
+                        'oblio' => __('Oblio.eu'),
+                        'smartbill' => __('SmartBill'),
+                        'fgo' => __('FGO'),
+                        'keez' => __('Keez'),
                     ])
                     ->live()
                     ->required(),
 
                 // Oblio fields
-                Section::make('Oblio.eu')
-                    ->description('Conectare la Oblio.eu pentru facturare automată. Nu există sandbox — folosiți opțiunea Draft pentru teste.')
+                Section::make(__('Oblio.eu'))
+                    ->description(__('Conectare la Oblio.eu pentru facturare automată. Nu există sandbox — folosiți opțiunea Draft pentru teste.'))
                     ->schema([
                         Forms\Components\TextInput::make('oblio_client_id')
-                            ->label('Email (Client ID)')
+                            ->label(__('Email (Client ID)'))
                             ->email()
                             ->required()
-                            ->helperText('Email-ul contului Oblio.eu'),
+                            ->helperText(__('Email-ul contului Oblio.eu')),
                         Forms\Components\TextInput::make('oblio_client_secret')
-                            ->label('API Token (Client Secret)')
+                            ->label(__('API Token (Client Secret)'))
                             ->password()
                             ->required()
-                            ->helperText('Token-ul API din setările Oblio.eu'),
+                            ->helperText(__('Token-ul API din setările Oblio.eu')),
                         Forms\Components\TextInput::make('oblio_cif')
-                            ->label('CIF Companie')
+                            ->label(__('CIF Companie'))
                             ->required()
-                            ->helperText('CUI/CIF-ul companiei pentru care se emit facturi'),
+                            ->helperText(__('CUI/CIF-ul companiei pentru care se emit facturi')),
                         Forms\Components\TextInput::make('oblio_series_name')
-                            ->label('Serie Facturi Fiscale')
+                            ->label(__('Serie Facturi Fiscale'))
                             ->default('FACT')
                             ->required()
-                            ->helperText('Seria de facturare fiscală configurată în Oblio'),
+                            ->helperText(__('Seria de facturare fiscală configurată în Oblio')),
                         Forms\Components\TextInput::make('oblio_proforma_series')
-                            ->label('Serie Proforma')
-                            ->helperText('Seria pentru facturi proforma (lăsați gol dacă nu folosiți proforma)'),
+                            ->label(__('Serie Proforma'))
+                            ->helperText(__('Seria pentru facturi proforma (lăsați gol dacă nu folosiți proforma)')),
                         Forms\Components\Toggle::make('oblio_use_draft')
-                            ->label('Trimite ca Draft')
-                            ->helperText('Facturile vor fi create ca draft (ciornă) — util pentru testare. Dezactivați pentru producție.')
+                            ->label(__('Trimite ca Draft'))
+                            ->helperText(__('Facturile vor fi create ca draft (ciornă) — util pentru testare. Dezactivați pentru producție.'))
                             ->default(true),
                     ])
                     ->visible(fn () => $this->provider === 'oblio')
                     ->columns(2),
 
                 // SmartBill fields
-                Section::make('SmartBill')
+                Section::make(__('SmartBill'))
                     ->schema([
                         Forms\Components\TextInput::make('smartbill_username')
-                            ->label('Email / Username')
+                            ->label(__('Email / Username'))
                             ->required(),
                         Forms\Components\TextInput::make('smartbill_token')
-                            ->label('API Token')
+                            ->label(__('API Token'))
                             ->password()
                             ->required(),
                         Forms\Components\TextInput::make('smartbill_company_vat')
-                            ->label('CUI Companie')
+                            ->label(__('CUI Companie'))
                             ->required(),
                     ])
                     ->visible(fn () => $this->provider === 'smartbill')
                     ->columns(2),
 
                 // FGO fields
-                Section::make('FGO')
+                Section::make(__('FGO'))
                     ->schema([
                         Forms\Components\TextInput::make('fgo_cod_unic')
-                            ->label('CUI (Cod Unic)')
+                            ->label(__('CUI (Cod Unic)'))
                             ->required(),
                         Forms\Components\TextInput::make('fgo_cheie_privata')
-                            ->label('Cheie Privată API')
+                            ->label(__('Cheie Privată API'))
                             ->password()
                             ->required(),
                         Forms\Components\TextInput::make('fgo_serie')
-                            ->label('Serie Facturi')
+                            ->label(__('Serie Facturi'))
                             ->default('FACT'),
                         Forms\Components\Select::make('fgo_environment')
-                            ->label('Environment')
+                            ->label(__('Environment'))
                             ->options([
-                                'test' => 'Test (Sandbox)',
-                                'production' => 'Producție',
+                                'test' => __('Test (Sandbox)'),
+                                'production' => __('Producție'),
                             ])
                             ->default('test'),
                     ])
@@ -237,23 +237,23 @@ class AccountingConfig extends Page implements HasForms
                     ->columns(2),
 
                 // Keez fields
-                Section::make('Keez')
+                Section::make(__('Keez'))
                     ->schema([
                         Forms\Components\TextInput::make('keez_application_id')
-                            ->label('Application ID')
+                            ->label(__('Application ID'))
                             ->required(),
                         Forms\Components\TextInput::make('keez_client_secret')
-                            ->label('Client Secret')
+                            ->label(__('Client Secret'))
                             ->password()
                             ->required(),
                         Forms\Components\TextInput::make('keez_client_eid')
-                            ->label('Client EID')
+                            ->label(__('Client EID'))
                             ->required(),
                         Forms\Components\Select::make('keez_environment')
-                            ->label('Environment')
+                            ->label(__('Environment'))
                             ->options([
-                                'staging' => 'Staging (Test)',
-                                'production' => 'Producție',
+                                'staging' => __('Staging (Test)'),
+                                'production' => __('Producție'),
                             ])
                             ->default('staging'),
                     ])
@@ -261,11 +261,11 @@ class AccountingConfig extends Page implements HasForms
                     ->columns(2),
 
                 // General settings
-                Section::make('Setări facturare')
+                Section::make(__('Setări facturare'))
                     ->schema([
                         Forms\Components\Toggle::make('use_provider_template')
                             ->label(fn () => 'Folosește model factură ' . $this->getProviderLabel())
-                            ->helperText('Dacă este activat, facturile vor folosi PDF-ul generat de provider-ul de contabilitate. Dacă nu, se va folosi modelul de factură din Tax Templates.')
+                            ->helperText(__('Dacă este activat, facturile vor folosi PDF-ul generat de provider-ul de contabilitate. Dacă nu, se va folosi modelul de factură din Tax Templates.'))
                             ->default(false),
                     ])
                     ->visible(fn () => $this->provider !== null),
@@ -275,7 +275,7 @@ class AccountingConfig extends Page implements HasForms
     public function save(): void
     {
         if (!$this->provider) {
-            Notification::make()->danger()->title('Selectați un provider.')->send();
+            Notification::make()->danger()->title(__('Selectați un provider.'))->send();
             return;
         }
 
@@ -293,12 +293,12 @@ class AccountingConfig extends Page implements HasForms
 
             if ($result['success']) {
                 Notification::make()->success()
-                    ->title('Conectat cu succes')
+                    ->title(__('Conectat cu succes'))
                     ->body($result['message'])
                     ->send();
             } else {
                 Notification::make()->danger()
-                    ->title('Eroare la conectare')
+                    ->title(__('Eroare la conectare'))
                     ->body($result['message'])
                     ->send();
             }
@@ -307,7 +307,7 @@ class AccountingConfig extends Page implements HasForms
             $this->lastError = $e->getMessage();
 
             Notification::make()->danger()
-                ->title('Eroare')
+                ->title(__('Eroare'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -316,7 +316,7 @@ class AccountingConfig extends Page implements HasForms
     public function testConnection(): void
     {
         if (!$this->provider) {
-            Notification::make()->danger()->title('Selectați un provider.')->send();
+            Notification::make()->danger()->title(__('Selectați un provider.'))->send();
             return;
         }
 
@@ -330,18 +330,18 @@ class AccountingConfig extends Page implements HasForms
 
             if ($result['connected']) {
                 Notification::make()->success()
-                    ->title('Conexiune reușită')
+                    ->title(__('Conexiune reușită'))
                     ->body($result['message'])
                     ->send();
             } else {
                 Notification::make()->danger()
-                    ->title('Conexiune eșuată')
+                    ->title(__('Conexiune eșuată'))
                     ->body($result['message'])
                     ->send();
             }
         } catch (\Throwable $e) {
             Notification::make()->danger()
-                ->title('Eroare')
+                ->title(__('Eroare'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -357,7 +357,7 @@ class AccountingConfig extends Page implements HasForms
         $this->lastError = null;
         $this->provider = null;
 
-        Notification::make()->success()->title('Deconectat cu succes.')->send();
+        Notification::make()->success()->title(__('Deconectat cu succes.'))->send();
     }
 
     protected function getCredentials(): array

@@ -210,12 +210,29 @@ class AppServiceProvider extends ServiceProvider
             \Filament\Tables\Filters\BaseFilter::class,
             \Filament\Infolists\Components\Entry::class,
             \Filament\Actions\Action::class,
-            \Filament\Schemas\Components\Tabs\Tab::class,
         ] as $translatable) {
             if (class_exists($translatable)) {
                 $translatable::configureUsing($translateInMarketplace);
             }
         }
+
+        // Tab-urile: Filament face cheia (?tab=documente) din etichetă. Păstrăm cheia din textul
+        // original, ca linkurile directe spre tab-uri să meargă în orice limbă, și traducem doar eticheta.
+        \Filament\Schemas\Components\Tabs\Tab::configureUsing(function (\Filament\Schemas\Components\Tabs\Tab $tab) {
+            if (filament()->getCurrentPanel()?->getId() !== 'marketplace') {
+                return;
+            }
+            $raw = $tab->getLabel();
+            if (is_string($raw) && $raw !== '') {
+                $slug = \Illuminate\Support\Str::slug(\Illuminate\Support\Str::transliterate($raw, strict: true));
+                $tab->key(function (\Filament\Schemas\Components\Tabs\Tab $component) use ($slug): string {
+                    $statePath = $component->getStatePath();
+
+                    return $slug . '::' . (filled($statePath) ? "{$statePath}::tab" : 'tab');
+                }, isInheritable: false);
+            }
+            $tab->translateLabel();
+        });
 
         // Bara de atenție a operatorilor: semnal Reverb când se schimbă ce afișează.
         foreach ([

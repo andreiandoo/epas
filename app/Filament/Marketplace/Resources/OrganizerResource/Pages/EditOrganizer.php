@@ -28,33 +28,33 @@ class EditOrganizer extends EditRecord
 
             // Secondary actions: pushed to the RIGHT via margin-left:auto on first one
             Actions\Action::make('login_as')
-                ->label('Login as Organizer')
+                ->label(__('Login as Organizer'))
                 ->icon('heroicon-o-arrow-right-on-rectangle')
                 ->color('warning')
                 ->extraAttributes(['style' => 'margin-left: auto;'])
                 ->url(fn () => url('/marketplace/organizers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
 
             Actions\Action::make('view_events')
-                ->label('View Events')
+                ->label(__('View Events'))
                 ->icon('heroicon-o-calendar')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('index', ['organizer' => $record->id])),
 
             Actions\Action::make('view_public_profile')
-                ->label('Vezi profil public')
+                ->label(__('Vezi profil public'))
                 ->icon('heroicon-o-globe-alt')
                 ->color('gray')
                 ->visible(fn () => (bool) $record->is_public && $record->getPublicProfileUrl())
                 ->url(fn () => $record->getPublicProfileUrl(), shouldOpenInNewTab: true),
 
             Actions\Action::make('vanity_urls')
-                ->label('Vanity URLs')
+                ->label(__('Vanity URLs'))
                 ->icon('heroicon-o-link')
                 ->color('gray')
                 ->url(fn () => '/marketplace/vanity-urls?tableFilters[target_type][value]=organizer', shouldOpenInNewTab: true),
 
             Actions\Action::make('create_event')
-                ->label('Create Event')
+                ->label(__('Create Event'))
                 ->icon('heroicon-o-plus')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('create', ['organizer' => $record->id])),
@@ -62,21 +62,21 @@ class EditOrganizer extends EditRecord
             // Activities module — only shown when the marketplace has the
             // `activities-module` microservice active. Ambilet/Tics never see these.
             Actions\Action::make('view_activities')
-                ->label('View Activities')
+                ->label(__('View Activities'))
                 ->icon('heroicon-o-rocket-launch')
                 ->color('gray')
                 ->visible(fn () => static::marketplaceHasMicroservice('activities-module'))
                 ->url(fn () => ActivityResource::getUrl('index', ['tableFilters[marketplace_organizer_id][value]' => $record->id])),
 
             Actions\Action::make('create_activity')
-                ->label('Create Activity')
+                ->label(__('Create Activity'))
                 ->icon('heroicon-o-plus')
                 ->color('gray')
                 ->visible(fn () => static::marketplaceHasMicroservice('activities-module'))
                 ->url(fn () => ActivityResource::getUrl('create', ['organizer' => $record->id])),
 
             Actions\Action::make('view_contract')
-                ->label('Vezi Contract')
+                ->label(__('Vezi Contract'))
                 ->icon('heroicon-o-document-text')
                 ->color('primary')
                 ->visible(fn () => \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
@@ -88,37 +88,37 @@ class EditOrganizer extends EditRecord
                     ->first()?->download_url, shouldOpenInNewTab: true),
 
             Actions\Action::make('view_balance')
-                ->label('View Balance')
+                ->label(__('View Balance'))
                 ->icon('heroicon-o-wallet')
                 ->color('warning')
                 ->url(fn () => url('/marketplace/organizers/' . $record->id . '/balance')),
 
             Actions\Action::make('create_payout')
-                ->label('Create Payout')
+                ->label(__('Create Payout'))
                 ->icon('heroicon-o-banknotes')
                 ->color('info')
                 ->visible(fn () => $record->available_balance > 0)
                 ->url(fn () => url('/marketplace/organizers/' . $record->id . '/balance')),
 
             Actions\Action::make('suspend')
-                ->label('Suspend Organizer')
+                ->label(__('Suspend Organizer'))
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
                 ->requiresConfirmation()
                 ->visible(fn () => $record->status === 'active')
                 ->action(function () use ($record) {
                     $record->update(['status' => 'suspended']);
-                    \Filament\Notifications\Notification::make()->title('Organizer suspended')->success()->send();
+                    \Filament\Notifications\Notification::make()->title(__('Organizer suspended'))->success()->send();
                 }),
 
             Actions\Action::make('reactivate')
-                ->label('Reactivate')
+                ->label(__('Reactivate'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
                 ->visible(fn () => $record->status === 'suspended')
                 ->action(function () use ($record) {
                     $record->update(['status' => 'active']);
-                    \Filament\Notifications\Notification::make()->title('Organizer reactivated')->success()->send();
+                    \Filament\Notifications\Notification::make()->title(__('Organizer reactivated'))->success()->send();
                 }),
         ];
     }
@@ -209,7 +209,7 @@ class EditOrganizer extends EditRecord
                 ->applyToAll($this->record->marketplace_client_id, $this->record->email, $password, $this->record), []);
             if ($updated) {
                 \Filament\Notifications\Notification::make()
-                    ->title('Parola a fost aplicată și celorlalte conturi')
+                    ->title(__('Parola a fost aplicată și celorlalte conturi'))
                     ->body(\App\Services\Marketplace\AccountPasswordSync::appliedNotice($updated))
                     ->success()
                     ->send();
@@ -225,7 +225,7 @@ class EditOrganizer extends EditRecord
                 'trace' => $e->getTraceAsString(),
             ]);
             \Filament\Notifications\Notification::make()
-                ->title('Tracking pixels nu au fost salvate')
+                ->title(__('Tracking pixels nu au fost salvate'))
                 ->body($e->getMessage())
                 ->danger()->send();
         }
@@ -239,7 +239,7 @@ class EditOrganizer extends EditRecord
                 'trace' => $e->getTraceAsString(),
             ]);
             \Filament\Notifications\Notification::make()
-                ->title('Facebook CAPI nu a fost salvat')
+                ->title(__('Facebook CAPI nu a fost salvat'))
                 ->body($e->getMessage())
                 ->danger()->send();
         }
@@ -252,7 +252,7 @@ class EditOrganizer extends EditRecord
                 'error' => $e->getMessage(),
             ]);
             \Filament\Notifications\Notification::make()
-                ->title('Audience subscriptions nu au fost salvate')
+                ->title(__('Audience subscriptions nu au fost salvate'))
                 ->body($e->getMessage())
                 ->danger()->send();
         }

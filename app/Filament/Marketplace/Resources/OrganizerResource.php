@@ -99,7 +99,7 @@ class OrganizerResource extends Resource
                                 ->icon('heroicon-o-user')
                                 ->schema([
 
-                    Section::make('Organizer Information')
+                    Section::make(__('Organizer Information'))
                         ->icon('heroicon-o-user')
                         ->schema([
                             Forms\Components\TextInput::make('name')
@@ -132,7 +132,7 @@ class OrganizerResource extends Resource
                                         ->exists();
                                     if ($exists) {
                                         \Filament\Notifications\Notification::make()
-                                            ->title('Email duplicat!')
+                                            ->title(__('Email duplicat!'))
                                             ->body("Adresa \"{$state}\" este deja folosită de un alt organizator.")
                                             ->warning()
                                             ->persistent()
@@ -141,7 +141,7 @@ class OrganizerResource extends Resource
                                 }),
 
                             Forms\Components\TextInput::make('password')
-                                ->label('Parolă')
+                                ->label(__('Parolă'))
                                 ->password()
                                 ->required(fn (string $context): bool => $context === 'create')
                                 ->dehydrated(fn ($state) => filled($state))
@@ -169,12 +169,12 @@ class OrganizerResource extends Resource
 
                             SC\Grid::make(2)->schema([
                                 Forms\Components\Toggle::make('is_public')
-                                    ->label('Fă profil public')
-                                    ->helperText('Activează profilul public al organizatorului pe site-ul marketplace.')
+                                    ->label(__('Fă profil public'))
+                                    ->helperText(__('Activează profilul public al organizatorului pe site-ul marketplace.'))
                                     ->live(),
 
                                 Forms\Components\Placeholder::make('public_profile_link')
-                                    ->label('Link profil public')
+                                    ->label(__('Link profil public'))
                                     ->visible(fn ($get, $record) => $get('is_public') && $record)
                                     ->content(function ($record) {
                                         if (!$record) return '—';
@@ -188,11 +188,11 @@ class OrganizerResource extends Resource
                         ])
                         ->columns(2),
 
-                    Section::make('Media')
+                    Section::make(__('Media'))
                         ->icon('heroicon-o-photo')
                         ->schema([
                             Forms\Components\FileUpload::make('logo')
-                                ->label('Logo organizator')
+                                ->label(__('Logo organizator'))
                                 ->image()
                                 ->imageResizeMode('cover')
                                 ->imageCropAspectRatio('1:1')
@@ -200,98 +200,98 @@ class OrganizerResource extends Resource
                                 ->imageResizeTargetHeight('400')
                                 ->directory('organizer-logos')
                                 ->disk('public')
-                                ->helperText('Imagine pătrată, recomandat 400×400 px.'),
+                                ->helperText(__('Imagine pătrată, recomandat 400×400 px.')),
 
                             Forms\Components\FileUpload::make('cover_image')
-                                ->label('Imagine cover')
+                                ->label(__('Imagine cover'))
                                 ->image()
                                 ->imageResizeMode('cover')
                                 ->imageResizeTargetWidth('1920')
                                 ->imageResizeTargetHeight('600')
                                 ->directory('organizer-covers')
                                 ->disk('public')
-                                ->helperText('Imagine landscape, recomandat 1920×600 px.'),
+                                ->helperText(__('Imagine landscape, recomandat 1920×600 px.')),
                         ])
                         ->columns(2),
 
-                    Section::make('Organizer Type')
+                    Section::make(__('Organizer Type'))
                         ->icon('heroicon-o-tag')
-                        ->description('Classification and work mode settings')
+                        ->description(__('Classification and work mode settings'))
                         ->schema([
                             Forms\Components\Select::make('person_type')
-                                ->label('Person Type')
+                                ->label(__('Person Type'))
                                 ->options([
-                                    'pj' => 'Persoana Juridica (Legal Entity)',
-                                    'pf' => 'Persoana Fizica (Individual)',
+                                    'pj' => __('Persoana Juridica (Legal Entity)'),
+                                    'pf' => __('Persoana Fizica (Individual)'),
                                 ])
                                 ->live()
                                 ->native(false),
 
                             Forms\Components\Select::make('work_mode')
-                                ->label('Work Mode')
+                                ->label(__('Work Mode'))
                                 ->options([
-                                    'exclusive' => 'Exclusive (sells only through this platform)',
-                                    'non_exclusive' => 'Non-Exclusive (sells through multiple channels)',
+                                    'exclusive' => __('Exclusive (sells only through this platform)'),
+                                    'non_exclusive' => __('Non-Exclusive (sells through multiple channels)'),
                                 ])
                                 ->native(false),
 
                             Forms\Components\Select::make('organizer_type')
-                                ->label('Organizer Type')
+                                ->label(__('Organizer Type'))
                                 ->options([
-                                    'agency' => 'Event Agency',
-                                    'promoter' => 'Independent Promoter',
-                                    'venue' => 'Venue / Hall',
-                                    'artist' => 'Artist / Manager',
-                                    'ngo' => 'NGO / Foundation',
-                                    'leisure' => '🏞️ Leisure Venue (rezervație, aquapark, castel, parc aventură, camping)',
-                                    'other' => 'Other',
+                                    'agency' => __('Event Agency'),
+                                    'promoter' => __('Independent Promoter'),
+                                    'venue' => __('Venue / Hall'),
+                                    'artist' => __('Artist / Manager'),
+                                    'ngo' => __('NGO / Foundation'),
+                                    'leisure' => __('🏞️ Leisure Venue (rezervație, aquapark, castel, parc aventură, camping)'),
+                                    'other' => __('Other'),
                                 ])
                                 ->live()
-                                ->helperText('Pentru "Leisure Venue" se aplică un panou self-service custom (dashboard live, POS, schimburi echipă, raportare detaliată).')
+                                ->helperText(__('Pentru "Leisure Venue" se aplică un panou self-service custom (dashboard live, POS, schimburi echipă, raportare detaliată).'))
                                 ->native(false),
                             Forms\Components\Select::make('leisure_template_variant')
-                                ->label('Template pagină publică (variant)')
+                                ->label(__('Template pagină publică (variant)'))
                                 ->options([
-                                    'reserve'   => '🌲 Rezervație naturală / parc (Sf. Ana style)',
-                                    'aquapark'  => '💦 Aquapark / Ștrand',
-                                    'castle'    => '🏰 Castel / Muzeu',
-                                    'adventure' => '🧗 Parc aventură / Karting',
-                                    'camping'   => '🏕️ Camping standalone',
+                                    'reserve'   => __('🌲 Rezervație naturală / parc (Sf. Ana style)'),
+                                    'aquapark'  => __('💦 Aquapark / Ștrand'),
+                                    'castle'    => __('🏰 Castel / Muzeu'),
+                                    'adventure' => __('🧗 Parc aventură / Karting'),
+                                    'camping'   => __('🏕️ Camping standalone'),
                                 ])
-                                ->placeholder('Lasă gol pentru template default (rezervație)')
-                                ->helperText('Determină ce variantă de layout/temă vizuală se folosește pe pagina publică. Va fi extins în viitor (vezi LEISURE_TEMPLATES_PLAN.md).')
+                                ->placeholder(__('Lasă gol pentru template default (rezervație)'))
+                                ->helperText(__('Determină ce variantă de layout/temă vizuală se folosește pe pagina publică. Va fi extins în viitor (vezi LEISURE_TEMPLATES_PLAN.md).'))
                                 ->native(false)
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('organizer_type') === 'leisure')
                                 ->columnSpan(3),
                         ])
                         ->columns(3),
 
-                    Section::make('Widget & Embed')
+                    Section::make(__('Widget & Embed'))
                         ->icon('heroicon-o-code-bracket')
-                        ->description('Configurare domenii permise pentru widget-uri embed. Organizatorul va putea genera coduri de embed din dashboardul propriu doar dacă are cel puțin un domeniu configurat.')
+                        ->description(__('Configurare domenii permise pentru widget-uri embed. Organizatorul va putea genera coduri de embed din dashboardul propriu doar dacă are cel puțin un domeniu configurat.'))
                         ->collapsed()
                         ->schema([
                             Forms\Components\Toggle::make('settings.widget_enabled')
-                                ->label('Activează widget-uri embed')
-                                ->helperText('Permite organizatorului să genereze coduri de widget pentru site-ul propriu')
+                                ->label(__('Activează widget-uri embed'))
+                                ->helperText(__('Permite organizatorului să genereze coduri de widget pentru site-ul propriu'))
                                 ->default(false)
                                 ->live(),
                             Forms\Components\TagsInput::make('settings.embed_domains')
-                                ->label('Domenii permise pentru embed')
-                                ->placeholder('ex: https://site-organizator.ro')
-                                ->helperText('Domeniile unde organizatorul poate folosi widget-urile. iframe-ul va fi blocat pe alte domenii. Format: https://domeniu.ro sau *.domeniu.ro pentru toate subdomeniile')
+                                ->label(__('Domenii permise pentru embed'))
+                                ->placeholder(__('ex: https://site-organizator.ro'))
+                                ->helperText(__('Domeniile unde organizatorul poate folosi widget-urile. iframe-ul va fi blocat pe alte domenii. Format: https://domeniu.ro sau *.domeniu.ro pentru toate subdomeniile'))
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
                             // Where we ping the organizer's own site when one of its events changes
                             Forms\Components\TextInput::make('settings.site_sync_url')
-                                ->label('URL notificări site organizator')
+                                ->label(__('URL notificări site organizator'))
                                 ->url()
                                 ->rule('starts_with:https://')
-                                ->placeholder('ex: https://qfeel.ro/wp-json/qfeel-manager/v1/ambilet/notify')
-                                ->helperText('Opțional. La fiecare modificare a unui eveniment al organizatorului, trimitem aici un semnal semnat cu cheia whitelabel, iar site-ul își citește singur datele. Doar https.')
+                                ->placeholder(__('ex: https://qfeel.ro/wp-json/qfeel-manager/v1/ambilet/notify'))
+                                ->helperText(__('Opțional. La fiecare modificare a unui eveniment al organizatorului, trimitem aici un semnal semnat cu cheia whitelabel, iar site-ul își citește singur datele. Doar https.'))
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
                             // Aceeași afacere pe mai multe firme: site-ul whitelabel vinde și evenimentele lor
                             Forms\Components\Select::make('settings.linked_organizer_ids')
-                                ->label('Organizatori asociați pe site-ul whitelabel')
+                                ->label(__('Organizatori asociați pe site-ul whitelabel'))
                                 ->multiple()
                                 ->searchable()
                                 ->options(function (?MarketplaceOrganizer $record) {
@@ -306,7 +306,7 @@ class OrganizerResource extends Resource
                                         ->all();
                                 })
                                 ->dehydrateStateUsing(fn ($state) => array_values(array_unique(array_filter(array_map('intval', (array) $state)))))
-                                ->helperText('Opțional. Site-ul whitelabel al acestui organizator (cheia wlk_ și sincronizarea cu site-ul lui) va arăta și vinde și evenimentele organizatorilor aleși aici. Comenzile, decontul și facturile rămân pe organizatorul fiecărui eveniment. Site-ul le preia la următoarea sincronizare completă.')
+                                ->helperText(__('Opțional. Site-ul whitelabel al acestui organizator (cheia wlk_ și sincronizarea cu site-ul lui) va arăta și vinde și evenimentele organizatorilor aleși aici. Comenzile, decontul și facturile rămân pe organizatorul fiecărui eveniment. Site-ul le preia la următoarea sincronizare completă.'))
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
                         ]),
 
@@ -321,44 +321,44 @@ class OrganizerResource extends Resource
                     // Shown only for Persoana Fizica. Feeds document-generation
                     // variables (Impozit spectacole, Decont, PV, etc.) instead of
                     // the Company Information fields when person_type === 'pf'.
-                    Section::make('Individual Information')
+                    Section::make(__('Individual Information'))
                         ->icon('heroicon-o-user')
-                        ->description('Date persoană fizică — folosite la generarea documentelor când tipul este Persoană Fizică.')
+                        ->description(__('Date persoană fizică — folosite la generarea documentelor când tipul este Persoană Fizică.'))
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('person_type') === 'pf')
                         ->schema([
                             Forms\Components\TextInput::make('individual_full_name')
-                                ->label('Nume complet')
+                                ->label(__('Nume complet'))
                                 ->maxLength(255)
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('individual_cnp')
-                                ->label('CNP')
+                                ->label(__('CNP'))
                                 ->maxLength(13)
-                                ->helperText('13 cifre'),
+                                ->helperText(__('13 cifre')),
 
                             Forms\Components\TextInput::make('individual_id_series_number')
-                                ->label('Serie & nr buletin')
+                                ->label(__('Serie & nr buletin'))
                                 ->maxLength(40)
-                                ->placeholder('ex: AB 123456')
+                                ->placeholder(__('ex: AB 123456'))
                                 ->extraInputAttributes(['style' => 'text-transform: uppercase']),
 
                             Forms\Components\Textarea::make('individual_address')
-                                ->label('Adresă')
+                                ->label(__('Adresă'))
                                 ->rows(2)
                                 ->columnSpanFull(),
 
                             SC\Grid::make(3)
                                 ->schema([
                                     Forms\Components\TextInput::make('individual_city')
-                                        ->label('Oraș')
+                                        ->label(__('Oraș'))
                                         ->maxLength(100),
 
                                     Forms\Components\TextInput::make('individual_county')
-                                        ->label('Județ')
+                                        ->label(__('Județ'))
                                         ->maxLength(100),
 
                                     Forms\Components\TextInput::make('individual_country')
-                                        ->label('Țară')
+                                        ->label(__('Țară'))
                                         ->maxLength(100)
                                         ->default('România'),
                                 ])
@@ -366,127 +366,127 @@ class OrganizerResource extends Resource
                         ])
                         ->columns(2),
 
-                    Section::make('Company Information')
+                    Section::make(__('Company Information'))
                         ->icon('heroicon-o-building-office')
-                        ->description('Legal entity details (for Persoana Juridica)')
+                        ->description(__('Legal entity details (for Persoana Juridica)'))
                         ->schema([
                             Forms\Components\TextInput::make('company_name')
                                 ->maxLength(255),
 
                             Forms\Components\TextInput::make('company_tax_id')
-                                ->label('CUI / Tax ID')
+                                ->label(__('CUI / Tax ID'))
                                 ->maxLength(50),
 
                             Forms\Components\TextInput::make('company_registration')
-                                ->label('Reg. Com. Number')
+                                ->label(__('Reg. Com. Number'))
                                 ->maxLength(100),
 
                             Forms\Components\Toggle::make('vat_payer')
-                                ->label('VAT Payer')
-                                ->helperText('Is the company a VAT payer?'),
+                                ->label(__('VAT Payer'))
+                                ->helperText(__('Is the company a VAT payer?')),
 
                             Forms\Components\Textarea::make('company_address')
-                                ->label('Company Address')
+                                ->label(__('Company Address'))
                                 ->rows(2)
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('company_city')
-                                ->label('City')
+                                ->label(__('City'))
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('company_county')
-                                ->label('County')
+                                ->label(__('County'))
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('company_zip')
-                                ->label('Postal Code')
+                                ->label(__('Postal Code'))
                                 ->maxLength(20),
 
                             Forms\Components\TextInput::make('representative_first_name')
-                                ->label('Representative First Name')
+                                ->label(__('Representative First Name'))
                                 ->maxLength(100)
-                                ->helperText('Legal representative'),
+                                ->helperText(__('Legal representative')),
 
                             Forms\Components\TextInput::make('representative_last_name')
-                                ->label('Representative Last Name')
+                                ->label(__('Representative Last Name'))
                                 ->maxLength(100),
                         ])
                         ->columns(2),
 
-                    Section::make('Guarantor / Personal Details')
+                    Section::make(__('Guarantor / Personal Details'))
                         ->icon('heroicon-o-identification')
-                        ->description('Personal identification for contract purposes')
+                        ->description(__('Personal identification for contract purposes'))
                         ->schema([
                             Forms\Components\TextInput::make('guarantor_first_name')
-                                ->label('First Name')
+                                ->label(__('First Name'))
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('guarantor_last_name')
-                                ->label('Last Name')
+                                ->label(__('Last Name'))
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('guarantor_cnp')
-                                ->label('CNP (Personal ID Number)')
+                                ->label(__('CNP (Personal ID Number)'))
                                 ->maxLength(13)
-                                ->helperText('13 digit Romanian CNP'),
+                                ->helperText(__('13 digit Romanian CNP')),
 
                             Forms\Components\TextInput::make('guarantor_address')
-                                ->label('Home Address')
+                                ->label(__('Home Address'))
                                 ->maxLength(255),
 
                             Forms\Components\TextInput::make('guarantor_city')
-                                ->label('City')
+                                ->label(__('City'))
                                 ->maxLength(100),
 
                             Forms\Components\Select::make('guarantor_id_type')
-                                ->label('ID Document Type')
+                                ->label(__('ID Document Type'))
                                 ->options([
-                                    'ci' => 'Carte de Identitate (CI)',
-                                    'bi' => 'Buletin de Identitate (BI)',
+                                    'ci' => __('Carte de Identitate (CI)'),
+                                    'bi' => __('Buletin de Identitate (BI)'),
                                 ])
                                 ->native(false),
 
                             Forms\Components\TextInput::make('guarantor_id_series')
-                                ->label('ID Series')
+                                ->label(__('ID Series'))
                                 ->maxLength(2)
                                 ->extraInputAttributes(['style' => 'text-transform: uppercase']),
 
                             Forms\Components\TextInput::make('guarantor_id_number')
-                                ->label('ID Number')
+                                ->label(__('ID Number'))
                                 ->maxLength(7),
 
                             Forms\Components\TextInput::make('guarantor_id_issued_by')
-                                ->label('Issued By')
+                                ->label(__('Issued By'))
                                 ->maxLength(100)
-                                ->helperText('e.g., SPCLEP Sector 1'),
+                                ->helperText(__('e.g., SPCLEP Sector 1')),
 
                             Forms\Components\DatePicker::make('guarantor_id_issued_date')
-                                ->label('Issue Date')
+                                ->label(__('Issue Date'))
                                 ->native(false),
                         ])
                         ->columns(2),
 
-                    Section::make('Uploaded Documents')
+                    Section::make(__('Uploaded Documents'))
                         ->icon('heroicon-o-document-arrow-up')
-                        ->description('Identity and company documents for verification')
+                        ->description(__('Identity and company documents for verification'))
                         ->schema([
                             Forms\Components\FileUpload::make('id_card_document')
-                                ->label('CI / ID Card Copy')
+                                ->label(__('CI / ID Card Copy'))
                                 ->disk('public')
                                 ->directory('organizer-documents')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120)
-                                ->helperText('Personal ID card for the guarantor/representative')
+                                ->helperText(__('Personal ID card for the guarantor/representative'))
                                 ->downloadable()
                                 ->openable(),
 
                             Forms\Components\FileUpload::make('cui_document')
-                                ->label('CUI / Company Registration Copy')
+                                ->label(__('CUI / Company Registration Copy'))
                                 ->disk('public')
                                 ->directory('organizer-documents')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(5120)
-                                ->helperText('Company registration certificate (CUI)')
+                                ->helperText(__('Company registration certificate (CUI)'))
                                 ->downloadable()
                                 ->openable(),
                         ])
@@ -500,28 +500,28 @@ class OrganizerResource extends Resource
                             return 'Împuternicire ' . $marketplaceName;
                         })
                         ->icon('heroicon-o-shield-check')
-                        ->description('Organizatorul împuternicește marketplace-ul prin intermediul unui reprezentant.')
+                        ->description(__('Organizatorul împuternicește marketplace-ul prin intermediul unui reprezentant.'))
                         ->schema([
                             Forms\Components\Toggle::make('has_proxy_authorization')
-                                ->label('Există împuternicire')
+                                ->label(__('Există împuternicire'))
                                 ->default(false)
                                 ->live()
                                 ->columnSpanFull(),
 
                             Forms\Components\FileUpload::make('proxy_authorization_file')
-                                ->label('Document de împuternicire')
+                                ->label(__('Document de împuternicire'))
                                 ->disk('public')
                                 ->directory('organizer-documents/proxy-authorizations')
                                 ->acceptedFileTypes(['image/*', 'application/pdf'])
                                 ->maxSize(10240)
                                 ->downloadable()
                                 ->openable()
-                                ->helperText('Drag & drop documentul de împuternicire (PDF sau imagine)')
+                                ->helperText(__('Drag & drop documentul de împuternicire (PDF sau imagine)'))
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
                                 ->columnSpanFull(),
 
                             Forms\Components\Select::make('proxy_admin_id')
-                                ->label('Împuternicit din partea marketplace')
+                                ->label(__('Împuternicit din partea marketplace'))
                                 ->options(function () {
                                     $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
                                     return \App\Models\MarketplaceAdmin::query()
@@ -533,8 +533,8 @@ class OrganizerResource extends Resource
                                         ->toArray();
                                 })
                                 ->searchable()
-                                ->placeholder('Selectează împuternicitul')
-                                ->helperText('Doar admin-ii cu datele de împuternicit completate apar în listă')
+                                ->placeholder(__('Selectează împuternicitul'))
+                                ->helperText(__('Doar admin-ii cu datele de împuternicit completate apar în listă'))
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
                                 ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
                                 ->columnSpanFull(),
@@ -547,7 +547,7 @@ class OrganizerResource extends Resource
                                         ?? 'Marketplace';
                                     return $marketplaceName . ' gestionează documente';
                                 })
-                                ->helperText('Activ: cererea de vizare, impozitul și PV-ul de distrugere le pregătim și le depunem noi. Inactiv: rămân în grija organizatorului.')
+                                ->helperText(__('Activ: cererea de vizare, impozitul și PV-ul de distrugere le pregătim și le depunem noi. Inactiv: rămân în grija organizatorului.'))
                                 ->default(false)
                                 ->live()
                                 ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {
@@ -560,7 +560,7 @@ class OrganizerResource extends Resource
                                 ->columnSpanFull(),
 
                             Forms\Components\Select::make('document_filing_exceptions')
-                                ->label('Excepții de depunere')
+                                ->label(__('Excepții de depunere'))
                                 ->multiple()
                                 ->searchable()
                                 ->preload()
@@ -583,7 +583,7 @@ class OrganizerResource extends Resource
                                         $component->state(self::defaultFilingExceptions());
                                     }
                                 })
-                                ->helperText('Direcțiile fiscale unde nu putem depune în numele organizatorului. Pentru evenimentele de acolo documentele le putem genera, dar depunerea o face organizatorul.')
+                                ->helperText(__('Direcțiile fiscale unde nu putem depune în numele organizatorului. Pentru evenimentele de acolo documentele le putem genera, dar depunerea o face organizatorul.'))
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('marketplace_manages_documents'))
                                 ->columnSpanFull(),
                         ]),
@@ -596,9 +596,9 @@ class OrganizerResource extends Resource
                                 ->icon('heroicon-o-banknotes')
                                 ->schema([
 
-                    Section::make('Bank Accounts')
+                    Section::make(__('Bank Accounts'))
                         ->icon('heroicon-o-credit-card')
-                        ->description('Manage organizer bank accounts for payouts. The primary account will be used for payments.')
+                        ->description(__('Manage organizer bank accounts for payouts. The primary account will be used for payments.'))
                         ->schema([
                             Forms\Components\Placeholder::make('bank_accounts_list')
                                 ->hiddenLabel()
@@ -609,15 +609,15 @@ class OrganizerResource extends Resource
                                 ->relationship('bankAccounts')
                                 ->schema([
                                     Forms\Components\TextInput::make('bank_name')
-                                        ->label('Bank Name')
+                                        ->label(__('Bank Name'))
                                         ->required()
                                         ->maxLength(100)
-                                        ->placeholder('e.g., ING Bank, BRD, BCR'),
+                                        ->placeholder(__('e.g., ING Bank, BRD, BCR')),
                                     Forms\Components\TextInput::make('iban')
-                                        ->label('IBAN')
+                                        ->label(__('IBAN'))
                                         ->required()
                                         ->maxLength(34)
-                                        ->placeholder('RO49AAAA1B31007593840000')
+                                        ->placeholder(__('RO49AAAA1B31007593840000'))
                                         ->dehydrateStateUsing(fn ($state) => strtoupper(preg_replace('/\s+/', '', $state ?? '')))
                                         ->live(onBlur: true)
                                         ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set, $component) => $set($component->getStatePath(false), strtoupper(preg_replace('/\s+/', '', $state ?? ''))))
@@ -626,16 +626,16 @@ class OrganizerResource extends Resource
                                             'regex' => 'Invalid IBAN format. Must start with 2 letters, 2 digits, then alphanumeric characters.',
                                         ]),
                                     Forms\Components\TextInput::make('account_holder')
-                                        ->label('Account Holder')
+                                        ->label(__('Account Holder'))
                                         ->required()
                                         ->maxLength(255)
-                                        ->placeholder('Account holder name'),
+                                        ->placeholder(__('Account holder name')),
                                     Forms\Components\Toggle::make('is_primary')
-                                        ->label('Primary Account')
-                                        ->helperText('This account will be used for payouts'),
+                                        ->label(__('Primary Account'))
+                                        ->helperText(__('This account will be used for payouts')),
                                 ])
                                 ->columns(4)
-                                ->addActionLabel('Add Bank Account')
+                                ->addActionLabel(__('Add Bank Account'))
                                 ->reorderable(false)
                                 ->defaultItems(0)
                                 ->minItems(0)
@@ -646,34 +646,34 @@ class OrganizerResource extends Resource
                                 ->extraAttributes(['class' => 'bank-accounts-repeater']),
                         ]),
 
-                    Section::make('Contract Details')
+                    Section::make(__('Contract Details'))
                         ->icon('heroicon-o-document-check')
-                        ->description('Contract number/series and date. Auto-filled when a contract is generated, but can be overridden by admin.')
+                        ->description(__('Contract number/series and date. Auto-filled when a contract is generated, but can be overridden by admin.'))
                         ->schema([
                             Forms\Components\TextInput::make('contract_number_series')
-                                ->label('Contract Number & Series')
+                                ->label(__('Contract Number & Series'))
                                 ->maxLength(50)
-                                ->placeholder('e.g., AMB/1322')
-                                ->helperText('Auto-filled on contract generation. Format: PREFIX/NUMBER'),
+                                ->placeholder(__('e.g., AMB/1322'))
+                                ->helperText(__('Auto-filled on contract generation. Format: PREFIX/NUMBER')),
 
                             Forms\Components\DatePicker::make('contract_date')
-                                ->label('Contract Date')
+                                ->label(__('Contract Date'))
                                 ->native(false)
                                 ->minDate('2000-01-01')
-                                ->helperText('Auto-filled on contract generation date'),
+                                ->helperText(__('Auto-filled on contract generation date')),
 
                             Forms\Components\TextInput::make('invoice_due_days')
-                                ->label('Zile scadență facturi')
+                                ->label(__('Zile scadență facturi'))
                                 ->numeric()
                                 ->minValue(1)
                                 ->maxValue(365)
                                 ->suffix('zile')
-                                ->placeholder('Default din setări')
-                                ->helperText('Suprascrie setarea globală de zile scadență. Lasă gol pentru a folosi valoarea din Setări.'),
+                                ->placeholder(__('Default din setări'))
+                                ->helperText(__('Suprascrie setarea globală de zile scadență. Lasă gol pentru a folosi valoarea din Setări.')),
 
                             // Download for the system-generated contract (organizer_documents).
                             Forms\Components\Placeholder::make('generated_contract_download')
-                                ->label('Contract generat de sistem')
+                                ->label(__('Contract generat de sistem'))
                                 ->columnSpanFull()
                                 ->visible(fn ($record) => $record && \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
                                     ->where('document_type', 'organizer_contract')
@@ -709,8 +709,8 @@ class OrganizerResource extends Resource
                             // contract for. Filament's FileUpload gives native download +
                             // delete on the uploaded file.
                             Forms\Components\FileUpload::make('contract_document')
-                                ->label('Încarcă contract (manual)')
-                                ->helperText('Pentru organizatorii cărora sistemul nu le-a generat un contract. După încărcare poate fi descărcat sau șters.')
+                                ->label(__('Încarcă contract (manual)'))
+                                ->helperText(__('Pentru organizatorii cărora sistemul nu le-a generat un contract. După încărcare poate fi descărcat sau șters.'))
                                 ->columnSpanFull()
                                 ->disk('public')
                                 ->directory('organizer-contracts')
@@ -726,51 +726,51 @@ class OrganizerResource extends Resource
                         ->columns(2),
 
                     // ── A doua societate emitentă (cazul Lacul Sf. Ana) ──
-                    Section::make('A doua societate emitentă')
+                    Section::make(__('A doua societate emitentă'))
                         ->icon('heroicon-o-building-office-2')
-                        ->description('Activează dacă organizatorul are 2 societăți distincte care emit facturi (ex: bilete acces pe SC1, servicii conexe pe SC2). În formularul tipurilor de bilete poți alege pentru fiecare bilet ce societate emite factura.')
+                        ->description(__('Activează dacă organizatorul are 2 societăți distincte care emit facturi (ex: bilete acces pe SC1, servicii conexe pe SC2). În formularul tipurilor de bilete poți alege pentru fiecare bilet ce societate emite factura.'))
                         ->schema([
                             Forms\Components\Toggle::make('has_secondary_issuer')
-                                ->label('Activează a doua societate')
-                                ->helperText('Lasă dezactivat dacă organizatorul are o singură societate.')
+                                ->label(__('Activează a doua societate'))
+                                ->helperText(__('Lasă dezactivat dacă organizatorul are o singură societate.'))
                                 ->live()
                                 ->columnSpanFull(),
 
                             SC\Group::make([
                                 Forms\Components\TextInput::make('secondary_company_name')
-                                    ->label('Denumire societate')
+                                    ->label(__('Denumire societate'))
                                     ->maxLength(255)
-                                    ->placeholder('ex: SC Servicii Sf. Ana SRL')
+                                    ->placeholder(__('ex: SC Servicii Sf. Ana SRL'))
                                     ->columnSpan(2),
                                 Forms\Components\TextInput::make('secondary_company_tax_id')
-                                    ->label('CUI / CIF')
+                                    ->label(__('CUI / CIF'))
                                     ->maxLength(32)
-                                    ->placeholder('RO12345678'),
+                                    ->placeholder(__('RO12345678')),
                                 Forms\Components\TextInput::make('secondary_company_registration')
-                                    ->label('Nr. Reg. Comerț')
+                                    ->label(__('Nr. Reg. Comerț'))
                                     ->maxLength(32)
-                                    ->placeholder('J40/1234/2020'),
+                                    ->placeholder(__('J40/1234/2020')),
                                 Forms\Components\Textarea::make('secondary_company_address')
-                                    ->label('Adresă sediu')
+                                    ->label(__('Adresă sediu'))
                                     ->rows(2)
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('secondary_company_city')
-                                    ->label('Oraș')
+                                    ->label(__('Oraș'))
                                     ->maxLength(100),
                                 Forms\Components\TextInput::make('secondary_company_county')
-                                    ->label('Județ')
+                                    ->label(__('Județ'))
                                     ->maxLength(100),
                                 Forms\Components\TextInput::make('secondary_company_zip')
-                                    ->label('Cod poștal')
+                                    ->label(__('Cod poștal'))
                                     ->maxLength(20),
                                 Forms\Components\TextInput::make('secondary_bank_name')
-                                    ->label('Bancă')
+                                    ->label(__('Bancă'))
                                     ->maxLength(255)
                                     ->columnSpan(1),
                                 Forms\Components\TextInput::make('secondary_iban')
-                                    ->label('IBAN')
+                                    ->label(__('IBAN'))
                                     ->maxLength(34)
-                                    ->placeholder('RO49...')
+                                    ->placeholder(__('RO49...'))
                                     ->dehydrateStateUsing(fn ($state) => $state ? strtoupper(preg_replace('/\s+/', '', $state)) : null)
                                     ->columnSpan(2),
                             ])
@@ -781,31 +781,31 @@ class OrganizerResource extends Resource
                             // Numerotare facturi separată
                             SC\Group::make([
                                 Forms\Components\TextInput::make('primary_invoice_series')
-                                    ->label('Serie facturi — societate principală')
+                                    ->label(__('Serie facturi — societate principală'))
                                     ->maxLength(16)
-                                    ->placeholder('ex: LSA-A'),
+                                    ->placeholder(__('ex: LSA-A')),
                                 Forms\Components\TextInput::make('primary_last_invoice_number')
-                                    ->label('Ultim nr. factură principală')
+                                    ->label(__('Ultim nr. factură principală'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->default(0)
-                                    ->helperText('Atenție: modifică doar la migrarea unei numerotări existente.'),
+                                    ->helperText(__('Atenție: modifică doar la migrarea unei numerotări existente.')),
                                 Forms\Components\TextInput::make('secondary_invoice_series')
-                                    ->label('Serie facturi — societate secundară')
+                                    ->label(__('Serie facturi — societate secundară'))
                                     ->maxLength(16)
-                                    ->placeholder('ex: LSA-S'),
+                                    ->placeholder(__('ex: LSA-S')),
                                 Forms\Components\TextInput::make('secondary_last_invoice_number')
-                                    ->label('Ultim nr. factură secundară')
+                                    ->label(__('Ultim nr. factură secundară'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->default(0),
                                 Forms\Components\Toggle::make('secondary_vat_payer')
-                                    ->label('Plătitoare de TVA — societate secundară')
-                                    ->helperText('Bifează dacă a doua societate emitentă este plătitoare de TVA (decontul/factura ei va include TVA).')
+                                    ->label(__('Plătitoare de TVA — societate secundară'))
+                                    ->helperText(__('Bifează dacă a doua societate emitentă este plătitoare de TVA (decontul/factura ei va include TVA).'))
                                     ->live()
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('secondary_vat_rate')
-                                    ->label('Cotă TVA secundară (%)')
+                                    ->label(__('Cotă TVA secundară (%)'))
                                     ->numeric()
                                     ->minValue(0)
                                     ->maxValue(100)
@@ -813,11 +813,11 @@ class OrganizerResource extends Resource
                                     ->suffix('%')
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('secondary_vat_payer')),
                                 Forms\Components\TextInput::make('secondary_contract_number_series')
-                                    ->label('Nr./serie contract — societate secundară')
+                                    ->label(__('Nr./serie contract — societate secundară'))
                                     ->maxLength(64)
-                                    ->placeholder('ex: CSA-123'),
+                                    ->placeholder(__('ex: CSA-123')),
                                 Forms\Components\DatePicker::make('secondary_contract_date')
-                                    ->label('Dată contract — societate secundară')
+                                    ->label(__('Dată contract — societate secundară'))
                                     ->native(false)
                                     ->displayFormat('d.m.Y'),
                             ])
@@ -835,13 +835,13 @@ class OrganizerResource extends Resource
                                 ->icon('heroicon-o-ticket')
                                 ->schema([
 
-                    Section::make('Termeni și Condiții Bilete')
+                    Section::make(__('Termeni și Condiții Bilete'))
                         ->icon('heroicon-o-document-text')
-                        ->description('Acești termeni vor fi preluați automat în câmpul "Termeni bilete" când creați un eveniment nou pentru acest organizator')
+                        ->description(__('Acești termeni vor fi preluați automat în câmpul "Termeni bilete" când creați un eveniment nou pentru acest organizator'))
                         ->schema([
                             Forms\Components\RichEditor::make('ticket_terms')
-                                ->label('Termeni și condiții standard')
-                                ->helperText('Textul de aici va fi copiat automat în secțiunea Ticket Terms la crearea unui eveniment')
+                                ->label(__('Termeni și condiții standard'))
+                                ->helperText(__('Textul de aici va fi copiat automat în secțiunea Ticket Terms la crearea unui eveniment'))
                                 ->toolbarButtons([
                                     'bold',
                                     'italic',
@@ -858,127 +858,127 @@ class OrganizerResource extends Resource
                                 ])
                                 ->columnSpanFull(),
 
-                            Section::make('Feature Access')
+                            Section::make(__('Feature Access'))
                                 ->icon('heroicon-o-cog-6-tooth')
                                 ->schema([
                                     Forms\Components\Toggle::make('gamification_enabled')
-                                        ->label('Gamification Enabled')
-                                        ->helperText('Allow this organizer to use customer points for discounts on their events'),
+                                        ->label(__('Gamification Enabled'))
+                                        ->helperText(__('Allow this organizer to use customer points for discounts on their events')),
 
                                     Forms\Components\Toggle::make('invitations_enabled')
-                                        ->label('Invitations Enabled')
+                                        ->label(__('Invitations Enabled'))
                                         ->default(true)
-                                        ->helperText('Allow this organizer to create and manage event invitations'),
+                                        ->helperText(__('Allow this organizer to create and manage event invitations')),
 
                                     Forms\Components\Toggle::make('allow_live_edits')
-                                        ->label('Permite modificări live')
+                                        ->label(__('Permite modificări live'))
                                         ->default(false)
-                                        ->helperText('Când e bifat, organizatorul poate modifica evenimentele deja publicate (live) direct din contul lui, iar modificările se publică imediat — fără să mai treacă prin aprobare.'),
+                                        ->helperText(__('Când e bifat, organizatorul poate modifica evenimentele deja publicate (live) direct din contul lui, iar modificările se publică imediat — fără să mai treacă prin aprobare.')),
                                 ])
                                 ->columns(2),
 
-                            Section::make('Extra Servicii')
+                            Section::make(__('Extra Servicii'))
                                 ->icon('heroicon-o-puzzle-piece')
-                                ->description('Activare/dezactivare servicii extra și model de pricing per organizator')
+                                ->description(__('Activare/dezactivare servicii extra și model de pricing per organizator'))
                                 ->schema([
                                     Forms\Components\Toggle::make('service_settings.featuring_enabled')
-                                        ->label('Promovare Eveniment')
+                                        ->label(__('Promovare Eveniment'))
                                         ->default(true)
                                         ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
-                                        ->helperText('Permite organizatorului să promoveze evenimente pe platformă'),
+                                        ->helperText(__('Permite organizatorului să promoveze evenimente pe platformă')),
 
                                     Forms\Components\Toggle::make('service_settings.email_enabled')
-                                        ->label('Email Marketing')
+                                        ->label(__('Email Marketing'))
                                         ->default(true)
                                         ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
-                                        ->helperText('Permite organizatorului să trimită campanii email'),
+                                        ->helperText(__('Permite organizatorului să trimită campanii email')),
 
                                     Forms\Components\Toggle::make('service_settings.tracking_enabled')
-                                        ->label('Ad Tracking')
+                                        ->label(__('Ad Tracking'))
                                         ->default(true)
                                         ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
                                         ->live()
-                                        ->helperText('Permite organizatorului să folosească tracking pentru campanii'),
+                                        ->helperText(__('Permite organizatorului să folosească tracking pentru campanii')),
 
                                     Forms\Components\Select::make('service_settings.tracking_pricing_model')
-                                        ->label('Model pricing Tracking')
+                                        ->label(__('Model pricing Tracking'))
                                         ->options([
-                                            'monthly' => 'Lunar',
-                                            'biannual' => 'Bianual (6 luni)',
-                                            'annual' => 'Anual (12 luni)',
-                                            'one_time' => 'One-time (plată unică)',
+                                            'monthly' => __('Lunar'),
+                                            'biannual' => __('Bianual (6 luni)'),
+                                            'annual' => __('Anual (12 luni)'),
+                                            'one_time' => __('One-time (plată unică)'),
                                         ])
                                         ->default('monthly')
                                         ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? 'monthly'))
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('service_settings.tracking_enabled'))
-                                        ->helperText('Modelul de pricing aplicat acestui organizator pentru serviciul de tracking'),
+                                        ->helperText(__('Modelul de pricing aplicat acestui organizator pentru serviciul de tracking')),
 
                                     Forms\Components\Toggle::make('service_settings.campaign_enabled')
-                                        ->label('Creare Campanii')
+                                        ->label(__('Creare Campanii'))
                                         ->default(true)
                                         ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
-                                        ->helperText('Permite organizatorului să comande servicii de creare campanii'),
+                                        ->helperText(__('Permite organizatorului să comande servicii de creare campanii')),
 
                                     Forms\Components\Toggle::make('service_settings.mobile_card_nfc_enabled')
-                                        ->label('Card prin NFC (mobile POS)')
+                                        ->label(__('Card prin NFC (mobile POS)'))
                                         ->default(false)
                                         ->afterStateHydrated(fn ($component, $state) => $component->state((bool) $state))
-                                        ->helperText('Adaugă în aplicația mobilă un buton "Card prin NFC" (plată Stripe Tap). Lasă oprit dacă organizatorul nu are NFC configurat — flow-ul normal Card POS (cu confirmare manuală) rămâne disponibil oricum.'),
+                                        ->helperText(__('Adaugă în aplicația mobilă un buton "Card prin NFC" (plată Stripe Tap). Lasă oprit dacă organizatorul nu are NFC configurat — flow-ul normal Card POS (cu confirmare manuală) rămâne disponibil oricum.')),
                                 ])
                                 ->columns(2),
 
-                            Section::make('Pixeli organizator')
+                            Section::make(__('Pixeli organizator'))
                                 ->icon('heroicon-o-chart-bar')
-                                ->description('Coduri de tracking proprii ale organizatorului. Sunt injectate suplimentar față de pixelii marketplace pe paginile evenimentelor sale, cart, checkout și thank-you.')
+                                ->description(__('Coduri de tracking proprii ale organizatorului. Sunt injectate suplimentar față de pixelii marketplace pe paginile evenimentelor sale, cart, checkout și thank-you.'))
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('service_settings.tracking_enabled'))
                                 ->schema([
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\Toggle::make('tracking_integrations.ga4_enabled')
-                                            ->label('Google Analytics 4')
+                                            ->label(__('Google Analytics 4'))
                                             ->live(),
                                         Forms\Components\TextInput::make('tracking_integrations.ga4_id')
-                                            ->label('GA4 Measurement ID')
-                                            ->placeholder('G-XXXXXXXXXX')
+                                            ->label(__('GA4 Measurement ID'))
+                                            ->placeholder(__('G-XXXXXXXXXX'))
                                             ->maxLength(20)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.ga4_enabled')),
                                     ]),
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\Toggle::make('tracking_integrations.gtm_enabled')
-                                            ->label('Google Tag Manager')
+                                            ->label(__('Google Tag Manager'))
                                             ->live(),
                                         Forms\Components\TextInput::make('tracking_integrations.gtm_id')
-                                            ->label('GTM Container ID')
-                                            ->placeholder('GTM-XXXXXX')
+                                            ->label(__('GTM Container ID'))
+                                            ->placeholder(__('GTM-XXXXXX'))
                                             ->maxLength(15)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.gtm_enabled')),
                                     ]),
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\Toggle::make('tracking_integrations.meta_enabled')
-                                            ->label('Meta (Facebook) Pixel')
+                                            ->label(__('Meta (Facebook) Pixel'))
                                             ->live(),
                                         Forms\Components\TextInput::make('tracking_integrations.meta_id')
-                                            ->label('Meta Pixel ID')
+                                            ->label(__('Meta Pixel ID'))
                                             ->placeholder('1234567890123456')
                                             ->maxLength(20)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.meta_enabled')),
                                     ]),
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\Toggle::make('tracking_integrations.tiktok_enabled')
-                                            ->label('TikTok Pixel')
+                                            ->label(__('TikTok Pixel'))
                                             ->live(),
                                         Forms\Components\TextInput::make('tracking_integrations.tiktok_id')
-                                            ->label('TikTok Pixel ID')
-                                            ->placeholder('CXXXXXXXXXXXXXXXXX')
+                                            ->label(__('TikTok Pixel ID'))
+                                            ->placeholder(__('CXXXXXXXXXXXXXXXXX'))
                                             ->maxLength(25)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.tiktok_enabled')),
                                     ]),
                                     SC\Grid::make(2)->schema([
                                         Forms\Components\Toggle::make('tracking_integrations.google_ads_enabled')
-                                            ->label('Google Ads')
+                                            ->label(__('Google Ads'))
                                             ->live(),
                                         Forms\Components\TextInput::make('tracking_integrations.google_ads_id')
-                                            ->label('Google Ads Conversion ID')
-                                            ->placeholder('AW-XXXXXXXXX')
+                                            ->label(__('Google Ads Conversion ID'))
+                                            ->placeholder(__('AW-XXXXXXXXX'))
                                             ->maxLength(25)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.google_ads_enabled')),
                                     ]),
@@ -991,63 +991,63 @@ class OrganizerResource extends Resource
                             // bypassing adblockers / iOS ATT / cookie deletion.
                             // Meta CAPI has its own dedicated section below with
                             // its own connection table (facebook_capi_connections).
-                            Section::make('Conversions API GA4 + TikTok (Server-Side, opțional)')
+                            Section::make(__('Conversions API GA4 + TikTok (Server-Side, opțional)'))
                                 ->icon('heroicon-o-bolt')
-                                ->description('Trimite evenimente către GA4 Measurement Protocol și TikTok Events API server-side, pe lângă pixelul din browser. Recomandat pentru capturarea evenimentelor blocate de adblockers. Credentialele se salvează criptate în DB. Când sunt goale aici, fallback-ul folosește credentialele setate la nivel de marketplace (Setări → Personalization → Tracking & Pixels).')
+                                ->description(__('Trimite evenimente către GA4 Measurement Protocol și TikTok Events API server-side, pe lângă pixelul din browser. Recomandat pentru capturarea evenimentelor blocate de adblockers. Credentialele se salvează criptate în DB. Când sunt goale aici, fallback-ul folosește credentialele setate la nivel de marketplace (Setări → Personalization → Tracking & Pixels).'))
                                 ->collapsible()
                                 ->collapsed()
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('service_settings.tracking_enabled'))
                                 ->schema([
                                     Forms\Components\TextInput::make('tracking_integrations.ga4_api_secret')
-                                        ->label('GA4 Measurement Protocol API Secret')
+                                        ->label(__('GA4 Measurement Protocol API Secret'))
                                         ->password()
                                         ->revealable()
                                         ->autocomplete('new-password')
                                         ->placeholder('••••••••')
-                                        ->helperText('GA4 Admin → Data Streams → your web stream → Measurement Protocol API secrets. Lasă gol pentru a păstra valoarea existentă. Necesar doar dacă vrei GA4 server-side pentru acest organizator; altfel se folosește tokenul marketplace-ului (dacă e setat).')
+                                        ->helperText(__('GA4 Admin → Data Streams → your web stream → Measurement Protocol API secrets. Lasă gol pentru a păstra valoarea existentă. Necesar doar dacă vrei GA4 server-side pentru acest organizator; altfel se folosește tokenul marketplace-ului (dacă e setat).'))
                                         ->dehydrated(fn ($state) => filled($state))
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.ga4_enabled')),
 
                                     Forms\Components\TextInput::make('tracking_integrations.tiktok_access_token')
-                                        ->label('TikTok Events API Access Token')
+                                        ->label(__('TikTok Events API Access Token'))
                                         ->password()
                                         ->revealable()
                                         ->autocomplete('new-password')
                                         ->placeholder('••••••••')
-                                        ->helperText('Events Manager → Settings → Events API → Generate access token. Lasă gol pentru a păstra valoarea existentă. Necesar doar dacă vrei TikTok server-side pentru acest organizator; altfel se folosește tokenul marketplace-ului (dacă e setat).')
+                                        ->helperText(__('Events Manager → Settings → Events API → Generate access token. Lasă gol pentru a păstra valoarea existentă. Necesar doar dacă vrei TikTok server-side pentru acest organizator; altfel se folosește tokenul marketplace-ului (dacă e setat).'))
                                         ->dehydrated(fn ($state) => filled($state))
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.tiktok_enabled')),
                                 ]),
 
-                            Section::make('Facebook Conversions API (Server-Side)')
+                            Section::make(__('Facebook Conversions API (Server-Side)'))
                                 ->icon('heroicon-o-bolt')
-                                ->description('Tracking server-side direct către Meta Graph API. Trece de adblockere și restricțiile iOS 14.5+ ATT pentru capturarea aproape 100% a conversiilor. Funcționează independent de Meta Pixel browser-side. Pentru deduplicare optimă, folosește același Pixel ID ca la Meta Pixel.')
+                                ->description(__('Tracking server-side direct către Meta Graph API. Trece de adblockere și restricțiile iOS 14.5+ ATT pentru capturarea aproape 100% a conversiilor. Funcționează independent de Meta Pixel browser-side. Pentru deduplicare optimă, folosește același Pixel ID ca la Meta Pixel.'))
                                 ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null && self::isFacebookCapiMicroserviceActive($record->marketplace_client_id))
                                 ->schema([
                                     Forms\Components\Toggle::make('facebook_capi.enabled')
-                                        ->label('Activează Facebook CAPI')
-                                        ->helperText('Trimite evenimentele de conversie server-side la Meta')
+                                        ->label(__('Activează Facebook CAPI'))
+                                        ->helperText(__('Trimite evenimentele de conversie server-side la Meta'))
                                         ->live(),
 
                                     SC\Grid::make(2)
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
                                         ->schema([
                                             Forms\Components\TextInput::make('facebook_capi.pixel_id')
-                                                ->label('Meta Pixel ID')
+                                                ->label(__('Meta Pixel ID'))
                                                 ->placeholder('1234567890123456')
                                                 ->maxLength(50)
                                                 ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
-                                                ->helperText('ID-ul Pixel-ului Meta. De obicei același cu cel din Meta Pixel browser de mai sus.'),
+                                                ->helperText(__('ID-ul Pixel-ului Meta. De obicei același cu cel din Meta Pixel browser de mai sus.')),
 
                                             Forms\Components\TextInput::make('facebook_capi.test_event_code')
-                                                ->label('Test Event Code (opțional)')
-                                                ->placeholder('TEST12345')
+                                                ->label(__('Test Event Code (opțional)'))
+                                                ->placeholder(__('TEST12345'))
                                                 ->maxLength(50)
-                                                ->helperText('Pentru testare în Events Manager → Test Events. Lasă gol în producție.'),
+                                                ->helperText(__('Pentru testare în Events Manager → Test Events. Lasă gol în producție.')),
                                         ]),
 
                                     Forms\Components\TextInput::make('facebook_capi.access_token')
-                                        ->label('System User Access Token')
+                                        ->label(__('System User Access Token'))
                                         ->password()
                                         ->revealable()
                                         ->maxLength(500)
@@ -1056,15 +1056,15 @@ class OrganizerResource extends Resource
                                         ->helperText(new HtmlString('Token-ul se generează din <a href="https://business.facebook.com/settings/system-users" target="_blank" class="text-primary-600 underline">Meta Business Suite → System Users</a> cu permisiunea <code>ads_management</code>. Tokenul e criptat în baza de date.')),
 
                                     Forms\Components\TextInput::make('facebook_capi.ad_account_id')
-                                        ->label('Ad Account ID (opțional, doar pentru Custom Audiences)')
+                                        ->label(__('Ad Account ID (opțional, doar pentru Custom Audiences)'))
                                         ->placeholder('123456789012345')
                                         ->maxLength(50)
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
-                                        ->helperText('ID-ul contului de Ads (fără prefix `act_`). Necesar doar dacă vrei sincronizare Custom Audiences. Token-ul trebuie să aibă acces la acest cont.'),
+                                        ->helperText(__('ID-ul contului de Ads (fără prefix `act_`). Necesar doar dacă vrei sincronizare Custom Audiences. Token-ul trebuie să aibă acces la acest cont.')),
 
                                     \Filament\Schemas\Components\Actions::make([
                                         \Filament\Actions\Action::make('test_facebook_capi_connection')
-                                            ->label('Test conexiune cu Meta')
+                                            ->label(__('Test conexiune cu Meta'))
                                             ->icon('heroicon-o-paper-airplane')
                                             ->color('info')
                                             ->action(function (\Filament\Schemas\Components\Utilities\Get $get): void {
@@ -1074,8 +1074,8 @@ class OrganizerResource extends Resource
 
                                                 if ($pixelId === '' || $accessToken === '') {
                                                     Notification::make()
-                                                        ->title('Date lipsă')
-                                                        ->body('Completează Pixel ID și Access Token înainte de test.')
+                                                        ->title(__('Date lipsă'))
+                                                        ->body(__('Completează Pixel ID și Access Token înainte de test.'))
                                                         ->warning()
                                                         ->send();
                                                     return;
@@ -1086,14 +1086,14 @@ class OrganizerResource extends Resource
 
                                                 if ($result['success']) {
                                                     Notification::make()
-                                                        ->title('Conexiune reușită')
+                                                        ->title(__('Conexiune reușită'))
                                                         ->body($result['message'])
                                                         ->success()
                                                         ->duration(8000)
                                                         ->send();
                                                 } else {
                                                     Notification::make()
-                                                        ->title('Conexiune eșuată')
+                                                        ->title(__('Conexiune eșuată'))
                                                         ->body($result['message'])
                                                         ->danger()
                                                         ->duration(10000)
@@ -1104,16 +1104,16 @@ class OrganizerResource extends Resource
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled')),
                                 ]),
 
-                            Section::make('Custom Audiences sync (Meta)')
+                            Section::make(__('Custom Audiences sync (Meta)'))
                                 ->icon('heroicon-o-user-group')
-                                ->description('Sincronizează automat segmente predefinite de customers în contul de Ads Meta — pentru retargeting, lookalike și suppression. Necesită CAPI activ + Ad Account ID completat. Sync zilnic la 04:15.')
+                                ->description(__('Sincronizează automat segmente predefinite de customers în contul de Ads Meta — pentru retargeting, lookalike și suppression. Necesită CAPI activ + Ad Account ID completat. Sync zilnic la 04:15.'))
                                 ->visible(fn (?MarketplaceOrganizer $record): bool =>
                                     $record !== null
                                     && self::isFacebookCapiMicroserviceActive($record->marketplace_client_id)
                                 )
                                 ->schema([
                                     Forms\Components\CheckboxList::make('audience_subscriptions')
-                                        ->label('Segmente active')
+                                        ->label(__('Segmente active'))
                                         ->options(fn () => \App\Models\CustomerAudienceSegment::where('is_active', true)
                                             ->orderBy('sort_order')
                                             ->pluck('name', 'id')
@@ -1125,7 +1125,7 @@ class OrganizerResource extends Resource
                                         ->columns(1),
 
                                     Forms\Components\Placeholder::make('audience_sync_status')
-                                        ->label('Stare ultimă sincronizare')
+                                        ->label(__('Stare ultimă sincronizare'))
                                         ->visible(fn (?MarketplaceOrganizer $record) => $record !== null)
                                         ->content(function (?MarketplaceOrganizer $record) {
                                             if (!$record) return '—';
@@ -1153,7 +1153,7 @@ class OrganizerResource extends Resource
 
                                     \Filament\Schemas\Components\Actions::make([
                                         \Filament\Actions\Action::make('audience_sync_now')
-                                            ->label('Sincronizează acum')
+                                            ->label(__('Sincronizează acum'))
                                             ->icon('heroicon-o-arrow-path')
                                             ->color('info')
                                             ->visible(fn (?MarketplaceOrganizer $record) => $record !== null)
@@ -1164,8 +1164,8 @@ class OrganizerResource extends Resource
                                                     ->get();
                                                 if ($subs->isEmpty()) {
                                                     Notification::make()
-                                                        ->title('Niciun segment activ')
-                                                        ->body('Bifează cel puțin un segment și salvează înainte de sync.')
+                                                        ->title(__('Niciun segment activ'))
+                                                        ->body(__('Bifează cel puțin un segment și salvează înainte de sync.'))
                                                         ->warning()
                                                         ->send();
                                                     return;
@@ -1174,7 +1174,7 @@ class OrganizerResource extends Resource
                                                     \App\Jobs\SyncMetaCustomAudienceJob::dispatch($sub->id);
                                                 }
                                                 Notification::make()
-                                                    ->title('Sync pornit')
+                                                    ->title(__('Sync pornit'))
                                                     ->body('Au fost dispatch-uite ' . $subs->count() . ' job-uri. Status-ul apare aici după ce queue worker-ul le procesează (1-5 min).')
                                                     ->success()
                                                     ->send();
@@ -1191,7 +1191,7 @@ class OrganizerResource extends Resource
                                 ->icon('heroicon-o-chart-bar')
                                 ->schema([
 
-                                    Section::make('Financial Summary')
+                                    Section::make(__('Financial Summary'))
                                         ->icon('heroicon-o-currency-dollar')
                                         ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
                                         ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
@@ -1201,7 +1201,7 @@ class OrganizerResource extends Resource
                                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderFinancialStats($record)),
                                         ]),
 
-                                    Section::make('Events Stats')
+                                    Section::make(__('Events Stats'))
                                         ->icon('heroicon-o-chart-bar')
                                         ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
                                         ->schema([
@@ -1210,9 +1210,9 @@ class OrganizerResource extends Resource
                                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderEventsStats($record)),
                                         ]),
 
-                                    Section::make('Listă evenimente')
+                                    Section::make(__('Listă evenimente'))
                                         ->icon('heroicon-o-list-bullet')
-                                        ->description('Toate evenimentele organizatorului cu vânzări, încasări nete și comisioane')
+                                        ->description(__('Toate evenimentele organizatorului cu vânzări, încasări nete și comisioane'))
                                         ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
                                         ->extraAttributes(['class' => 'ep-events-list-section'])
                                         ->schema([
@@ -1227,7 +1227,7 @@ class OrganizerResource extends Resource
                                     // Events Stats block above but counts from `activities`
                                     // + revenue from `activity_bookings` (paid/confirmed/
                                     // checked_in only).
-                                    Section::make('Activities Stats')
+                                    Section::make(__('Activities Stats'))
                                         ->icon('heroicon-o-rocket-launch')
                                         ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null && self::marketplaceHasMicroservice('activities-module'))
                                         ->schema([
@@ -1236,9 +1236,9 @@ class OrganizerResource extends Resource
                                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderActivitiesStats($record)),
                                         ]),
 
-                                    Section::make('Listă activități')
+                                    Section::make(__('Listă activități'))
                                         ->icon('heroicon-o-list-bullet')
-                                        ->description('Toate activitățile organizatorului cu rezervări și venituri.')
+                                        ->description(__('Toate activitățile organizatorului cu rezervări și venituri.'))
                                         ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null && self::marketplaceHasMicroservice('activities-module'))
                                         ->schema([
                                             Forms\Components\Placeholder::make('activities_list')
@@ -1425,54 +1425,54 @@ class OrganizerResource extends Resource
                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderOrganizerPreview($record)),
                         ]),
 
-                    Section::make('Status & Commission')
+                    Section::make(__('Status & Commission'))
                         ->icon('heroicon-o-check-circle')
                         ->compact()
                         ->schema([
                             Forms\Components\Select::make('status')
                                 ->options([
-                                    'pending' => 'Pending',
-                                    'active' => 'Active',
-                                    'suspended' => 'Suspended',
+                                    'pending' => __('Pending'),
+                                    'active' => __('Active'),
+                                    'suspended' => __('Suspended'),
                                 ])
                                 ->required()
                                 ->default('pending'),
 
                             Forms\Components\TextInput::make('commission_rate')
-                                ->label('Commission Rate (%)')
+                                ->label(__('Commission Rate (%)'))
                                 ->numeric()
                                 ->minValue(0)
                                 ->maxValue(50)
                                 ->step(0.5)
                                 ->suffix('%')
-                                ->helperText('Leave empty to use marketplace default'),
+                                ->helperText(__('Leave empty to use marketplace default')),
 
                             Forms\Components\TextInput::make('fixed_commission_default')
-                                ->label('Fixed Commission (RON)')
+                                ->label(__('Fixed Commission (RON)'))
                                 ->numeric()
                                 ->minValue(0)
                                 ->step(0.5)
                                 ->suffix('RON')
-                                ->helperText('Fixed amount per ticket. Leave empty to use only percentage rate.'),
+                                ->helperText(__('Fixed amount per ticket. Leave empty to use only percentage rate.')),
 
                             // Activities module: the currency the operator sells in. Hidden until the migration
                             // that adds the column has run, so the form never tries to save a missing column.
                             Forms\Components\Select::make('currency')
-                                ->label('Selling currency')
+                                ->label(__('Selling currency'))
                                 ->options(\App\Services\Activities\ActivityCurrency::CHOICES)
-                                ->placeholder('Marketplace currency')
+                                ->placeholder(__('Marketplace currency'))
                                 ->native(false)
                                 ->visible(fn () => \App\Services\Activities\ActivityCurrency::ready())
-                                ->helperText('All of this operator\'s prices are in this currency. Changing it does not convert the amounts: the prices must be entered again.'),
+                                ->helperText(__('All of this operator\'s prices are in this currency. Changing it does not convert the amounts: the prices must be entered again.')),
 
                             Forms\Components\Select::make('default_commission_mode')
-                                ->label('Default Commission Mode')
+                                ->label(__('Default Commission Mode'))
                                 ->options([
-                                    'included' => 'Included in price',
-                                    'added_on_top' => 'Added on top of price',
+                                    'included' => __('Included in price'),
+                                    'added_on_top' => __('Added on top of price'),
                                 ])
-                                ->placeholder('Use marketplace default')
-                                ->helperText('Applied automatically when creating events for this organizer'),
+                                ->placeholder(__('Use marketplace default'))
+                                ->helperText(__('Applied automatically when creating events for this organizer')),
 
                             // Opt-in explicit pentru semantica "floor" a comisionului fix.
                             // Cand bifat: comisionul per bilet = max(rate% * pret, fixed).
@@ -1480,7 +1480,7 @@ class OrganizerResource extends Resource
                             // (fixed_commission_default e ignorat in customer/admin/raport,
                             // dar POS on_top pastreaza invariantul istoric max()).
                             Forms\Components\Toggle::make('commission_use_floor')
-                                ->label('Calculează cu floor (minim per bilet)')
+                                ->label(__('Calculează cu floor (minim per bilet)'))
                                 ->hintIcon('heroicon-m-information-circle', tooltip: 'Când e bifat: comisionul per bilet nu poate fi mai mic decât „Fixed Commission" de mai sus. Aplicat în: POS, customer checkout, pagina de vânzări din admin, raport organizator.')
                                 ->default(true)
                                 ->inline(false),
@@ -1492,7 +1492,7 @@ class OrganizerResource extends Resource
                             // Test POS (exclus din interfata publica, carduri si
                             // rapoarte prin meta.is_test). Vezi Event::ensureTestTicketType().
                             Forms\Components\Toggle::make('test_pos_enabled')
-                                ->label('Bilete Test POS')
+                                ->label(__('Bilete Test POS'))
                                 ->hintIcon('heroicon-m-information-circle', tooltip: 'Când e bifat: fiecare eveniment (non-leisure) al acestui organizator primește automat un bilet „Test POS" de 10 lei pentru testarea aplicației mobile POS (vânzare + print + scanare). Când NU e bifat: biletul nu se mai creează, iar cele deja existente se pot șterge global cu „php artisan test-tickets:prune-disabled".')
                                 ->default(true)
                                 ->inline(false),
@@ -1502,23 +1502,23 @@ class OrganizerResource extends Resource
                             // it's a config that goes nowhere). For ambilet/tics this section
                             // doesn't render until they opt in.
                             Forms\Components\Select::make('payment_fee_mode')
-                                ->label('Taxă procesare card (Stripe / Netopia / RoPay)')
+                                ->label(__('Taxă procesare card (Stripe / Netopia / RoPay)'))
                                 ->options([
-                                    'pass_to_customer'       => 'Transferă clientului (linie separată în checkout)',
-                                    'absorbed_by_commission' => 'Inclusă în comision (marketplace absoarbe taxa)',
+                                    'pass_to_customer'       => __('Transferă clientului (linie separată în checkout)'),
+                                    'absorbed_by_commission' => __('Inclusă în comision (marketplace absoarbe taxa)'),
                                 ])
-                                ->placeholder('Moștenește din marketplace')
-                                ->helperText('Lasă gol pentru a moșteni setarea de la nivel de marketplace. Setează doar dacă vrei un deal special pentru acest organizator.')
+                                ->placeholder(__('Moștenește din marketplace'))
+                                ->helperText(__('Lasă gol pentru a moșteni setarea de la nivel de marketplace. Setează doar dacă vrei un deal special pentru acest organizator.'))
                                 ->native(false)
                                 ->visible(fn () => is_array(static::getMarketplaceClient()?->payment_fees ?? null)),
 
                             Forms\Components\DateTimePicker::make('verified_at')
-                                ->label('Verified At'),
+                                ->label(__('Verified At')),
                         ])
                         ->columns(1),
 
                     // Meta Info (doar pe Edit/View, collapsed)
-                    Section::make('Meta Info')
+                    Section::make(__('Meta Info'))
                         ->icon('heroicon-o-information-circle')
                         ->compact()
                         ->collapsible()
@@ -1554,7 +1554,7 @@ class OrganizerResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('person_type')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->badge()
                     ->state(fn (MarketplaceOrganizer $r): string => match ($r->person_type) {
                         'pf' => 'Persoană Fizică',
@@ -1579,7 +1579,7 @@ class OrganizerResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('verified_at')
-                    ->label('Verified')
+                    ->label(__('Verified'))
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-circle')
@@ -1590,7 +1590,7 @@ class OrganizerResource extends Resource
                 // cutoff (CONTRACT_SIGNATURE_REQUIRED_FROM) so they were
                 // grandfathered out of the e-signature requirement.
                 Tables\Columns\TextColumn::make('contract_signed_state')
-                    ->label('Contract')
+                    ->label(__('Contract'))
                     ->badge()
                     ->state(fn (MarketplaceOrganizer $r): string =>
                         !$r->isContractSignatureRequired() ? 'exceptat'
@@ -1610,19 +1610,19 @@ class OrganizerResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_events')
-                    ->label('Events')
+                    ->label(__('Events'))
                     ->numeric()
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_revenue')
-                    ->label('Revenue')
+                    ->label(__('Revenue'))
                     ->money('RON')
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('available_balance')
-                    ->label('Balance')
+                    ->label(__('Balance'))
                     ->money('RON')
                     ->sortable()
                     ->toggleable(),
@@ -1635,13 +1635,13 @@ class OrganizerResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'Pending',
-                        'active' => 'Active',
-                        'suspended' => 'Suspended',
+                        'pending' => __('Pending'),
+                        'active' => __('Active'),
+                        'suspended' => __('Suspended'),
                     ]),
 
                 Tables\Filters\TernaryFilter::make('verified')
-                    ->label('Verified')
+                    ->label(__('Verified'))
                     ->nullable()
                     ->queries(
                         true: fn (Builder $query) => $query->whereNotNull('verified_at'),
@@ -1652,11 +1652,11 @@ class OrganizerResource extends Resource
                 // "Exceptat" uses the model's grandfather cutoff constant
                 // so the SQL and the column stay in sync automatically.
                 Tables\Filters\SelectFilter::make('contract_signed_state')
-                    ->label('Contract')
+                    ->label(__('Contract'))
                     ->options([
-                        'semnat' => 'Semnat',
-                        'nesemnat' => 'Nesemnat',
-                        'exceptat' => 'Exceptat',
+                        'semnat' => __('Semnat'),
+                        'nesemnat' => __('Nesemnat'),
+                        'exceptat' => __('Exceptat'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
@@ -1674,7 +1674,7 @@ class OrganizerResource extends Resource
             ])
             ->recordActions([
                 Action::make('approve')
-                    ->label('Approve')
+                    ->label(__('Approve'))
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()
@@ -1684,7 +1684,7 @@ class OrganizerResource extends Resource
                     }),
 
                 Action::make('verify')
-                    ->label('Verify')
+                    ->label(__('Verify'))
                     ->icon('heroicon-o-check-badge')
                     ->color('info')
                     ->requiresConfirmation()
@@ -1700,15 +1700,15 @@ class OrganizerResource extends Resource
                 // not yet signed) — grandfathered accounts + already
                 // signed ones don't see the action.
                 Action::make('resend_signing_reminder')
-                    ->label('Trimite reminder semnare')
+                    ->label(__('Trimite reminder semnare'))
                     ->icon('heroicon-o-envelope')
                     ->color('primary')
                     ->requiresConfirmation()
-                    ->modalHeading('Trimite reminder pentru semnarea contractului')
+                    ->modalHeading(__('Trimite reminder pentru semnarea contractului'))
                     ->modalDescription(fn (MarketplaceOrganizer $record) =>
                         'Se va trimite un email către ' . ($record->email ?: '(fără email)')
                         . ' cu un CTA "Semnează acum" ce duce la /organizator/semneaza-contract.')
-                    ->modalSubmitActionLabel('Trimite email')
+                    ->modalSubmitActionLabel(__('Trimite email'))
                     ->visible(fn (MarketplaceOrganizer $record): bool =>
                         $record->isContractSignatureRequired() && !$record->hasSignedContract() && filled($record->email))
                     ->action(function (MarketplaceOrganizer $record): void {
@@ -1725,7 +1725,7 @@ class OrganizerResource extends Resource
                 self::markContractSignedOfflineAction(),
 
                 Action::make('suspend')
-                    ->label('Suspend')
+                    ->label(__('Suspend'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -1735,7 +1735,7 @@ class OrganizerResource extends Resource
                     }),
 
                 Action::make('reactivate')
-                    ->label('Reactivate')
+                    ->label(__('Reactivate'))
                     ->icon('heroicon-o-arrow-path')
                     ->color('success')
                     ->requiresConfirmation()
@@ -1745,7 +1745,7 @@ class OrganizerResource extends Resource
                     }),
 
                 Action::make('login_as')
-                    ->label('Login as')
+                    ->label(__('Login as'))
                     ->icon('heroicon-o-arrow-right-on-rectangle')
                     ->color('warning')
                     ->url(fn (MarketplaceOrganizer $record) => url('/marketplace/organizers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
@@ -1756,7 +1756,7 @@ class OrganizerResource extends Resource
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve_selected')
-                        ->label('Approve Selected')
+                        ->label(__('Approve Selected'))
                         ->icon('heroicon-o-check')
                         ->color('success')
                         ->requiresConfirmation()
@@ -1765,13 +1765,13 @@ class OrganizerResource extends Resource
                         }),
 
                     BulkAction::make('send_password_reset')
-                        ->label('Send Password Reset')
+                        ->label(__('Send Password Reset'))
                         ->icon('heroicon-o-key')
                         ->color('warning')
                         ->requiresConfirmation()
-                        ->modalHeading('Trimite email de resetare parolă')
-                        ->modalDescription('Se va trimite un email de resetare a parolei către toți organizatorii selectați. Sigur vrei să continui?')
-                        ->modalSubmitActionLabel('Trimite')
+                        ->modalHeading(__('Trimite email de resetare parolă'))
+                        ->modalDescription(__('Se va trimite un email de resetare a parolei către toți organizatorii selectați. Sigur vrei să continui?'))
+                        ->modalSubmitActionLabel(__('Trimite'))
                         ->action(function ($records): void {
                             $sent = 0;
                             $failed = 0;
@@ -2425,29 +2425,29 @@ class OrganizerResource extends Resource
     public static function markContractSignedOfflineAction(): Action
     {
         return Action::make('mark_contract_signed_offline')
-            ->label('Marchează contract semnat offline')
+            ->label(__('Marchează contract semnat offline'))
             ->icon('heroicon-o-document-check')
             ->color('success')
-            ->modalHeading('Contract semnat în afara platformei')
-            ->modalDescription('Folosește doar dacă organizatorul a semnat contractul pe email sau olograf. După salvare poate publica evenimente și cere deconturi.')
-            ->modalSubmitActionLabel('Marchează semnat')
+            ->modalHeading(__('Contract semnat în afara platformei'))
+            ->modalDescription(__('Folosește doar dacă organizatorul a semnat contractul pe email sau olograf. După salvare poate publica evenimente și cere deconturi.'))
+            ->modalSubmitActionLabel(__('Marchează semnat'))
             ->schema([
                 Forms\Components\DateTimePicker::make('signed_at')
-                    ->label('Data semnării')
+                    ->label(__('Data semnării'))
                     ->default(now())
                     ->maxDate(now())
                     ->seconds(false)
                     ->required(),
                 Forms\Components\FileUpload::make('signed_pdf')
-                    ->label('Contract semnat (PDF)')
-                    ->helperText('Recomandat: contractul primit pe email. Va înlocui contractul nesemnat din contul organizatorului.')
+                    ->label(__('Contract semnat (PDF)'))
+                    ->helperText(__('Recomandat: contractul primit pe email. Va înlocui contractul nesemnat din contul organizatorului.'))
                     ->disk('public')
                     ->directory(fn (MarketplaceOrganizer $record) => 'organizer-documents/' . $record->id)
                     ->acceptedFileTypes(['application/pdf'])
                     ->maxSize(10240),
                 Forms\Components\Textarea::make('note')
-                    ->label('Notă')
-                    ->placeholder('ex: semnat pe email, trimis de ... în data de ...')
+                    ->label(__('Notă'))
+                    ->placeholder(__('ex: semnat pe email, trimis de ... în data de ...'))
                     ->rows(2)
                     ->maxLength(500),
             ])

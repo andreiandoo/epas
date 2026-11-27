@@ -143,16 +143,16 @@ class Balances extends Page implements HasForms, HasTable
     public function legacyAnalyzeAllAction(): Actions\Action
     {
         return Actions\Action::make('legacyAnalyzeAll')
-                ->label('Analizează ciornele vechi')
+                ->label(__('Analizează ciornele vechi'))
                 ->icon('heroicon-o-magnifying-glass')
                 ->color('gray')
                 ->visible(fn () => $this->legacyEnabled())
                 ->requiresConfirmation()
-                ->modalHeading('Analizează ciornele vechi')
+                ->modalHeading(__('Analizează ciornele vechi'))
                 ->modalDescription('Verifică, pentru fiecare organizator, ciornele de decont rămase „În așteptare” pe evenimentele încheiate până pe '
                     . \Carbon\Carbon::parse(LegacySettlementService::CUTOFF_DATE)->format('d.m.Y')
                     . '. Rulează în fundal; rezultatul apare în coloana „Trecut”. Nu modifică nimic.')
-                ->modalSubmitActionLabel('Pornește analiza')
+                ->modalSubmitActionLabel(__('Pornește analiza'))
                 ->action(function () {
                     $marketplaceId = (int) static::getMarketplaceClient()->id;
                     $candidates = LegacySettlementService::candidateOrganizerIds($marketplaceId);
@@ -178,7 +178,7 @@ class Balances extends Page implements HasForms, HasTable
                     }
 
                     Notification::make()->success()
-                        ->title('Analiza a pornit')
+                        ->title(__('Analiza a pornit'))
                         ->body($ids->count() . ' organizatori cu ciorne vechi se analizează în fundal. Coloana „Trecut” se completează pe măsură ce se termină.')
                         ->send();
                 });
@@ -187,7 +187,7 @@ class Balances extends Page implements HasForms, HasTable
     protected function legacyAnalyzeAction(): Actions\Action
     {
         return Actions\Action::make('legacy_analyze')
-            ->label('Analizează')
+            ->label(__('Analizează'))
             ->icon('heroicon-m-magnifying-glass')
             ->color('gray')
             ->size('sm')
@@ -201,13 +201,13 @@ class Balances extends Page implements HasForms, HasTable
                 'warnLimit' => LegacySettlementService::WARN_ADJUSTMENT,
             ]))
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel('Închide');
+            ->modalCancelActionLabel(__('Închide'));
     }
 
     protected function legacySettleAction(): Actions\Action
     {
         return Actions\Action::make('legacy_settle')
-            ->label('Aprobă')
+            ->label(__('Aprobă'))
             ->icon('heroicon-m-check-badge')
             ->color('success')
             ->size('sm')
@@ -228,15 +228,15 @@ class Balances extends Page implements HasForms, HasTable
                     ->label('Am verificat ajustările de peste ' . number_format(LegacySettlementService::WARN_ADJUSTMENT, 0, ',', '.') . ' lei din analiză')
                     ->accepted()]
                 : [])
-            ->modalSubmitActionLabel('Aprobă')
+            ->modalSubmitActionLabel(__('Aprobă'))
             ->action(function ($record, array $data) {
                 try {
                     $a = app(LegacySettlementService::class)->settle($record, $this->currentAdmin(), (bool) ($data['confirm_warn'] ?? false));
-                    Notification::make()->success()->title('Aprobat')
+                    Notification::make()->success()->title(__('Aprobat'))
                         ->body($a['totals']['payouts'] . ' ciorne aprobate (' . number_format($a['totals']['settle_amount'], 2, ',', '.') . ' lei în procesare). Soldul a fost recalculat.')
                         ->send();
                 } catch (\Throwable $e) {
-                    Notification::make()->danger()->title('Nu s-a aprobat')->body($e->getMessage())->persistent()->send();
+                    Notification::make()->danger()->title(__('Nu s-a aprobat'))->body($e->getMessage())->persistent()->send();
                 }
             });
     }
@@ -244,7 +244,7 @@ class Balances extends Page implements HasForms, HasTable
     protected function legacyRevertAction(): Actions\Action
     {
         return Actions\Action::make('legacy_revert')
-            ->label('Anulează aprobarea')
+            ->label(__('Anulează aprobarea'))
             ->icon('heroicon-m-arrow-uturn-left')
             ->color('danger')
             ->size('sm')
@@ -253,14 +253,14 @@ class Balances extends Page implements HasForms, HasTable
                 && (LegacySettlementService::cachedVerdict($record->id)['verdict'] ?? null) === LegacySettlementService::VERDICT_SETTLED)
             ->requiresConfirmation()
             ->modalHeading(fn ($record) => 'Anulează aprobarea — ' . $record->name)
-            ->modalDescription('Ciornele aprobate și încă neplătite revin exact cum erau: „În așteptare”, cu suma, organizatorul și notele inițiale. Cele deja finalizate ca plătite rămân. Soldul se recalculează.')
-            ->modalSubmitActionLabel('Anulează aprobarea')
+            ->modalDescription(__('Ciornele aprobate și încă neplătite revin exact cum erau: „În așteptare”, cu suma, organizatorul și notele inițiale. Cele deja finalizate ca plătite rămân. Soldul se recalculează.'))
+            ->modalSubmitActionLabel(__('Anulează aprobarea'))
             ->action(function ($record) {
                 try {
                     $n = app(LegacySettlementService::class)->revert($record, $this->currentAdmin());
-                    Notification::make()->success()->title('Aprobare anulată')->body($n . ' ciorne readuse la starea anterioară.')->send();
+                    Notification::make()->success()->title(__('Aprobare anulată'))->body($n . ' ciorne readuse la starea anterioară.')->send();
                 } catch (\Throwable $e) {
-                    Notification::make()->danger()->title('Nu s-a anulat')->body($e->getMessage())->persistent()->send();
+                    Notification::make()->danger()->title(__('Nu s-a anulat'))->body($e->getMessage())->persistent()->send();
                 }
             });
     }
@@ -281,7 +281,7 @@ class Balances extends Page implements HasForms, HasTable
                 ]))
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->searchable()
                     ->sortable()
                     ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/balance'))
@@ -290,7 +290,7 @@ class Balances extends Page implements HasForms, HasTable
                 // relație ca pe pagina organizatorului. Coloana veche total_revenue
                 // (Σ orders.total, cu comision) nu avea legătură cu soldul.
                 Tables\Columns\TextColumn::make('net_sales')
-                    ->label('Total vânzări (net)')
+                    ->label(__('Total vânzări (net)'))
                     ->state(fn ($record) => (float) $record->available_balance + (float) $record->pending_balance + (float) $record->total_paid_out
                         + (float) ($record->inv_pending ?? 0) + (float) ($record->inv_paid ?? 0))
                     ->money('RON', locale: 'ro')
@@ -299,25 +299,25 @@ class Balances extends Page implements HasForms, HasTable
                     ))
                     ->color('gray'),
                 Tables\Columns\TextColumn::make('total_paid_out')
-                    ->label('Total plătit')
+                    ->label(__('Total plătit'))
                     ->state(fn ($record) => (float) $record->total_paid_out + (float) ($record->inv_paid ?? 0))
                     ->money('RON', locale: 'ro')
                     ->sortable()
                     ->color('primary'),
                 Tables\Columns\TextColumn::make('pending_balance')
-                    ->label('În procesare')
+                    ->label(__('În procesare'))
                     ->state(fn ($record) => (float) $record->pending_balance + (float) ($record->inv_pending ?? 0))
                     ->money('RON', locale: 'ro')
                     ->sortable()
                     ->color('warning'),
                 Tables\Columns\TextColumn::make('available_balance')
-                    ->label('Sold disponibil')
+                    ->label(__('Sold disponibil'))
                     ->money('RON', locale: 'ro')
                     ->sortable()
                     ->color(fn ($state) => (float) $state < 0 ? 'danger' : 'success')
                     ->weight('bold'),
                 Tables\Columns\TextColumn::make('legacy_verdict')
-                    ->label('Trecut')
+                    ->label(__('Trecut'))
                     ->visible(fn () => $this->legacyEnabled())
                     ->badge()
                     ->state(function ($record) {
@@ -340,7 +340,7 @@ class Balances extends Page implements HasForms, HasTable
                             : "Analizat {$at}";
                     }),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'active' => 'Activ',
@@ -358,7 +358,7 @@ class Balances extends Page implements HasForms, HasTable
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('legacy_verdict')
-                    ->label('Trecut')
+                    ->label(__('Trecut'))
                     ->visible(fn () => $this->legacyEnabled())
                     ->options([
                         LegacySettlementService::VERDICT_OK => 'OK',
@@ -379,14 +379,14 @@ class Balances extends Page implements HasForms, HasTable
             ])
             ->toolbarActions([
                 Actions\BulkAction::make('legacy_settle_selected')
-                    ->label('Aprobă selectate (doar OK)')
+                    ->label(__('Aprobă selectate (doar OK)'))
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn () => $this->legacyEnabled())
                     ->requiresConfirmation()
-                    ->modalHeading('Aprobă ciornele vechi')
-                    ->modalDescription('Se aprobă doar organizatorii selectați cu verdictul OK; ceilalți sunt săriți. Rulează în fundal, iar fiecare organizator e reanalizat înainte de scriere. Fără PDF, fără email.')
-                    ->modalSubmitActionLabel('Aprobă')
+                    ->modalHeading(__('Aprobă ciornele vechi'))
+                    ->modalDescription(__('Se aprobă doar organizatorii selectați cu verdictul OK; ceilalți sunt săriți. Rulează în fundal, iar fiecare organizator e reanalizat înainte de scriere. Fără PDF, fără email.'))
+                    ->modalSubmitActionLabel(__('Aprobă'))
                     ->action(function (Collection $records) {
                         $ok = $records->filter(fn ($r) => (LegacySettlementService::cachedVerdict($r->id)['verdict'] ?? null) === LegacySettlementService::VERDICT_OK);
                         $adminId = $this->currentAdmin()?->getKey();
@@ -398,7 +398,7 @@ class Balances extends Page implements HasForms, HasTable
 
                         $skipped = $records->count() - $ok->count();
                         Notification::make()->success()
-                            ->title('Aprobarea a pornit')
+                            ->title(__('Aprobarea a pornit'))
                             ->body($ok->count() . ' organizatori se aprobă în fundal' . ($skipped > 0 ? '; ' . $skipped . ' săriți (nu sunt OK)' : '') . '.')
                             ->send();
                     })

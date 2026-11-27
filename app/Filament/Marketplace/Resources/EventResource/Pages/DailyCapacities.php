@@ -152,7 +152,7 @@ class DailyCapacities extends Page
     {
         return [
             Actions\Action::make('back')
-                ->label('Înapoi la eveniment')
+                ->label(__('Înapoi la eveniment'))
                 ->url(EventResource::getUrl('edit', ['record' => $this->record]))
                 ->icon('heroicon-o-arrow-left')
                 ->color('gray'),

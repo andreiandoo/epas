@@ -86,17 +86,17 @@ class VanityUrlResource extends Resource
         return $schema
             ->columns(1)
             ->components([
-                Section::make('Vanity URL')
+                Section::make(__('Vanity URL'))
                     ->icon('heroicon-o-link')
-                    ->description('Configurează un URL scurt care răspunde direct pe domeniul marketplace-ului. Pagina țintă va fi randată direct pe URL-ul scurt (fără redirect).')
+                    ->description(__('Configurează un URL scurt care răspunde direct pe domeniul marketplace-ului. Pagina țintă va fi randată direct pe URL-ul scurt (fără redirect).'))
                     ->schema([
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug (cale URL)')
+                            ->label(__('Slug (cale URL)'))
                             ->required()
                             ->maxLength(100)
                             ->prefix('https://ambilet.ro/')
                             ->placeholder('teatrulmicilorvisatori')
-                            ->helperText('Doar litere mici, cifre și liniuțe. NU folosi paths rezervate (artist, bilete, organizator, etc.).')
+                            ->helperText(__('Doar litere mici, cifre și liniuțe. NU folosi paths rezervate (artist, bilete, organizator, etc.).'))
                             ->extraInputAttributes(['style' => 'text-transform: lowercase'])
                             ->dehydrateStateUsing(fn ($state) => strtolower(trim($state)))
                             ->rules([
@@ -122,14 +122,14 @@ class VanityUrlResource extends Resource
                             ),
 
                         Forms\Components\Select::make('target_type')
-                            ->label('Tip țintă')
+                            ->label(__('Tip țintă'))
                             ->options(MarketplaceVanityUrl::TYPES)
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('target_id', null)),
 
                         Forms\Components\Select::make('target_id')
-                            ->label('Selectează ținta')
+                            ->label(__('Selectează ținta'))
                             ->searchable()
                             ->preload()
                             ->required()
@@ -225,7 +225,7 @@ class VanityUrlResource extends Resource
                             }),
 
                         Forms\Components\TextInput::make('target_url')
-                            ->label('URL extern')
+                            ->label(__('URL extern'))
                             ->url()
                             ->maxLength(500)
                             ->placeholder('https://example.com/promo')
@@ -233,11 +233,11 @@ class VanityUrlResource extends Resource
                             ->required(fn (SGet $get) => $get('target_type') === MarketplaceVanityUrl::TYPE_EXTERNAL_URL),
 
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Activ')
+                            ->label(__('Activ'))
                             ->default(true),
 
                         Forms\Components\Textarea::make('notes')
-                            ->label('Note interne')
+                            ->label(__('Note interne'))
                             ->rows(2),
                     ])
                     ->columns(2),
@@ -249,14 +249,14 @@ class VanityUrlResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->prefix('/')
                     ->searchable()
                     ->sortable()
                     ->copyable(),
 
                 Tables\Columns\BadgeColumn::make('target_type')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->colors([
                         'primary' => MarketplaceVanityUrl::TYPE_ARTIST,
                         'success' => MarketplaceVanityUrl::TYPE_EVENT,
@@ -267,39 +267,39 @@ class VanityUrlResource extends Resource
                     ->formatStateUsing(fn ($state) => MarketplaceVanityUrl::TYPES[$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('target_label')
-                    ->label('Țintă')
+                    ->label(__('Țintă'))
                     ->getStateUsing(fn (MarketplaceVanityUrl $record) => $record->getTargetLabel() ?? '—')
                     ->limit(60)
                     ->wrap(),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Activ')
+                    ->label(__('Activ'))
                     ->boolean()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('clicks_count')
-                    ->label('Click-uri')
+                    ->label(__('Click-uri'))
                     ->numeric()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('last_accessed_at')
-                    ->label('Ultim accesat')
+                    ->label(__('Ultim accesat'))
                     ->dateTime('d M Y H:i')
                     ->sortable()
                     ->placeholder('—')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Modificat')
+                    ->label(__('Modificat'))
                     ->dateTime('d M Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')->label('Activ'),
+                Tables\Filters\TernaryFilter::make('is_active')->label(__('Activ')),
                 Tables\Filters\SelectFilter::make('target_type')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->options(MarketplaceVanityUrl::TYPES),
             ])
             ->recordActions([

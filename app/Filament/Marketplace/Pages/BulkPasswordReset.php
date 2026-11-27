@@ -154,7 +154,7 @@ class BulkPasswordReset extends Page
 
         SendBulkPasswordResetJob::dispatch($id);
 
-        Notification::make()->title('Campanie pornită!')->body("Trimitere email de resetare parolă către {$total} " . ($type === 'customer' ? 'clienți' : 'organizatori'))->success()->send();
+        Notification::make()->title(__('Campanie pornită!'))->body("Trimitere email de resetare parolă către {$total} " . ($type === 'customer' ? 'clienți' : 'organizatori'))->success()->send();
 
         $this->loadCampaigns();
     }
@@ -177,7 +177,7 @@ class BulkPasswordReset extends Page
             DB::table('bulk_password_reset_campaigns')->where('id', $campaign->id)->update([
                 'status' => 'paused', 'paused_at' => now(), 'updated_at' => now(),
             ]);
-            Notification::make()->title('Campanie oprită')->warning()->send();
+            Notification::make()->title(__('Campanie oprită'))->warning()->send();
         }
         $this->loadCampaigns();
     }
@@ -190,7 +190,7 @@ class BulkPasswordReset extends Page
                 'status' => 'sending', 'paused_at' => null, 'updated_at' => now(),
             ]);
             SendBulkPasswordResetJob::dispatch($campaign->id);
-            Notification::make()->title('Campanie reluată')->success()->send();
+            Notification::make()->title(__('Campanie reluată'))->success()->send();
         }
         $this->loadCampaigns();
     }

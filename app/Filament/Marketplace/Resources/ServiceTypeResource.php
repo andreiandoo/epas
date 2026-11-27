@@ -66,21 +66,21 @@ class ServiceTypeResource extends Resource
     {
         return $schema
             ->components([
-                Section::make('Service Information')
+                Section::make(__('Service Information'))
                     ->icon('heroicon-o-information-circle')
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Service Name')
+                            ->label(__('Service Name'))
                             ->required()
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('code')
-                            ->label('Code')
+                            ->label(__('Code'))
                             ->disabled()
                             ->dehydrated(false),
 
                         Forms\Components\Select::make('audience')
-                            ->label('Audience')
+                            ->label(__('Audience'))
                             ->options([
                                 ServiceType::AUDIENCE_ORGANIZER => 'Organizator',
                                 ServiceType::AUDIENCE_ARTIST => 'Artist',
@@ -88,41 +88,41 @@ class ServiceTypeResource extends Resource
                             ])
                             ->disabled()
                             ->dehydrated(false)
-                            ->helperText('Cine poate cumpara acest serviciu (read-only).'),
+                            ->helperText(__('Cine poate cumpara acest serviciu (read-only).')),
 
                         Forms\Components\Textarea::make('description')
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(2)
                             ->columnSpanFull(),
 
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
+                            ->label(__('Active'))
                             ->default(true)
-                            ->helperText('Deactivate to hide this service from buyers'),
+                            ->helperText(__('Deactivate to hide this service from buyers')),
                     ])
                     ->columns(2),
 
                 // Extended Artist Pricing
-                Section::make('Extended Artist Pricing')
+                Section::make(__('Extended Artist Pricing'))
                     ->icon('heroicon-o-sparkles')
-                    ->description('Abonament lunar pentru artiști + trial gratuit')
+                    ->description(__('Abonament lunar pentru artiști + trial gratuit'))
                     ->statePath('pricing')
                     ->schema([
                         Forms\Components\TextInput::make('monthly')
-                            ->label('Cost lunar (RON)')
+                            ->label(__('Cost lunar (RON)'))
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Pretul facturat lunar dupa expirarea trial-ului'),
+                            ->helperText(__('Pretul facturat lunar dupa expirarea trial-ului')),
 
                         Forms\Components\TextInput::make('trial_days')
-                            ->label('Zile trial gratuit')
+                            ->label(__('Zile trial gratuit'))
                             ->numeric()
                             ->step(1)
                             ->minValue(0)
-                            ->helperText('0 = fără trial. Default: 30 zile.'),
+                            ->helperText(__('0 = fără trial. Default: 30 zile.')),
 
                         Forms\Components\TextInput::make('currency')
-                            ->label('Moneda')
+                            ->label(__('Moneda'))
                             ->default('RON')
                             ->maxLength(3),
                     ])
@@ -130,28 +130,28 @@ class ServiceTypeResource extends Resource
                     ->visible(fn ($record) => $record?->code === ServiceType::CODE_EXTENDED_ARTIST),
 
                 // Featuring Pricing
-                Section::make('Featuring Pricing')
+                Section::make(__('Featuring Pricing'))
                     ->icon('heroicon-o-star')
-                    ->description('Prices per day for featuring an event on different pages')
+                    ->description(__('Prices per day for featuring an event on different pages'))
                     ->statePath('pricing')
                     ->schema([
                         Forms\Components\TextInput::make('home_hero')
-                            ->label('Prima pagina - Hero (RON/zi)')
+                            ->label(__('Prima pagina - Hero (RON/zi)'))
                             ->numeric()
                             ->step(0.01),
 
                         Forms\Components\TextInput::make('home_recommendations')
-                            ->label('Prima pagina - Recomandari (RON/zi)')
+                            ->label(__('Prima pagina - Recomandari (RON/zi)'))
                             ->numeric()
                             ->step(0.01),
 
                         Forms\Components\TextInput::make('category')
-                            ->label('Pagina categorie eveniment (RON/zi)')
+                            ->label(__('Pagina categorie eveniment (RON/zi)'))
                             ->numeric()
                             ->step(0.01),
 
                         Forms\Components\TextInput::make('city')
-                            ->label('Pagina oras eveniment (RON/zi)')
+                            ->label(__('Pagina oras eveniment (RON/zi)'))
                             ->numeric()
                             ->step(0.01),
                     ])
@@ -161,96 +161,96 @@ class ServiceTypeResource extends Resource
                     ->visible(fn ($record) => in_array($record?->code, ['featuring', ServiceType::CODE_LOCATION_FEATURING], true)),
 
                 // Email Marketing Pricing
-                Section::make('Email Marketing Pricing')
+                Section::make(__('Email Marketing Pricing'))
                     ->icon('heroicon-o-envelope')
-                    ->description('Prices per email for different audience types')
+                    ->description(__('Prices per email for different audience types'))
                     ->statePath('pricing')
                     ->schema([
                         Forms\Components\TextInput::make('own_per_email')
-                            ->label('Own Customers (RON/email)')
+                            ->label(__('Own Customers (RON/email)'))
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Price for emailing the organizer\'s own customers'),
+                            ->helperText(__('Price for emailing the organizer\'s own customers')),
 
                         Forms\Components\TextInput::make('marketplace_per_email')
-                            ->label('Marketplace Database (RON/email)')
+                            ->label(__('Marketplace Database (RON/email)'))
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Price for emailing the marketplace\'s user base'),
+                            ->helperText(__('Price for emailing the marketplace\'s user base')),
 
                         Forms\Components\TextInput::make('minimum')
-                            ->label('Minimum Order (emails)')
+                            ->label(__('Minimum Order (emails)'))
                             ->numeric()
-                            ->helperText('Minimum number of emails per order'),
+                            ->helperText(__('Minimum number of emails per order')),
                     ])
                     ->columns(3)
                     ->visible(fn ($record) => $record?->code === 'email'),
 
                 // Ad Tracking Pricing
-                Section::make('Ad Tracking Pricing')
+                Section::make(__('Ad Tracking Pricing'))
                     ->icon('heroicon-o-chart-bar')
-                    ->description('Multiple pricing tiers for ad tracking integration')
+                    ->description(__('Multiple pricing tiers for ad tracking integration'))
                     ->statePath('pricing')
                     ->schema([
                         // The keys the price calculation and the organizer page read
                         // (ServiceOrderController::calculatePrice): a monthly price per
                         // platform and a discount per duration (0.10 = 10%).
                         Forms\Components\TextInput::make('per_platform_monthly')
-                            ->label('Cost lunar / platformă (RON, fără TVA)')
+                            ->label(__('Cost lunar / platformă (RON, fără TVA)'))
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Preț per platformă (Facebook, Google, TikTok) pe lună'),
+                            ->helperText(__('Preț per platformă (Facebook, Google, TikTok) pe lună')),
 
                         Forms\Components\TextInput::make('discounts.3')
-                            ->label('Reducere 3 luni')
+                            ->label(__('Reducere 3 luni'))
                             ->numeric()
                             ->step(0.01)
                             ->minValue(0)
                             ->maxValue(1)
-                            ->helperText('Fracție: 0.10 = 10%'),
+                            ->helperText(__('Fracție: 0.10 = 10%')),
 
                         Forms\Components\TextInput::make('discounts.6')
-                            ->label('Reducere 6 luni')
+                            ->label(__('Reducere 6 luni'))
                             ->numeric()
                             ->step(0.01)
                             ->minValue(0)
                             ->maxValue(1)
-                            ->helperText('Fracție: 0.15 = 15%'),
+                            ->helperText(__('Fracție: 0.15 = 15%')),
 
                         Forms\Components\TextInput::make('discounts.12')
-                            ->label('Reducere 12 luni')
+                            ->label(__('Reducere 12 luni'))
                             ->numeric()
                             ->step(0.01)
                             ->minValue(0)
                             ->maxValue(1)
-                            ->helperText('Fracție: 0.25 = 25%'),
+                            ->helperText(__('Fracție: 0.25 = 25%')),
                     ])
                     ->columns(4)
                     ->visible(fn ($record) => $record?->code === 'tracking'),
 
                 // Campaign Creation Pricing
-                Section::make('Campaign Creation Pricing')
+                Section::make(__('Campaign Creation Pricing'))
                     ->icon('heroicon-o-megaphone')
-                    ->description('Prices for professional ad campaign creation packages')
+                    ->description(__('Prices for professional ad campaign creation packages'))
                     ->statePath('pricing')
                     ->schema([
                         Forms\Components\TextInput::make('basic')
-                            ->label('Basic Package (RON)')
+                            ->label(__('Basic Package (RON)'))
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Basic campaign setup'),
+                            ->helperText(__('Basic campaign setup')),
 
                         Forms\Components\TextInput::make('standard')
-                            ->label('Standard Package (RON)')
+                            ->label(__('Standard Package (RON)'))
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Standard campaign with optimization'),
+                            ->helperText(__('Standard campaign with optimization')),
 
                         Forms\Components\TextInput::make('premium')
-                            ->label('Premium Package (RON)')
+                            ->label(__('Premium Package (RON)'))
                             ->numeric()
                             ->step(0.01)
-                            ->helperText('Full-service campaign management'),
+                            ->helperText(__('Full-service campaign management')),
                     ])
                     ->columns(3)
                     ->visible(fn ($record) => $record?->code === 'campaign'),
@@ -262,12 +262,12 @@ class ServiceTypeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Service')
+                    ->label(__('Service'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'featuring' => 'primary',
@@ -279,7 +279,7 @@ class ServiceTypeResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('audience')
-                    ->label('Audience')
+                    ->label(__('Audience'))
                     ->badge()
                     ->color(fn (?string $state): string => match ($state) {
                         ServiceType::AUDIENCE_ORGANIZER => 'gray',
@@ -295,7 +295,7 @@ class ServiceTypeResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('pricing_summary')
-                    ->label('Pricing (fără TVA)')
+                    ->label(__('Pricing (fără TVA)'))
                     ->getStateUsing(function (ServiceType $record): string {
                         $pricing = $record->pricing;
                         return match ($record->code) {
@@ -334,17 +334,17 @@ class ServiceTypeResource extends Resource
                     }),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('orders_count')
-                    ->label('Orders')
+                    ->label(__('Orders'))
                     ->counts('orders')
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('code')
-                    ->label('Service Type')
+                    ->label(__('Service Type'))
                     ->options([
                         'featuring' => 'Featuring',
                         // bilete.online only (activities module).
@@ -356,7 +356,7 @@ class ServiceTypeResource extends Resource
                     ]),
 
                 Tables\Filters\SelectFilter::make('audience')
-                    ->label('Audience')
+                    ->label(__('Audience'))
                     ->options([
                         ServiceType::AUDIENCE_ORGANIZER => 'Organizator',
                         ServiceType::AUDIENCE_ARTIST => 'Artist',
@@ -364,7 +364,7 @@ class ServiceTypeResource extends Resource
                     ]),
 
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
             ])
             ->recordActions([
                 EditAction::make(),

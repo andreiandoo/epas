@@ -28,12 +28,12 @@ class EditTaxTemplate extends EditRecord
     {
         return [
             Actions\Action::make('test_generate')
-                ->label('Testează')
+                ->label(__('Testează'))
                 ->icon('heroicon-o-document-arrow-down')
                 ->color('info')
                 ->form([
                     Forms\Components\Select::make('organizer_id')
-                        ->label('Organizator')
+                        ->label(__('Organizator'))
                         ->options(function () {
                             $marketplace = static::getMarketplaceClient();
                             if (!$marketplace) return [];
@@ -52,7 +52,7 @@ class EditTaxTemplate extends EditRecord
                         }),
 
                     Forms\Components\Select::make('event_id')
-                        ->label('Eveniment')
+                        ->label(__('Eveniment'))
                         ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $organizerId = $get('organizer_id');
                             if (!$organizerId) return [];
@@ -86,10 +86,10 @@ class EditTaxTemplate extends EditRecord
                         })
                         ->searchable()
                         ->live()
-                        ->helperText('Opțional — lasă gol pentru test fără date de eveniment.'),
+                        ->helperText(__('Opțional — lasă gol pentru test fără date de eveniment.')),
 
                     Forms\Components\Select::make('payout_id')
-                        ->label('Decont existent')
+                        ->label(__('Decont existent'))
                         ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $organizerId = $get('organizer_id');
                             if (!$organizerId) return [];
@@ -110,10 +110,10 @@ class EditTaxTemplate extends EditRecord
                                 ->toArray();
                         })
                         ->searchable()
-                        ->helperText('Opțional — selectează un decont pentru a folosi datele lui reale (bilete, comision etc).'),
+                        ->helperText(__('Opțional — selectează un decont pentru a folosi datele lui reale (bilete, comision etc).')),
 
                     Forms\Components\Select::make('tax_registry_id')
-                        ->label('Registry fiscal')
+                        ->label(__('Registry fiscal'))
                         ->searchable()
                         ->getSearchResultsUsing(function (string $search) {
                             $marketplace = static::getMarketplaceClient();
@@ -152,7 +152,7 @@ class EditTaxTemplate extends EditRecord
                                 . ($r->commune ? ' — ' . $r->commune : '')
                                 . ($r->tax_rate !== null ? ' (' . rtrim(rtrim(number_format((float) $r->tax_rate, 2, '.', ''), '0'), '.') . '%)' : '');
                         })
-                        ->helperText('Opțional — alege explicit registry-ul fiscal pentru test. Caută după nume, comună, oraș sau județ (case + diacritic insensitive). Fallback: registry-ul evenimentului → primul registry activ al marketplace-ului.'),
+                        ->helperText(__('Opțional — alege explicit registry-ul fiscal pentru test. Caută după nume, comună, oraș sau județ (case + diacritic insensitive). Fallback: registry-ul evenimentului → primul registry activ al marketplace-ului.')),
                 ])
                 ->action(function (array $data) {
                     $template = $this->record->fresh();
@@ -208,7 +208,7 @@ class EditTaxTemplate extends EditRecord
 
                     if (empty($pages)) {
                         \Filament\Notifications\Notification::make()
-                            ->title('Template-ul nu are conținut HTML.')
+                            ->title(__('Template-ul nu are conținut HTML.'))
                             ->warning()
                             ->send();
                         return;
@@ -240,9 +240,9 @@ class EditTaxTemplate extends EditRecord
                         'Content-Type' => 'application/pdf',
                     ]);
                 })
-                ->modalHeading('Testează Generare Document')
-                ->modalDescription('Selectează un organizator și opțional un eveniment pentru a genera un PDF de test cu date reale.')
-                ->modalSubmitActionLabel('Generează PDF')
+                ->modalHeading(__('Testează Generare Document'))
+                ->modalDescription(__('Selectează un organizator și opțional un eveniment pentru a genera un PDF de test cu date reale.'))
+                ->modalSubmitActionLabel(__('Generează PDF'))
                 ->modalIcon('heroicon-o-document-arrow-down'),
 
             Actions\DeleteAction::make(),

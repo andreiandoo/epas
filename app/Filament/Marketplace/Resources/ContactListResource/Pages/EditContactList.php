@@ -16,17 +16,17 @@ class EditContactList extends EditRecord
     {
         return [
             Actions\Action::make('sync_subscribers')
-                ->label('Sync Subscribers')
+                ->label(__('Sync Subscribers'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('primary')
                 ->requiresConfirmation()
-                ->modalHeading('Sync Subscribers')
-                ->modalDescription('This will add all customers matching the current rules to this list. Existing subscribers will not be removed.')
+                ->modalHeading(__('Sync Subscribers'))
+                ->modalDescription(__('This will add all customers matching the current rules to this list. Existing subscribers will not be removed.'))
                 ->visible(fn () => $this->record->isDynamic())
                 ->action(function () {
                     $added = $this->record->syncSubscribers();
                     \Filament\Notifications\Notification::make()
-                        ->title('Sync Complete')
+                        ->title(__('Sync Complete'))
                         ->body("{$added} new subscribers added to the list.")
                         ->success()
                         ->send();

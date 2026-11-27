@@ -21,13 +21,13 @@ class ListTaxRegistries extends ListRecords
     {
         return [
             Actions\Action::make('reports')
-                ->label('Rapoarte')
+                ->label(__('Rapoarte'))
                 ->icon('heroicon-o-table-cells')
                 ->color('gray')
                 ->url(\App\Filament\Marketplace\Pages\TaxRegistryReports::getUrl()),
 
             Actions\Action::make('downloadTemplate')
-                ->label('Descarcă Template CSV')
+                ->label(__('Descarcă Template CSV'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->action(function (): StreamedResponse {
@@ -50,22 +50,22 @@ class ListTaxRegistries extends ListRecords
                 }),
 
             Actions\Action::make('importCsv')
-                ->label('Import CSV')
+                ->label(__('Import CSV'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('info')
                 ->form([
                     Forms\Components\FileUpload::make('csv_file')
-                        ->label('Fișier CSV')
+                        ->label(__('Fișier CSV'))
                         ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])
                         ->required()
                         ->disk('local')
                         ->directory('temp-imports')
-                        ->helperText('Coloane acceptate: name, subname, country, county, city, commune, address, directions, phone, email, email2, website_url, cif, iban, siruta_code, is_active. Câmpul CIF este folosit ca identificator unic.'),
+                        ->helperText(__('Coloane acceptate: name, subname, country, county, city, commune, address, directions, phone, email, email2, website_url, cif, iban, siruta_code, is_active. Câmpul CIF este folosit ca identificator unic.')),
 
                     Forms\Components\Toggle::make('overwrite')
-                        ->label('Suprascrie înregistrările existente (pe baza CIF)')
+                        ->label(__('Suprascrie înregistrările existente (pe baza CIF)'))
                         ->default(true)
-                        ->helperText('Dacă este activ, intrările existente cu același CIF vor fi actualizate cu datele din CSV.'),
+                        ->helperText(__('Dacă este activ, intrările existente cu același CIF vor fi actualizate cu datele din CSV.')),
                 ])
                 ->action(function (array $data): void {
                     $this->importCsvData($data);
@@ -79,7 +79,7 @@ class ListTaxRegistries extends ListRecords
     {
         $marketplace = TaxRegistryResource::getMarketplaceClient();
         if (!$marketplace) {
-            Notification::make()->title('Marketplace nu a fost găsit.')->danger()->send();
+            Notification::make()->title(__('Marketplace nu a fost găsit.'))->danger()->send();
             return;
         }
 
@@ -90,7 +90,7 @@ class ListTaxRegistries extends ListRecords
         }
 
         if (!file_exists($filePath)) {
-            Notification::make()->title('Fișierul CSV nu a fost găsit.')->danger()->send();
+            Notification::make()->title(__('Fișierul CSV nu a fost găsit.'))->danger()->send();
             return;
         }
 
@@ -98,7 +98,7 @@ class ListTaxRegistries extends ListRecords
 
         $handle = fopen($filePath, 'r');
         if (!$handle) {
-            Notification::make()->title('Nu s-a putut deschide fișierul CSV.')->danger()->send();
+            Notification::make()->title(__('Nu s-a putut deschide fișierul CSV.'))->danger()->send();
             return;
         }
 
@@ -106,7 +106,7 @@ class ListTaxRegistries extends ListRecords
         $header = fgetcsv($handle, 0, ',', '"', '\\');
         if (!$header) {
             fclose($handle);
-            Notification::make()->title('Fișierul CSV este gol.')->danger()->send();
+            Notification::make()->title(__('Fișierul CSV este gol.'))->danger()->send();
             return;
         }
 
@@ -125,7 +125,7 @@ class ListTaxRegistries extends ListRecords
         if (!isset($headerMap['cif'])) {
             fclose($handle);
             Notification::make()
-                ->title('Coloana CIF lipsește din fișierul CSV.')
+                ->title(__('Coloana CIF lipsește din fișierul CSV.'))
                 ->body('Coloanele găsite: ' . implode(', ', $header))
                 ->danger()
                 ->send();
@@ -197,7 +197,7 @@ class ListTaxRegistries extends ListRecords
         @unlink($filePath);
 
         Notification::make()
-            ->title('Import finalizat')
+            ->title(__('Import finalizat'))
             ->body("Create: {$created} | Actualizate: {$updated} | Ignorate: {$skipped}")
             ->success()
             ->send();

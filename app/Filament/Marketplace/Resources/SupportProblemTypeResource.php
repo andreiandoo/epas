@@ -42,7 +42,7 @@ class SupportProblemTypeResource extends Resource
         return $form->components([
             Section::make()->schema([
                 Forms\Components\Select::make('support_department_id')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->options(fn () => SupportDepartment::query()
                         ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                         ->orderBy('sort_order')
@@ -52,50 +52,50 @@ class SupportProblemTypeResource extends Resource
                     ->required(),
 
                 Forms\Components\TextInput::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->required()
                     ->maxLength(64),
 
                 Forms\Components\KeyValue::make('name')
-                    ->label('Nume (per limbă)')
+                    ->label(__('Nume (per limbă)'))
                     ->keyLabel('Cod limbă')
                     ->valueLabel('Denumire')
                     ->keyPlaceholder('ro')
                     ->required(),
 
                 Forms\Components\KeyValue::make('description')
-                    ->label('Descriere (per limbă)')
+                    ->label(__('Descriere (per limbă)'))
                     ->keyLabel('Cod limbă')
                     ->valueLabel('Descriere'),
 
                 Forms\Components\CheckboxList::make('required_fields')
-                    ->label('Câmpuri obligatorii pe formular')
+                    ->label(__('Câmpuri obligatorii pe formular'))
                     ->options([
-                        'url' => 'URL pagină',
-                        'invoice_series' => 'Seria decont',
-                        'invoice_number' => 'Număr decont',
-                        'event_id' => 'Selector eveniment',
-                        'module_name' => 'Nume modul',
+                        'url' => __('URL pagină'),
+                        'invoice_series' => __('Seria decont'),
+                        'invoice_number' => __('Număr decont'),
+                        'event_id' => __('Selector eveniment'),
+                        'module_name' => __('Nume modul'),
                     ])
                     ->columns(2)
-                    ->helperText('Câmpurile selectate apar dinamic pe formularul organizatorului și sunt validate ca obligatorii.'),
+                    ->helperText(__('Câmpurile selectate apar dinamic pe formularul organizatorului și sunt validate ca obligatorii.')),
 
                 Forms\Components\CheckboxList::make('allowed_opener_types')
-                    ->label('Vizibil pentru')
+                    ->label(__('Vizibil pentru'))
                     ->options([
-                        'organizer' => 'Organizatori',
-                        'customer' => 'Cumpărători (viitor)',
+                        'organizer' => __('Organizatori'),
+                        'customer' => __('Cumpărători (viitor)'),
                     ])
                     ->columns(2)
                     ->default(['organizer', 'customer']),
 
                 Forms\Components\TextInput::make('sort_order')
-                    ->label('Ordine')
+                    ->label(__('Ordine'))
                     ->numeric()
                     ->default(0),
 
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Activ')
+                    ->label(__('Activ'))
                     ->default(true),
             ])->columns(2),
         ]);
@@ -106,29 +106,29 @@ class SupportProblemTypeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('department.name')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->state(fn (SupportProblemType $r) => $r->department?->getTranslation('name', 'ro') ?? '—')
                     ->badge()
                     ->color('gray')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->state(fn (SupportProblemType $r) => $r->getTranslation('name', 'ro') ?: $r->slug),
                 Tables\Columns\TextColumn::make('slug')->fontFamily('mono')->size('xs'),
                 Tables\Columns\TextColumn::make('required_fields')
-                    ->label('Câmpuri')
+                    ->label(__('Câmpuri'))
                     ->state(fn (SupportProblemType $r) => empty($r->required_fields) ? '—' : implode(', ', $r->required_fields))
                     ->size('xs'),
                 Tables\Columns\TextColumn::make('allowed_opener_types')
-                    ->label('Vizibil')
+                    ->label(__('Vizibil'))
                     ->state(fn (SupportProblemType $r) => empty($r->allowed_opener_types) ? 'toți' : implode(', ', $r->allowed_opener_types))
                     ->size('xs'),
-                Tables\Columns\IconColumn::make('is_active')->label('Activ')->boolean(),
+                Tables\Columns\IconColumn::make('is_active')->label(__('Activ'))->boolean(),
             ])
             ->defaultSort('sort_order')
             ->filters([
                 Tables\Filters\SelectFilter::make('support_department_id')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->options(fn () => SupportDepartment::query()
                         ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                         ->orderBy('sort_order')

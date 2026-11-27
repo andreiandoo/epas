@@ -18,7 +18,7 @@ class ListPartnerAds extends ListRecords
     {
         return [
             Actions\Action::make('syncFormats')
-                ->label('Actualizează zonele')
+                ->label(__('Actualizează zonele'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
                 ->action(function () {
@@ -26,8 +26,8 @@ class ListPartnerAds extends ListRecords
 
                     if ($partners->isEmpty()) {
                         Notification::make()
-                            ->title('Niciun partener nu are adresa API pentru reclame')
-                            ->body('Completeaz-o în Parteneri media → Reclame.')
+                            ->title(__('Niciun partener nu are adresa API pentru reclame'))
+                            ->body(__('Completeaz-o în Parteneri media → Reclame.'))
                             ->warning()
                             ->send();
 

@@ -47,19 +47,19 @@ class BookingsRelationManager extends RelationManager
             ->recordTitleAttribute('confirmation_code')
             ->columns([
                 Tables\Columns\TextColumn::make('confirmation_code')
-                    ->label('Cod')
+                    ->label(__('Cod'))
                     ->searchable()
                     ->copyable()
                     ->weight('bold')
                     ->fontFamily('mono'),
 
                 Tables\Columns\TextColumn::make('booking_date')
-                    ->label('Data')
+                    ->label(__('Data'))
                     ->date('d M Y')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slot_start_time')
-                    ->label('Ora')
+                    ->label(__('Ora'))
                     ->formatStateUsing(fn ($state) => $state
                         ? (is_string($state) ? substr($state, 0, 5) : $state->format('H:i'))
                         : '—')
@@ -67,13 +67,13 @@ class BookingsRelationManager extends RelationManager
                     ->fontFamily('mono'),
 
                 Tables\Columns\TextColumn::make('participants_count')
-                    ->label('Locuri')
+                    ->label(__('Locuri'))
                     ->alignCenter()
                     ->badge()
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('customer.email')
-                    ->label('Client')
+                    ->label(__('Client'))
                     ->formatStateUsing(fn ($state, $record) => $record->customer
                         ? trim(($record->customer->first_name ?? '') . ' ' . ($record->customer->last_name ?? '')) . "\n" . $state
                         : ($state ?? '—'))
@@ -82,13 +82,13 @@ class BookingsRelationManager extends RelationManager
                     ->limit(45),
 
                 Tables\Columns\TextColumn::make('total_cents')
-                    ->label('Total')
+                    ->label(__('Total'))
                     ->formatStateUsing(fn ($state, $record) =>
                         number_format(($state ?? 0) / 100, 2, ',', '.') . ' ' . ($record->currency ?? 'RON'))
                     ->alignRight(),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         ActivityBooking::STATUS_PAID,
@@ -114,7 +114,7 @@ class BookingsRelationManager extends RelationManager
             ->modifyQueryUsing(fn (Builder $query) => $query->orderBy('booking_date')->orderBy('slot_start_time'))
             ->filters([
                 SelectFilter::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->multiple()
                     ->options([
                         ActivityBooking::STATUS_PAID            => 'Plătit',
@@ -126,12 +126,12 @@ class BookingsRelationManager extends RelationManager
                     ]),
 
                 Filter::make('today')
-                    ->label('Doar azi')
+                    ->label(__('Doar azi'))
                     ->query(fn (Builder $query) => $query->whereDate('booking_date', now()->toDateString()))
                     ->toggle(),
 
                 Filter::make('upcoming')
-                    ->label('Doar viitoare')
+                    ->label(__('Doar viitoare'))
                     ->query(fn (Builder $query) => $query->whereDate('booking_date', '>=', now()->toDateString()))
                     ->toggle(),
             ])
@@ -140,7 +140,7 @@ class BookingsRelationManager extends RelationManager
                 // activity — useful when the organizer wants to see the
                 // bookings list with its full toolbar.
                 Action::make('openFullList')
-                    ->label('Listă completă')
+                    ->label(__('Listă completă'))
                     ->icon('heroicon-o-arrow-top-right-on-square')
                     ->color('gray')
                     ->url(fn () => route('filament.marketplace.resources.activity-bookings.index', [
@@ -155,7 +155,7 @@ class BookingsRelationManager extends RelationManager
                     ])),
 
                 Action::make('checkIn')
-                    ->label('Validează')
+                    ->label(__('Validează'))
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn (ActivityBooking $record): bool => in_array($record->status, [
@@ -178,13 +178,13 @@ class BookingsRelationManager extends RelationManager
                                 ]);
                         });
                         Notification::make()
-                            ->title('Rezervarea a fost validată')
+                            ->title(__('Rezervarea a fost validată'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('markNoShow')
-                    ->label('No-show')
+                    ->label(__('No-show'))
                     ->icon('heroicon-o-no-symbol')
                     ->color('warning')
                     ->visible(fn (ActivityBooking $record): bool => in_array($record->status, [
@@ -194,11 +194,11 @@ class BookingsRelationManager extends RelationManager
                     ->requiresConfirmation()
                     ->action(function (ActivityBooking $record): void {
                         $record->update(['status' => ActivityBooking::STATUS_NO_SHOW]);
-                        Notification::make()->title('Marcat ca no-show')->success()->send();
+                        Notification::make()->title(__('Marcat ca no-show'))->success()->send();
                     }),
 
                 Action::make('cancelBooking')
-                    ->label('Anulează')
+                    ->label(__('Anulează'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn (ActivityBooking $record): bool => ! in_array($record->status, [
@@ -216,7 +216,7 @@ class BookingsRelationManager extends RelationManager
                                 ->whereIn('status', ['valid', 'pending'])
                                 ->update(['status' => 'cancelled']);
                         });
-                        Notification::make()->title('Rezervarea a fost anulată')->success()->send();
+                        Notification::make()->title(__('Rezervarea a fost anulată'))->success()->send();
                     }),
             ])
             ->toolbarActions([]);

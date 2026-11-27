@@ -41,7 +41,7 @@ class EditPartnerAd extends EditRecord
     {
         return [
             Actions\Action::make('pause')
-                ->label('Pune pe pauză')
+                ->label(__('Pune pe pauză'))
                 ->icon('heroicon-o-pause')
                 ->color('warning')
                 ->visible(fn () => $this->record->status === PartnerAd::STATUS_ACTIVE)
@@ -50,7 +50,7 @@ class EditPartnerAd extends EditRecord
                     $this->refreshFormData(['status']);
                 }),
             Actions\Action::make('activate')
-                ->label('Activează')
+                ->label(__('Activează'))
                 ->icon('heroicon-o-play')
                 ->color('success')
                 ->visible(fn () => $this->record->status !== PartnerAd::STATUS_ACTIVE)
@@ -59,7 +59,7 @@ class EditPartnerAd extends EditRecord
                     $this->refreshFormData(['status']);
                 }),
             Actions\DeleteAction::make()
-                ->modalDescription('Reclama se retrage și de pe site-ul partenerului.')
+                ->modalDescription(__('Reclama se retrage și de pe site-ul partenerului.'))
                 ->before(fn () => app(PartnerAds::class)->withdrawBeforeDelete($this->record)),
         ];
     }

@@ -61,10 +61,10 @@ class KbCategoryResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Category Details')
+                SC\Section::make(__('Category Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
-                            ->label('Category Name')
+                            ->label(__('Category Name'))
                             ->required()
                             ->maxLength(190)
                             ->live(onBlur: true)
@@ -73,62 +73,62 @@ class KbCategoryResource extends Resource
                             }),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
                         Forms\Components\Textarea::make("description.{$marketplaceLanguage}")
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(3)
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
 
                         Forms\Components\Toggle::make('is_visible')
-                            ->label('Visible')
+                            ->label(__('Visible'))
                             ->default(true),
                     ])->columns(2),
 
-                SC\Section::make('Appearance')
+                SC\Section::make(__('Appearance'))
                     ->schema([
                         Forms\Components\Select::make('icon')
-                            ->label('Icon')
+                            ->label(__('Icon'))
                             ->options([
-                                'heroicon-o-ticket' => 'Ticket',
-                                'heroicon-o-calendar' => 'Calendar',
-                                'heroicon-o-user' => 'User',
-                                'heroicon-o-cog-6-tooth' => 'Settings',
-                                'heroicon-o-credit-card' => 'Credit Card',
-                                'heroicon-o-document-text' => 'Document',
-                                'heroicon-o-question-mark-circle' => 'Question',
-                                'heroicon-o-information-circle' => 'Information',
-                                'heroicon-o-bell' => 'Bell',
-                                'heroicon-o-envelope' => 'Envelope',
-                                'heroicon-o-shield-check' => 'Shield',
-                                'heroicon-o-lock-closed' => 'Lock',
-                                'heroicon-o-map-pin' => 'Location',
-                                'heroicon-o-phone' => 'Phone',
-                                'heroicon-o-building-office' => 'Building',
-                                'heroicon-o-banknotes' => 'Money',
-                                'heroicon-o-gift' => 'Gift',
-                                'heroicon-o-star' => 'Star',
-                                'heroicon-o-heart' => 'Heart',
-                                'heroicon-o-chart-bar' => 'Chart',
-                                'heroicon-o-folder' => 'Folder',
-                                'heroicon-o-clipboard-document-list' => 'Clipboard',
+                                'heroicon-o-ticket' => __('Ticket'),
+                                'heroicon-o-calendar' => __('Calendar'),
+                                'heroicon-o-user' => __('User'),
+                                'heroicon-o-cog-6-tooth' => __('Settings'),
+                                'heroicon-o-credit-card' => __('Credit Card'),
+                                'heroicon-o-document-text' => __('Document'),
+                                'heroicon-o-question-mark-circle' => __('Question'),
+                                'heroicon-o-information-circle' => __('Information'),
+                                'heroicon-o-bell' => __('Bell'),
+                                'heroicon-o-envelope' => __('Envelope'),
+                                'heroicon-o-shield-check' => __('Shield'),
+                                'heroicon-o-lock-closed' => __('Lock'),
+                                'heroicon-o-map-pin' => __('Location'),
+                                'heroicon-o-phone' => __('Phone'),
+                                'heroicon-o-building-office' => __('Building'),
+                                'heroicon-o-banknotes' => __('Money'),
+                                'heroicon-o-gift' => __('Gift'),
+                                'heroicon-o-star' => __('Star'),
+                                'heroicon-o-heart' => __('Heart'),
+                                'heroicon-o-chart-bar' => __('Chart'),
+                                'heroicon-o-folder' => __('Folder'),
+                                'heroicon-o-clipboard-document-list' => __('Clipboard'),
                             ])
                             ->searchable()
-                            ->placeholder('Select an icon'),
+                            ->placeholder(__('Select an icon')),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
 
                         Forms\Components\TextInput::make('image_url')
-                            ->label('Image URL')
+                            ->label(__('Image URL'))
                             ->url()
                             ->maxLength(500)
                             ->placeholder('https://...'),
@@ -153,27 +153,27 @@ class KbCategoryResource extends Resource
                     ->icon(fn ($state) => $state),
 
                 Tables\Columns\ColorColumn::make('color')
-                    ->label('Color'),
+                    ->label(__('Color')),
 
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('article_count')
-                    ->label('Articles')
+                    ->label(__('Articles'))
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -183,7 +183,7 @@ class KbCategoryResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
             ])
             ->recordActions([
                 EditAction::make(),

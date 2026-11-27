@@ -65,19 +65,19 @@ class GiftCardResource extends Resource
 
         return $schema
             ->components([
-                SC\Section::make('Gift Card Details')
+                SC\Section::make(__('Gift Card Details'))
                     ->schema([
                         Forms\Components\Hidden::make('marketplace_client_id')
                             ->default($marketplace?->id),
 
                         Forms\Components\TextInput::make('code')
-                            ->label('Gift Card Code')
+                            ->label(__('Gift Card Code'))
                             ->disabled()
                             ->dehydrated(false)
                             ->visible(fn ($record) => $record !== null),
 
                         Forms\Components\Select::make('initial_amount')
-                            ->label('Amount')
+                            ->label(__('Amount'))
                             ->options(array_combine(
                                 MarketplaceGiftCard::PRESET_AMOUNTS,
                                 array_map(fn ($v) => number_format($v, 2) . ' RON', MarketplaceGiftCard::PRESET_AMOUNTS)
@@ -89,7 +89,7 @@ class GiftCardResource extends Resource
                         Forms\Components\Hidden::make('balance'),
 
                         Forms\Components\Select::make('currency')
-                            ->options(['RON' => 'RON', 'EUR' => 'EUR'])
+                            ->options(['RON' => __('RON'), 'EUR' => __('EUR')])
                             ->default('RON')
                             ->required(),
 
@@ -107,45 +107,45 @@ class GiftCardResource extends Resource
                             ->visible(fn ($record) => $record !== null),
                     ])->columns(2),
 
-                SC\Section::make('Purchaser Information')
+                SC\Section::make(__('Purchaser Information'))
                     ->schema([
                         Forms\Components\TextInput::make('purchaser_email')
-                            ->label('Purchaser Email')
+                            ->label(__('Purchaser Email'))
                             ->email()
                             ->required(),
 
                         Forms\Components\TextInput::make('purchaser_name')
-                            ->label('Purchaser Name'),
+                            ->label(__('Purchaser Name')),
 
                         Forms\Components\Select::make('purchaser_id')
-                            ->label('Link to Customer')
+                            ->label(__('Link to Customer'))
                             ->relationship('purchaser', 'email', fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClientId()))
                             ->searchable()
                             ->preload(),
                     ])->columns(3),
 
-                SC\Section::make('Recipient Information')
+                SC\Section::make(__('Recipient Information'))
                     ->schema([
                         Forms\Components\TextInput::make('recipient_email')
-                            ->label('Recipient Email')
+                            ->label(__('Recipient Email'))
                             ->email()
                             ->required(),
 
                         Forms\Components\TextInput::make('recipient_name')
-                            ->label('Recipient Name'),
+                            ->label(__('Recipient Name')),
 
                         Forms\Components\Select::make('occasion')
-                            ->label('Occasion')
+                            ->label(__('Occasion'))
                             ->options(MarketplaceGiftCard::OCCASIONS),
 
                         Forms\Components\Textarea::make('personal_message')
-                            ->label('Personal Message')
+                            ->label(__('Personal Message'))
                             ->rows(3)
                             ->maxLength(500)
                             ->columnSpanFull(),
                     ])->columns(2),
 
-                SC\Section::make('Delivery')
+                SC\Section::make(__('Delivery'))
                     ->schema([
                         Forms\Components\Select::make('delivery_method')
                             ->options([
@@ -156,22 +156,22 @@ class GiftCardResource extends Resource
                             ->required(),
 
                         Forms\Components\DateTimePicker::make('scheduled_delivery_at')
-                            ->label('Schedule Delivery')
-                            ->helperText('Leave empty to send immediately')
+                            ->label(__('Schedule Delivery'))
+                            ->helperText(__('Leave empty to send immediately'))
                             ->minDate(now()),
 
                         Forms\Components\Select::make('design_template')
-                            ->label('Design Template')
+                            ->label(__('Design Template'))
                             ->options(fn () => \App\Models\MarketplaceGiftCardDesign::forMarketplace(static::getMarketplaceClientId())
                                 ->active()
                                 ->pluck('name', 'slug'))
                             ->default('default'),
                     ])->columns(3),
 
-                SC\Section::make('Validity')
+                SC\Section::make(__('Validity'))
                     ->schema([
                         Forms\Components\DateTimePicker::make('expires_at')
-                            ->label('Expires At')
+                            ->label(__('Expires At'))
                             ->required()
                             ->default(now()->addYear())
                             ->minDate(now()),
@@ -183,19 +183,19 @@ class GiftCardResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Gift Card Details')
+                SC\Section::make(__('Gift Card Details'))
                     ->columns(4)
                     ->schema([
                         Forms\Components\Placeholder::make('code')
-                            ->label('Code')
+                            ->label(__('Code'))
                             ->content(fn ($record) => new HtmlString('<span class="font-mono text-lg font-bold">' . $record->code . '</span>')),
 
                         Forms\Components\Placeholder::make('pin')
-                            ->label('PIN')
+                            ->label(__('PIN'))
                             ->content(fn ($record) => new HtmlString('<span class="font-mono">' . $record->pin . '</span>')),
 
                         Forms\Components\Placeholder::make('status')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->status) {
                                 'pending' => 'bg-warning-100 text-warning-700',
                                 'active' => 'bg-success-100 text-success-700',
@@ -206,7 +206,7 @@ class GiftCardResource extends Resource
                             } . '">' . $record->status_label . '</span>')),
 
                         Forms\Components\Placeholder::make('balance_display')
-                            ->label('Balance')
+                            ->label(__('Balance'))
                             ->content(fn ($record) => new HtmlString(
                                 '<span class="text-lg font-bold">' . $record->formatted_balance . '</span>' .
                                 ' / ' . number_format($record->initial_amount, 2) . ' ' . $record->currency .
@@ -214,7 +214,7 @@ class GiftCardResource extends Resource
                             )),
                     ]),
 
-                SC\Section::make('Purchaser')
+                SC\Section::make(__('Purchaser'))
                     ->columns(3)
                     ->schema([
                         Forms\Components\Placeholder::make('purchaser_name')
@@ -224,13 +224,13 @@ class GiftCardResource extends Resource
                             ->content(fn ($record) => $record->purchaser_email),
 
                         Forms\Components\Placeholder::make('purchase_order')
-                            ->label('Order')
+                            ->label(__('Order'))
                             ->content(fn ($record) => $record->purchaseOrder
                                 ? '#' . ($record->purchaseOrder->order_number ?? $record->purchase_order_id)
                                 : 'Manual Creation'),
                     ]),
 
-                SC\Section::make('Recipient')
+                SC\Section::make(__('Recipient'))
                     ->columns(3)
                     ->schema([
                         Forms\Components\Placeholder::make('recipient_name')
@@ -243,19 +243,19 @@ class GiftCardResource extends Resource
                             ->content(fn ($record) => $record->occasion_label ?? 'N/A'),
 
                         Forms\Components\Placeholder::make('personal_message')
-                            ->label('Message')
+                            ->label(__('Message'))
                             ->content(fn ($record) => $record->personal_message ?? 'No message')
                             ->columnSpanFull(),
                     ]),
 
-                SC\Section::make('Delivery & Validity')
+                SC\Section::make(__('Delivery & Validity'))
                     ->columns(4)
                     ->schema([
                         Forms\Components\Placeholder::make('delivery_method')
                             ->content(fn ($record) => ucfirst($record->delivery_method)),
 
                         Forms\Components\Placeholder::make('is_delivered')
-                            ->label('Delivered')
+                            ->label(__('Delivered'))
                             ->content(fn ($record) => $record->is_delivered
                                 ? 'Yes (' . $record->delivered_at?->format('d M Y H:i') . ')'
                                 : ($record->scheduled_delivery_at ? 'Scheduled: ' . $record->scheduled_delivery_at->format('d M Y H:i') : 'Pending')),
@@ -269,7 +269,7 @@ class GiftCardResource extends Resource
                                 : 'Not yet'),
                     ]),
 
-                SC\Section::make('Transaction History')
+                SC\Section::make(__('Transaction History'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\Placeholder::make('transactions')
@@ -311,7 +311,7 @@ class GiftCardResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
@@ -319,12 +319,12 @@ class GiftCardResource extends Resource
                     ->fontFamily('mono'),
 
                 Tables\Columns\TextColumn::make('initial_amount')
-                    ->label('Amount')
+                    ->label(__('Amount'))
                     ->money('RON')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('balance')
-                    ->label('Balance')
+                    ->label(__('Balance'))
                     ->money('RON')
                     ->sortable()
                     ->color(fn ($record) => $record->balance > 0 ? 'success' : 'gray'),
@@ -334,27 +334,27 @@ class GiftCardResource extends Resource
                     ->color(fn ($record) => $record->status_color),
 
                 Tables\Columns\TextColumn::make('recipient_email')
-                    ->label('Recipient')
+                    ->label(__('Recipient'))
                     ->searchable()
                     ->limit(25),
 
                 Tables\Columns\TextColumn::make('occasion')
-                    ->label('Occasion')
+                    ->label(__('Occasion'))
                     ->formatStateUsing(fn ($state) => MarketplaceGiftCard::OCCASIONS[$state] ?? $state)
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('is_delivered')
-                    ->label('Delivered')
+                    ->label(__('Delivered'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('expires_at')
-                    ->label('Expires')
+                    ->label(__('Expires'))
                     ->date()
                     ->sortable()
                     ->color(fn ($record) => $record->isExpiringSoon() ? 'warning' : null),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label(__('Created'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -373,16 +373,16 @@ class GiftCardResource extends Resource
                 Tables\Filters\SelectFilter::make('occasion')
                     ->options(MarketplaceGiftCard::OCCASIONS),
                 Tables\Filters\TernaryFilter::make('is_delivered')
-                    ->label('Delivered'),
+                    ->label(__('Delivered')),
                 Tables\Filters\Filter::make('expiring_soon')
-                    ->label('Expiring Soon (30 days)')
+                    ->label(__('Expiring Soon (30 days)'))
                     ->query(fn (Builder $query) => $query->where('expires_at', '<=', now()->addDays(30))->where('expires_at', '>', now())),
             ])
             ->recordActions([
                 ViewAction::make(),
                 ActionGroup::make([
                     Action::make('send_email')
-                        ->label('Send/Resend Email')
+                        ->label(__('Send/Resend Email'))
                         ->icon('heroicon-o-envelope')
                         ->color('primary')
                         ->visible(fn ($record) => $record->delivery_method === 'email')
@@ -392,13 +392,13 @@ class GiftCardResource extends Resource
                             $record->markDelivered();
 
                             Notification::make()
-                                ->title('Gift card email sent')
+                                ->title(__('Gift card email sent'))
                                 ->success()
                                 ->send();
                         }),
 
                     Action::make('activate')
-                        ->label('Activate')
+                        ->label(__('Activate'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->visible(fn ($record) => $record->isPending())
@@ -406,19 +406,19 @@ class GiftCardResource extends Resource
                             $record->activate();
 
                             Notification::make()
-                                ->title('Gift card activated')
+                                ->title(__('Gift card activated'))
                                 ->success()
                                 ->send();
                         }),
 
                     Action::make('revoke')
-                        ->label('Revoke')
+                        ->label(__('Revoke'))
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->visible(fn ($record) => $record->isActive())
                         ->form([
                             Forms\Components\Textarea::make('reason')
-                                ->label('Reason')
+                                ->label(__('Reason'))
                                 ->required(),
                         ])
                         ->requiresConfirmation()
@@ -426,24 +426,24 @@ class GiftCardResource extends Resource
                             $record->revoke($data['reason'], auth()->id());
 
                             Notification::make()
-                                ->title('Gift card revoked')
+                                ->title(__('Gift card revoked'))
                                 ->warning()
                                 ->send();
                         }),
 
                     Action::make('adjust_balance')
-                        ->label('Adjust Balance')
+                        ->label(__('Adjust Balance'))
                         ->icon('heroicon-o-currency-dollar')
                         ->color('warning')
                         ->visible(fn ($record) => $record->isActive())
                         ->form([
                             Forms\Components\TextInput::make('amount')
-                                ->label('Amount to Add/Subtract')
+                                ->label(__('Amount to Add/Subtract'))
                                 ->numeric()
                                 ->required()
-                                ->helperText('Use negative number to subtract'),
+                                ->helperText(__('Use negative number to subtract')),
                             Forms\Components\Textarea::make('reason')
-                                ->label('Reason')
+                                ->label(__('Reason'))
                                 ->required(),
                         ])
                         ->action(function ($record, array $data) {
@@ -456,7 +456,7 @@ class GiftCardResource extends Resource
                             }
 
                             Notification::make()
-                                ->title('Balance adjusted')
+                                ->title(__('Balance adjusted'))
                                 ->success()
                                 ->send();
                         }),

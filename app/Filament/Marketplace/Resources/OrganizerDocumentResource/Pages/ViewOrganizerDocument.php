@@ -21,20 +21,20 @@ class ViewOrganizerDocument extends ViewRecord
     {
         return [
             Actions\Action::make('download')
-                ->label('Download PDF')
+                ->label(__('Download PDF'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->url(fn () => $this->record->download_url)
                 ->openUrlInNewTab()
                 ->visible(fn () => $this->record->file_path),
 
             Actions\Action::make('regenerate')
-                ->label('Regenerate')
+                ->label(__('Regenerate'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('Regenerate Document')
-                ->modalDescription('This will regenerate the document with current data and replace the existing file. Are you sure?')
-                ->modalSubmitActionLabel('Yes, Regenerate')
+                ->modalHeading(__('Regenerate Document'))
+                ->modalDescription(__('This will regenerate the document with current data and replace the existing file. Are you sure?'))
+                ->modalSubmitActionLabel(__('Yes, Regenerate'))
                 ->action(function () {
                     $document = $this->record;
                     $organizer = $document->organizer;
@@ -43,8 +43,8 @@ class ViewOrganizerDocument extends ViewRecord
 
                     if (!$event) {
                         Notification::make()
-                            ->title('Error')
-                            ->body('Event not found')
+                            ->title(__('Error'))
+                            ->body(__('Event not found'))
                             ->danger()
                             ->send();
                         return;
@@ -61,8 +61,8 @@ class ViewOrganizerDocument extends ViewRecord
 
                     if (!$template) {
                         Notification::make()
-                            ->title('Error')
-                            ->body('No active template found for this document type')
+                            ->title(__('Error'))
+                            ->body(__('No active template found for this document type'))
                             ->danger()
                             ->send();
                         return;
@@ -212,8 +212,8 @@ class ViewOrganizerDocument extends ViewRecord
                     ]);
 
                     Notification::make()
-                        ->title('Success')
-                        ->body('Document has been regenerated successfully')
+                        ->title(__('Success'))
+                        ->body(__('Document has been regenerated successfully'))
                         ->success()
                         ->send();
 

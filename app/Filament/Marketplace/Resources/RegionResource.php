@@ -56,14 +56,14 @@ class RegionResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Region Details')
+                SC\Section::make(__('Region Details'))
                     ->schema([
                         SC\Tabs::make('Name Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.ro')
-                                            ->label('Nume regiune (RO)')
+                                            ->label(__('Nume regiune (RO)'))
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
@@ -76,66 +76,66 @@ class RegionResource extends Resource
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.en')
-                                            ->label('Region name (EN)')
+                                            ->label(__('Region name (EN)'))
                                             ->maxLength(190),
                                     ]),
                             ])->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
                         Forms\Components\TextInput::make('code')
-                            ->label('Region Code')
+                            ->label(__('Region Code'))
                             ->maxLength(10)
-                            ->placeholder('e.g., B, CJ, TM'),
+                            ->placeholder(__('e.g., B, CJ, TM')),
 
                         Forms\Components\Select::make('country')
-                            ->label('Country')
+                            ->label(__('Country'))
                             ->options([
-                                'RO' => 'Romania',
-                                'MD' => 'Moldova',
-                                'HU' => 'Hungary',
-                                'BG' => 'Bulgaria',
+                                'RO' => __('Romania'),
+                                'MD' => __('Moldova'),
+                                'HU' => __('Hungary'),
+                                'BG' => __('Bulgaria'),
                             ])
                             ->default('RO')
                             ->required(),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
                     ])->columns(2),
 
-                SC\Section::make('Appearance')
+                SC\Section::make(__('Appearance'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\FileUpload::make('image_url')
-                            ->label('Region Image')
+                            ->label(__('Region Image'))
                             ->image()
                             ->disk('public')
                             ->directory('regions')
                             ->visibility('public'),
 
                         Forms\Components\TextInput::make('icon')
-                            ->label('Icon')
+                            ->label(__('Icon'))
                             ->placeholder('heroicon-o-map')
                             ->maxLength(100),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
 
                         Forms\Components\Toggle::make('is_visible')
-                            ->label('Visible')
+                            ->label(__('Visible'))
                             ->default(true),
 
                         Forms\Components\Toggle::make('is_featured')
-                            ->label('Featured'),
+                            ->label(__('Featured')),
                     ])->columns(3),
 
-                SC\Section::make('Description')
+                SC\Section::make(__('Description'))
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
@@ -143,13 +143,13 @@ class RegionResource extends Resource
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.ro')
-                                            ->label('Descriere (RO)')
+                                            ->label(__('Descriere (RO)'))
                                             ->rows(3),
                                     ]),
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.en')
-                                            ->label('Description (EN)')
+                                            ->label(__('Description (EN)'))
                                             ->rows(3),
                                     ]),
                             ])->columnSpanFull(),
@@ -165,17 +165,17 @@ class RegionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->badge()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('country')
-                    ->label('Country')
+                    ->label(__('Country'))
                     ->badge(),
 
                 // Live count of cities currently linked via region_id —
@@ -183,7 +183,7 @@ class RegionResource extends Resource
                 // only runs when the seed scripts touch it. Cheap join
                 // (~8 regions × one count query each).
                 Tables\Columns\TextColumn::make('city_count')
-                    ->label('Orașe')
+                    ->label(__('Orașe'))
                     ->getStateUsing(fn ($record) => \App\Models\MarketplaceCity::query()
                         ->where('region_id', $record->id)
                         ->count())
@@ -207,22 +207,22 @@ class RegionResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Featured')
+                    ->label(__('Featured'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                    ->label(__('Featured')),
             ])
             ->recordActions([
                 EditAction::make(),

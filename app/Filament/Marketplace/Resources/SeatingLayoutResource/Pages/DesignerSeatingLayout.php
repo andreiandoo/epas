@@ -91,30 +91,30 @@ class DesignerSeatingLayout extends Page
     {
         return [
             Actions\Action::make('importMap')
-                ->label('Import Map')
+                ->label(__('Import Map'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('info')
                 ->extraAttributes(['class' => '!hidden'])
                 ->modalWidth('5xl')
-                ->modalHeading('Import Seating Map')
+                ->modalHeading(__('Import Seating Map'))
                 ->steps([
-                    Step::make('Upload')
-                        ->description('Paste HTML/SVG content')
+                    Step::make(__('Upload'))
+                        ->description(__('Paste HTML/SVG content'))
                         ->icon('heroicon-o-document-text')
                         ->schema([
                             Forms\Components\Textarea::make('html_content')
-                                ->label('HTML/SVG Content')
-                                ->helperText('Paste the HTML content containing SVG areas and seats layers (e.g., from iabilet.ro)')
+                                ->label(__('HTML/SVG Content'))
+                                ->helperText(__('Paste the HTML content containing SVG areas and seats layers (e.g., from iabilet.ro)'))
                                 ->rows(12)
                                 ->required()
                                 ->columnSpanFull(),
                         ]),
-                    Step::make('Preview')
-                        ->description('Review detected elements')
+                    Step::make(__('Preview'))
+                        ->description(__('Review detected elements'))
                         ->icon('heroicon-o-eye')
                         ->schema([
                             Forms\Components\Placeholder::make('preview_info')
-                                ->label('Detected Elements')
+                                ->label(__('Detected Elements'))
                                 ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
                                     $htmlContent = $get('html_content');
                                     if (empty($htmlContent)) {
@@ -161,27 +161,27 @@ class DesignerSeatingLayout extends Page
                                 })
                                 ->columnSpanFull(),
                         ]),
-                    Step::make('Options')
-                        ->description('Configure import settings')
+                    Step::make(__('Options'))
+                        ->description(__('Configure import settings'))
                         ->icon('heroicon-o-cog-6-tooth')
                         ->schema([
                             Forms\Components\Toggle::make('import_seats')
-                                ->label('Import seats')
+                                ->label(__('Import seats'))
                                 ->default(true)
-                                ->helperText('Uncheck to import only sections/areas'),
+                                ->helperText(__('Uncheck to import only sections/areas')),
 
                             Forms\Components\Toggle::make('clear_existing')
-                                ->label('Clear existing sections')
+                                ->label(__('Clear existing sections'))
                                 ->default(false)
-                                ->helperText('Warning: This will delete all existing sections and their seats'),
+                                ->helperText(__('Warning: This will delete all existing sections and their seats')),
 
                             Forms\Components\Toggle::make('resize_canvas')
-                                ->label('Resize canvas to match import')
+                                ->label(__('Resize canvas to match import'))
                                 ->default(false)
-                                ->helperText('Adjusts canvas size to match the original map dimensions (recommended for better alignment)'),
+                                ->helperText(__('Adjusts canvas size to match the original map dimensions (recommended for better alignment)')),
 
                             Forms\Components\Placeholder::make('current_layout_info')
-                                ->label('Current Layout')
+                                ->label(__('Current Layout'))
                                 ->content(fn () => "Current canvas: **{$this->seatingLayout->canvas_width}x{$this->seatingLayout->canvas_height}px** with **{$this->seatingLayout->sections()->count()}** sections.")
                                 ->columnSpanFull(),
                         ]),
@@ -233,14 +233,14 @@ class DesignerSeatingLayout extends Page
 
                         Notification::make()
                             ->success()
-                            ->title('Import successful')
+                            ->title(__('Import successful'))
                             ->body($message)
                             ->send();
 
                     } catch (\Exception $e) {
                         Notification::make()
                             ->danger()
-                            ->title('Import failed')
+                            ->title(__('Import failed'))
                             ->body($e->getMessage())
                             ->send();
                     }
@@ -249,48 +249,48 @@ class DesignerSeatingLayout extends Page
             // Note: addSection action removed - sections are now created via canvas tools
 
             Actions\Action::make('addDecorativeZone')
-                ->label('Add Decorative Zone')
+                ->label(__('Add Decorative Zone'))
                 ->icon('heroicon-o-star')
                 ->color('warning')
                 ->extraAttributes(['class' => '!hidden'])
-                ->modalHeading('Add Decorative Zone (Stage, etc.)')
-                ->modalDescription('Create a non-seat area like a stage, dance floor, or other decorative element.')
+                ->modalHeading(__('Add Decorative Zone (Stage, etc.)'))
+                ->modalDescription(__('Create a non-seat area like a stage, dance floor, or other decorative element.'))
                 ->form([
                     Forms\Components\TextInput::make('name')
-                        ->label('Zone Name')
+                        ->label(__('Zone Name'))
                         ->required()
                         ->maxLength(100)
-                        ->helperText('e.g., "Stage", "Dance Floor", "VIP Lounge"')
+                        ->helperText(__('e.g., "Stage", "Dance Floor", "VIP Lounge"'))
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('section_type')
-                        ->label('Zone Type')
+                        ->label(__('Zone Type'))
                         ->options([
-                            'decorative' => 'Decorative (no seats)',
-                            'stage' => 'Stage',
-                            'dance_floor' => 'Dance Floor',
+                            'decorative' => __('Decorative (no seats)'),
+                            'stage' => __('Stage'),
+                            'dance_floor' => __('Dance Floor'),
                         ])
                         ->default('decorative')
                         ->required()
                         ->columnSpanFull(),
 
                     Forms\Components\ColorPicker::make('background_color')
-                        ->label('Background Color')
+                        ->label(__('Background Color'))
                         ->default('#9333EA')
-                        ->helperText('Main fill color for this zone')
+                        ->helperText(__('Main fill color for this zone'))
                         ->columnSpan(1),
 
                     Forms\Components\TextInput::make('corner_radius')
-                        ->label('Corner Radius (px)')
+                        ->label(__('Corner Radius (px)'))
                         ->numeric()
                         ->default(0)
                         ->minValue(0)
                         ->maxValue(100)
-                        ->helperText('Curved corners (0 = sharp corners)')
+                        ->helperText(__('Curved corners (0 = sharp corners)'))
                         ->columnSpan(1),
 
                     Forms\Components\FileUpload::make('background_image')
-                        ->label('Background Image')
+                        ->label(__('Background Image'))
                         ->image()
                         ->disk('public')
                         ->directory('seating/zones')
@@ -298,7 +298,7 @@ class DesignerSeatingLayout extends Page
                         ->maxSize(10240)
                         ->preserveFilenames()
                         ->nullable()
-                        ->helperText('Optional image overlay for this zone')
+                        ->helperText(__('Optional image overlay for this zone'))
                         ->columnSpanFull(),
 
                     Forms\Components\Hidden::make('x_position')
@@ -322,10 +322,10 @@ class DesignerSeatingLayout extends Page
                         ->default('DECORATIVE'),
 
                     Forms\Components\TextInput::make('display_order')
-                        ->label('Display Order')
+                        ->label(__('Display Order'))
                         ->numeric()
                         ->default(0)
-                        ->helperText('Lower numbers appear behind other elements')
+                        ->helperText(__('Lower numbers appear behind other elements'))
                         ->columnSpanFull(),
                 ])
                 ->action(function (array $data): void {
@@ -361,58 +361,58 @@ class DesignerSeatingLayout extends Page
 
                     Notification::make()
                         ->success()
-                        ->title('Decorative zone added successfully')
+                        ->title(__('Decorative zone added successfully'))
                         ->send();
                 }),
 
             Actions\Action::make('addIcon')
-                ->label('Add Icon')
+                ->label(__('Add Icon'))
                 ->icon('heroicon-o-map-pin')
                 ->color('info')
                 ->extraAttributes(['class' => '!hidden'])
-                ->modalHeading('Add Map Icon')
-                ->modalDescription('Add an icon marker to your seating map (exit, toilet, info point, etc.)')
+                ->modalHeading(__('Add Map Icon'))
+                ->modalDescription(__('Add an icon marker to your seating map (exit, toilet, info point, etc.)'))
                 ->form([
                     Forms\Components\Select::make('icon_key')
-                        ->label('Icon Type')
+                        ->label(__('Icon Type'))
                         ->options(fn () => collect(config('seating-icons', []))->mapWithKeys(fn ($icon, $key) => [$key => $icon['label']]))
                         ->required()
                         ->searchable()
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('name')
-                        ->label('Title/Label')
+                        ->label(__('Title/Label'))
                         ->required()
                         ->maxLength(50)
-                        ->helperText('Text that appears below the icon')
+                        ->helperText(__('Text that appears below the icon'))
                         ->columnSpanFull(),
 
                     Forms\Components\ColorPicker::make('icon_color')
-                        ->label('Icon Color')
+                        ->label(__('Icon Color'))
                         ->default('#FFFFFF')
                         ->columnSpan(1),
 
                     Forms\Components\ColorPicker::make('background_color')
-                        ->label('Background Color')
+                        ->label(__('Background Color'))
                         ->default('#3B82F6')
                         ->columnSpan(1),
 
                     Forms\Components\TextInput::make('icon_size')
-                        ->label('Icon Size (px)')
+                        ->label(__('Icon Size (px)'))
                         ->numeric()
                         ->default(48)
                         ->minValue(24)
                         ->maxValue(96)
-                        ->helperText('Size of the icon marker')
+                        ->helperText(__('Size of the icon marker'))
                         ->columnSpan(1),
 
                     Forms\Components\TextInput::make('corner_radius')
-                        ->label('Corner Radius')
+                        ->label(__('Corner Radius'))
                         ->numeric()
                         ->default(8)
                         ->minValue(0)
                         ->maxValue(48)
-                        ->helperText('Rounded corners (0 = square)')
+                        ->helperText(__('Rounded corners (0 = square)'))
                         ->columnSpan(1),
 
                     Forms\Components\Hidden::make('x_position')
@@ -422,10 +422,10 @@ class DesignerSeatingLayout extends Page
                         ->default(200),
 
                     Forms\Components\TextInput::make('display_order')
-                        ->label('Display Order')
+                        ->label(__('Display Order'))
                         ->numeric()
                         ->default(100)
-                        ->helperText('Higher numbers appear on top')
+                        ->helperText(__('Higher numbers appear on top'))
                         ->columnSpanFull(),
                 ])
                 ->action(function (array $data): void {
@@ -458,7 +458,7 @@ class DesignerSeatingLayout extends Page
 
                     Notification::make()
                         ->success()
-                        ->title('Icon added successfully')
+                        ->title(__('Icon added successfully'))
                         ->send();
                 }),
 
@@ -466,14 +466,14 @@ class DesignerSeatingLayout extends Page
             // These functions are now handled directly in the canvas UI
 
             Actions\Action::make('preview')
-                ->label('Preview')
+                ->label(__('Preview'))
                 ->icon('heroicon-o-eye')
                 ->color('info')
                 ->url(fn () => static::getResource()::getUrl('preview', ['record' => $this->seatingLayout]))
                 ->openUrlInNewTab(),
 
             Actions\Action::make('backToEdit')
-                ->label('Layout Settings')
+                ->label(__('Layout Settings'))
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
                 ->extraAttributes(['class' => '!hidden'])
@@ -537,7 +537,7 @@ class DesignerSeatingLayout extends Page
             if (count($seatsPerRowArray) !== $numRows) {
                 Notification::make()
                     ->danger()
-                    ->title('Configuration Error')
+                    ->title(__('Configuration Error'))
                     ->body("Seats configuration must have exactly {$numRows} values (one per row)")
                     ->send();
                 return;
@@ -555,7 +555,7 @@ class DesignerSeatingLayout extends Page
             if (count($alignmentArray) !== $numRows) {
                 Notification::make()
                     ->danger()
-                    ->title('Configuration Error')
+                    ->title(__('Configuration Error'))
                     ->body("Alignment configuration must have exactly {$numRows} values (one per row)")
                     ->send();
                 return;
@@ -566,7 +566,7 @@ class DesignerSeatingLayout extends Page
                 if (!in_array($alignment, $validAlignments)) {
                     Notification::make()
                         ->danger()
-                        ->title('Configuration Error')
+                        ->title(__('Configuration Error'))
                         ->body("Invalid alignment '{$alignment}'. Valid options: left, center, right")
                         ->send();
                     return;
@@ -778,7 +778,7 @@ class DesignerSeatingLayout extends Page
         if (!$section) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -786,7 +786,7 @@ class DesignerSeatingLayout extends Page
         if ($section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section does not belong to this layout')
+                ->title(__('Section does not belong to this layout'))
                 ->send();
             return;
         }
@@ -818,8 +818,8 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Section updated')
-            ->body('Position and dimensions saved')
+            ->title(__('Section updated'))
+            ->body(__('Position and dimensions saved'))
             ->send();
     }
 
@@ -852,7 +852,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -866,7 +866,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Section colors updated')
+            ->title(__('Section colors updated'))
             ->send();
     }
 
@@ -1048,7 +1048,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Section created')
+            ->title(__('Section created'))
             ->body("Section '{$section->name}' has been added")
             ->send();
 
@@ -1067,7 +1067,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -1151,7 +1151,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Row added')
+            ->title(__('Row added'))
             ->body("Row '{$rowLabel}' with " . count($seats) . " seats added to '{$section->name}'")
             ->send();
 
@@ -1169,7 +1169,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -1181,7 +1181,7 @@ class DesignerSeatingLayout extends Page
         if (empty($seats)) {
             Notification::make()
                 ->warning()
-                ->title('No seats specified')
+                ->title(__('No seats specified'))
                 ->send();
             return;
         }
@@ -1245,7 +1245,7 @@ class DesignerSeatingLayout extends Page
         $tableTypeLabel = $type === 'round' ? 'rotundă' : 'dreptunghiulară';
         Notification::make()
             ->success()
-            ->title('Masă adăugată')
+            ->title(__('Masă adăugată'))
             ->body("Masă {$tableTypeLabel} cu " . count($seats) . " locuri adăugată în '{$section->name}'")
             ->send();
 
@@ -1263,7 +1263,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -1385,7 +1385,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Rows added')
+            ->title(__('Rows added'))
             ->body("{$rowsCreated} rows with {$totalSeats} seats added to '{$section->name}'")
             ->send();
 
@@ -1634,8 +1634,8 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Anulat')
-            ->body('Modificarea a fost anulată')
+            ->title(__('Anulat'))
+            ->body(__('Modificarea a fost anulată'))
             ->send();
     }
 
@@ -1649,7 +1649,7 @@ class DesignerSeatingLayout extends Page
         if (!$section) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -1657,7 +1657,7 @@ class DesignerSeatingLayout extends Page
         if ($section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section does not belong to this layout')
+                ->title(__('Section does not belong to this layout'))
                 ->send();
             return;
         }
@@ -1670,7 +1670,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Section deleted')
+            ->title(__('Section deleted'))
             ->body("Section '{$sectionName}' has been deleted")
             ->send();
     }
@@ -1685,7 +1685,7 @@ class DesignerSeatingLayout extends Page
         if (!$row) {
             Notification::make()
                 ->danger()
-                ->title('Row not found')
+                ->title(__('Row not found'))
                 ->send();
             return;
         }
@@ -1694,7 +1694,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Row does not belong to this layout')
+                ->title(__('Row does not belong to this layout'))
                 ->send();
             return;
         }
@@ -1707,7 +1707,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Row deleted')
+            ->title(__('Row deleted'))
             ->body("Row '{$rowLabel}' has been deleted")
             ->send();
     }
@@ -1722,7 +1722,7 @@ class DesignerSeatingLayout extends Page
         if (!$row) {
             Notification::make()
                 ->danger()
-                ->title('Row not found')
+                ->title(__('Row not found'))
                 ->send();
             return;
         }
@@ -1731,7 +1731,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Row does not belong to this layout')
+                ->title(__('Row does not belong to this layout'))
                 ->send();
             return;
         }
@@ -1744,7 +1744,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Row updated')
+            ->title(__('Row updated'))
             ->body("Row name changed from '{$oldLabel}' to '{$newLabel}'")
             ->send();
     }
@@ -1759,7 +1759,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Table not found')
+                ->title(__('Table not found'))
                 ->send();
             return;
         }
@@ -1840,7 +1840,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Locuri actualizate')
+            ->title(__('Locuri actualizate'))
             ->body("Masa '{$row->label}' are acum {$newSeatCount} locuri")
             ->send();
     }
@@ -1855,7 +1855,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Table not found')
+                ->title(__('Table not found'))
                 ->send();
             return;
         }
@@ -1892,7 +1892,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Table not found')
+                ->title(__('Table not found'))
                 ->send();
             return;
         }
@@ -1922,7 +1922,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Table not found')
+                ->title(__('Table not found'))
                 ->send();
             return;
         }
@@ -2002,7 +2002,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Row not found')
+                ->title(__('Row not found'))
                 ->send();
             return;
         }
@@ -2092,7 +2092,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Locuri actualizate')
+            ->title(__('Locuri actualizate'))
             ->body("Rândul '{$row->label}' are acum {$newSeatCount} locuri")
             ->send();
     }
@@ -2134,7 +2134,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Row not found')
+                ->title(__('Row not found'))
                 ->send();
             return;
         }
@@ -2184,7 +2184,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Numerotare actualizată')
+            ->title(__('Numerotare actualizată'))
             ->body("Locurile din rândul '{$row->label}' au fost renumerotate")
             ->send();
     }
@@ -2245,7 +2245,7 @@ class DesignerSeatingLayout extends Page
         if (!$seat) {
             Notification::make()
                 ->danger()
-                ->title('Seat not found')
+                ->title(__('Seat not found'))
                 ->send();
             return;
         }
@@ -2256,7 +2256,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Seat does not belong to this layout')
+                ->title(__('Seat does not belong to this layout'))
                 ->send();
             return;
         }
@@ -2276,7 +2276,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Seat deleted')
+            ->title(__('Seat deleted'))
             ->body("Seat '{$seatLabel}' has been deleted")
             ->send();
     }
@@ -2291,7 +2291,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -2331,7 +2331,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Seat added')
+            ->title(__('Seat added'))
             ->body("Seat '{$seatLabel}' added to section")
             ->send();
     }
@@ -2346,7 +2346,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -2425,7 +2425,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Seats assigned')
+            ->title(__('Seats assigned'))
             ->body("Assigned {$assignedCount} seats to row '{$rowLabel}' in section '{$section->name}'")
             ->send();
     }
@@ -2444,7 +2444,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Background settings saved')
+            ->title(__('Background settings saved'))
             ->send();
     }
 
@@ -2483,14 +2483,14 @@ class DesignerSeatingLayout extends Page
 
             Notification::make()
                 ->success()
-                ->title('Imagine încărcată')
+                ->title(__('Imagine încărcată'))
                 ->send();
 
             return \Storage::disk('public')->url($path);
         } catch (\Exception $e) {
             Notification::make()
                 ->danger()
-                ->title('Eroare la încărcare')
+                ->title(__('Eroare la încărcare'))
                 ->body($e->getMessage())
                 ->send();
             return null;
@@ -2507,7 +2507,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -2530,7 +2530,7 @@ class DesignerSeatingLayout extends Page
         if (empty($allSeats)) {
             Notification::make()
                 ->warning()
-                ->title('No seats to recalculate')
+                ->title(__('No seats to recalculate'))
                 ->send();
             return;
         }
@@ -2607,7 +2607,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Rows recalculated')
+            ->title(__('Rows recalculated'))
             ->body("Created " . count($rowGroups) . " rows from " . count($allSeats) . " seats")
             ->send();
     }
@@ -2624,7 +2624,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -2672,7 +2672,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Rows aligned')
+            ->title(__('Rows aligned'))
             ->body("Aligned " . count($rowIds) . " rows to {$alignment}")
             ->send();
     }
@@ -2687,7 +2687,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Row not found')
+                ->title(__('Row not found'))
                 ->send();
             return;
         }
@@ -2704,7 +2704,7 @@ class DesignerSeatingLayout extends Page
         if ($seats->isEmpty()) {
             Notification::make()
                 ->warning()
-                ->title('No seats in row')
+                ->title(__('No seats in row'))
                 ->send();
             return;
         }
@@ -2726,7 +2726,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Row spacing updated')
+            ->title(__('Row spacing updated'))
             ->body("Applied seat size {$seatSize}px and spacing {$seatSpacing}px")
             ->send();
     }
@@ -2741,7 +2741,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -2769,7 +2769,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Seat style updated')
+            ->title(__('Seat style updated'))
             ->body("Applied seat size {$seatSize}px and color {$seatColor}")
             ->send();
     }
@@ -2782,7 +2782,7 @@ class DesignerSeatingLayout extends Page
         if (count($rowIds) < 2) {
             Notification::make()
                 ->warning()
-                ->title('Select at least 2 rows')
+                ->title(__('Select at least 2 rows'))
                 ->send();
             return;
         }
@@ -2801,7 +2801,7 @@ class DesignerSeatingLayout extends Page
         if ($rows->count() < 2) {
             Notification::make()
                 ->danger()
-                ->title('Invalid rows')
+                ->title(__('Invalid rows'))
                 ->send();
             return;
         }
@@ -2827,7 +2827,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Row spacing applied')
+            ->title(__('Row spacing applied'))
             ->body("Set {$spacing}px spacing between " . count($rowIds) . " rows")
             ->send();
     }
@@ -2870,7 +2870,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Seat spacing applied')
+            ->title(__('Seat spacing applied'))
             ->body("Applied {$spacing}px spacing to {$updatedCount} rows")
             ->send();
     }
@@ -2907,7 +2907,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Row labels updated')
+            ->title(__('Row labels updated'))
             ->body("Updated label settings for {$updatedCount} rows")
             ->send();
     }
@@ -2922,7 +2922,7 @@ class DesignerSeatingLayout extends Page
         if (!$row || !$row->section || $row->section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Row not found')
+                ->title(__('Row not found'))
                 ->send();
             return;
         }
@@ -2935,7 +2935,7 @@ class DesignerSeatingLayout extends Page
         if ($seats->isEmpty()) {
             Notification::make()
                 ->warning()
-                ->title('No seats in row')
+                ->title(__('No seats in row'))
                 ->send();
             return;
         }
@@ -2970,7 +2970,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Row curve applied')
+            ->title(__('Row curve applied'))
             ->body("Applied curve offset {$curveOffset} to row")
             ->send();
     }
@@ -3042,7 +3042,7 @@ class DesignerSeatingLayout extends Page
         $reasonLabel = $reasonLabels[$reason] ?? $reason;
         Notification::make()
             ->success()
-            ->title('Seats blocked')
+            ->title(__('Seats blocked'))
             ->body("Blocked {$blockedCount} seat(s) - Reason: {$reasonLabel}")
             ->send();
     }
@@ -3075,7 +3075,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Seats unblocked')
+            ->title(__('Seats unblocked'))
             ->body("Unblocked {$unblockedCount} seat(s)")
             ->send();
     }
@@ -3123,7 +3123,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Seats deleted')
+            ->title(__('Seats deleted'))
             ->body("Deleted {$deletedCount} seats")
             ->send();
     }
@@ -3231,7 +3231,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Background color saved')
+            ->title(__('Background color saved'))
             ->send();
     }
 
@@ -3303,7 +3303,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -3352,7 +3352,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Element updated')
+            ->title(__('Element updated'))
             ->send();
     }
 
@@ -3366,7 +3366,7 @@ class DesignerSeatingLayout extends Page
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
             Notification::make()
                 ->danger()
-                ->title('Section not found')
+                ->title(__('Section not found'))
                 ->send();
             return;
         }
@@ -3402,7 +3402,7 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Iconiță actualizată')
+            ->title(__('Iconiță actualizată'))
             ->send();
     }
 
@@ -3437,8 +3437,8 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Iconiță adăugată')
-            ->body('Selectați iconița pentru a o edita')
+            ->title(__('Iconiță adăugată'))
+            ->body(__('Selectați iconița pentru a o edita'))
             ->send();
     }
 
@@ -3476,8 +3476,8 @@ class DesignerSeatingLayout extends Page
 
         Notification::make()
             ->success()
-            ->title('Zonă decorativă adăugată')
-            ->body('Selectați zona pentru a o edita')
+            ->title(__('Zonă decorativă adăugată'))
+            ->body(__('Selectați zona pentru a o edita'))
             ->send();
     }
 

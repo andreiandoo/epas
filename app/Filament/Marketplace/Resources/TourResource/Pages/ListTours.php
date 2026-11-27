@@ -24,7 +24,7 @@ class ListTours extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Crează turneu')
+                ->label(__('Crează turneu'))
                 ->extraAttributes([
                     'id' => 'create-record-btn',
                     'x-init' => "\$nextTick(() => {

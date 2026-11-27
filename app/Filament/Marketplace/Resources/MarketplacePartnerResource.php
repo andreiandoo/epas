@@ -54,44 +54,44 @@ class MarketplacePartnerResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Partener')->schema([
+            Section::make(__('Partener'))->schema([
                 Forms\Components\TextInput::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->required()
                     ->maxLength(191),
 
                 Forms\Components\TextInput::make('slug')
-                    ->label('Identificator')
+                    ->label(__('Identificator'))
                     ->required()
                     ->maxLength(64)
                     ->regex('/^[a-z0-9_-]+$/')
                     ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule) => $rule
                         ->where('marketplace_client_id', static::getMarketplaceClientId()))
-                    ->helperText('Litere mici, fără spații (ex. maximumrock). Implicit devine utm_source.'),
+                    ->helperText(__('Litere mici, fără spații (ex. maximumrock). Implicit devine utm_source.')),
 
                 Forms\Components\Select::make('status')
-                    ->label('Stare')
-                    ->options(['active' => 'Activ', 'inactive' => 'Inactiv'])
+                    ->label(__('Stare'))
+                    ->options(['active' => __('Activ'), 'inactive' => __('Inactiv')])
                     ->default('active')
                     ->required()
                     ->native(false),
             ])->columns(3),
 
-            Section::make('Acces API')->schema([
+            Section::make(__('Acces API'))->schema([
                 Forms\Components\CheckboxList::make('scopes')
-                    ->label('Drepturi')
+                    ->label(__('Drepturi'))
                     ->options(MarketplacePartner::SCOPES)
                     ->default(array_keys(MarketplacePartner::SCOPES))
                     ->columns(2)
                     ->columnSpanFull(),
 
                 Forms\Components\TagsInput::make('allowed_ips')
-                    ->label('IP-uri permise')
-                    ->placeholder('IP sau interval CIDR')
-                    ->helperText('Gol = orice IP.'),
+                    ->label(__('IP-uri permise'))
+                    ->placeholder(__('IP sau interval CIDR'))
+                    ->helperText(__('Gol = orice IP.')),
 
                 Forms\Components\TextInput::make('rate_limit_per_minute')
-                    ->label('Cereri pe minut')
+                    ->label(__('Cereri pe minut'))
                     ->numeric()
                     ->minValue(1)
                     ->maxValue(10000)
@@ -99,88 +99,88 @@ class MarketplacePartnerResource extends Resource
                     ->required(),
 
                 Forms\Components\Placeholder::make('api_key_info')
-                    ->label('Cheie API')
+                    ->label(__('Cheie API'))
                     ->content(fn (?MarketplacePartner $record) => $record?->api_key_prefix
                         ? $record->api_key_prefix . '…'
                         : 'Se generează la salvare și se afișează o singură dată.'),
 
                 Forms\Components\Placeholder::make('last_used_info')
-                    ->label('Ultima folosire')
+                    ->label(__('Ultima folosire'))
                     ->content(fn (?MarketplacePartner $record) => $record?->last_used_at
                         ? $record->last_used_at->timezone('Europe/Bucharest')->format('d.m.Y H:i') . ' · ' . $record->last_used_ip
                         : 'Niciodată')
                     ->visibleOn('edit'),
 
                 Forms\Components\Placeholder::make('base_url_info')
-                    ->label('Adresa API')
+                    ->label(__('Adresa API'))
                     ->content(url('/api/partner/v1')),
             ])->columns(2),
 
-            Section::make('Notificări (webhook)')
-                ->description('La fiecare eveniment nou, modificat, anulat sau șters, partenerul primește un POST semnat și citește apoi evenimentul prin API.')
+            Section::make(__('Notificări (webhook)'))
+                ->description(__('La fiecare eveniment nou, modificat, anulat sau șters, partenerul primește un POST semnat și citește apoi evenimentul prin API.'))
                 ->schema([
                     Forms\Components\TextInput::make('webhook_url')
-                        ->label('URL webhook')
+                        ->label(__('URL webhook'))
                         ->url()
                         ->rule('starts_with:https://')
                         ->maxLength(2048)
                         ->placeholder('https://…')
-                        ->helperText('Gol = fără notificări; partenerul se sincronizează singur.'),
+                        ->helperText(__('Gol = fără notificări; partenerul se sincronizează singur.')),
 
                     Forms\Components\TextInput::make('outbound_secret')
-                        ->label('Secret de semnare')
+                        ->label(__('Secret de semnare'))
                         ->password()
                         ->revealable()
                         ->maxLength(255)
-                        ->helperText('Secret comun (HMAC-SHA256) pentru cererile trimise partenerului. Trimite-l pe un canal sigur.')
+                        ->helperText(__('Secret comun (HMAC-SHA256) pentru cererile trimise partenerului. Trimite-l pe un canal sigur.'))
                         ->suffixAction(
                             \Filament\Actions\Action::make('generateOutboundSecret')
                                 ->icon('heroicon-m-arrow-path')
-                                ->label('Generează')
+                                ->label(__('Generează'))
                                 ->action(fn (Set $set) => $set('outbound_secret', Str::random(48)))
                         ),
                 ])->columns(2),
 
-            Section::make('Reclame')
-                ->description('Reclamele create în „Reclame parteneri” sunt publicate pe site-ul partenerului prin API-ul lui, semnate cu secretul de mai sus.')
+            Section::make(__('Reclame'))
+                ->description(__('Reclamele create în „Reclame parteneri” sunt publicate pe site-ul partenerului prin API-ul lui, semnate cu secretul de mai sus.'))
                 ->schema([
                     Forms\Components\TextInput::make('ads_api_url')
-                        ->label('Adresa API pentru reclame')
+                        ->label(__('Adresa API pentru reclame'))
                         ->url()
                         ->rule('starts_with:https://')
                         ->maxLength(2048)
                         ->placeholder('https://www.maximumrock.ro/wp-json/maximumrock/v1')
-                        ->helperText('Fără /ads la final. Gol = partenerul nu primește reclame.'),
+                        ->helperText(__('Fără /ads la final. Gol = partenerul nu primește reclame.')),
 
                     Forms\Components\TextInput::make('settings.ads.header_prefix')
-                        ->label('Prefix antete semnătură')
-                        ->placeholder('X-Ambilet')
+                        ->label(__('Prefix antete semnătură'))
+                        ->placeholder(__('X-Ambilet'))
                         ->regex('/^X-[A-Za-z0-9-]{1,30}$/')
                         ->maxLength(32)
-                        ->helperText('Cum își numește partenerul antetele, ex. X-MR → X-MR-Timestamp și X-MR-Signature.'),
+                        ->helperText(__('Cum își numește partenerul antetele, ex. X-MR → X-MR-Timestamp și X-MR-Signature.')),
                 ])->columns(2),
 
-            Section::make('Articole')
-                ->description('Articolele trimise de partener apar pe pagina artistului, cu link către site-ul partenerului.')
+            Section::make(__('Articole'))
+                ->description(__('Articolele trimise de partener apar pe pagina artistului, cu link către site-ul partenerului.'))
                 ->schema([
                     Forms\Components\TextInput::make('settings.articles.domain')
-                        ->label('Domeniul site-ului partenerului')
+                        ->label(__('Domeniul site-ului partenerului'))
                         ->placeholder('maximumrock.ro')
                         ->maxLength(191)
-                        ->helperText('Sunt acceptate doar articole cu link pe acest domeniu (și subdomeniile lui). Gol = niciun articol acceptat.'),
+                        ->helperText(__('Sunt acceptate doar articole cu link pe acest domeniu (și subdomeniile lui). Gol = niciun articol acceptat.')),
                 ]),
 
-            Section::make('Linkuri de bilete')
-                ->description('Parametrii UTM adăugați linkurilor către evenimente pe care le primește partenerul.')
+            Section::make(__('Linkuri de bilete'))
+                ->description(__('Parametrii UTM adăugați linkurilor către evenimente pe care le primește partenerul.'))
                 ->schema([
                     Forms\Components\TextInput::make('settings.utm.source')
                         ->label('utm_source')
-                        ->placeholder('implicit: identificatorul')
+                        ->placeholder(__('implicit: identificatorul'))
                         ->maxLength(100),
 
                     Forms\Components\TextInput::make('settings.utm.medium')
                         ->label('utm_medium')
-                        ->placeholder('implicit: referral')
+                        ->placeholder(__('implicit: referral'))
                         ->maxLength(100),
 
                     Forms\Components\TextInput::make('settings.utm.campaign')
@@ -194,18 +194,18 @@ class MarketplacePartnerResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Nume')->searchable()->weight('bold'),
-                Tables\Columns\TextColumn::make('slug')->label('Identificator'),
+                Tables\Columns\TextColumn::make('name')->label(__('Nume'))->searchable()->weight('bold'),
+                Tables\Columns\TextColumn::make('slug')->label(__('Identificator')),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Stare')
+                    ->label(__('Stare'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => $state === 'active' ? 'Activ' : 'Inactiv')
                     ->color(fn (string $state) => $state === 'active' ? 'success' : 'gray'),
-                Tables\Columns\TextColumn::make('scopes')->label('Drepturi')->badge(),
+                Tables\Columns\TextColumn::make('scopes')->label(__('Drepturi'))->badge(),
                 Tables\Columns\TextColumn::make('api_key_prefix')
-                    ->label('Cheie')
+                    ->label(__('Cheie'))
                     ->formatStateUsing(fn (?string $state) => $state ? $state . '…' : '—'),
-                Tables\Columns\TextColumn::make('last_used_at')->label('Ultima folosire')->since()->placeholder('Niciodată'),
+                Tables\Columns\TextColumn::make('last_used_at')->label(__('Ultima folosire'))->since()->placeholder(__('Niciodată')),
             ])
             ->defaultSort('name')
             ->recordActions([

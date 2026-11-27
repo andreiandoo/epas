@@ -58,7 +58,7 @@ class ChatOperatorScheduleResource extends Resource
         return $form->components([
             Section::make()->schema([
                 Forms\Components\Select::make('marketplace_admin_id')
-                    ->label('Operator')
+                    ->label(__('Operator'))
                     ->options(function () {
                         return MarketplaceAdmin::query()
                             ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
@@ -71,34 +71,34 @@ class ChatOperatorScheduleResource extends Resource
 
                 // Create: pick several days at once → one row per day.
                 Forms\Components\CheckboxList::make('days')
-                    ->label('Zile')
+                    ->label(__('Zile'))
                     ->options(static::$days)
                     ->columns(3)
                     ->gridDirection('row')
-                    ->helperText('Bifează una sau mai multe zile — se creează câte un program pentru fiecare.')
+                    ->helperText(__('Bifează una sau mai multe zile — se creează câte un program pentru fiecare.'))
                     ->dehydrated(false)
                     ->visibleOn('create')
                     ->required(fn (string $operation) => $operation === 'create'),
 
                 // Edit: a single existing row keeps its day.
                 Forms\Components\Select::make('day_of_week')
-                    ->label('Zi')
+                    ->label(__('Zi'))
                     ->options(static::$days)
                     ->visibleOn('edit')
                     ->required(fn (string $operation) => $operation === 'edit'),
 
                 Forms\Components\TimePicker::make('start_time')
-                    ->label('Ora început')
+                    ->label(__('Ora început'))
                     ->seconds(false)
                     ->required(),
 
                 Forms\Components\TimePicker::make('end_time')
-                    ->label('Ora sfârșit')
+                    ->label(__('Ora sfârșit'))
                     ->seconds(false)
                     ->required(),
 
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Activ')
+                    ->label(__('Activ'))
                     ->default(true),
             ])->columns(2),
         ]);
@@ -108,13 +108,13 @@ class ChatOperatorScheduleResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('operator.name')->label('Operator'),
+                Tables\Columns\TextColumn::make('operator.name')->label(__('Operator')),
                 Tables\Columns\TextColumn::make('day_of_week')
-                    ->label('Zi')
+                    ->label(__('Zi'))
                     ->formatStateUsing(fn ($state) => static::$days[$state] ?? $state),
-                Tables\Columns\TextColumn::make('start_time')->label('Ora început'),
-                Tables\Columns\TextColumn::make('end_time')->label('Ora sfârșit'),
-                Tables\Columns\IconColumn::make('is_active')->label('Activ')->boolean(),
+                Tables\Columns\TextColumn::make('start_time')->label(__('Ora început')),
+                Tables\Columns\TextColumn::make('end_time')->label(__('Ora sfârșit')),
+                Tables\Columns\IconColumn::make('is_active')->label(__('Activ'))->boolean(),
             ])
             ->defaultSort('day_of_week')
             ->recordActions([

@@ -66,7 +66,7 @@ class EditArtist extends EditRecord
     {
         return [
             Actions\Action::make('saveAndClose')
-                ->label('Salvează și închide')
+                ->label(__('Salvează și închide'))
                 ->action(function () {
                     $this->shouldClose = true;
                     $this->save();

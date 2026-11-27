@@ -58,12 +58,12 @@ class ArtistResource extends Resource
                 SC\Group::make()->columnSpan(3)->schema([
                     SC\Grid::make(5)->schema([
                         // NAME & SLUG
-                        SC\Section::make('Identitate Artist')
+                        SC\Section::make(__('Identitate Artist'))
                             ->icon('heroicon-o-identification')
                             ->columnSpan(2)
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->label('Nume artist')
+                                    ->label(__('Nume artist'))
                                     ->required()
                                     ->maxLength(255)
                                     ->live(onBlur: true)
@@ -71,7 +71,7 @@ class ArtistResource extends Resource
                                         if ($state && $context === 'create') $set('slug', Str::slug($state));
                                     }),
                                 Forms\Components\TextInput::make('slug')
-                                    ->label('Slug')
+                                    ->label(__('Slug'))
                                     ->required()
                                     ->maxLength(190)
                                     ->unique(ignoreRecord: true)
@@ -131,31 +131,31 @@ class ArtistResource extends Resource
                                 // Band / artist details
                                 SC\Grid::make(3)->schema([
                                     Forms\Components\TextInput::make('founded_year')
-                                        ->label('Anul înființării')
+                                        ->label(__('Anul înființării'))
                                         ->numeric()
                                         ->minValue(1800)
                                         ->maxValue((int) date('Y'))
-                                        ->placeholder('ex: 1997'),
+                                        ->placeholder(__('ex: 1997')),
                                     Forms\Components\TextInput::make('members_count')
-                                        ->label('Număr membri')
+                                        ->label(__('Număr membri'))
                                         ->numeric()
                                         ->minValue(1)
                                         ->maxValue(500)
-                                        ->placeholder('ex: 4'),
+                                        ->placeholder(__('ex: 4')),
                                     Forms\Components\TextInput::make('record_label')
-                                        ->label('Casă de discuri')
+                                        ->label(__('Casă de discuri'))
                                         ->maxLength(255)
-                                        ->placeholder('ex: Universal Music'),
+                                        ->placeholder(__('ex: Universal Music')),
                                 ]),
                             ])->columns(1),
 
                         // IMAGES
-                        SC\Section::make('Media')
+                        SC\Section::make(__('Media'))
                             ->icon('heroicon-o-photo')
                             ->columnSpan(3)
                             ->schema([
                                 Forms\Components\FileUpload::make('main_image_url')
-                                    ->label('Imagine principală')
+                                    ->label(__('Imagine principală'))
                                     ->image()
                                     ->disk('public')
                                     ->directory('artists')
@@ -164,7 +164,7 @@ class ArtistResource extends Resource
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                                     ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('logo_url')
-                                    ->label('Logo')
+                                    ->label(__('Logo'))
                                     ->image()
                                     ->disk('public')
                                     ->directory('artists/logos')
@@ -173,7 +173,7 @@ class ArtistResource extends Resource
                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                                     ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('portrait_url')
-                                    ->label('Portret')
+                                    ->label(__('Portret'))
                                     ->image()
                                     ->disk('public')
                                     ->directory('artists/portraits')
@@ -184,7 +184,7 @@ class ArtistResource extends Resource
                             ])->columns(3),
                     ]),
                     // BIOGRAPHY - EN/RO
-                    SC\Section::make('Biografie')
+                    SC\Section::make(__('Biografie'))
                         ->icon('heroicon-o-document-text')
                         ->schema([
                             SC\Tabs::make('Bio Translations')
@@ -192,58 +192,58 @@ class ArtistResource extends Resource
                                     SC\Tabs\Tab::make('Română')
                                         ->schema([
                                             Forms\Components\RichEditor::make('bio_html.ro')
-                                                ->label('Biografie (RO)')
+                                                ->label(__('Biografie (RO)'))
                                                 ->columnSpanFull(),
                                         ]),
                                     SC\Tabs\Tab::make('English')
                                         ->schema([
                                             Forms\Components\RichEditor::make('bio_html.en')
-                                                ->label('Biography (EN)')
+                                                ->label(__('Biography (EN)'))
                                                 ->columnSpanFull(),
                                         ]),
                                 ])->columnSpanFull(),
                         ]),
 
                     // ACHIEVEMENTS
-                    SC\Section::make('Achievements')
+                    SC\Section::make(__('Achievements'))
                         ->icon('heroicon-o-trophy')
-                        ->description('Realizări cheie ale artistului (ex: premii, număr piese, recorduri). Apar pe pagina publică a artistului.')
+                        ->description(__('Realizări cheie ale artistului (ex: premii, număr piese, recorduri). Apar pe pagina publică a artistului.'))
                         ->collapsible()->collapsed()->persistCollapsed()
                         ->schema([
                             Forms\Components\Repeater::make('achievements')
                                 ->hiddenLabel()
                                 ->schema([
                                     Forms\Components\TextInput::make('title')
-                                        ->label('Titlu')
+                                        ->label(__('Titlu'))
                                         ->required()
                                         ->maxLength(14)
-                                        ->placeholder('ex: 5× Platinum'),
+                                        ->placeholder(__('ex: 5× Platinum')),
                                     Forms\Components\TextInput::make('subtitle')
-                                        ->label('Subtitlu')
+                                        ->label(__('Subtitlu'))
                                         ->required()
                                         ->maxLength(24)
-                                        ->placeholder('ex: Discuri vândute în RO'),
+                                        ->placeholder(__('ex: Discuri vândute în RO')),
                                 ])
                                 ->columns(2)
                                 ->reorderable()
                                 ->defaultItems(0)
-                                ->addActionLabel('Adaugă achievement')
+                                ->addActionLabel(__('Adaugă achievement'))
                                 ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                                 ->collapsible()
                                 ->columnSpanFull(),
                         ]),
 
                     // DISCOGRAPHY
-                    SC\Section::make('Discografie')
+                    SC\Section::make(__('Discografie'))
                         ->icon('heroicon-o-musical-note')
-                        ->description('Lansări ale artistului. Apar pe pagina publică a artistului.')
+                        ->description(__('Lansări ale artistului. Apar pe pagina publică a artistului.'))
                         ->collapsible()->collapsed()->persistCollapsed()
                         ->schema([
                             Forms\Components\Repeater::make('discography')
                                 ->hiddenLabel()
                                 ->schema([
                                     Forms\Components\FileUpload::make('image')
-                                        ->label('Imagine album')
+                                        ->label(__('Imagine album'))
                                         ->image()
                                         ->disk('public')
                                         ->directory('artists/discography')
@@ -252,36 +252,36 @@ class ArtistResource extends Resource
                                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                                         ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                     Forms\Components\TextInput::make('name')
-                                        ->label('Nume album')
+                                        ->label(__('Nume album'))
                                         ->required()
                                         ->maxLength(255)
-                                        ->placeholder('ex: Nopți fără somn'),
+                                        ->placeholder(__('ex: Nopți fără somn')),
                                     Forms\Components\Select::make('type')
-                                        ->label('Tip')
+                                        ->label(__('Tip'))
                                         ->options([
-                                            'album' => 'Album',
-                                            'ep' => 'EP',
-                                            'single' => 'Single',
-                                            'live' => 'Live album',
-                                            'live_dvd' => 'Live DVD / Blu-ray',
-                                            'compilation' => 'Compilație',
-                                            'soundtrack' => 'Coloană sonoră',
-                                            'remix' => 'Album remix',
+                                            'album' => __('Album'),
+                                            'ep' => __('EP'),
+                                            'single' => __('Single'),
+                                            'live' => __('Live album'),
+                                            'live_dvd' => __('Live DVD / Blu-ray'),
+                                            'compilation' => __('Compilație'),
+                                            'soundtrack' => __('Coloană sonoră'),
+                                            'remix' => __('Album remix'),
                                         ])
                                         ->native(false)
                                         ->required(),
                                     Forms\Components\TextInput::make('year')
-                                        ->label('An apariție')
+                                        ->label(__('An apariție'))
                                         ->numeric()
                                         ->minValue(1900)
                                         ->maxValue((int) date('Y') + 1)
                                         ->required()
-                                        ->placeholder('ex: 2024'),
+                                        ->placeholder(__('ex: 2024')),
                                 ])
                                 ->columns(4)
                                 ->reorderable()
                                 ->defaultItems(0)
-                                ->addActionLabel('Adaugă lansare')
+                                ->addActionLabel(__('Adaugă lansare'))
                                 ->itemLabel(function (array $state): ?string {
                                     $name = $state['name'] ?? null;
                                     $year = $state['year'] ?? null;
@@ -294,11 +294,11 @@ class ArtistResource extends Resource
 
                     SC\Grid::make(2)->schema([
                         // LOCATION
-                        SC\Section::make('Locație')
+                        SC\Section::make(__('Locație'))
                             ->icon('heroicon-o-map-pin')
                             ->schema([
                                 Forms\Components\Select::make('country')
-                                    ->label('Țară')
+                                    ->label(__('Țară'))
                                     ->options(Locations::countries())
                                     ->searchable()
                                     ->live()
@@ -308,25 +308,25 @@ class ArtistResource extends Resource
                                         $set('city', null);
                                     }),
                                 Forms\Components\Select::make('state')
-                                    ->label('Județ / Regiune')
+                                    ->label(__('Județ / Regiune'))
                                     ->options(fn (SGet $get) => $get('country') ? Locations::states($get('country')) : [])
                                     ->searchable()
                                     ->live()
                                     ->preload(false)
                                     ->afterStateUpdated(fn (SSet $set) => $set('city', null)),
                                 Forms\Components\Select::make('city')
-                                    ->label('Oraș')
+                                    ->label(__('Oraș'))
                                     ->options(fn (SGet $get) => ($get('country') && $get('state')) ? Locations::cityOptions($get('country'), $get('state')) : [])
                                     ->searchable()
                                     ->preload(false),
                             ])->columns(3),
 
                         // TYPES & GENRES
-                        SC\Section::make('Categorii')
+                        SC\Section::make(__('Categorii'))
                             ->icon('heroicon-o-tag')
                             ->schema([
                                 Forms\Components\Select::make('artistTypes')
-                                    ->label('Tip artist')
+                                    ->label(__('Tip artist'))
                                     ->relationship('artistTypes', 'slug')
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en'))
                                     ->multiple()
@@ -334,18 +334,18 @@ class ArtistResource extends Resource
                                     ->searchable(),
 
                                 Forms\Components\Select::make('artistGenres')
-                                    ->label('Genuri muzicale')
+                                    ->label(__('Genuri muzicale'))
                                     ->relationship('artistGenres', 'slug')
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en'))
                                     ->createOptionForm([
                                         Forms\Components\TextInput::make('name.ro')
-                                            ->label('Nume (RO)')
+                                            ->label(__('Nume (RO)'))
                                             ->required(),
                                         Forms\Components\TextInput::make('name.en')
-                                            ->label('Nume (EN)'),
+                                            ->label(__('Nume (EN)')),
                                         Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
-                                            ->helperText('Se generează automat dacă e gol'),
+                                            ->label(__('Slug'))
+                                            ->helperText(__('Se generează automat dacă e gol')),
                                     ])
                                     ->createOptionUsing(function (array $data): int {
                                         $slug = $data['slug'] ?? Str::slug($data['name']['ro'] ?? $data['name']['en'] ?? 'genre');
@@ -364,57 +364,57 @@ class ArtistResource extends Resource
                     ]),
 
                     // SOCIAL & LINKS
-                    SC\Section::make('Social Media & Link-uri')
+                    SC\Section::make(__('Social Media & Link-uri'))
                         ->icon('heroicon-o-link')
                         ->collapsible()
                         ->collapsed()
                         ->persistCollapsed()
                         ->schema([
                             Forms\Components\TextInput::make('website')
-                                ->label('Website')
+                                ->label(__('Website'))
                                 ->url()
                                 ->placeholder('https://...')
                                 ->prefixIcon('heroicon-o-globe-alt'),
                             Forms\Components\TextInput::make('facebook_url')
-                                ->label('Facebook')
+                                ->label(__('Facebook'))
                                 ->url()
                                 ->placeholder('https://facebook.com/...')
                                 ->prefixIcon('heroicon-o-link'),
                             Forms\Components\TextInput::make('instagram_url')
-                                ->label('Instagram')
+                                ->label(__('Instagram'))
                                 ->url()
                                 ->placeholder('https://instagram.com/...')
                                 ->prefixIcon('heroicon-o-link'),
                             Forms\Components\TextInput::make('tiktok_url')
-                                ->label('TikTok')
+                                ->label(__('TikTok'))
                                 ->url()
                                 ->placeholder('https://tiktok.com/@...')
                                 ->prefixIcon('heroicon-o-link'),
                             Forms\Components\TextInput::make('youtube_url')
-                                ->label('YouTube')
+                                ->label(__('YouTube'))
                                 ->url()
                                 ->placeholder('https://youtube.com/...')
                                 ->prefixIcon('heroicon-o-play'),
                             Forms\Components\TextInput::make('spotify_url')
-                                ->label('Spotify')
+                                ->label(__('Spotify'))
                                 ->url()
                                 ->placeholder('https://open.spotify.com/artist/...')
                                 ->prefixIcon('heroicon-o-musical-note'),
                             Forms\Components\TextInput::make('spotify_id')
-                                ->label('Spotify Artist ID')
-                                ->placeholder('e.g. 4gzpq5DPGxSnKTe4SA8HAU')
-                                ->helperText('Se găsește în URL-ul Spotify după /artist/')
+                                ->label(__('Spotify Artist ID'))
+                                ->placeholder(__('e.g. 4gzpq5DPGxSnKTe4SA8HAU'))
+                                ->helperText(__('Se găsește în URL-ul Spotify după /artist/'))
                                 ->prefixIcon('heroicon-o-musical-note'),
                             Forms\Components\TextInput::make('youtube_id')
-                                ->label('YouTube Channel ID')
-                                ->placeholder('e.g. UCq-Fj5jknLsUf-MWSy4_brA')
-                                ->helperText('ID-ul canalului YouTube (nu numele)')
+                                ->label(__('YouTube Channel ID'))
+                                ->placeholder(__('e.g. UCq-Fj5jknLsUf-MWSy4_brA'))
+                                ->helperText(__('ID-ul canalului YouTube (nu numele)'))
                                 ->prefixIcon('heroicon-o-play'),
                         ])->columns(2),
 
                     // YOUTUBE VIDEOS - compact layout
-                    SC\Section::make('Videoclipuri YouTube')
-                        ->description('Maxim 5 videoclipuri')
+                    SC\Section::make(__('Videoclipuri YouTube'))
+                        ->description(__('Maxim 5 videoclipuri'))
                         ->icon('heroicon-o-play')
                         ->collapsible()
                         ->collapsed()
@@ -433,7 +433,7 @@ class ArtistResource extends Resource
                                 ])
                                 ->maxItems(5)
                                 ->defaultItems(0)
-                                ->addActionLabel('Adaugă videoclip')
+                                ->addActionLabel(__('Adaugă videoclip'))
                                 ->reorderable()
                                 ->reorderableWithDragAndDrop()
                                 ->collapsed()
@@ -443,78 +443,78 @@ class ArtistResource extends Resource
 
                     SC\Grid::make(2)->schema([
                         // CONTACT
-                        SC\Section::make('Contact')
+                        SC\Section::make(__('Contact'))
                             ->icon('heroicon-o-envelope')
                             ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('email')
-                                    ->label('Email')
+                                    ->label(__('Email'))
                                     ->email()
-                                    ->placeholder('contact@artist.com')
+                                    ->placeholder(__('contact@artist.com'))
                                     ->prefixIcon('heroicon-o-envelope'),
                                 Forms\Components\TextInput::make('phone')
-                                    ->label('Telefon')
+                                    ->label(__('Telefon'))
                                     ->maxLength(64)
                                     ->placeholder('+40 ...')
                                     ->prefixIcon('heroicon-o-phone'),
                             ])->columns(2),
                         // MANAGER
-                        SC\Section::make('Manager')
+                        SC\Section::make(__('Manager'))
                             ->icon('heroicon-o-user')
                             ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('manager_first_name')
-                                    ->label('Prenume'),
+                                    ->label(__('Prenume')),
                                 Forms\Components\TextInput::make('manager_last_name')
-                                    ->label('Nume'),
+                                    ->label(__('Nume')),
                                 Forms\Components\TextInput::make('manager_email')
-                                    ->label('Email')
+                                    ->label(__('Email'))
                                     ->email(),
                                 Forms\Components\TextInput::make('manager_phone')
-                                    ->label('Telefon'),
+                                    ->label(__('Telefon')),
                             ])->columns(2),
                     ]),
 
                     SC\Grid::make(2)->schema([
-                        SC\Section::make('Agent Booking')
+                        SC\Section::make(__('Agent Booking'))
                             ->icon('heroicon-o-briefcase')
                             ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('agent_first_name')
-                                    ->label('Prenume'),
+                                    ->label(__('Prenume')),
                                 Forms\Components\TextInput::make('agent_last_name')
-                                    ->label('Nume'),
+                                    ->label(__('Nume')),
                                 Forms\Components\TextInput::make('agent_email')
-                                    ->label('Email')
+                                    ->label(__('Email'))
                                     ->email(),
                                 Forms\Components\TextInput::make('agent_phone')
-                                    ->label('Telefon'),
+                                    ->label(__('Telefon')),
                             ])->columns(2),
                         // BOOKING AGENCY
-                        SC\Section::make('Agenție de Booking')
+                        SC\Section::make(__('Agenție de Booking'))
                             ->icon('heroicon-o-building-office')
                             ->collapsible()->collapsed()->persistCollapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('booking_agency.name')
-                                    ->label('Nume Agenție')
-                                    ->placeholder('e.g. Universal Music Romania'),
+                                    ->label(__('Nume Agenție'))
+                                    ->placeholder(__('e.g. Universal Music Romania')),
                                 Forms\Components\TextInput::make('booking_agency.email')
-                                    ->label('Email')
+                                    ->label(__('Email'))
                                     ->email()
-                                    ->placeholder('booking@agency.com'),
+                                    ->placeholder(__('booking@agency.com')),
                                 Forms\Components\TextInput::make('booking_agency.phone')
-                                    ->label('Telefon')
+                                    ->label(__('Telefon'))
                                     ->placeholder('+40 ...'),
                                 Forms\Components\TextInput::make('booking_agency.website')
-                                    ->label('Website')
+                                    ->label(__('Website'))
                                     ->url()
                                     ->placeholder('https://...'),
                                 Forms\Components\CheckboxList::make('booking_agency.services')
-                                    ->label('Servicii oferite de agenție')
+                                    ->label(__('Servicii oferite de agenție'))
                                     ->options([
-                                        'booking' => 'Booking',
-                                        'management' => 'Management',
-                                        'pr' => 'PR',
+                                        'booking' => __('Booking'),
+                                        'management' => __('Management'),
+                                        'pr' => __('PR'),
                                     ])
                                     ->columns(3)
                                     ->columnSpanFull(),
@@ -522,14 +522,14 @@ class ArtistResource extends Resource
                     ]),
 
                     // PARTNER NOTES (internal)
-                    SC\Section::make('Note interne')
-                        ->description('Note interne despre acest artist (nu sunt vizibile public)')
+                    SC\Section::make(__('Note interne'))
+                        ->description(__('Note interne despre acest artist (nu sunt vizibile public)'))
                         ->icon('heroicon-o-lock-closed')
                         ->collapsible()->collapsed()->persistCollapsed()
                         ->schema([
                             Forms\Components\Textarea::make('partner_notes')
-                                ->label('Note')
-                                ->placeholder('Note despre parteneriat, contracte, etc.')
+                                ->label(__('Note'))
+                                ->placeholder(__('Note despre parteneriat, contracte, etc.'))
                                 ->rows(4)
                                 ->columnSpanFull(),
                         ]),
@@ -583,25 +583,25 @@ class ArtistResource extends Resource
                         ]),
 
                     // Status Toggles
-                    SC\Section::make('Status')
+                    SC\Section::make(__('Status'))
                         ->icon('heroicon-o-eye')
                         ->compact()
                         ->schema([
                             Forms\Components\Toggle::make('is_active')
-                                ->label('Activ')
-                                ->helperText('Artistul apare pe site')
+                                ->label(__('Activ'))
+                                ->helperText(__('Artistul apare pe site'))
                                 ->default(true)
                                 ->onColor('success')
                                 ->offColor('gray'),
                             Forms\Components\Toggle::make('is_featured')
-                                ->label('Promovat')
-                                ->helperText('Apare în secțiunea de artiști promovați')
+                                ->label(__('Promovat'))
+                                ->helperText(__('Apare în secțiunea de artiști promovați'))
                                 ->default(false)
                                 ->onColor('warning')
                                 ->offColor('gray'),
                         ]),
                     // SOCIAL STATS
-                    SC\Section::make('Social Stats')
+                    SC\Section::make(__('Social Stats'))
                         ->icon('heroicon-o-chart-bar')
                         ->compact()
                         ->collapsed()
@@ -690,7 +690,7 @@ class ArtistResource extends Resource
                         ]),
 
                     // Evenimente Stats
-                    SC\Section::make('Evenimente')
+                    SC\Section::make(__('Evenimente'))
                         ->icon('heroicon-o-calendar')
                         ->compact()
                         ->visible(fn (?Artist $record) => $record?->exists)
@@ -725,7 +725,7 @@ class ArtistResource extends Resource
                         ]),
 
                     // Meta Info
-                    SC\Section::make('Informații')
+                    SC\Section::make(__('Informații'))
                         ->icon('heroicon-o-information-circle')
                         ->compact()
                         ->visible(fn (?Artist $record) => $record?->exists)
@@ -767,46 +767,46 @@ class ArtistResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('main_image_url')
-                    ->label('Imagine')
+                    ->label(__('Imagine'))
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=A&color=7F9CF5&background=EBF4FF')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('city')
-                    ->label('Oraș')
+                    ->label(__('Oraș'))
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('artistTypes')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->badge()
                     ->getStateUsing(fn ($record) => $record->artistTypes->map(fn($t) => $t->getTranslation('name', 'ro') ?: $t->getTranslation('name', 'en'))->filter()->toArray())
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('artistGenres')
-                    ->label('Genuri')
+                    ->label(__('Genuri'))
                     ->badge()
                     ->color('info')
                     ->getStateUsing(fn ($record) => $record->artistGenres->map(fn($g) => $g->getTranslation('name', 'ro') ?: $g->getTranslation('name', 'en'))->filter()->toArray())
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Promovat')
+                    ->label(__('Promovat'))
                     ->boolean()
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Activ')
+                    ->label(__('Activ'))
                     ->boolean()
                     ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Doar promovați'),
+                    ->label(__('Doar promovați')),
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Doar activi'),
+                    ->label(__('Doar activi')),
                 Tables\Filters\SelectFilter::make('artistTypes')
-                    ->label('Tip artist')
+                    ->label(__('Tip artist'))
                     ->relationship('artistTypes', 'name')
                     ->preload()
                     ->multiple(),

@@ -52,31 +52,31 @@ class OrganizerBalance extends Page
     {
         return [
             Actions\Action::make('back')
-                ->label('Înapoi la solduri')
+                ->label(__('Înapoi la solduri'))
                 ->url(url('/marketplace/balances'))
                 ->color('gray')
                 ->icon('heroicon-o-arrow-left'),
             Actions\Action::make('refresh_figures')
-                ->label('Reîmprospătează')
+                ->label(__('Reîmprospătează'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
                 ->action(function () {
                     Cache::forget($this->eventRowsCacheKey());
-                    Notification::make()->success()->title('Cifre recalculate')->send();
+                    Notification::make()->success()->title(__('Cifre recalculate'))->send();
                 }),
             Actions\Action::make('record_advance')
-                ->label('Înregistrează avans')
+                ->label(__('Înregistrează avans'))
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
                 ->visible(fn () => (bool) $this->organizer && MarketplacePayout::advancesEnabled())
-                ->modalHeading('Înregistrează avans')
+                ->modalHeading(__('Înregistrează avans'))
                 ->modalDescription(fn () => 'Plată în avans din soldul curent, înainte de decontul pe eveniment. Suma se scade imediat din sold; '
                     . 'deconturile aprobate ulterior se compensează automat din avans (cel mai vechi avans întâi), iar la plată rămâne de transferat doar diferența. '
                     . 'Sold disponibil: ' . number_format($this->liveAvailable(), 2, ',', '.') . ' RON.')
-                ->modalSubmitActionLabel('Înregistrează avansul')
+                ->modalSubmitActionLabel(__('Înregistrează avansul'))
                 ->form([
                     Forms\Components\TextInput::make('amount')
-                        ->label('Sumă avans (RON)')
+                        ->label(__('Sumă avans (RON)'))
                         ->numeric()
                         ->required()
                         ->minValue(0.01)
@@ -93,12 +93,12 @@ class OrganizerBalance extends Page
                         ->hintIcon(fn ($state) => (float) $state - $this->liveAvailable() > 0.004 ? 'heroicon-m-exclamation-triangle' : null)
                         ->helperText(fn () => 'Sold disponibil: ' . number_format($this->liveAvailable(), 2, ',', '.') . ' RON. Avansul poate depăși soldul — diferența rămâne de recuperat din vânzările următoare.'),
                     Forms\Components\DatePicker::make('paid_at')
-                        ->label('Data plății')
+                        ->label(__('Data plății'))
                         ->default(now())
                         ->maxDate(now())
                         ->required(),
                     Forms\Components\Placeholder::make('bank_info')
-                        ->label('Date bancare')
+                        ->label(__('Date bancare'))
                         ->content(function () {
                             // Prefer the primary row from marketplace_organizer_bank_accounts
                             // (source of truth since 2026-02) over the legacy
@@ -123,15 +123,15 @@ class OrganizerBalance extends Page
                             );
                         }),
                     Forms\Components\TextInput::make('payment_reference')
-                        ->label('Referință plată')
+                        ->label(__('Referință plată'))
                         ->required()
                         ->maxLength(255)
-                        ->placeholder('Numărul sau referința transferului')
-                        ->helperText('Referința transferului bancar sau ID-ul tranzacției'),
+                        ->placeholder(__('Numărul sau referința transferului'))
+                        ->helperText(__('Referința transferului bancar sau ID-ul tranzacției')),
                     Forms\Components\Textarea::make('payment_notes')
-                        ->label('Note (opțional)')
+                        ->label(__('Note (opțional)'))
                         ->rows(2)
-                        ->placeholder('Detalii suplimentare despre avans'),
+                        ->placeholder(__('Detalii suplimentare despre avans')),
                 ])
                 ->action(function (array $data) {
                     $amount = round((float) $data['amount'], 2);
@@ -183,7 +183,7 @@ class OrganizerBalance extends Page
                     $this->organizer->refresh();
 
                     $notification = Notification::make()
-                        ->title('Avans înregistrat')
+                        ->title(__('Avans înregistrat'))
                         ->body('Avansul ' . $payout->reference . ' de ' . number_format($amount, 2, ',', '.') . ' RON a fost înregistrat și scăzut din sold.');
 
                     if ($amount - $availableBefore > 0.004) {
@@ -233,8 +233,8 @@ class OrganizerBalance extends Page
     {
         $payout = $this->findPayout($payoutId);
         if (! $payout || ! $payout->canBeCompleted()) {
-            Notification::make()->danger()->title('Decontul nu poate fi finalizat')
-                ->body('Doar deconturile aprobate sau în procesare pot fi marcate finalizate.')->send();
+            Notification::make()->danger()->title(__('Decontul nu poate fi finalizat'))
+                ->body(__('Doar deconturile aprobate sau în procesare pot fi marcate finalizate.'))->send();
 
             return;
         }
@@ -261,7 +261,7 @@ class OrganizerBalance extends Page
     public function completePayoutAction(): Actions\Action
     {
         return Actions\Action::make('completePayout')
-            ->label('Finalizează')
+            ->label(__('Finalizează'))
             ->icon('heroicon-m-check-circle')
             ->color('success')
             ->size('sm')
@@ -296,21 +296,21 @@ class OrganizerBalance extends Page
                     ? ['payment_reference' => 'Compensat integral din avans']
                     : [];
             })
-            ->modalSubmitActionLabel('Marchează finalizat')
+            ->modalSubmitActionLabel(__('Marchează finalizat'))
             ->form([
                 Forms\Components\TextInput::make('payment_reference')
-                    ->label('Referință plată')
+                    ->label(__('Referință plată'))
                     ->maxLength(255)
-                    ->helperText('Opțional: referința transferului bancar sau ID-ul tranzacției'),
+                    ->helperText(__('Opțional: referința transferului bancar sau ID-ul tranzacției')),
                 Forms\Components\Textarea::make('payment_notes')
-                    ->label('Note (opțional)')
+                    ->label(__('Note (opțional)'))
                     ->rows(2),
             ])
             ->action(function (array $data, array $arguments) {
                 $payout = $this->findPayout($arguments['payout'] ?? null);
                 if (! $payout || ! $payout->canBeCompleted()) {
-                    Notification::make()->danger()->title('Decontul nu poate fi finalizat')
-                        ->body('Doar deconturile aprobate sau în procesare pot fi marcate finalizate.')->send();
+                    Notification::make()->danger()->title(__('Decontul nu poate fi finalizat'))
+                        ->body(__('Doar deconturile aprobate sau în procesare pot fi marcate finalizate.'))->send();
 
                     return;
                 }
@@ -318,7 +318,7 @@ class OrganizerBalance extends Page
                 $payout->complete($data['payment_reference'] ?? null, $data['payment_notes'] ?? null);
                 $this->organizer->refresh();
 
-                Notification::make()->success()->title('Decont finalizat')
+                Notification::make()->success()->title(__('Decont finalizat'))
                     ->body("Decontul {$payout->reference} a fost marcat finalizat" . (! empty($data['payment_reference']) ? " (ref: {$data['payment_reference']})" : '') . '.')->send();
             });
     }
@@ -336,7 +336,7 @@ class OrganizerBalance extends Page
             ->size('sm')
             ->link()
             ->modalHeading(fn (array $arguments) => 'Referință plată — ' . ($this->findPayout($arguments['payout'] ?? null)?->reference ?? ''))
-            ->modalSubmitActionLabel('Salvează')
+            ->modalSubmitActionLabel(__('Salvează'))
             ->fillForm(function (array $arguments) {
                 $p = $this->findPayout($arguments['payout'] ?? null);
 
@@ -344,11 +344,11 @@ class OrganizerBalance extends Page
             })
             ->form([
                 Forms\Components\TextInput::make('payment_reference')
-                    ->label('Referință plată')
+                    ->label(__('Referință plată'))
                     ->required()
                     ->maxLength(255),
                 Forms\Components\Textarea::make('payment_notes')
-                    ->label('Note (opțional)')
+                    ->label(__('Note (opțional)'))
                     ->rows(2),
             ])
             ->action(function (array $data, array $arguments) {
@@ -362,7 +362,7 @@ class OrganizerBalance extends Page
                     'payment_notes' => $data['payment_notes'] ?? null,
                 ]);
 
-                Notification::make()->success()->title('Referință salvată')->send();
+                Notification::make()->success()->title(__('Referință salvată'))->send();
             });
     }
 

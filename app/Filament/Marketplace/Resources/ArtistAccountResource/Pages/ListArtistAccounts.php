@@ -34,7 +34,7 @@ class ListArtistAccounts extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Cont nou')
+                ->label(__('Cont nou'))
                 ->icon('heroicon-m-plus'),
         ];
     }

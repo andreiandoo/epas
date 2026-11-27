@@ -34,7 +34,7 @@ class CreateEvent extends CreateRecord
         return [
             // Opens the page manual drawer (see EditEvent::getHeaderActions).
             \Filament\Actions\Action::make('page_manual')
-                ->label('Manual pagină')
+                ->label(__('Manual pagină'))
                 ->icon('heroicon-o-book-open')
                 ->color('gray')
                 ->alpineClickHandler("window.dispatchEvent(new CustomEvent('ep-manual:open'))"),

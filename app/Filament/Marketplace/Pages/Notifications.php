@@ -35,7 +35,7 @@ class Notifications extends Page
     {
         return [
             Action::make('markAllRead')
-                ->label('Marcheaza toate citite')
+                ->label(__('Marcheaza toate citite'))
                 ->icon('heroicon-o-check')
                 ->action(fn () => app(OperatorNotificationJournal::class)->markAllRead()),
         ];

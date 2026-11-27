@@ -37,7 +37,7 @@ class EventsManual extends Page
     {
         return [
             Action::make('back_to_hub')
-                ->label('Înapoi la Manual')
+                ->label(__('Înapoi la Manual'))
                 ->url(UserManualIndex::getUrl())
                 ->color('gray')
                 ->icon('heroicon-o-arrow-left'),

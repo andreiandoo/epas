@@ -93,26 +93,26 @@ class AttractionResource extends Resource
 
                 // ============ LEFT COLUMN (3/4) ============
                 SC\Grid::make(1)->columnSpan(3)->schema([
-                    SC\Section::make('Atracție')->schema([
+                    SC\Section::make(__('Atracție'))->schema([
                         Forms\Components\TextInput::make("name.{$lang}")
-                            ->label('Nume')->required()->maxLength(160)->live(onBlur: true)
+                            ->label(__('Nume'))->required()->maxLength(160)->live(onBlur: true)
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 if ($state && ! $get('slug')) {
                                     $set('slug', Str::slug($state));
                                 }
                             }),
-                        Forms\Components\TextInput::make('name.en')->label('Nume (EN)')->maxLength(160),
-                        Forms\Components\TextInput::make('slug')->label('Slug')->required()->maxLength(191)->rule('alpha_dash'),
-                        Forms\Components\TextInput::make("subtitle.{$lang}")->label('Subtitlu')->maxLength(200)->columnSpanFull(),
+                        Forms\Components\TextInput::make('name.en')->label(__('Nume (EN)'))->maxLength(160),
+                        Forms\Components\TextInput::make('slug')->label(__('Slug'))->required()->maxLength(191)->rule('alpha_dash'),
+                        Forms\Components\TextInput::make("subtitle.{$lang}")->label(__('Subtitlu'))->maxLength(200)->columnSpanFull(),
                         Forms\Components\RichEditor::make("description.{$lang}")
-                            ->label('Descriere')
+                            ->label(__('Descriere'))
                             ->toolbarButtons(['bold', 'italic', 'underline', 'strike', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                             ->columnSpanFull(),
                     ])->columns(2),
 
-                    SC\Section::make('Media')->schema([
+                    SC\Section::make(__('Media'))->schema([
                         Forms\Components\FileUpload::make('cover_image_url')
-                            ->label('Imagine cover')
+                            ->label(__('Imagine cover'))
                             ->image()
                             ->disk('public')
                             ->directory('attractions/covers')
@@ -120,7 +120,7 @@ class AttractionResource extends Resource
                             ->imageEditor()
                             ->columnSpanFull(),
                         Forms\Components\FileUpload::make('gallery')
-                            ->label('Galerie')
+                            ->label(__('Galerie'))
                             ->image()
                             ->multiple()
                             ->reorderable()
@@ -131,36 +131,36 @@ class AttractionResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                    SC\Section::make('Locație')->schema([
-                        Forms\Components\TextInput::make('address')->label('Adresă')->maxLength(255)->columnSpanFull(),
-                        Forms\Components\TextInput::make('latitude')->label('Latitudine')->numeric()->step('0.0000001')->placeholder('44.4268'),
-                        Forms\Components\TextInput::make('longitude')->label('Longitudine')->numeric()->step('0.0000001')->placeholder('26.1025'),
+                    SC\Section::make(__('Locație'))->schema([
+                        Forms\Components\TextInput::make('address')->label(__('Adresă'))->maxLength(255)->columnSpanFull(),
+                        Forms\Components\TextInput::make('latitude')->label(__('Latitudine'))->numeric()->step('0.0000001')->placeholder('44.4268'),
+                        Forms\Components\TextInput::make('longitude')->label(__('Longitudine'))->numeric()->step('0.0000001')->placeholder('26.1025'),
                     ])->columns(2),
 
-                    SC\Section::make('SEO')
-                        ->description('Titlu + descriere meta pentru rezultatele din motoarele de căutare și share-uri.')
+                    SC\Section::make(__('SEO'))
+                        ->description(__('Titlu + descriere meta pentru rezultatele din motoarele de căutare și share-uri.'))
                         ->schema([
                             Forms\Components\TextInput::make("seo.title_{$lang}")
-                                ->label('Meta title')
+                                ->label(__('Meta title'))
                                 ->maxLength(70)
-                                ->helperText('Ideal 50–60 caractere.')
+                                ->helperText(__('Ideal 50–60 caractere.'))
                                 ->columnSpanFull(),
                             Forms\Components\Textarea::make("seo.description_{$lang}")
-                                ->label('Meta description')
+                                ->label(__('Meta description'))
                                 ->rows(2)
                                 ->maxLength(170)
-                                ->helperText('Ideal 120–160 caractere.')
+                                ->helperText(__('Ideal 120–160 caractere.'))
                                 ->columnSpanFull(),
                             Forms\Components\TextInput::make("seo.keywords_{$lang}")
-                                ->label('Cuvinte cheie')
-                                ->helperText('Separate prin virgulă (opțional).')
+                                ->label(__('Cuvinte cheie'))
+                                ->helperText(__('Separate prin virgulă (opțional).'))
                                 ->columnSpanFull(),
                         ])->columns(1),
                 ]),
 
                 // ============ RIGHT COLUMN (1/4) ============
                 SC\Grid::make(1)->columnSpan(1)->schema([
-                    SC\Section::make('Publicare')->schema([
+                    SC\Section::make(__('Publicare'))->schema([
                         Forms\Components\Placeholder::make('view_link')
                             ->label('')
                             ->content(function ($record) use ($marketplace) {
@@ -178,8 +178,8 @@ class AttractionResource extends Resource
                             })
                             ->visible(fn ($record) => (bool) $record),
 
-                        Forms\Components\Select::make('attraction_type_id')->label('Tip')->options($typeOptions)->searchable()->preload(),
-                        Forms\Components\Select::make('marketplace_city_id')->label('Oraș')->options($cityOptions)->searchable()->preload()
+                        Forms\Components\Select::make('attraction_type_id')->label(__('Tip'))->options($typeOptions)->searchable()->preload(),
+                        Forms\Components\Select::make('marketplace_city_id')->label(__('Oraș'))->options($cityOptions)->searchable()->preload()
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) use ($hasCounty) {
                                 // Auto-fill judet from the chosen city's county.
@@ -188,13 +188,13 @@ class AttractionResource extends Resource
                                     if ($cid) $set('marketplace_county_id', $cid);
                                 }
                             }),
-                        Forms\Components\Select::make('marketplace_county_id')->label('Județ')->options($countyOptions)->searchable()->preload()
+                        Forms\Components\Select::make('marketplace_county_id')->label(__('Județ'))->options($countyOptions)->searchable()->preload()
                             ->visible($hasCounty)
                             ->dehydrated($hasCounty)
-                            ->helperText('Se completează automat din oraș; setează manual când nu există oraș.'),
-                        Forms\Components\TextInput::make('sort_order')->label('Ordine')->numeric()->default(0),
-                        Forms\Components\Toggle::make('is_featured')->label('Recomandată')->default(false),
-                        Forms\Components\Toggle::make('is_visible')->label('Vizibilă')->default(true),
+                            ->helperText(__('Se completează automat din oraș; setează manual când nu există oraș.')),
+                        Forms\Components\TextInput::make('sort_order')->label(__('Ordine'))->numeric()->default(0),
+                        Forms\Components\Toggle::make('is_featured')->label(__('Recomandată'))->default(false),
+                        Forms\Components\Toggle::make('is_visible')->label(__('Vizibilă'))->default(true),
                     ]),
                 ]),
             ]),
@@ -219,36 +219,36 @@ class AttractionResource extends Resource
             // on a real model per row; relations lazy-load (fine for an admin list).
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
-                Tables\Columns\TextColumn::make('name')->label('Nume')
+                Tables\Columns\TextColumn::make('name')->label(__('Nume'))
                     ->getStateUsing(fn (Attraction $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name)
                     ->searchable(query: fn (Builder $query, string $search) => $query->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%'])),
-                Tables\Columns\TextColumn::make('tip_label')->label('Tip')
+                Tables\Columns\TextColumn::make('tip_label')->label(__('Tip'))
                     ->getStateUsing(fn (Attraction $r) => $r->type && is_array($r->type->name) ? ($r->type->name[$lang] ?? $r->type->name['ro'] ?? '') : ''),
-                Tables\Columns\TextColumn::make('oras_label')->label('Oraș')
+                Tables\Columns\TextColumn::make('oras_label')->label(__('Oraș'))
                     ->getStateUsing(fn (Attraction $r) => $r->city && is_array($r->city->name) ? ($r->city->name[$lang] ?? $r->city->name['ro'] ?? '') : ''),
-                Tables\Columns\TextColumn::make('judet_label')->label('Județ')
+                Tables\Columns\TextColumn::make('judet_label')->label(__('Județ'))
                     ->getStateUsing(fn (Attraction $r) => $r->county ? ((is_array($r->county->name) ? ($r->county->name[$lang] ?? $r->county->name['ro'] ?? '') : (string) $r->county->name) . ($r->county->code ? ' (' . $r->county->code . ')' : '')) : '')
                     ->visible($hasCounty)
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('activities_count')->label('Activități')
+                Tables\Columns\TextColumn::make('activities_count')->label(__('Activități'))
                     ->getStateUsing(fn (Attraction $r) => $r->activities()->count())
                     ->badge(),
-                Tables\Columns\IconColumn::make('is_featured')->label('Recom.')->boolean(),
-                Tables\Columns\ToggleColumn::make('is_visible')->label('Vizibilă'),
+                Tables\Columns\IconColumn::make('is_featured')->label(__('Recom.'))->boolean(),
+                Tables\Columns\ToggleColumn::make('is_visible')->label(__('Vizibilă')),
             ])
             ->defaultSort('sort_order')
             ->recordActions([EditAction::make(), DeleteAction::make()])
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('mark_featured')
-                        ->label('Marchează recomandat')
+                        ->label(__('Marchează recomandat'))
                         ->icon('heroicon-o-star')
                         ->color('warning')
                         ->requiresConfirmation()
                         ->action(fn ($records) => $records->each->update(['is_featured' => true]))
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('unmark_featured')
-                        ->label('Scoate recomandat')
+                        ->label(__('Scoate recomandat'))
                         ->icon('heroicon-o-star')
                         ->color('gray')
                         ->action(fn ($records) => $records->each->update(['is_featured' => false]))

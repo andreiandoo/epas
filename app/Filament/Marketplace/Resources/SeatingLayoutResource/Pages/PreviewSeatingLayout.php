@@ -33,12 +33,12 @@ class PreviewSeatingLayout extends Page
     {
         return [
             Actions\Action::make('designer')
-                ->label('Open Designer')
+                ->label(__('Open Designer'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
                 ->url(fn () => SeatingLayoutResource::getUrl('designer', ['record' => $this->layoutId])),
             Actions\Action::make('edit')
-                ->label('Edit')
+                ->label(__('Edit'))
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
                 ->url(fn () => SeatingLayoutResource::getUrl('edit', ['record' => $this->layoutId])),

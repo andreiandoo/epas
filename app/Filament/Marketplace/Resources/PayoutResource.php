@@ -56,18 +56,18 @@ class PayoutResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Payout Request')
+                Section::make(__('Payout Request'))
                     ->schema([
                         Forms\Components\Placeholder::make('reference_display')
-                            ->label('Reference')
+                            ->label(__('Reference'))
                             ->content(fn (?MarketplacePayout $record): string => $record?->reference ?? '-'),
 
                         Forms\Components\Placeholder::make('organizer_display')
-                            ->label('Organizer')
+                            ->label(__('Organizer'))
                             ->content(fn (?MarketplacePayout $record): string => $record?->organizer?->name ?? '-'),
 
                         Forms\Components\Placeholder::make('event_display')
-                            ->label('Event')
+                            ->label(__('Event'))
                             ->content(function (?MarketplacePayout $record): string {
                                 if (!$record?->event) return 'General payout (no specific event)';
                                 $title = $record->event->title;
@@ -77,65 +77,65 @@ class PayoutResource extends Resource
                             }),
 
                         Forms\Components\Placeholder::make('amount_display')
-                            ->label('Amount')
+                            ->label(__('Amount'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record ? number_format($record->amount, 2) . ' ' . $record->currency : '-'),
 
                         Forms\Components\Placeholder::make('status_display')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->content(fn (?MarketplacePayout $record): string => $record?->status_label ?? '-'),
 
                         Forms\Components\Placeholder::make('created_at_display')
-                            ->label('Requested At')
+                            ->label(__('Requested At'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 MarketplaceTz::fmt($record?->created_at, 'd.m.Y H:i', $record?->marketplaceClient, fallback: '-')),
                     ])
                     ->columns(3),
 
-                Section::make('Amount Breakdown')
+                Section::make(__('Amount Breakdown'))
                     ->schema([
                         Forms\Components\Placeholder::make('gross_amount_display')
-                            ->label('Gross Amount')
+                            ->label(__('Gross Amount'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record ? number_format($record->gross_amount, 2) . ' ' . $record->currency : '-'),
 
                         Forms\Components\Placeholder::make('commission_amount_display')
-                            ->label('Commission')
+                            ->label(__('Commission'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record ? '-' . number_format($record->commission_amount, 2) . ' ' . $record->currency : '-'),
 
                         Forms\Components\Placeholder::make('fees_amount_display')
-                            ->label('Fees')
+                            ->label(__('Fees'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record ? '-' . number_format($record->fees_amount, 2) . ' ' . $record->currency : '-'),
 
                         Forms\Components\Placeholder::make('net_amount_display')
-                            ->label('Net Amount')
+                            ->label(__('Net Amount'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record ? number_format($record->amount, 2) . ' ' . $record->currency : '-'),
                     ])
                     ->columns(4),
 
-                Section::make('Payout Method')
+                Section::make(__('Payout Method'))
                     ->schema([
                         Forms\Components\Placeholder::make('bank_name_display')
-                            ->label('Bank')
+                            ->label(__('Bank'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record?->payout_method['bank_name'] ?? '-'),
 
                         Forms\Components\Placeholder::make('iban_display')
-                            ->label('IBAN')
+                            ->label(__('IBAN'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record?->payout_method['iban'] ?? '-'),
 
                         Forms\Components\Placeholder::make('account_holder_display')
-                            ->label('Account Holder')
+                            ->label(__('Account Holder'))
                             ->content(fn (?MarketplacePayout $record): string =>
                                 $record?->payout_method['account_holder'] ?? '-'),
                     ])
                     ->columns(3),
 
-                Section::make('Organizer Notes')
+                Section::make(__('Organizer Notes'))
                     ->schema([
                         Forms\Components\Placeholder::make('organizer_notes_display')
                             ->label('')
@@ -145,7 +145,7 @@ class PayoutResource extends Resource
                     ])
                     ->collapsed(fn (?MarketplacePayout $record): bool => empty($record?->organizer_notes)),
 
-                Section::make('Admin Notes')
+                Section::make(__('Admin Notes'))
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
                             ->rows(3)
@@ -187,7 +187,7 @@ class PayoutResource extends Resource
                 \Filament\Schemas\Components\Grid::make(3)->schema([
                     // LEFT: Payout details (2/3)
                     \Filament\Schemas\Components\Group::make()->columnSpan(2)->schema([
-                        Section::make('Decont')
+                        Section::make(__('Decont'))
                             ->icon('heroicon-o-banknotes')
                             ->schema([
                                 Infolists\Components\TextEntry::make('decont_overview')
@@ -198,14 +198,14 @@ class PayoutResource extends Resource
                                     ->columnSpanFull(),
                                 \Filament\Schemas\Components\Actions::make([
                                         \Filament\Actions\Action::make('edit_decont_series_inline')
-                                            ->label('Editează seria')
+                                            ->label(__('Editează seria'))
                                             ->icon('heroicon-m-pencil-square')
                                             ->color('gray')
-                                            ->modalHeading('Editează seria decontului')
-                                            ->modalDescription('Tastează doar partea după prefix (ex. „1204" → DECAMB1204). Prefixul vine automat din Settings → Personalization. Lasă gol pentru a șterge seria.')
+                                            ->modalHeading(__('Editează seria decontului'))
+                                            ->modalDescription(__('Tastează doar partea după prefix (ex. „1204" → DECAMB1204). Prefixul vine automat din Settings → Personalization. Lasă gol pentru a șterge seria.'))
                                             ->form([
                                                 \Filament\Forms\Components\TextInput::make('decont_series')
-                                                    ->label('Serie decont')
+                                                    ->label(__('Serie decont'))
                                                     ->maxLength(40)
                                                     ->prefix(function ($record) {
                                                         $settings = $record->marketplaceClient?->settings ?? [];
@@ -240,7 +240,7 @@ class PayoutResource extends Resource
                                                 }
                                                 $livewire->refreshFormData(['decont_series']);
                                                 \Filament\Notifications\Notification::make()
-                                                    ->title('Serie actualizată')
+                                                    ->title(__('Serie actualizată'))
                                                     ->success()
                                                     ->send();
                                             })
@@ -254,7 +254,7 @@ class PayoutResource extends Resource
                         // on the fi-section-content inside this specific Section (tagged
                         // with the ep-breakdown-section class) so the table sits flush with
                         // the card edges.
-                        Section::make('Detalii bilete')
+                        Section::make(__('Detalii bilete'))
                             ->icon('heroicon-o-ticket')
                             ->afterHeader(fn ($livewire) => static::ticketActionsHtml($livewire))
                             ->schema([
@@ -283,9 +283,9 @@ class PayoutResource extends Resource
                         // so "Vânzări totale eveniment" (event-level) appeared next
                         // to "Suma brută decont bilete online" (payout-level) and
                         // the contradictory numbers confused operators.
-                        Section::make('Sume')
+                        Section::make(__('Sume'))
                             ->icon('heroicon-o-calculator')
-                            ->description('Stânga: doar acest decont. Dreapta: tot evenimentul, pentru context.')
+                            ->description(__('Stânga: doar acest decont. Dreapta: tot evenimentul, pentru context.'))
                             ->schema([
                                 Infolists\Components\TextEntry::make('money_overview')
                                     ->hiddenLabel()
@@ -327,12 +327,12 @@ class PayoutResource extends Resource
                                     ->html(),
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('add_admin_note')
-                                        ->label('Notă admin')
+                                        ->label(__('Notă admin'))
                                         ->icon('heroicon-o-pencil-square')
                                         ->color('gray')
                                         ->form([
                                             \Filament\Forms\Components\Textarea::make('admin_notes')
-                                                ->label('Note admin')
+                                                ->label(__('Note admin'))
                                                 ->default(fn ($record) => $record->admin_notes)
                                                 ->rows(3),
                                         ])
@@ -341,11 +341,11 @@ class PayoutResource extends Resource
                                             $livewire->refreshFormData(['admin_notes']);
                                         }),
                                     \Filament\Actions\Action::make('edit_decont_mentions')
-                                        ->label('Mențiuni decont')
+                                        ->label(__('Mențiuni decont'))
                                         ->icon('heroicon-o-chat-bubble-bottom-center-text')
                                         ->color('gray')
-                                        ->modalHeading('Mențiuni decont')
-                                        ->modalDescription('Textul apare în PDF-ul decontului, sub nota „Facturile pot circula fără semnătură...”. Lasă gol ca să nu apară nimic.')
+                                        ->modalHeading(__('Mențiuni decont'))
+                                        ->modalDescription(__('Textul apare în PDF-ul decontului, sub nota „Facturile pot circula fără semnătură...”. Lasă gol ca să nu apară nimic.'))
                                         ->visible(fn ($record) => ! in_array($record->status, ['rejected', 'cancelled'], true))
                                         ->fillForm(fn ($record) => [
                                             'decont_mentions' => $record->decont_mentions,
@@ -353,12 +353,12 @@ class PayoutResource extends Resource
                                         ])
                                         ->form([
                                             \Filament\Forms\Components\Textarea::make('decont_mentions')
-                                                ->label('Mențiuni')
+                                                ->label(__('Mențiuni'))
                                                 ->rows(4)
                                                 ->maxLength(2000),
                                             \Filament\Forms\Components\Toggle::make('regenerate')
-                                                ->label('Regenerează decontul acum')
-                                                ->helperText('Numărul decontului rămâne același.')
+                                                ->label(__('Regenerează decontul acum'))
+                                                ->helperText(__('Numărul decontului rămâne același.'))
                                                 ->visible(fn ($record) => $record->decontDocument !== null),
                                         ])
                                         ->action(function (array $data, $record, $livewire) {
@@ -372,7 +372,7 @@ class PayoutResource extends Resource
                                             }
 
                                             \Filament\Notifications\Notification::make()
-                                                ->title('Mențiuni salvate')
+                                                ->title(__('Mențiuni salvate'))
                                                 ->body($record->decontDocument !== null ? 'Regenerează decontul ca să apară în PDF.' : null)
                                                 ->success()
                                                 ->send();
@@ -381,7 +381,7 @@ class PayoutResource extends Resource
                                 ]),
                             ]),
 
-                        Section::make('Acțiuni')
+                        Section::make(__('Acțiuni'))
                             ->icon('heroicon-o-bolt')
                             ->compact()
                             ->description(fn ($record) => in_array($record->status, ['approved', 'processing'], true)
@@ -395,7 +395,7 @@ class PayoutResource extends Resource
                                 // rămâne valid pentru deconturile vechi.
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('approve_payout')
-                                        ->label('Aprobă')
+                                        ->label(__('Aprobă'))
                                         ->icon('heroicon-o-check')
                                         ->color('success')
                                         ->requiresConfirmation()
@@ -409,7 +409,7 @@ class PayoutResource extends Resource
 
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('complete_payout')
-                                        ->label('Finalizează')
+                                        ->label(__('Finalizează'))
                                         ->icon('heroicon-o-check-circle')
                                         ->color('success')
                                         ->visible(fn ($record) => $record->canBeCompleted())
@@ -436,11 +436,11 @@ class PayoutResource extends Resource
                                             : [])
                                         ->form([
                                             \Filament\Forms\Components\TextInput::make('payment_reference')
-                                                ->label('Referință plată')
+                                                ->label(__('Referință plată'))
                                                 ->required()
-                                                ->helperText('Referința transferului bancar sau ID-ul tranzacției'),
+                                                ->helperText(__('Referința transferului bancar sau ID-ul tranzacției')),
                                             \Filament\Forms\Components\Textarea::make('payment_notes')
-                                                ->label('Note')
+                                                ->label(__('Note'))
                                                 ->rows(2),
                                         ])
                                         ->action(function (array $data, $record, $livewire) {
@@ -451,14 +451,14 @@ class PayoutResource extends Resource
 
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('reject_payout')
-                                        ->label('Respinge')
+                                        ->label(__('Respinge'))
                                         ->icon('heroicon-o-x-circle')
                                         ->color('danger')
                                         ->outlined()
                                         ->visible(fn ($record) => $record->canBeRejected())
                                         ->form([
                                             \Filament\Forms\Components\Textarea::make('reason')
-                                                ->label('Motiv respingere')
+                                                ->label(__('Motiv respingere'))
                                                 ->required()
                                                 ->rows(3),
                                         ])
@@ -480,8 +480,8 @@ class PayoutResource extends Resource
                                             }
 
                                             \Filament\Notifications\Notification::make()
-                                                ->title('Decont respins')
-                                                ->body('Documentele asociate au fost șterse.')
+                                                ->title(__('Decont respins'))
+                                                ->body(__('Documentele asociate au fost șterse.'))
                                                 ->success()
                                                 ->send();
                                             $livewire->redirect(static::getUrl('view', ['record' => $record]));
@@ -491,21 +491,21 @@ class PayoutResource extends Resource
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\ActionGroup::make([
                                     \Filament\Actions\Action::make('set_net_override')
-                                        ->label('Ajustare manuală net')
+                                        ->label(__('Ajustare manuală net'))
                                         ->icon('heroicon-o-adjustments-horizontal')
                                         ->color('warning')
-                                        ->modalHeading('Ajustare manuală a netului de plată')
-                                        ->modalDescription('Setează manual suma netă de plată când calculul automat e greșit (ex. decont ajustat pentru fraudă). Lasă gol pentru a reveni la calculul automat din bilete.')
+                                        ->modalHeading(__('Ajustare manuală a netului de plată'))
+                                        ->modalDescription(__('Setează manual suma netă de plată când calculul automat e greșit (ex. decont ajustat pentru fraudă). Lasă gol pentru a reveni la calculul automat din bilete.'))
                                         ->form([
                                             \Filament\Forms\Components\TextInput::make('net_override')
-                                                ->label('Net de plată (override)')
+                                                ->label(__('Net de plată (override)'))
                                                 ->numeric()
                                                 ->step('0.01')
                                                 ->suffix('RON')
                                                 ->default(fn ($record) => $record->net_override)
-                                                ->helperText('Gol = calcul automat din bilete.'),
+                                                ->helperText(__('Gol = calcul automat din bilete.')),
                                             \Filament\Forms\Components\Textarea::make('override_reason')
-                                                ->label('Motiv (se adaugă la notele admin)')
+                                                ->label(__('Motiv (se adaugă la notele admin)'))
                                                 ->rows(2),
                                         ])
                                         ->action(function (array $data, $record, $livewire) {
@@ -517,37 +517,37 @@ class PayoutResource extends Resource
                                                 . (!empty($data['override_reason']) ? (': ' . $data['override_reason']) : ''));
                                             $record->update(['net_override' => $val, 'admin_notes' => $note]);
                                             \Filament\Notifications\Notification::make()
-                                                ->title('Ajustare aplicată')
+                                                ->title(__('Ajustare aplicată'))
                                                 ->success()
                                                 ->send();
                                             $livewire->refreshFormData(['net_override', 'admin_notes']);
                                         }),
                                     \Filament\Actions\Action::make('delete_payout')
-                                        ->label('Șterge decont')
+                                        ->label(__('Șterge decont'))
                                         ->icon('heroicon-o-trash')
                                         ->color('danger')
                                         ->requiresConfirmation()
-                                        ->modalHeading('Șterge decontul')
-                                        ->modalDescription('Decontul va fi mutat în coșul de gunoi (soft delete). Documentele asociate (PDF decont, factură, factură organizator) NU se șterg automat — ocupă-te de ele separat dacă e nevoie.')
-                                        ->modalSubmitActionLabel('Da, șterge')
+                                        ->modalHeading(__('Șterge decontul'))
+                                        ->modalDescription(__('Decontul va fi mutat în coșul de gunoi (soft delete). Documentele asociate (PDF decont, factură, factură organizator) NU se șterg automat — ocupă-te de ele separat dacă e nevoie.'))
+                                        ->modalSubmitActionLabel(__('Da, șterge'))
                                         ->visible(fn ($record): bool => $record->status !== 'completed')
                                         ->action(function ($record, $livewire) {
                                             $record->delete();
                                             \Filament\Notifications\Notification::make()
-                                                ->title('Decont șters')
+                                                ->title(__('Decont șters'))
                                                 ->success()
                                                 ->send();
                                             $livewire->redirect(static::getUrl('index'));
                                         }),
                                     ])
-                                        ->label('Alte acțiuni')
+                                        ->label(__('Alte acțiuni'))
                                         ->icon('heroicon-m-ellipsis-horizontal')
                                         ->color('gray')
                                         ->button(),
                                 ])->fullWidth(),
                             ]),
 
-                        Section::make('Documente')
+                        Section::make(__('Documente'))
                             ->icon('heroicon-o-document-duplicate')
                             ->compact()
                             ->schema([
@@ -560,7 +560,7 @@ class PayoutResource extends Resource
                             ->visible(fn ($record) => ! in_array($record->status, ['rejected', 'cancelled'], true)),
 
                         // Event decont context
-                        Section::make('Context eveniment')
+                        Section::make(__('Context eveniment'))
                             ->icon('heroicon-o-chart-bar')
                             ->compact()
                             ->schema([
@@ -573,7 +573,7 @@ class PayoutResource extends Resource
                             ->visible(fn ($record) => $record->event_id),
 
                         // Timeline
-                        Section::make('Cronologie')
+                        Section::make(__('Cronologie'))
                             ->icon('heroicon-o-clock')
                             ->compact()
                             ->schema([
@@ -601,7 +601,7 @@ class PayoutResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('decont_series')
-                    ->label('Serie decont')
+                    ->label(__('Serie decont'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
@@ -609,7 +609,7 @@ class PayoutResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         $term = '%' . mb_strtolower($search) . '%';
                         return $query->whereHas('organizer', function ($q) use ($term) {
@@ -621,8 +621,8 @@ class PayoutResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('event.title')
-                    ->label('Event')
-                    ->placeholder('General')
+                    ->label(__('Event'))
+                    ->placeholder(__('General'))
                     ->formatStateUsing(fn ($state) => is_array($state)
                         ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
                         : $state)
@@ -642,7 +642,7 @@ class PayoutResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('amount')
-                    ->label('Amount')
+                    ->label(__('Amount'))
                     // Show the FINAL net (row E in the decont PDF) — gross
                     // − discounts − refunds − advance — so the column
                     // matches what the organizer actually receives. The
@@ -713,12 +713,12 @@ class PayoutResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'Pending',
-                        'approved' => 'Approved',
-                        'processing' => 'Processing',
-                        'completed' => 'Completed',
-                        'rejected' => 'Rejected',
-                        'cancelled' => 'Cancelled',
+                        'pending' => __('Pending'),
+                        'approved' => __('Approved'),
+                        'processing' => __('Processing'),
+                        'completed' => __('Completed'),
+                        'rejected' => __('Rejected'),
+                        'cancelled' => __('Cancelled'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('organizer')
@@ -726,7 +726,7 @@ class PayoutResource extends Resource
             ])
             ->recordActions([
                 Action::make('approve')
-                    ->label('Approve')
+                    ->label(__('Approve'))
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->requiresConfirmation()
@@ -737,7 +737,7 @@ class PayoutResource extends Resource
                     }),
 
                 Action::make('process')
-                    ->label('Mark Processing')
+                    ->label(__('Mark Processing'))
                     ->icon('heroicon-o-arrow-path')
                     ->color('info')
                     ->requiresConfirmation()
@@ -748,17 +748,17 @@ class PayoutResource extends Resource
                     }),
 
                 Action::make('complete')
-                    ->label('Complete')
+                    ->label(__('Complete'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn (MarketplacePayout $record): bool => $record->canBeCompleted())
                     ->form([
                         Forms\Components\TextInput::make('payment_reference')
-                            ->label('Payment Reference')
+                            ->label(__('Payment Reference'))
                             ->required()
                             ->maxLength(255),
                         Forms\Components\Textarea::make('payment_notes')
-                            ->label('Payment Notes')
+                            ->label(__('Payment Notes'))
                             ->rows(2),
                     ])
                     ->action(function (MarketplacePayout $record, array $data): void {
@@ -766,13 +766,13 @@ class PayoutResource extends Resource
                     }),
 
                 Action::make('reject')
-                    ->label('Reject')
+                    ->label(__('Reject'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn (MarketplacePayout $record): bool => $record->canBeRejected())
                     ->form([
                         Forms\Components\Textarea::make('rejection_reason')
-                            ->label('Rejection Reason')
+                            ->label(__('Rejection Reason'))
                             ->required()
                             ->rows(3),
                     ])
@@ -796,11 +796,11 @@ class PayoutResource extends Resource
                 ViewAction::make(),
 
                 Action::make('delete')
-                    ->label('Șterge')
+                    ->label(__('Șterge'))
                     ->icon('heroicon-o-trash')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalDescription('Decontul va fi șters, iar suma rezervată va reveni în soldul organizatorului.')
+                    ->modalDescription(__('Decontul va fi șters, iar suma rezervată va reveni în soldul organizatorului.'))
                     ->visible(fn (MarketplacePayout $record): bool => $record->status !== 'completed')
                     ->action(function (MarketplacePayout $record): void {
                         static::reversePayout($record);
@@ -809,11 +809,11 @@ class PayoutResource extends Resource
             ->toolbarActions([
                 \Filament\Actions\BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('bulk_delete')
-                        ->label('Șterge selectate')
+                        ->label(__('Șterge selectate'))
                         ->icon('heroicon-o-trash')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalDescription('Deconturile selectate vor fi șterse, iar sumele rezervate vor reveni în soldul organizatorilor. Deconturile finalizate nu se șterg.')
+                        ->modalDescription(__('Deconturile selectate vor fi șterse, iar sumele rezervate vor reveni în soldul organizatorilor. Deconturile finalizate nu se șterg.'))
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
                             foreach ($records as $record) {
                                 static::reversePayout($record);
@@ -848,7 +848,7 @@ class PayoutResource extends Resource
         // The money already left: reversing would restore the balance and allow a second payment.
         if ($payout->status === 'completed') {
             \Filament\Notifications\Notification::make()
-                ->title('Decontul finalizat nu poate fi șters')
+                ->title(__('Decontul finalizat nu poate fi șters'))
                 ->body("Decontul {$payout->reference} a fost deja plătit.")
                 ->warning()
                 ->send();
@@ -890,8 +890,8 @@ class PayoutResource extends Resource
             \DB::commit();
 
             \Filament\Notifications\Notification::make()
-                ->title('Decont șters')
-                ->body('Valorile au fost returnate organizatorului.')
+                ->title(__('Decont șters'))
+                ->body(__('Valorile au fost returnate organizatorului.'))
                 ->success()
                 ->send();
 
@@ -900,7 +900,7 @@ class PayoutResource extends Resource
             \Log::error('Failed to reverse payout', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
 
             \Filament\Notifications\Notification::make()
-                ->title('Eroare la ștergere')
+                ->title(__('Eroare la ștergere'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();

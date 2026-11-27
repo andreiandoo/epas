@@ -48,7 +48,7 @@ class GiftCardDesignResource extends Resource
 
         return $schema
             ->components([
-                SC\Section::make('Basic Information')
+                SC\Section::make(__('Basic Information'))
                     ->schema([
                         Forms\Components\Hidden::make('marketplace_client_id')
                             ->default($marketplace?->id),
@@ -70,50 +70,50 @@ class GiftCardDesignResource extends Resource
                             ->options(MarketplaceGiftCard::OCCASIONS),
                     ])->columns(2),
 
-                SC\Section::make('Design Assets')
+                SC\Section::make(__('Design Assets'))
                     ->schema([
                         Forms\Components\FileUpload::make('preview_image')
-                            ->label('Preview Image')
+                            ->label(__('Preview Image'))
                             ->image()
                             ->directory('gift-card-designs')
                             ->visibility('public'),
 
                         Forms\Components\TextInput::make('email_template_path')
-                            ->label('Email Template Path')
-                            ->helperText('Path to custom email blade template'),
+                            ->label(__('Email Template Path'))
+                            ->helperText(__('Path to custom email blade template')),
 
                         Forms\Components\TextInput::make('pdf_template_path')
-                            ->label('PDF Template Path')
-                            ->helperText('Path to custom PDF blade template'),
+                            ->label(__('PDF Template Path'))
+                            ->helperText(__('Path to custom PDF blade template')),
                     ])->columns(2),
 
-                SC\Section::make('Colors')
+                SC\Section::make(__('Colors'))
                     ->schema([
                         Forms\Components\ColorPicker::make('colors.primary')
-                            ->label('Primary Color')
+                            ->label(__('Primary Color'))
                             ->default('#4f46e5'),
 
                         Forms\Components\ColorPicker::make('colors.secondary')
-                            ->label('Secondary Color')
+                            ->label(__('Secondary Color'))
                             ->default('#818cf8'),
 
                         Forms\Components\ColorPicker::make('colors.accent')
-                            ->label('Accent Color')
+                            ->label(__('Accent Color'))
                             ->default('#c7d2fe'),
 
                         Forms\Components\ColorPicker::make('colors.text')
-                            ->label('Text Color')
+                            ->label(__('Text Color'))
                             ->default('#1f2937'),
                     ])->columns(4),
 
-                SC\Section::make('Status')
+                SC\Section::make(__('Status'))
                     ->schema([
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
+                            ->label(__('Active'))
                             ->default(true),
 
                         Forms\Components\Toggle::make('is_default')
-                            ->label('Default Design'),
+                            ->label(__('Default Design')),
 
                         Forms\Components\TextInput::make('sort_order')
                             ->numeric()
@@ -127,7 +127,7 @@ class GiftCardDesignResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('preview_image')
-                    ->label('Preview')
+                    ->label(__('Preview'))
                     ->circular(false)
                     ->height(50),
 
@@ -145,20 +145,20 @@ class GiftCardDesignResource extends Resource
                     ->badge(),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_default')
-                    ->label('Default')
+                    ->label(__('Default'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('giftCards_count')
-                    ->label('Used')
+                    ->label(__('Used'))
                     ->counts('giftCards')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -172,7 +172,7 @@ class GiftCardDesignResource extends Resource
             ->recordActions([
                 EditAction::make(),
                 Action::make('set_default')
-                    ->label('Set as Default')
+                    ->label(__('Set as Default'))
                     ->icon('heroicon-o-star')
                     ->color('warning')
                     ->visible(fn ($record) => !$record->is_default)
@@ -180,7 +180,7 @@ class GiftCardDesignResource extends Resource
                         $record->setAsDefault();
 
                         Notification::make()
-                            ->title('Design set as default')
+                            ->title(__('Design set as default'))
                             ->success()
                             ->send();
                     }),

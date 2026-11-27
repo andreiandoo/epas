@@ -31,7 +31,7 @@ class ViewPendingPayment extends ViewRecord
         // snapshot, edit bilete, etc).
         return [
             Actions\Action::make('view_full_decont')
-                ->label('Vezi decontul complet')
+                ->label(__('Vezi decontul complet'))
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('gray')
                 ->url(fn () => PayoutResource::getUrl('view', ['record' => $this->record->id]))

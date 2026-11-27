@@ -16,7 +16,7 @@ class ListActivities extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Activitate nouă'),
+                ->label(__('Activitate nouă')),
         ];
     }
 }

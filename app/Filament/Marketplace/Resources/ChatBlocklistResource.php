@@ -47,27 +47,27 @@ class ChatBlocklistResource extends Resource
         return $form->components([
             Section::make()->schema([
                 Forms\Components\Select::make('type')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->required()
-                    ->options(['ip' => 'IP', 'email' => 'Email']),
+                    ->options(['ip' => __('IP'), 'email' => __('Email')]),
 
                 Forms\Components\TextInput::make('value')
-                    ->label('Valoare')
+                    ->label(__('Valoare'))
                     ->required()
                     ->maxLength(191)
-                    ->helperText('Adresa IP sau emailul de blocat'),
+                    ->helperText(__('Adresa IP sau emailul de blocat')),
 
                 Forms\Components\TextInput::make('reason')
-                    ->label('Motiv')
+                    ->label(__('Motiv'))
                     ->maxLength(255),
 
                 Forms\Components\DateTimePicker::make('expires_at')
-                    ->label('Expiră la')
+                    ->label(__('Expiră la'))
                     ->native(false)
-                    ->helperText('Gol = blocare permanentă'),
+                    ->helperText(__('Gol = blocare permanentă')),
 
                 Forms\Components\Placeholder::make('creator_name')
-                    ->label('Adăugat de')
+                    ->label(__('Adăugat de'))
                     ->content(fn ($record) => $record?->creator?->name ?? '—')
                     ->visibleOn('edit'),
             ])->columns(2),
@@ -78,12 +78,12 @@ class ChatBlocklistResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('type')->label('Tip')->badge(),
-                Tables\Columns\TextColumn::make('value')->label('Valoare')->searchable()->copyable(),
-                Tables\Columns\TextColumn::make('reason')->label('Motiv')->limit(40),
-                Tables\Columns\TextColumn::make('creator.name')->label('Adăugat de')->placeholder('—'),
-                Tables\Columns\TextColumn::make('expires_at')->label('Expiră')->dateTime()->placeholder('Permanent'),
-                Tables\Columns\TextColumn::make('created_at')->label('Adăugat')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('type')->label(__('Tip'))->badge(),
+                Tables\Columns\TextColumn::make('value')->label(__('Valoare'))->searchable()->copyable(),
+                Tables\Columns\TextColumn::make('reason')->label(__('Motiv'))->limit(40),
+                Tables\Columns\TextColumn::make('creator.name')->label(__('Adăugat de'))->placeholder('—'),
+                Tables\Columns\TextColumn::make('expires_at')->label(__('Expiră'))->dateTime()->placeholder(__('Permanent')),
+                Tables\Columns\TextColumn::make('created_at')->label(__('Adăugat'))->dateTime()->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->recordActions([

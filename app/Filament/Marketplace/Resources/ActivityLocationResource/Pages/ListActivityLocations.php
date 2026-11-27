@@ -15,7 +15,7 @@ class ListActivityLocations extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->label('Locație nouă'),
+            Actions\CreateAction::make()->label(__('Locație nouă')),
         ];
     }
 }

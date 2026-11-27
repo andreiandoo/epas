@@ -218,27 +218,27 @@ class NewsletterResource extends Resource
     protected static function mainColumnSchema($marketplace): array
     {
         return [
-            SC\Section::make('Campaign Details')
+            SC\Section::make(__('Campaign Details'))
                 ->schema([
                     Forms\Components\TextInput::make('name')
-                        ->label('Campaign Name')
+                        ->label(__('Campaign Name'))
                         ->required()
                         ->maxLength(255)
-                        ->helperText('Internal name for this campaign'),
+                        ->helperText(__('Internal name for this campaign')),
                     Forms\Components\Select::make('status')
                         ->options([
-                            'draft' => 'Draft',
-                            'scheduled' => 'Scheduled',
-                            'sending' => 'Sending',
-                            'sent' => 'Sent',
-                            'cancelled' => 'Cancelled',
+                            'draft' => __('Draft'),
+                            'scheduled' => __('Scheduled'),
+                            'sending' => __('Sending'),
+                            'sent' => __('Sent'),
+                            'cancelled' => __('Cancelled'),
                         ])
                         ->default('draft')
                         ->disabled(fn ($record) => in_array($record?->status, ['sending', 'sent'])),
                 ])->columns(2),
 
-            SC\Section::make('Recipients')
-                ->description('Send to contact lists, tag-filtered customers, or ticket buyers of specific events. Recipients are dedup-ed by email across all sources.')
+            SC\Section::make(__('Recipients'))
+                ->description(__('Send to contact lists, tag-filtered customers, or ticket buyers of specific events. Recipients are dedup-ed by email across all sources.'))
                 ->schema([
                     // Oraș filter — purely a UI helper to narrow the events
                     // list below by city. Not persisted (dehydrated false) —
@@ -247,7 +247,7 @@ class NewsletterResource extends Resource
                     // any number of selected events in the buildRecipientList
                     // resolver.
                     Forms\Components\Select::make('target_city_ids')
-                        ->label('Oraș — filtrează evenimente / organizatori')
+                        ->label(__('Oraș — filtrează evenimente / organizatori'))
                         ->multiple()
                         ->searchable()
                         ->live(onBlur: true)
@@ -289,7 +289,7 @@ class NewsletterResource extends Resource
                             $set('target_event_ids', []);
                             $set('target_organizer_ids', []);
                         })
-                        ->helperText('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele/organizatorii de acolo. Caută cu sau fără diacritice. Lasă gol pentru toate.')
+                        ->helperText(__('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele/organizatorii de acolo. Caută cu sau fără diacritice. Lasă gol pentru toate.'))
                         ->columnSpanFull(),
 
                     // Resident-city target — distinct from target_city_ids
@@ -299,7 +299,7 @@ class NewsletterResource extends Resource
                     // (auto-detected from order history) OR the manual
                     // address.city text column (case + accent insensitive).
                     Forms\Components\Select::make('target_resident_cities')
-                        ->label('Orașe — unde locuiesc clienții (auto-detectat + adresa lor)')
+                        ->label(__('Orașe — unde locuiesc clienții (auto-detectat + adresa lor)'))
                         ->multiple()
                         ->searchable()
                         // Trigger the recipient-count placeholder rebuild
@@ -327,7 +327,7 @@ class NewsletterResource extends Resource
                                 })
                                 ->toArray();
                         })
-                        ->helperText('Sursa: orașul determinat din comenzi (rulează customers:detect-cities) + câmpul Adresă completat manual de client. Match case + accent insensitive. Combinat cu alte filtre (Contact Lists / Evenimente) → intersecție (doar cei care sunt și în restul filtrelor ȘI locuiesc aici). Singur → toți cei care locuiesc în orașele alese.')
+                        ->helperText(__('Sursa: orașul determinat din comenzi (rulează customers:detect-cities) + câmpul Adresă completat manual de client. Match case + accent insensitive. Combinat cu alte filtre (Contact Lists / Evenimente) → intersecție (doar cei care sunt și în restul filtrelor ȘI locuiesc aici). Singur → toți cei care locuiesc în orașele alese.'))
                         ->columnSpanFull(),
 
                     // Organizer pre-filter. Two purposes:
@@ -342,7 +342,7 @@ class NewsletterResource extends Resource
                     //      in Bucharest". See
                     //      MarketplaceNewsletter::buildRecipientList.
                     Forms\Components\Select::make('target_organizer_ids')
-                        ->label('Organizatori — filtru / target direct')
+                        ->label(__('Organizatori — filtru / target direct'))
                         ->multiple()
                         ->searchable()
                         ->live(onBlur: true)
@@ -363,7 +363,7 @@ class NewsletterResource extends Resource
                         ->afterStateUpdated(function (SSet $set) {
                             $set('target_event_ids', []);
                         })
-                        ->helperText('Dacă selectezi organizator + nu alegi evenimente: trimite la TOȚI cumpărătorii lui (eventual narrow pe oraș). Dacă alegi și evenimente: organizatorul filtrează doar dropdown-ul.')
+                        ->helperText(__('Dacă selectezi organizator + nu alegi evenimente: trimite la TOȚI cumpărătorii lui (eventual narrow pe oraș). Dacă alegi și evenimente: organizatorul filtrează doar dropdown-ul.'))
                         ->columnSpanFull(),
 
                     // Category intersect filter. AND'd with city / organizer
@@ -377,7 +377,7 @@ class NewsletterResource extends Resource
                     // ordering on `name->>'ro'` and extracting the locale
                     // value via mapWithKeys.
                     Forms\Components\Select::make('target_category_ids')
-                        ->label('Categorie eveniment — filtru intersecție')
+                        ->label(__('Categorie eveniment — filtru intersecție'))
                         ->multiple()
                         ->searchable()
                         ->live(onBlur: true)
@@ -397,14 +397,14 @@ class NewsletterResource extends Resource
                         ->afterStateUpdated(function (SSet $set) {
                             $set('target_event_ids', []);
                         })
-                        ->helperText('Restrânge cumpărătorii doar la cei care au luat bilete la evenimente din categoriile alese.')
+                        ->helperText(__('Restrânge cumpărătorii doar la cei care au luat bilete la evenimente din categoriile alese.'))
                         ->columnSpanFull(),
 
                     // Artist intersect filter. Looks up via the event_artist
                     // pivot — admin picks artists, the filter expands to
                     // every event that features one of them.
                     Forms\Components\Select::make('target_artist_ids')
-                        ->label('Artist în eveniment — filtru intersecție')
+                        ->label(__('Artist în eveniment — filtru intersecție'))
                         ->multiple()
                         ->searchable()
                         ->live(onBlur: true)
@@ -434,11 +434,11 @@ class NewsletterResource extends Resource
                         ->afterStateUpdated(function (SSet $set) {
                             $set('target_event_ids', []);
                         })
-                        ->helperText('Restrânge la cumpărătorii care au luat bilet la cel puțin un eveniment care îi includea pe artiștii aleși.')
+                        ->helperText(__('Restrânge la cumpărătorii care au luat bilet la cel puțin un eveniment care îi includea pe artiștii aleși.'))
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('target_event_ids')
-                        ->label('Evenimente — către cumpărătorii biletelor')
+                        ->label(__('Evenimente — către cumpărătorii biletelor'))
                         ->multiple()
                         ->searchable()
                         // No ->live() here on purpose. Each pill selection
@@ -479,7 +479,7 @@ class NewsletterResource extends Resource
                                 ])
                                 ->toArray();
                         })
-                        ->helperText('Selectează orașul mai sus → evenimentele se preîncărc automat. Newsletter ajunge la toți cumpărătorii cu bilete valide; un client care a cumpărat la mai multe evenimente primește un singur email.')
+                        ->helperText(__('Selectează orașul mai sus → evenimentele se preîncărc automat. Newsletter ajunge la toți cumpărătorii cu bilete valide; un client care a cumpărat la mai multe evenimente primește un singur email.'))
                         ->columnSpanFull(),
 
                     // Contact lists. Labels include subscriber counts and
@@ -490,7 +490,7 @@ class NewsletterResource extends Resource
                     // cohorts. Showing the count + type avoids the
                     // "which one did I pick?" trap.
                     Forms\Components\Select::make('target_lists')
-                        ->label('Contact Lists')
+                        ->label(__('Contact Lists'))
                         ->multiple()
                         ->live(onBlur: true)
                         ->options(function () use ($marketplace) {
@@ -506,19 +506,19 @@ class NewsletterResource extends Resource
                                 })
                                 ->toArray();
                         })
-                        ->helperText('Listele sunt sursa de bază (audiența). Combinate cu organizator/eveniment, rezultatul e INTERSECȚIA: doar membrii listei care au cumpărat la scopul ales.'),
+                        ->helperText(__('Listele sunt sursa de bază (audiența). Combinate cu organizator/eveniment, rezultatul e INTERSECȚIA: doar membrii listei care au cumpărat la scopul ales.')),
                     Forms\Components\Select::make('target_tags')
-                        ->label('Contact Tags')
+                        ->label(__('Contact Tags'))
                         ->multiple()
                         ->live(onBlur: true)
                         ->options(function () use ($marketplace) {
                             return MarketplaceContactTag::where('marketplace_client_id', $marketplace?->id)
                                 ->pluck('name', 'id');
                         })
-                        ->helperText('Filtrează contactele după tag-uri'),
+                        ->helperText(__('Filtrează contactele după tag-uri')),
                 ])->columns(2),
 
-            SC\Section::make('Email Content')
+            SC\Section::make(__('Email Content'))
                     ->schema([
                         // Optional starting point: pick an existing email
                         // template (Communications → Email Templates). The
@@ -527,7 +527,7 @@ class NewsletterResource extends Resource
                         // sending. We do NOT keep a live link — once forked,
                         // edits to the source template don't reflect here.
                         Forms\Components\Select::make('source_email_template_id')
-                            ->label('Pornește de la un template (opțional)')
+                            ->label(__('Pornește de la un template (opțional)'))
                             ->options(function () use ($marketplace) {
                                 return MarketplaceEmailTemplate::where('marketplace_client_id', $marketplace?->id)
                                     ->where('is_active', true)
@@ -536,8 +536,8 @@ class NewsletterResource extends Resource
                             })
                             ->searchable()
                             ->live()
-                            ->placeholder('— niciun template —')
-                            ->helperText('Aplică conținutul unui template existent. Poți edita liber după.')
+                            ->placeholder(__('— niciun template —'))
+                            ->helperText(__('Aplică conținutul unui template existent. Poți edita liber după.'))
                             ->columnSpanFull()
                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplace) {
                                 if (!$state) return;
@@ -567,25 +567,25 @@ class NewsletterResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('preview_text')
                             ->maxLength(255)
-                            ->helperText('Preview text shown in email client (optional)')
+                            ->helperText(__('Preview text shown in email client (optional)'))
                             ->columnSpanFull(),
 
                         Forms\Components\Repeater::make('body_sections')
-                            ->label('Secțiuni Email')
+                            ->label(__('Secțiuni Email'))
                             ->schema([
                                 Forms\Components\Select::make('type')
-                                    ->label('Tip secțiune')
+                                    ->label(__('Tip secțiune'))
                                     ->options([
-                                        'text' => 'Text / Rich Content',
-                                        'html' => 'HTML personalizat',
-                                        'featured_event' => 'Eveniment featured (single hero)',
-                                        'recommended_events' => 'Evenimente recomandate',
-                                        'hand_picked_events' => 'Evenimente alese',
-                                        'events_next_week' => 'Evenimente săptămâna viitoare',
-                                        'events_next_month' => 'Evenimente luna viitoare',
-                                        'button' => 'Buton CTA',
-                                        'spacer' => 'Spațiu / Separator',
-                                        'image' => 'Imagine',
+                                        'text' => __('Text / Rich Content'),
+                                        'html' => __('HTML personalizat'),
+                                        'featured_event' => __('Eveniment featured (single hero)'),
+                                        'recommended_events' => __('Evenimente recomandate'),
+                                        'hand_picked_events' => __('Evenimente alese'),
+                                        'events_next_week' => __('Evenimente săptămâna viitoare'),
+                                        'events_next_month' => __('Evenimente luna viitoare'),
+                                        'button' => __('Buton CTA'),
+                                        'spacer' => __('Spațiu / Separator'),
+                                        'image' => __('Imagine'),
                                     ])
                                     ->required()
                                     ->live()
@@ -613,7 +613,7 @@ class NewsletterResource extends Resource
                                 // unaccent + LOWER LIKE so "lacul sf" matches
                                 // "Lacul Sf. Ana" regardless of diacritics.
                                 Forms\Components\Select::make('event_id')
-                                    ->label('Selectează evenimentul featured')
+                                    ->label(__('Selectează evenimentul featured'))
                                     ->searchable()
                                     ->getSearchResultsUsing(function (string $search) use ($marketplace) {
                                         return static::searchLiveEvents($marketplace?->id, $search, null);
@@ -624,43 +624,43 @@ class NewsletterResource extends Resource
                                     })
                                     ->visible(fn ($get) => $get('type') === 'featured_event')
                                     ->columnSpanFull()
-                                    ->helperText('Va popula automat în email: imagine, titlu, preț, venue, oraș și link.'),
+                                    ->helperText(__('Va popula automat în email: imagine, titlu, preț, venue, oraș și link.')),
 
                                 Forms\Components\TextInput::make('artist_name')
-                                    ->label('Subtitlu / Artist (opțional)')
+                                    ->label(__('Subtitlu / Artist (opțional)'))
                                     ->visible(fn ($get) => $get('type') === 'featured_event')
-                                    ->placeholder('ex: Dirty Shirt')
+                                    ->placeholder(__('ex: Dirty Shirt'))
                                     ->maxLength(120)
                                     ->columnSpanFull(),
 
                                 Forms\Components\Textarea::make('intro_paragraph')
-                                    ->label('Paragraf intro (opțional)')
+                                    ->label(__('Paragraf intro (opțional)'))
                                     ->visible(fn ($get) => $get('type') === 'featured_event')
                                     ->rows(3)
-                                    ->placeholder('Energia trupei ajunge pe scenă într-un show intens...')
+                                    ->placeholder(__('Energia trupei ajunge pe scenă într-un show intens...'))
                                     ->columnSpanFull(),
 
                                 Forms\Components\TextInput::make('cta_label')
-                                    ->label('Text buton CTA (opțional)')
+                                    ->label(__('Text buton CTA (opțional)'))
                                     ->visible(fn ($get) => $get('type') === 'featured_event')
-                                    ->placeholder('Cumpără bilete')
+                                    ->placeholder(__('Cumpără bilete'))
                                     ->maxLength(80)
                                     ->columnSpanFull(),
 
                                 // Text section
                                 Forms\Components\RichEditor::make('content')
-                                    ->label('Conținut')
+                                    ->label(__('Conținut'))
                                     ->visible(fn ($get) => $get('type') === 'text')
                                     ->columnSpanFull()
-                                    ->helperText('Suportă variabile: {{customer_name}}, {{customer_email}}, {{event:ID:name}}, etc.'),
+                                    ->helperText(__('Suportă variabile: {{customer_name}}, {{customer_email}}, {{event:ID:name}}, etc.')),
 
                                 // HTML section
                                 Forms\Components\Textarea::make('html_content')
-                                    ->label('Cod HTML')
+                                    ->label(__('Cod HTML'))
                                     ->visible(fn ($get) => $get('type') === 'html')
                                     ->rows(10)
                                     ->columnSpanFull()
-                                    ->helperText('HTML personalizat. Poți importa template-uri externe sau scrie cod HTML direct.'),
+                                    ->helperText(__('HTML personalizat. Poți importa template-uri externe sau scrie cod HTML direct.')),
 
                                 // Manual event picker — shared across all 4 list
                                 // sections (recommended/hand_picked/next_week/
@@ -676,7 +676,7 @@ class NewsletterResource extends Resource
                                 // No status / is_public filter — admin picks
                                 // any of their own events.
                                 Forms\Components\Select::make('event_ids')
-                                    ->label('Selectează evenimente')
+                                    ->label(__('Selectează evenimente'))
                                     ->multiple()
                                     ->searchable()
                                     ->getSearchResultsUsing(function (string $search, callable $get) use ($marketplace) {
@@ -715,7 +715,7 @@ class NewsletterResource extends Resource
                                 // (e.g. "Evenimente recomandate" / "Săptămâna
                                 // viitoare").
                                 Forms\Components\TextInput::make('section_title')
-                                    ->label('Titlu secțiune (opțional)')
+                                    ->label(__('Titlu secțiune (opțional)'))
                                     ->visible(fn ($get) => in_array($get('type'), [
                                         'recommended_events',
                                         'hand_picked_events',
@@ -730,13 +730,13 @@ class NewsletterResource extends Resource
                                 // event to a full-width landscape card and flow
                                 // the rest into a 2- or 3-column grid below.
                                 Forms\Components\Select::make('display_layout')
-                                    ->label('Aranjare carduri')
+                                    ->label(__('Aranjare carduri'))
                                     ->options([
-                                        '2_cols' => '2 coloane',
-                                        '3_cols' => '3 coloane',
-                                        '2_cols_first_hero' => '2 coloane, primul fullwidth (landscape)',
-                                        '3_cols_first_hero' => '3 coloane, primul fullwidth (landscape)',
-                                        '2_cols_mixed' => '2 coloane, mixt (alternează fullwidth + 2 rânduri de 2 coloane)',
+                                        '2_cols' => __('2 coloane'),
+                                        '3_cols' => __('3 coloane'),
+                                        '2_cols_first_hero' => __('2 coloane, primul fullwidth (landscape)'),
+                                        '3_cols_first_hero' => __('3 coloane, primul fullwidth (landscape)'),
+                                        '2_cols_mixed' => __('2 coloane, mixt (alternează fullwidth + 2 rânduri de 2 coloane)'),
                                     ])
                                     ->default('2_cols')
                                     ->visible(fn ($get) => in_array($get('type'), [
@@ -746,7 +746,7 @@ class NewsletterResource extends Resource
                                         'events_next_month',
                                     ]))
                                     ->live()
-                                    ->helperText('Pe layout-urile "primul fullwidth", evenimentul promovat folosește imaginea landscape. Implicit este primul ca dată, dar poți alege oricare din evenimentele selectate.')
+                                    ->helperText(__('Pe layout-urile "primul fullwidth", evenimentul promovat folosește imaginea landscape. Implicit este primul ca dată, dar poți alege oricare din evenimentele selectate.'))
                                     ->columnSpanFull(),
 
                                 // Hero override — when one of the "primul
@@ -760,8 +760,8 @@ class NewsletterResource extends Resource
                                 // exactly the events the admin has chosen
                                 // for the section.
                                 Forms\Components\Select::make('hero_event_id')
-                                    ->label('Eveniment promovat (fullwidth)')
-                                    ->placeholder('Implicit: primul ca dată')
+                                    ->label(__('Eveniment promovat (fullwidth)'))
+                                    ->placeholder(__('Implicit: primul ca dată'))
                                     ->options(function ($get) {
                                         $ids = (array) ($get('event_ids') ?? []);
                                         if (empty($ids)) return [];
@@ -787,7 +787,7 @@ class NewsletterResource extends Resource
                                     ]))
                                     ->searchable()
                                     ->live()
-                                    ->helperText('Alege ce eveniment apare ca PRIMUL hero landscape. Va fi eliminat din grila de coloane pentru a evita duplicarea. Pe layout-ul "mixt", heroes ulteriori sunt aleși cronologic din evenimentele rămase.')
+                                    ->helperText(__('Alege ce eveniment apare ca PRIMUL hero landscape. Va fi eliminat din grila de coloane pentru a evita duplicarea. Pe layout-ul "mixt", heroes ulteriori sunt aleși cronologic din evenimentele rămase.'))
                                     ->columnSpanFull(),
 
                                 // Button fields. Defaults (#A51C30 brand red,
@@ -799,15 +799,15 @@ class NewsletterResource extends Resource
                                 // repeater item — it only seeds defaults at
                                 // initial item create.
                                 Forms\Components\TextInput::make('button_text')
-                                    ->label('Text buton')
+                                    ->label(__('Text buton'))
                                     ->default('Click aici')
                                     ->visible(fn ($get) => $get('type') === 'button'),
                                 Forms\Components\TextInput::make('button_url')
-                                    ->label('URL buton')
+                                    ->label(__('URL buton'))
                                     ->url()
                                     ->visible(fn ($get) => $get('type') === 'button'),
                                 Forms\Components\ColorPicker::make('button_color')
-                                    ->label('Culoare')
+                                    ->label(__('Culoare'))
                                     ->default('#A51C30')
                                     ->dehydrateStateUsing(fn ($state) => $state ?: '#A51C30')
                                     ->visible(fn ($get) => $get('type') === 'button'),
@@ -819,7 +819,7 @@ class NewsletterResource extends Resource
                                 // NewsletterRenderer::resolveImageUrl(),
                                 // which prepends config('app.url') /storage/.
                                 Forms\Components\FileUpload::make('file')
-                                    ->label('Imagine')
+                                    ->label(__('Imagine'))
                                     ->image()
                                     ->imageEditor()
                                     ->disk('public')
@@ -828,18 +828,18 @@ class NewsletterResource extends Resource
                                     ->visible(fn ($get) => $get('type') === 'image')
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('image_link')
-                                    ->label('Link la click (opțional)')
+                                    ->label(__('Link la click (opțional)'))
                                     ->url()
                                     ->visible(fn ($get) => $get('type') === 'image')
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('alt_text')
-                                    ->label('Text alternativ')
+                                    ->label(__('Text alternativ'))
                                     ->visible(fn ($get) => $get('type') === 'image')
                                     ->columnSpanFull(),
 
                                 // Spacer height
                                 Forms\Components\TextInput::make('height')
-                                    ->label('Înălțime (px)')
+                                    ->label(__('Înălțime (px)'))
                                     ->numeric()
                                     ->default(20)
                                     ->visible(fn ($get) => $get('type') === 'spacer')
@@ -862,21 +862,21 @@ class NewsletterResource extends Resource
                                 default => 'Secțiune nouă',
                             })
                             ->defaultItems(0)
-                            ->addActionLabel('Adaugă secțiune')
+                            ->addActionLabel(__('Adaugă secțiune'))
                             ->columnSpanFull(),
 
                         Forms\Components\Textarea::make('body_text')
-                            ->label('Plain Text Version')
+                            ->label(__('Plain Text Version'))
                             ->rows(5)
                             ->columnSpanFull()
-                            ->helperText('Versiune text simplu (opțional). Se generează automat dacă lipsește.'),
+                            ->helperText(__('Versiune text simplu (opțional). Se generează automat dacă lipsește.')),
                     ]),
 
-            SC\Section::make('Scheduling')
+            SC\Section::make(__('Scheduling'))
                 ->schema([
                     Forms\Components\DateTimePicker::make('scheduled_at')
-                        ->label('Send At')
-                        ->helperText('Leave empty to send immediately when you click "Send Newsletter"')
+                        ->label(__('Send At'))
+                        ->helperText(__('Leave empty to send immediately when you click "Send Newsletter"'))
                         ->minDate(now()),
                 ])
                 ->visible(fn ($record) => !in_array($record?->status, ['sending', 'sent'])),
@@ -889,15 +889,15 @@ class NewsletterResource extends Resource
     protected static function sidebarSchema($marketplace): array
     {
         return [
-            SC\Section::make('Sender Information')
+            SC\Section::make(__('Sender Information'))
                 ->schema([
                     Forms\Components\TextInput::make('from_name')
-                        ->label('From Name')
+                        ->label(__('From Name'))
                         ->default(fn () => $marketplace?->name)
                         ->required()
                         ->maxLength(100),
                     Forms\Components\TextInput::make('from_email')
-                        ->label('From Email')
+                        ->label(__('From Email'))
                         ->email()
                         ->default(function () use ($marketplace) {
                             // Default to noreply@<host> — that's the
@@ -912,15 +912,15 @@ class NewsletterResource extends Resource
                         ->required()
                         ->maxLength(255),
                     Forms\Components\TextInput::make('reply_to')
-                        ->label('Reply-To Email')
+                        ->label(__('Reply-To Email'))
                         ->email()
                         ->maxLength(255),
                 ]),
 
-            SC\Section::make('Statistici email')
+            SC\Section::make(__('Statistici email'))
                 ->schema([
                     Forms\Components\Placeholder::make('recipient_count')
-                        ->label('Destinatari unici')
+                        ->label(__('Destinatari unici'))
                         ->content(function (SGet $get) use ($marketplace) {
                             // Build a transient instance and use the same
                             // logic the real send-time recipient build uses,
@@ -1027,7 +1027,7 @@ class NewsletterResource extends Resource
                     // those emails get stripped at recipient-build time so
                     // the same person isn't mailed twice in quick succession.
                     Forms\Components\Placeholder::make('recent_recipient_overlap')
-                        ->label('Destinatari care au primit alt newsletter recent')
+                        ->label(__('Destinatari care au primit alt newsletter recent'))
                         ->content(function (SGet $get) use ($marketplace) {
                             $instance = new MarketplaceNewsletter();
                             $instance->marketplace_client_id = $marketplace?->id;
@@ -1084,14 +1084,14 @@ class NewsletterResource extends Resource
                         }),
 
                     Forms\Components\Toggle::make('exclude_recent_recipients')
-                        ->label('Exclude destinatarii care au primit newsletter recent')
-                        ->helperText('Când e activ, email-urile care au primit deja un newsletter de la acest marketplace în fereastra de mai jos sunt sărite din trimiterea curentă.')
+                        ->label(__('Exclude destinatarii care au primit newsletter recent'))
+                        ->helperText(__('Când e activ, email-urile care au primit deja un newsletter de la acest marketplace în fereastra de mai jos sunt sărite din trimiterea curentă.'))
                         ->default(false)
                         ->live(),
 
                     Forms\Components\TextInput::make('recent_recipient_window_hours')
-                        ->label('Fereastră (ore)')
-                        ->helperText('Câte ore în urmă să verificăm. Implicit 48h.')
+                        ->label(__('Fereastră (ore)'))
+                        ->helperText(__('Câte ore în urmă să verificăm. Implicit 48h.'))
                         ->numeric()
                         ->minValue(1)
                         ->maxValue(720)
@@ -1101,14 +1101,14 @@ class NewsletterResource extends Resource
                         ->suffix('ore'),
 
                     Forms\Components\Toggle::make('exclude_stale_no_opens')
-                        ->label('Exclude destinatari "stale" (nicio deschidere)')
-                        ->helperText('Sare peste cei care au primit cel puțin un newsletter mai vechi decât fereastra de mai jos și nu au deschis niciodată vreun mail trimis prin acest marketplace.')
+                        ->label(__('Exclude destinatari "stale" (nicio deschidere)'))
+                        ->helperText(__('Sare peste cei care au primit cel puțin un newsletter mai vechi decât fereastra de mai jos și nu au deschis niciodată vreun mail trimis prin acest marketplace.'))
                         ->default(false)
                         ->live(),
 
                     Forms\Components\TextInput::make('stale_no_opens_window_hours')
-                        ->label('Fereastră stale (ore)')
-                        ->helperText('Cooldown după ultimul newsletter primit. Implicit 48h.')
+                        ->label(__('Fereastră stale (ore)'))
+                        ->helperText(__('Cooldown după ultimul newsletter primit. Implicit 48h.'))
                         ->numeric()
                         ->minValue(24)
                         ->maxValue(8760)
@@ -1118,14 +1118,14 @@ class NewsletterResource extends Resource
                         ->suffix('ore'),
 
                     Forms\Components\Toggle::make('exclude_stale_no_clicks')
-                        ->label('Exclude destinatari "no-click" (nicio apăsare link)')
-                        ->helperText('Sare peste cei care au primit cel puțin un newsletter mai vechi decât fereastra de mai jos și nu au apăsat niciodată un link trimis prin acest marketplace.')
+                        ->label(__('Exclude destinatari "no-click" (nicio apăsare link)'))
+                        ->helperText(__('Sare peste cei care au primit cel puțin un newsletter mai vechi decât fereastra de mai jos și nu au apăsat niciodată un link trimis prin acest marketplace.'))
                         ->default(false)
                         ->live(),
 
                     Forms\Components\TextInput::make('stale_no_clicks_window_hours')
-                        ->label('Fereastră no-click (ore)')
-                        ->helperText('Cooldown după ultimul newsletter primit. Implicit 96h.')
+                        ->label(__('Fereastră no-click (ore)'))
+                        ->helperText(__('Cooldown după ultimul newsletter primit. Implicit 96h.'))
                         ->numeric()
                         ->minValue(24)
                         ->maxValue(8760)
@@ -1135,7 +1135,7 @@ class NewsletterResource extends Resource
                         ->suffix('ore'),
 
                     Forms\Components\Placeholder::make('throttle_estimate')
-                        ->label('Durată estimată trimitere')
+                        ->label(__('Durată estimată trimitere'))
                         ->content(function (SGet $get) use ($marketplace) {
                             // Approximate: total ÷ (batch_size / batch_delay).
                             // Doesn't account for SMTP send time, which adds
@@ -1202,7 +1202,7 @@ class NewsletterResource extends Resource
                             || !empty($get('target_tags'))),
 
                     Forms\Components\Placeholder::make('targeted_events_summary')
-                        ->label('Evenimente țintă')
+                        ->label(__('Evenimente țintă'))
                         ->content(function (SGet $get) {
                             $ids = $get('target_event_ids') ?? [];
                             if (empty($ids)) return '—';
@@ -1215,7 +1215,7 @@ class NewsletterResource extends Resource
                         })
                         ->visible(fn (SGet $get) => !empty($get('target_event_ids'))),
                     Forms\Components\Placeholder::make('targeted_lists_summary')
-                        ->label('Liste țintă')
+                        ->label(__('Liste țintă'))
                         ->content(function (SGet $get) use ($marketplace) {
                             $ids = $get('target_lists') ?? [];
                             if (empty($ids)) return '—';
@@ -1228,7 +1228,7 @@ class NewsletterResource extends Resource
                         ->visible(fn (SGet $get) => !empty($get('target_lists'))),
                 ]),
 
-            SC\Section::make('Variabile disponibile')
+            SC\Section::make(__('Variabile disponibile'))
                 ->schema([
                     Forms\Components\Placeholder::make('variables_info')
                         ->label('')
@@ -1263,7 +1263,7 @@ class NewsletterResource extends Resource
             // organizer always sees the campaign's send status in the same
             // place. For an unsent draft the placeholder explains there's
             // nothing to show yet.
-            SC\Section::make('Statistici trimitere')
+            SC\Section::make(__('Statistici trimitere'))
                 ->schema([
                     Forms\Components\Placeholder::make('send_stats')
                         ->label('')
@@ -1437,14 +1437,14 @@ class NewsletterResource extends Resource
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('total_recipients')
-                    ->label('Recipients')
+                    ->label(__('Recipients'))
                     ->numeric(),
                 Tables\Columns\TextColumn::make('open_rate')
-                    ->label('Open Rate')
+                    ->label(__('Open Rate'))
                     ->suffix('%')
                     ->visible(fn () => true),
                 Tables\Columns\TextColumn::make('click_rate')
-                    ->label('Click Rate')
+                    ->label(__('Click Rate'))
                     ->state(function ($record) {
                         $sent = (int) ($record->sent_count ?? 0);
                         if ($sent <= 0) return '—';
@@ -1453,12 +1453,12 @@ class NewsletterResource extends Resource
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('purchase_count')
-                    ->label('Comenzi')
+                    ->label(__('Comenzi'))
                     ->numeric()
                     ->sortable()
                     ->placeholder('—'),
                 Tables\Columns\TextColumn::make('purchase_amount_cents')
-                    ->label('Venit')
+                    ->label(__('Venit'))
                     ->state(function ($record) {
                         $cents = (int) ($record->purchase_amount_cents ?? 0);
                         if ($cents <= 0) return '—';
@@ -1467,7 +1467,7 @@ class NewsletterResource extends Resource
                     })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('commission_attributed')
-                    ->label('Comision')
+                    ->label(__('Comision'))
                     ->state(function ($record) {
                         if (!isset($record->commission_attributed)) return '—';
                         $val = (float) $record->commission_attributed;
@@ -1476,9 +1476,9 @@ class NewsletterResource extends Resource
                         return number_format($val, 2, ',', '.') . ' ' . $currency;
                     })
                     ->sortable()
-                    ->tooltip('Comisionul marketplace-ului încasat din comenzile atribuite acestui newsletter (sum commission_amount pe orders cu status success).'),
+                    ->tooltip(__('Comisionul marketplace-ului încasat din comenzile atribuite acestui newsletter (sum commission_amount pe orders cu status success).')),
                 Tables\Columns\TextColumn::make('scheduled_at')
-                    ->label('Scheduled')
+                    ->label(__('Scheduled'))
                     ->dateTime()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -1512,11 +1512,11 @@ class NewsletterResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'scheduled' => 'Scheduled',
-                        'sending' => 'Sending',
-                        'sent' => 'Sent',
-                        'cancelled' => 'Cancelled',
+                        'draft' => __('Draft'),
+                        'scheduled' => __('Scheduled'),
+                        'sending' => __('Sending'),
+                        'sent' => __('Sent'),
+                        'cancelled' => __('Cancelled'),
                     ]),
             ])
             ->recordActions([
@@ -1525,8 +1525,8 @@ class NewsletterResource extends Resource
                     ->icon('heroicon-o-paper-airplane')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Send Newsletter')
-                    ->modalDescription('Are you sure you want to send this newsletter? This action cannot be undone.')
+                    ->modalHeading(__('Send Newsletter'))
+                    ->modalDescription(__('Are you sure you want to send this newsletter? This action cannot be undone.'))
                     ->visible(fn ($record) => $record->status === 'draft')
                     ->action(function ($record) {
                         $record->createRecipients();
@@ -1538,7 +1538,7 @@ class NewsletterResource extends Resource
                     ->color('warning')
                     ->form([
                         Forms\Components\DateTimePicker::make('scheduled_at')
-                            ->label('Send At')
+                            ->label(__('Send At'))
                             ->required()
                             ->minDate(now()),
                     ])
@@ -1551,12 +1551,12 @@ class NewsletterResource extends Resource
                 // by SendNewsletterJob exits early. Same mechanism the
                 // EditNewsletter pause action uses.
                 Action::make('pauseSending')
-                    ->label('Pauză')
+                    ->label(__('Pauză'))
                     ->icon('heroicon-o-pause')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->modalHeading('Pauză trimitere')
-                    ->modalDescription('Trimiterea se oprește în maxim un batch (~10-15s). Rămași stau pending.')
+                    ->modalHeading(__('Pauză trimitere'))
+                    ->modalDescription(__('Trimiterea se oprește în maxim un batch (~10-15s). Rămași stau pending.'))
                     ->visible(fn ($record) => $record->status === 'sending')
                     ->action(function ($record) {
                         $record->update(['status' => 'scheduled']);
@@ -1564,12 +1564,12 @@ class NewsletterResource extends Resource
 
                 // Resume — only when paused AND still has pending recipients.
                 Action::make('resumeSending')
-                    ->label('Reia')
+                    ->label(__('Reia'))
                     ->icon('heroicon-o-play')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->modalHeading('Reia trimitere')
-                    ->modalDescription('Continuă cu throttle-ul curent al marketplace-ului pentru pending-ul rămas.')
+                    ->modalHeading(__('Reia trimitere'))
+                    ->modalDescription(__('Continuă cu throttle-ul curent al marketplace-ului pentru pending-ul rămas.'))
                     ->visible(function ($record) {
                         if ($record->status !== 'scheduled') return false;
                         return \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
@@ -1586,13 +1586,13 @@ class NewsletterResource extends Resource
                 // cancelled. Distinct from the existing "cancel" which
                 // only undoes a pure scheduled-future draft.
                 Action::make('stopSending')
-                    ->label('Stop definitiv')
+                    ->label(__('Stop definitiv'))
                     ->icon('heroicon-o-stop')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading('Oprește definitiv')
-                    ->modalDescription('Newsletter marcat ca anulat. Pending nu se mai trimit. Acțiunea nu se mai poate anula.')
-                    ->modalSubmitActionLabel('Oprește definitiv')
+                    ->modalHeading(__('Oprește definitiv'))
+                    ->modalDescription(__('Newsletter marcat ca anulat. Pending nu se mai trimit. Acțiunea nu se mai poate anula.'))
+                    ->modalSubmitActionLabel(__('Oprește definitiv'))
                     ->visible(function ($record) {
                         if (!in_array($record->status, ['sending', 'scheduled'])) return false;
                         return \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')

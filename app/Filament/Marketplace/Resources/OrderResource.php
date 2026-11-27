@@ -71,7 +71,7 @@ class OrderResource extends Resource
                         ->content(fn ($record) => self::renderOrderHero($record)),
 
                     // Refund Details (visible only if refunded)
-                    SC\Section::make('Detalii rambursare')
+                    SC\Section::make(__('Detalii rambursare'))
                         ->icon('heroicon-o-arrow-uturn-left')
                         ->visible(fn ($record) => in_array($record->refund_status ?? 'none', ['partial', 'full']) || in_array($record->status, ['refunded', 'partially_refunded']))
                         ->schema([
@@ -81,7 +81,7 @@ class OrderResource extends Resource
                         ]),
 
                     // Customer Section
-                    SC\Section::make('Client')
+                    SC\Section::make(__('Client'))
                         ->icon('heroicon-o-user')
                         ->schema([
                             Forms\Components\Placeholder::make('customer_card')
@@ -90,7 +90,7 @@ class OrderResource extends Resource
                         ]),
 
                     // Beneficiaries (right after Customer)
-                    SC\Section::make('Beneficiari')
+                    SC\Section::make(__('Beneficiari'))
                         ->icon('heroicon-o-users')
                         ->compact()
                         ->collapsible()
@@ -106,7 +106,7 @@ class OrderResource extends Resource
                     // tickets.meta.transfers[] entry on the order's tickets,
                     // sorted newest first). Visible only when at least one
                     // ticket in the order has been transferred at least once.
-                    SC\Section::make('Istoric transferuri bilete')
+                    SC\Section::make(__('Istoric transferuri bilete'))
                         ->icon('heroicon-o-arrow-path-rounded-square')
                         ->compact()
                         ->collapsible()
@@ -146,11 +146,11 @@ class OrderResource extends Resource
                         ]),
 
                     // Tickets Section
-                    SC\Section::make('Bilete comandate')
+                    SC\Section::make(__('Bilete comandate'))
                         ->icon('heroicon-o-ticket')
                         ->headerActions([
                             Action::make('download_all')
-                                ->label('Download toate')
+                                ->label(__('Download toate'))
                                 ->icon('heroicon-o-arrow-down-tray')
                                 ->color('gray')
                                 ->size('sm')
@@ -165,7 +165,7 @@ class OrderResource extends Resource
                 ]),
                 SC\Group::make()->columnSpan(1)->schema([
                     // Combined Order Details
-                    SC\Section::make('Detalii comandă')
+                    SC\Section::make(__('Detalii comandă'))
                         ->icon('heroicon-o-calculator')
                         ->compact()
                         ->schema([
@@ -175,13 +175,13 @@ class OrderResource extends Resource
                         ]),
 
                     // Quick Actions - stacked vertically with fullWidth
-                    SC\Section::make('Acțiuni rapide')
+                    SC\Section::make(__('Acțiuni rapide'))
                         ->icon('heroicon-o-bolt')
                         ->compact()
                         ->schema([
                             SC\Actions::make([
                                 Action::make('resend_confirmation')
-                                    ->label('Retrimite confirmare')
+                                    ->label(__('Retrimite confirmare'))
                                     ->icon('heroicon-o-envelope')
                                     ->color('gray')
                                     ->visible(fn ($record) => $record->source !== 'external_import' && $record->status !== 'expired')
@@ -189,7 +189,7 @@ class OrderResource extends Resource
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('download_tickets')
-                                    ->label('Download bilete')
+                                    ->label(__('Download bilete'))
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('gray')
                                     ->visible(fn ($record) => $record->status !== 'expired')
@@ -197,26 +197,26 @@ class OrderResource extends Resource
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('change_status')
-                                    ->label('Schimbă status')
+                                    ->label(__('Schimbă status'))
                                     ->icon('heroicon-o-arrow-path')
                                     ->color('warning')
                                     ->visible(fn ($record) => !in_array($record->status, ['refunded', 'partially_refunded']) && $record->source !== 'external_import')
                                     ->form([
                                         Forms\Components\Select::make('status')
                                             ->options([
-                                                'pending' => 'În așteptare',
-                                                'confirmed' => 'Confirmată',
-                                                'completed' => 'Finalizată',
-                                                'cancelled' => 'Anulată',
+                                                'pending' => __('În așteptare'),
+                                                'confirmed' => __('Confirmată'),
+                                                'completed' => __('Finalizată'),
+                                                'cancelled' => __('Anulată'),
                                             ])
-                                            ->helperText('Pentru rambursări folosește butonul „Rambursare”: aici se schimbă doar statusul, banii nu pleacă.')
+                                            ->helperText(__('Pentru rambursări folosește butonul „Rambursare”: aici se schimbă doar statusul, banii nu pleacă.'))
                                             ->required(),
                                     ])
                                     ->action(fn ($record, array $data) => $record->update(['status' => $data['status']])),
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('request_refund')
-                                    ->label('Solicită rambursare')
+                                    ->label(__('Solicită rambursare'))
                                     ->icon('heroicon-o-arrow-uturn-left')
                                     ->color('danger')
                                     ->requiresConfirmation()
@@ -225,7 +225,7 @@ class OrderResource extends Resource
                         ]),
 
                     // Order Timeline
-                    SC\Section::make('Istoric comandă')
+                    SC\Section::make(__('Istoric comandă'))
                         ->icon('heroicon-o-clock')
                         ->compact()
                         ->collapsible()
@@ -236,7 +236,7 @@ class OrderResource extends Resource
                         ]),
 
                     // Payment Details
-                    SC\Section::make('Detalii plată')
+                    SC\Section::make(__('Detalii plată'))
                         ->icon('heroicon-o-credit-card')
                         ->compact()
                         ->collapsible()
@@ -255,12 +255,12 @@ class OrderResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Order Details')
+                SC\Section::make(__('Order Details'))
                     ->schema([
                         Forms\Components\TextInput::make('order_number')
                             ->disabled(),
                         Forms\Components\Select::make('marketplace_customer_id')
-                            ->label('Client')
+                            ->label(__('Client'))
                             ->relationship(
                                 name: 'marketplaceCustomer',
                                 titleAttribute: 'email',
@@ -280,17 +280,17 @@ class OrderResource extends Resource
                             })
                             ->searchable(['email', 'first_name', 'last_name', 'phone'])
                             ->preload()
-                            ->helperText('Caută după email, nume sau telefon. Lista include doar clienții acestui marketplace.'),
+                            ->helperText(__('Caută după email, nume sau telefon. Lista include doar clienții acestui marketplace.')),
                         Forms\Components\TextInput::make('customer_email')
-                            ->label('Email comandă')
+                            ->label(__('Email comandă'))
                             ->email()
                             ->maxLength(255)
-                            ->helperText('Adresa la care s-au trimis biletele/confirmările. Editabilă pentru a corecta greșeli de introducere (ex: prefix www.).'),
+                            ->helperText(__('Adresa la care s-au trimis biletele/confirmările. Editabilă pentru a corecta greșeli de introducere (ex: prefix www.).')),
                         Forms\Components\TextInput::make('customer_name')
-                            ->label('Nume comandă')
+                            ->label(__('Nume comandă'))
                             ->maxLength(255),
                         Forms\Components\TextInput::make('customer_phone')
-                            ->label('Telefon comandă')
+                            ->label(__('Telefon comandă'))
                             ->tel()
                             ->maxLength(50),
                         Forms\Components\Select::make('status')
@@ -324,7 +324,7 @@ class OrderResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')
-                    ->label('Nr. Comandă')
+                    ->label(__('Nr. Comandă'))
                     ->html()
                     ->formatStateUsing(function ($state, $record) {
                         $primary = '#' . str_pad($state, 6, '0', STR_PAD_LEFT);
@@ -346,7 +346,7 @@ class OrderResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('customer_name')
-                    ->label('Client')
+                    ->label(__('Client'))
                     ->html()
                     ->getStateUsing(function ($record) {
                         $name = trim((string) ($record->customer_name ?? ''));
@@ -369,7 +369,7 @@ class OrderResource extends Resource
                     ->sortable('customer_name')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('event_names')
-                    ->label('Eveniment')
+                    ->label(__('Eveniment'))
                     ->searchable(query: function ($query, $search) {
                         $term = '%' . mb_strtolower($search) . '%';
                         $isPgsql = \DB::getDriverName() === 'pgsql';
@@ -425,24 +425,24 @@ class OrderResource extends Resource
                     ->extraAttributes(['style' => 'min-width: 260px;'])
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('tickets_count')
-                    ->label('Bilete')
+                    ->label(__('Bilete'))
                     ->getStateUsing(fn ($record) => $record->tickets->count())
                     ->badge()
                     ->color('info')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->label('Total')
+                    ->label(__('Total'))
                     ->formatStateUsing(fn ($state, $record) => number_format($state ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON'))
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('promo_code')
-                    ->label('Cod discount')
+                    ->label(__('Cod discount'))
                     ->placeholder('-')
                     ->badge()
                     ->color('success')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->colors([
                         'warning' => 'pending',
                         'success' => fn ($state) => in_array($state, ['completed', 'paid', 'confirmed']),
@@ -473,7 +473,7 @@ class OrderResource extends Resource
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Data')
+                    ->label(__('Data'))
                     ->dateTime('d M Y H:i', timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(),
@@ -481,15 +481,15 @@ class OrderResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'În așteptare',
-                        'paid' => 'Plătită',
-                        'confirmed' => 'Confirmată',
-                        'completed' => 'Finalizată',
-                        'cancelled' => 'Anulată',
-                        'refunded' => 'Rambursată',
-                        'partially_refunded' => 'Rambursată parțial',
-                        'failed' => 'Eșuată',
-                        'expired' => 'Expirată',
+                        'pending' => __('În așteptare'),
+                        'paid' => __('Plătită'),
+                        'confirmed' => __('Confirmată'),
+                        'completed' => __('Finalizată'),
+                        'cancelled' => __('Anulată'),
+                        'refunded' => __('Rambursată'),
+                        'partially_refunded' => __('Rambursată parțial'),
+                        'failed' => __('Eșuată'),
+                        'expired' => __('Expirată'),
                     ]),
                 Tables\Filters\Filter::make('event_id')
                     ->query(fn ($query, array $data) => $query->when(
@@ -498,7 +498,7 @@ class OrderResource extends Resource
                     ))
                     ->form([
                         \Filament\Forms\Components\Select::make('event_id')
-                            ->label('Eveniment')
+                            ->label(__('Eveniment'))
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search) {
                                 $marketplace = static::getMarketplaceClient();
@@ -522,7 +522,7 @@ class OrderResource extends Resource
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('danger')
                     ->iconButton()
-                    ->tooltip('Rambursează comanda')
+                    ->tooltip(__('Rambursează comanda'))
                     ->visible(fn ($record) => false)
                     ->requiresConfirmation()
                     ->modalHeading(fn ($record) => 'Rambursare ' . ($record->order_number ?? '#' . $record->id))
@@ -581,20 +581,20 @@ class OrderResource extends Resource
                         }
 
                         $schema[] = \Filament\Forms\Components\Radio::make('refund_variant')
-                            ->label('Tip rambursare')
+                            ->label(__('Tip rambursare'))
                             ->options($variantOptions)
                             ->default($profile === 'included' ? 'with_commission' : 'face_only')
                             ->required()
                             ->inline(false);
                         $schema[] = \Filament\Forms\Components\Select::make('reason_category')
-                            ->label('Motiv')
+                            ->label(__('Motiv'))
                             ->options([
-                                'event_cancelled' => 'Eveniment anulat',
-                                'event_postponed' => 'Eveniment amânat',
-                                'personal_reason' => 'Motiv personal client',
-                                'duplicate_purchase' => 'Achiziție duplicat',
-                                'technical_issue' => 'Problemă tehnică',
-                                'other' => 'Alt motiv',
+                                'event_cancelled' => __('Eveniment anulat'),
+                                'event_postponed' => __('Eveniment amânat'),
+                                'personal_reason' => __('Motiv personal client'),
+                                'duplicate_purchase' => __('Achiziție duplicat'),
+                                'technical_issue' => __('Problemă tehnică'),
+                                'other' => __('Alt motiv'),
                             ])
                             ->nullable();
 
@@ -605,8 +605,8 @@ class OrderResource extends Resource
                         if ($record->getRefundCommissionProfile() === 'mixed') {
                             \Filament\Notifications\Notification::make()
                                 ->warning()
-                                ->title('Deschide comanda')
-                                ->body('Comanda are bilete cu tipuri de comision diferite. Deschide-o și rambursează per bilet.')
+                                ->title(__('Deschide comanda'))
+                                ->body(__('Comanda are bilete cu tipuri de comision diferite. Deschide-o și rambursează per bilet.'))
                                 ->send();
                             return;
                         }
@@ -625,17 +625,17 @@ class OrderResource extends Resource
                         if ($result->success) {
                             \Filament\Notifications\Notification::make()
                                 ->success()
-                                ->title('Rambursare procesată')
+                                ->title(__('Rambursare procesată'))
                                 ->body(($record->order_number ?? '#' . $record->id) . ' — ' . ($result->refundId ?? ''))
                                 ->send();
                         } elseif ($result->requiresManual) {
                             \Filament\Notifications\Notification::make()
                                 ->danger()
-                                ->title('Procesatorul a refuzat rambursarea — banii NU au plecat')
+                                ->title(__('Procesatorul a refuzat rambursarea — banii NU au plecat'))
                                 ->body(($record->order_number ?? '#' . $record->id) . ': ' . ($result->error ?? '') . ' Biletele sunt încă valide; deschide comanda pentru pașii de finalizare manuală.')
                                 ->actions([
                                     \Filament\Actions\Action::make('open_order')
-                                        ->label('Deschide comanda')
+                                        ->label(__('Deschide comanda'))
                                         ->url(static::getUrl('view', ['record' => $record])),
                                 ])
                                 ->persistent()
@@ -643,7 +643,7 @@ class OrderResource extends Resource
                         } else {
                             \Filament\Notifications\Notification::make()
                                 ->danger()
-                                ->title('Eroare rambursare')
+                                ->title(__('Eroare rambursare'))
                                 ->body($result->error ?? '')
                                 ->send();
                         }
@@ -652,21 +652,21 @@ class OrderResource extends Resource
             ->bulkActions([
                 \Filament\Actions\BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('change_status')
-                        ->label('Schimbă status')
+                        ->label(__('Schimbă status'))
                         ->icon('heroicon-o-arrow-path')
                         ->form([
                             \Filament\Forms\Components\Select::make('status')
-                                ->label('Status nou')
+                                ->label(__('Status nou'))
                                 ->options([
-                                    'pending' => 'În așteptare',
-                                    'paid' => 'Plătită',
-                                    'confirmed' => 'Confirmată',
-                                    'completed' => 'Finalizată',
-                                    'cancelled' => 'Anulată',
-                                    'failed' => 'Eșuată',
-                                    'expired' => 'Expirată',
+                                    'pending' => __('În așteptare'),
+                                    'paid' => __('Plătită'),
+                                    'confirmed' => __('Confirmată'),
+                                    'completed' => __('Finalizată'),
+                                    'cancelled' => __('Anulată'),
+                                    'failed' => __('Eșuată'),
+                                    'expired' => __('Expirată'),
                                 ])
-                                ->helperText('Rambursarea nu poate fi setată manual — folosește acțiunea dedicată.')
+                                ->helperText(__('Rambursarea nu poate fi setată manual — folosește acțiunea dedicată.'))
                                 ->required(),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
@@ -679,12 +679,12 @@ class OrderResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
                     \Filament\Actions\BulkAction::make('bulk_refund')
-                        ->label('Rambursează')
+                        ->label(__('Rambursează'))
                         ->icon('heroicon-o-arrow-uturn-left')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalHeading('Rambursare comenzi selectate')
-                        ->modalDescription('Comenzile deja rambursate sau neplătite vor fi ignorate. Pentru rambursare parțială (selectează bilete individuale), folosește butonul Rambursare de pe pagina comenzii.')
+                        ->modalHeading(__('Rambursare comenzi selectate'))
+                        ->modalDescription(__('Comenzile deja rambursate sau neplătite vor fi ignorate. Pentru rambursare parțială (selectează bilete individuale), folosește butonul Rambursare de pe pagina comenzii.'))
                         ->form(function (\Illuminate\Database\Eloquent\Collection $records) {
                             // Detect orders that carry tickets across more than
                             // one event — bulk-refunding them would refund the
@@ -734,20 +734,20 @@ class OrderResource extends Resource
 
                             $schema = [
                                 \Filament\Forms\Components\Radio::make('refund_variant')
-                                    ->label('Tip rambursare aplicat la TOATE comenzile selectate')
+                                    ->label(__('Tip rambursare aplicat la TOATE comenzile selectate'))
                                     ->options($variantOptions)
                                     ->default($forceWithCommission ? 'with_commission' : 'face_only')
                                     ->required()
                                     ->inline(false),
                                 \Filament\Forms\Components\Select::make('reason_category')
-                                    ->label('Motiv')
+                                    ->label(__('Motiv'))
                                     ->options([
-                                        'event_cancelled' => 'Eveniment anulat',
-                                        'event_postponed' => 'Eveniment amânat',
-                                        'personal_reason' => 'Motiv personal client',
-                                        'duplicate_purchase' => 'Achiziție duplicat',
-                                        'technical_issue' => 'Problemă tehnică',
-                                        'other' => 'Alt motiv',
+                                        'event_cancelled' => __('Eveniment anulat'),
+                                        'event_postponed' => __('Eveniment amânat'),
+                                        'personal_reason' => __('Motiv personal client'),
+                                        'duplicate_purchase' => __('Achiziție duplicat'),
+                                        'technical_issue' => __('Problemă tehnică'),
+                                        'other' => __('Alt motiv'),
                                     ])
                                     ->nullable(),
                             ];
@@ -803,8 +803,8 @@ class OrderResource extends Resource
                                     ->hiddenLabel()
                                     ->content(new \Illuminate\Support\HtmlString($warningHtml)));
                                 $schema[] = \Filament\Forms\Components\Toggle::make('skip_multi_event')
-                                    ->label('Omite comenzile cu bilete la mai multe evenimente')
-                                    ->helperText('Recomandat. Dezactivează doar dacă vrei să rambursezi forțat și biletele lor de pe alte evenimente.')
+                                    ->label(__('Omite comenzile cu bilete la mai multe evenimente'))
+                                    ->helperText(__('Recomandat. Dezactivează doar dacă vrei să rambursezi forțat și biletele lor de pe alte evenimente.'))
                                     ->default(true);
                                 $schema[] = \Filament\Forms\Components\Hidden::make('_multi_event_ids')
                                     ->default(implode(',', $multiEventOrderIds));
@@ -906,17 +906,17 @@ class OrderResource extends Resource
                     // mandatory acknowledgement checkbox + strong confirmation so a
                     // misclick can't wipe real sales.
                     \Filament\Actions\BulkAction::make('bulk_hard_delete')
-                        ->label('Șterge definitiv')
+                        ->label(__('Șterge definitiv'))
                         ->icon('heroicon-o-fire')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalHeading('Șterge DEFINITIV comenzile selectate')
+                        ->modalHeading(__('Șterge DEFINITIV comenzile selectate'))
                         ->modalDescription(new HtmlString('<b>Ștergere HARD, ireversibilă.</b> Dispar comenzile și biletele, se eliberează locurile, se reface stocul și se scad din rapoarte — <b>INCLUSIV vânzări reale plătite/finalizate</b>. Nu returnează banii încasați și nu modifică deconturile deja emise. Folosește DOAR pentru curățarea testelor.'))
-                        ->modalSubmitActionLabel('Da, șterge definitiv')
+                        ->modalSubmitActionLabel(__('Da, șterge definitiv'))
                         ->modalIcon('heroicon-o-fire')
                         ->form([
                             \Filament\Forms\Components\Checkbox::make('confirm_hard_delete')
-                                ->label('Am înțeles: șterg definitiv (inclusiv vânzări reale), acțiunea nu poate fi anulată.')
+                                ->label(__('Am înțeles: șterg definitiv (inclusiv vânzări reale), acțiunea nu poate fi anulată.'))
                                 ->accepted()
                                 ->required()
                                 ->validationMessages(['accepted' => 'Bifează asumarea pentru a putea șterge.']),
@@ -2713,14 +2713,14 @@ class OrderResource extends Resource
             ]);
 
             \Filament\Notifications\Notification::make()
-                ->title('Email trimis')
+                ->title(__('Email trimis'))
                 ->body('Confirmarea a fost retrimisă către ' . $record->customer_email)
                 ->success()
                 ->send();
 
         } catch (\Exception $e) {
             \Filament\Notifications\Notification::make()
-                ->title('Eroare')
+                ->title(__('Eroare'))
                 ->body('Nu s-a putut trimite emailul: ' . $e->getMessage())
                 ->danger()
                 ->send();

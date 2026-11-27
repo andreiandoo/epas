@@ -35,30 +35,30 @@ class AddonsRelationManager extends RelationManager
     {
         return $schema->schema([
             Forms\Components\TextInput::make('name.ro')
-                ->label('Nume')
+                ->label(__('Nume'))
                 ->required()
                 ->maxLength(120)
-                ->placeholder('ex: Vestă de salvare, Pachet foto'),
+                ->placeholder(__('ex: Vestă de salvare, Pachet foto')),
             Forms\Components\TextInput::make('price_cents')
-                ->label('Preț')
+                ->label(__('Preț'))
                 ->numeric()->required()->default(0)->minValue(0)->step(0.01)->suffix('lei')
                 ->formatStateUsing(fn ($state) => $state !== null ? round($state / 100, 2) : null)
                 ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100)),
             Forms\Components\TextInput::make('included_qty')
-                ->label('Incluse gratuit / unitate')
-                ->helperText('Câte primește clientul fără să plateasca, la fiecare bilet.')
+                ->label(__('Incluse gratuit / unitate'))
+                ->helperText(__('Câte primește clientul fără să plateasca, la fiecare bilet.'))
                 ->numeric()->default(0)->minValue(0)->maxValue(50),
             Forms\Components\TextInput::make('max_per_unit')
-                ->label('Plătite, maxim / unitate')
+                ->label(__('Plătite, maxim / unitate'))
                 // The customer's ceiling is the sum of the two, and the site now prints it next to
                 // the stepper; 0 here means "nothing to buy beyond what is already included".
-                ->helperText('Câte mai poate cumpăra peste cele incluse. Total maxim pe bilet = incluse + acest număr.')
+                ->helperText(__('Câte mai poate cumpăra peste cele incluse. Total maxim pe bilet = incluse + acest număr.'))
                 ->numeric()->default(0)->minValue(0)->maxValue(50),
             Forms\Components\TextInput::make('sort_order')
-                ->label('Ordine')
+                ->label(__('Ordine'))
                 ->numeric()->default(0),
             Forms\Components\Toggle::make('is_active')
-                ->label('Activ')
+                ->label(__('Activ'))
                 ->default(true)
                 ->inline(false),
         ])->columns(2);
@@ -68,12 +68,12 @@ class AddonsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name.ro')->label('Supliment'),
-                Tables\Columns\TextColumn::make('price_cents')->label('Preț')
+                Tables\Columns\TextColumn::make('name.ro')->label(__('Supliment')),
+                Tables\Columns\TextColumn::make('price_cents')->label(__('Preț'))
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2, ',', '.') . ' lei'),
-                Tables\Columns\TextColumn::make('included_qty')->label('Incluse'),
-                Tables\Columns\TextColumn::make('max_per_unit')->label('Max. plătite'),
-                Tables\Columns\IconColumn::make('is_active')->label('Activ')->boolean(),
+                Tables\Columns\TextColumn::make('included_qty')->label(__('Incluse')),
+                Tables\Columns\TextColumn::make('max_per_unit')->label(__('Max. plătite')),
+                Tables\Columns\IconColumn::make('is_active')->label(__('Activ'))->boolean(),
             ])
             ->defaultSort('sort_order')
             ->headerActions([CreateAction::make()])

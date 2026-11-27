@@ -48,12 +48,12 @@ class ManageSubscribers extends Page implements HasTable
             )
             ->columns([
                 Tables\Columns\TextColumn::make('full_name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable(['first_name', 'last_name']),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('contactLists.pivot.status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->getStateUsing(function ($record) {
                         $pivot = $record->contactLists->firstWhere('id', $this->record->id)?->pivot;
@@ -66,7 +66,7 @@ class ManageSubscribers extends Page implements HasTable
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('subscribed_at')
-                    ->label('Subscribed')
+                    ->label(__('Subscribed'))
                     ->getStateUsing(function ($record) {
                         $pivot = $record->contactLists->firstWhere('id', $this->record->id)?->pivot;
                         return $pivot?->subscribed_at;
@@ -75,11 +75,11 @@ class ManageSubscribers extends Page implements HasTable
             ])
             ->headerActions([
                 Action::make('add_subscriber')
-                    ->label('Add Subscriber')
+                    ->label(__('Add Subscriber'))
                     ->icon('heroicon-o-plus')
                     ->form([
                         Forms\Components\Select::make('customer_id')
-                            ->label('Customer')
+                            ->label(__('Customer'))
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search) {
                                 $marketplace = static::getMarketplaceClient();
@@ -113,7 +113,7 @@ class ManageSubscribers extends Page implements HasTable
             ])
             ->toolbarActions([
                 BulkAction::make('unsubscribe_selected')
-                    ->label('Unsubscribe Selected')
+                    ->label(__('Unsubscribe Selected'))
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()

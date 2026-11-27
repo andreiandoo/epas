@@ -84,7 +84,7 @@ class CreateNewsletter extends CreateRecord
     {
         return [
             Actions\Action::make('preview')
-                ->label('Previzualizare')
+                ->label(__('Previzualizare'))
                 ->icon('heroicon-o-eye')
                 ->color('info')
                 ->modalContent(function () {
@@ -106,20 +106,20 @@ class CreateNewsletter extends CreateRecord
                         '</div>'
                     );
                 })
-                ->modalHeading('Newsletter Preview')
+                ->modalHeading(__('Newsletter Preview'))
                 ->modalSubmitAction(false)
                 ->modalWidth('5xl'),
 
             Actions\Action::make('sendTest')
-                ->label('Trimite test')
+                ->label(__('Trimite test'))
                 ->icon('heroicon-o-paper-airplane')
                 ->color('warning')
                 ->form([
                     Forms\Components\TextInput::make('test_email')
-                        ->label('Email de test')
+                        ->label(__('Email de test'))
                         ->email()
                         ->required()
-                        ->placeholder('test@example.com')
+                        ->placeholder(__('test@example.com'))
                         ->default(fn () => auth()->user()?->email),
                 ])
                 ->action(function (array $data) {
@@ -140,14 +140,14 @@ class CreateNewsletter extends CreateRecord
         return [
             ...parent::getFormActions(),
             Actions\Action::make('saveDraft')
-                ->label('Save draft')
+                ->label(__('Save draft'))
                 ->color('gray')
                 ->action(function () {
                     $data = $this->form->getState();
                     $data = $this->mutateFormDataBeforeCreate($data);
                     $data['status'] = 'draft';
                     $record = static::getModel()::create($data);
-                    Notification::make()->title('Draft salvat')->success()->send();
+                    Notification::make()->title(__('Draft salvat'))->success()->send();
                     $this->redirect(NewsletterResource::getUrl('edit', ['record' => $record]));
                 }),
         ];
@@ -189,7 +189,7 @@ class CreateNewsletter extends CreateRecord
             Notification::make()->title("Test trimis către {$email}")->success()->send();
         } catch (\Throwable $e) {
             Notification::make()
-                ->title('Trimiterea testului a eșuat')
+                ->title(__('Trimiterea testului a eșuat'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();

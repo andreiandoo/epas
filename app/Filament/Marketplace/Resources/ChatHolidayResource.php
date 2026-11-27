@@ -47,12 +47,12 @@ class ChatHolidayResource extends Resource
         return $form->components([
             Section::make()->schema([
                 Forms\Components\DatePicker::make('date')
-                    ->label('Data')
+                    ->label(__('Data'))
                     ->native(false)
                     ->required(),
 
                 Forms\Components\TextInput::make('label')
-                    ->label('Etichetă')
+                    ->label(__('Etichetă'))
                     ->maxLength(191),
             ])->columns(2),
         ]);
@@ -62,8 +62,8 @@ class ChatHolidayResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('date')->label('Data')->date()->sortable(),
-                Tables\Columns\TextColumn::make('label')->label('Etichetă'),
+                Tables\Columns\TextColumn::make('date')->label(__('Data'))->date()->sortable(),
+                Tables\Columns\TextColumn::make('label')->label(__('Etichetă')),
             ])
             ->defaultSort('date', 'desc')
             ->recordActions([

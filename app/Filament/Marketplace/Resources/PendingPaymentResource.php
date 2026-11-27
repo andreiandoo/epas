@@ -104,7 +104,7 @@ class PendingPaymentResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('event_with_meta')
-                    ->label('Eveniment')
+                    ->label(__('Eveniment'))
                     ->state(function ($record) {
                         $event = $record->event;
                         if (!$event) {
@@ -149,7 +149,7 @@ class PendingPaymentResource extends Resource
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('organizer.company_name')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->state(fn ($record) => $record->organizer?->company_name
                         ?? $record->organizer?->name
                         ?? '—')
@@ -157,13 +157,13 @@ class PendingPaymentResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('reference')
-                    ->label('Referință')
+                    ->label(__('Referință'))
                     ->description(fn ($record) => $record->decont_series)
                     ->searchable()
                     ->copyable(),
 
                 Tables\Columns\TextColumn::make('sold_de_plata')
-                    ->label('Sold de plată')
+                    ->label(__('Sold de plată'))
                     ->state(function ($record) {
                         return self::computeBalance($record);
                     })
@@ -179,7 +179,7 @@ class PendingPaymentResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('payment_status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->state(fn ($record) => match ($record->status) {
                         'pending', 'approved', 'processing' => 'În așteptare',
@@ -195,20 +195,20 @@ class PendingPaymentResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Data decont')
+                    ->label(__('Data decont'))
                     ->date('d.m.Y'),
             ])
             ->filters([
                 // Status filtering is handled by the toolbar tabs (În așteptare /
                 // Achitat / Respins) on the list page — see ListPendingPayments::getTabs().
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->relationship('organizer', 'company_name')
                     ->searchable()
                     ->preload(),
             ])
             ->recordActions([
-                ViewAction::make()->label('Vezi'),
+                ViewAction::make()->label(__('Vezi')),
             ])
             ->defaultSort('created_at', 'desc');
     }
@@ -230,19 +230,19 @@ class PendingPaymentResource extends Resource
                     // MAIN (3/4): Cont bancar → Sold → Organizator → Eveniment → status info → Alte deconturi
                     \Filament\Schemas\Components\Group::make()->columnSpan(3)->schema([
 
-                        Section::make('Cont bancar')
+                        Section::make(__('Cont bancar'))
                             ->icon('heroicon-o-building-library')
                             ->columns(3)
                             ->schema([
                                 Infolists\Components\TextEntry::make('bank_name')
-                                    ->label('Bancă')
+                                    ->label(__('Bancă'))
                                     ->state(fn ($record) => static::getPrimaryBank($record)?->bank_name ?? '—'),
                                 Infolists\Components\TextEntry::make('bank_iban')
-                                    ->label('IBAN')
+                                    ->label(__('IBAN'))
                                     ->state(fn ($record) => static::getPrimaryBank($record)?->iban ?? '—')
                                     ->copyable(),
                                 Infolists\Components\TextEntry::make('bank_holder')
-                                    ->label('Titular')
+                                    ->label(__('Titular'))
                                     ->state(fn ($record) => static::getPrimaryBank($record)?->account_holder ?? '—'),
                                 Infolists\Components\TextEntry::make('bank_warning')
                                     ->hiddenLabel()
@@ -255,7 +255,7 @@ class PendingPaymentResource extends Resource
                                     ->columnSpanFull(),
                             ]),
 
-                        Section::make('Sold de plată')
+                        Section::make(__('Sold de plată'))
                             ->icon('heroicon-o-calculator')
                             ->schema([
                                 Infolists\Components\TextEntry::make('balance_breakdown')
@@ -264,12 +264,12 @@ class PendingPaymentResource extends Resource
                                     ->columnSpanFull(),
                             ]),
 
-                        Section::make('Organizator')
+                        Section::make(__('Organizator'))
                             ->icon('heroicon-o-building-office')
                             ->columns(2)
                             ->schema([
                                 Infolists\Components\TextEntry::make('organizer.company_name')
-                                    ->label('Companie')
+                                    ->label(__('Companie'))
                                     ->state(fn ($record) => $record->organizer?->company_name
                                         ?? $record->organizer?->name
                                         ?? '—')
@@ -279,15 +279,15 @@ class PendingPaymentResource extends Resource
                                     ->color('primary')
                                     ->weight('bold'),
                                 Infolists\Components\TextEntry::make('organizer.cui')
-                                    ->label('CUI')
+                                    ->label(__('CUI'))
                                     ->copyable()
                                     ->placeholder('—'),
                                 Infolists\Components\TextEntry::make('organizer.company_address')
-                                    ->label('Adresă')
+                                    ->label(__('Adresă'))
                                     ->placeholder('—')
                                     ->columnSpan(2),
                                 Infolists\Components\TextEntry::make('representative')
-                                    ->label('Reprezentant')
+                                    ->label(__('Reprezentant'))
                                     ->state(function ($record) {
                                         $o = $record->organizer;
                                         if (!$o) return '—';
@@ -295,18 +295,18 @@ class PendingPaymentResource extends Resource
                                         return $name !== '' ? $name : '—';
                                     }),
                                 Infolists\Components\TextEntry::make('organizer.email')
-                                    ->label('Email')
+                                    ->label(__('Email'))
                                     ->copyable()
                                     ->placeholder('—'),
                             ]),
 
-                        Section::make('Eveniment')
+                        Section::make(__('Eveniment'))
                             ->icon('heroicon-o-calendar-days')
                             ->columns(2)
                             ->visible(fn ($record) => $record->event_id !== null)
                             ->schema([
                                 Infolists\Components\TextEntry::make('event.title')
-                                    ->label('Titlu')
+                                    ->label(__('Titlu'))
                                     ->state(function ($record) {
                                         $t = $record->event?->title;
                                         return is_array($t)
@@ -320,7 +320,7 @@ class PendingPaymentResource extends Resource
                                     ->weight('bold')
                                     ->openUrlInNewTab(),
                                 Infolists\Components\TextEntry::make('event_date_label')
-                                    ->label('Data eveniment')
+                                    ->label(__('Data eveniment'))
                                     ->state(function ($record) {
                                         $event = $record->event;
                                         if (!$event) return '—';
@@ -330,55 +330,55 @@ class PendingPaymentResource extends Resource
                                         return ($end && $end !== $start) ? "{$start} – {$end}" : $start;
                                     }),
                                 Infolists\Components\TextEntry::make('event.venue.name')
-                                    ->label('Locație')
+                                    ->label(__('Locație'))
                                     ->state(function ($record) {
                                         $v = $record->event?->venue?->name;
                                         $vname = is_array($v) ? ($v['ro'] ?? $v['en'] ?? null) : $v;
                                         return $vname ?: '—';
                                     }),
                                 Infolists\Components\TextEntry::make('event.venue.city')
-                                    ->label('Oraș')
+                                    ->label(__('Oraș'))
                                     ->state(fn ($record) => $record->event?->venue?->city ?? '—'),
                                 Infolists\Components\TextEntry::make('event.venue.address')
-                                    ->label('Adresă locație')
+                                    ->label(__('Adresă locație'))
                                     ->state(fn ($record) => $record->event?->venue?->address ?? '—')
                                     ->columnSpan(2),
                             ]),
 
-                        Section::make('Plată înregistrată')
+                        Section::make(__('Plată înregistrată'))
                             ->icon('heroicon-o-check-badge')
                             ->columns(2)
                             ->visible(fn ($record) => $record->status === 'completed')
                             ->schema([
                                 Infolists\Components\TextEntry::make('payment_reference')
-                                    ->label('Referință transfer')
+                                    ->label(__('Referință transfer'))
                                     ->placeholder('—')
                                     ->copyable(),
                                 Infolists\Components\TextEntry::make('completed_at')
-                                    ->label('Data plății')
+                                    ->label(__('Data plății'))
                                     ->dateTime('d.m.Y H:i')
                                     ->placeholder('—'),
                                 Infolists\Components\TextEntry::make('payment_notes')
-                                    ->label('Note')
+                                    ->label(__('Note'))
                                     ->placeholder('—')
                                     ->columnSpan(2),
                             ]),
 
-                        Section::make('Plată respinsă')
+                        Section::make(__('Plată respinsă'))
                             ->icon('heroicon-o-x-circle')
                             ->columns(1)
                             ->visible(fn ($record) => $record->status === 'rejected')
                             ->schema([
                                 Infolists\Components\TextEntry::make('rejection_reason')
-                                    ->label('Motiv respingere')
+                                    ->label(__('Motiv respingere'))
                                     ->placeholder('—'),
                                 Infolists\Components\TextEntry::make('rejected_at')
-                                    ->label('Data respingerii')
+                                    ->label(__('Data respingerii'))
                                     ->dateTime('d.m.Y H:i')
                                     ->placeholder('—'),
                             ]),
 
-                        Section::make('Alte deconturi pe acest eveniment')
+                        Section::make(__('Alte deconturi pe acest eveniment'))
                             ->icon('heroicon-o-rectangle-stack')
                             ->compact()
                             ->visible(fn ($record) => static::otherEventPayouts($record)->isNotEmpty())
@@ -392,29 +392,29 @@ class PendingPaymentResource extends Resource
 
                     // SIDEBAR (1/4): Acțiuni
                     \Filament\Schemas\Components\Group::make()->columnSpan(1)->schema([
-                        Section::make('Acțiuni')
+                        Section::make(__('Acțiuni'))
                             ->icon('heroicon-o-bolt')
                             ->compact()
                             ->visible(fn ($record) => in_array($record->status, ['pending', 'approved', 'processing'], true))
                             ->schema([
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('mark_paid')
-                                        ->label('Achitat')
+                                        ->label(__('Achitat'))
                                         ->icon('heroicon-o-check-circle')
                                         ->color('success')
                                         ->requiresConfirmation()
-                                        ->modalHeading('Marchează plata ca achitată')
+                                        ->modalHeading(__('Marchează plata ca achitată'))
                                         ->modalDescription(function ($record) {
                                             $balance = static::computeBalance($record);
                                             return 'Transferul de ' . number_format($balance, 2) . ' RON a fost efectuat către organizator. Decontul se va marca completed, iar facturile organizator linkate (POS / refunds) vor fi marcate paid în același transfer.';
                                         })
                                         ->form([
                                             Forms\Components\TextInput::make('payment_reference')
-                                                ->label('Referință transfer')
+                                                ->label(__('Referință transfer'))
                                                 ->required()
-                                                ->helperText('Numărul transferului bancar sau ID-ul tranzacției.'),
+                                                ->helperText(__('Numărul transferului bancar sau ID-ul tranzacției.')),
                                             Forms\Components\Textarea::make('payment_notes')
-                                                ->label('Note')
+                                                ->label(__('Note'))
                                                 ->rows(2),
                                         ])
                                         ->action(function (array $data, $record, $livewire) {
@@ -428,8 +428,8 @@ class PendingPaymentResource extends Resource
                                                 ->each(fn ($inv) => $inv->markAsPaid('manual'));
 
                                             Notification::make()
-                                                ->title('Plată înregistrată')
-                                                ->body('Decontul + facturile organizator au fost marcate ca achitate.')
+                                                ->title(__('Plată înregistrată'))
+                                                ->body(__('Decontul + facturile organizator au fost marcate ca achitate.'))
                                                 ->success()
                                                 ->send();
 
@@ -439,15 +439,15 @@ class PendingPaymentResource extends Resource
 
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('mark_rejected')
-                                        ->label('Respinge plata')
+                                        ->label(__('Respinge plata'))
                                         ->icon('heroicon-o-x-circle')
                                         ->color('danger')
                                         ->requiresConfirmation()
-                                        ->modalHeading('Respinge decontul')
-                                        ->modalDescription('Decontul va fi marcat rejected, PDF-ul decont va fi șters, iar facturile organizator linkate vor fi marcate cancelled.')
+                                        ->modalHeading(__('Respinge decontul'))
+                                        ->modalDescription(__('Decontul va fi marcat rejected, PDF-ul decont va fi șters, iar facturile organizator linkate vor fi marcate cancelled.'))
                                         ->form([
                                             Forms\Components\Textarea::make('reason')
-                                                ->label('Motiv respingere')
+                                                ->label(__('Motiv respingere'))
                                                 ->required()
                                                 ->rows(3),
                                         ])
@@ -471,8 +471,8 @@ class PendingPaymentResource extends Resource
                                                 ->update(['status' => 'cancelled']);
 
                                             Notification::make()
-                                                ->title('Plată respinsă')
-                                                ->body('Decontul a fost marcat rejected, documentele asociate au fost curățate.')
+                                                ->title(__('Plată respinsă'))
+                                                ->body(__('Decontul a fost marcat rejected, documentele asociate au fost curățate.'))
                                                 ->success()
                                                 ->send();
 

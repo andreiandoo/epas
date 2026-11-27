@@ -82,16 +82,16 @@ class EventSeatingLayoutResource extends Resource
                     // ============================================================
                     // SEARCH EXISTING EVENT SEATING LAYOUTS (only on create page)
                     // ============================================================
-                    SC\Section::make('Caută configurații existente')
-                        ->description('Caută în toate configurările de locuri pentru evenimente. Dacă găsești configurația dorită, o poți adăuga ca partener.')
+                    SC\Section::make(__('Caută configurații existente'))
+                        ->description(__('Caută în toate configurările de locuri pentru evenimente. Dacă găsești configurația dorită, o poți adăuga ca partener.'))
                         ->icon('heroicon-o-magnifying-glass')
                         ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
                         ->visible(fn ($operation) => $operation === 'create')
                         ->columnSpanFull()
                         ->schema([
                             Forms\Components\Select::make('search_existing')
-                                ->label('Caută o configurație existentă')
-                                ->placeholder('Scrie numele evenimentului...')
+                                ->label(__('Caută o configurație existentă'))
+                                ->placeholder(__('Scrie numele evenimentului...'))
                                 ->searchable()
                                 ->prefixIcon('heroicon-o-magnifying-glass')
                                 ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
@@ -219,7 +219,7 @@ class EventSeatingLayoutResource extends Resource
 
                             SC\Actions::make([
                                 Action::make('add_as_partner')
-                                    ->label('Adaugă ca partener')
+                                    ->label(__('Adaugă ca partener'))
                                     ->icon('heroicon-o-plus-circle')
                                     ->color('success')
                                     ->size('lg')
@@ -230,16 +230,16 @@ class EventSeatingLayoutResource extends Resource
                                         return $esl && is_null($esl->marketplace_client_id);
                                     })
                                     ->requiresConfirmation()
-                                    ->modalHeading('Adaugă configurația ca partener')
-                                    ->modalDescription('Această configurație de locuri va fi adăugată în lista ta.')
+                                    ->modalHeading(__('Adaugă configurația ca partener'))
+                                    ->modalDescription(__('Această configurație de locuri va fi adăugată în lista ta.'))
                                     ->action(function (SGet $get) use ($marketplace) {
                                         $eslId = $get('search_existing');
                                         $esl = EventSeatingLayout::withoutGlobalScopes()->find($eslId);
 
                                         if (!$esl) {
                                             Notification::make()
-                                                ->title('Eroare')
-                                                ->body('Configurația nu a fost găsită.')
+                                                ->title(__('Eroare'))
+                                                ->body(__('Configurația nu a fost găsită.'))
                                                 ->danger()
                                                 ->send();
                                             return;
@@ -247,8 +247,8 @@ class EventSeatingLayoutResource extends Resource
 
                                         if ($esl->marketplace_client_id) {
                                             Notification::make()
-                                                ->title('Eroare')
-                                                ->body('Această configurație aparține deja unui alt marketplace.')
+                                                ->title(__('Eroare'))
+                                                ->body(__('Această configurație aparține deja unui alt marketplace.'))
                                                 ->danger()
                                                 ->send();
                                             return;
@@ -260,8 +260,8 @@ class EventSeatingLayoutResource extends Resource
                                         ]);
 
                                         Notification::make()
-                                            ->title('Configurație adăugată')
-                                            ->body('Configurația a fost adăugată ca partener.')
+                                            ->title(__('Configurație adăugată'))
+                                            ->body(__('Configurația a fost adăugată ca partener.'))
                                             ->success()
                                             ->send();
 
@@ -286,11 +286,11 @@ class EventSeatingLayoutResource extends Resource
                     // ============================================================
                     // CREATE NEW EVENT SEATING FORM
                     // ============================================================
-                    SC\Section::make('Eveniment & Layout')
+                    SC\Section::make(__('Eveniment & Layout'))
                         ->icon('heroicon-o-calendar')
                         ->schema([
                             Forms\Components\Select::make('marketplace_event_id')
-                                ->label('Eveniment')
+                                ->label(__('Eveniment'))
                                 ->options(fn () => MarketplaceEvent::query()
                                     ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
                                     ->orderBy('starts_at', 'desc')
@@ -303,11 +303,11 @@ class EventSeatingLayoutResource extends Resource
                                 )
                                 ->required()
                                 ->searchable()
-                                ->helperText('Selectează evenimentul pentru care configurezi locurile')
+                                ->helperText(__('Selectează evenimentul pentru care configurezi locurile'))
                                 ->columnSpan(1),
 
                             Forms\Components\Select::make('layout_id')
-                                ->label('Layout de bază')
+                                ->label(__('Layout de bază'))
                                 ->options(fn () => SeatingLayout::query()
                                     ->withoutGlobalScopes()
                                     ->where(function ($q) {
@@ -320,53 +320,53 @@ class EventSeatingLayoutResource extends Resource
                                 )
                                 ->required()
                                 ->searchable()
-                                ->helperText('Alege un layout publicat ca șablon')
+                                ->helperText(__('Alege un layout publicat ca șablon'))
                                 ->columnSpan(1),
 
                             Forms\Components\Select::make('status')
                                 ->options([
-                                    'draft' => 'Draft',
-                                    'published' => 'Publicat',
-                                    'archived' => 'Arhivat',
+                                    'draft' => __('Draft'),
+                                    'published' => __('Publicat'),
+                                    'archived' => __('Arhivat'),
                                 ])
                                 ->default('draft')
                                 ->required()
-                                ->helperText('Doar configurațiile publicate sunt vizibile public')
+                                ->helperText(__('Doar configurațiile publicate sunt vizibile public'))
                                 ->columnSpanFull(),
                         ])
                         ->columns(2),
 
-                    SC\Section::make('Publicare')
+                    SC\Section::make(__('Publicare'))
                         ->icon('heroicon-o-clock')
                         ->collapsible()
                         ->collapsed()
                         ->schema([
                             Forms\Components\DateTimePicker::make('published_at')
-                                ->label('Publicat la')
+                                ->label(__('Publicat la'))
                                 ->native(false)
-                                ->helperText('Se setează automat când statusul devine "Publicat"')
+                                ->helperText(__('Se setează automat când statusul devine "Publicat"'))
                                 ->disabled()
                                 ->columnSpan(1),
 
                             Forms\Components\DateTimePicker::make('archived_at')
-                                ->label('Arhivat la')
+                                ->label(__('Arhivat la'))
                                 ->native(false)
-                                ->helperText('Se setează automat când statusul devine "Arhivat"')
+                                ->helperText(__('Se setează automat când statusul devine "Arhivat"'))
                                 ->disabled()
                                 ->columnSpan(1),
                         ])
                         ->columns(2),
 
                     // Partner notes
-                    SC\Section::make('Note interne')
-                        ->description('Note interne (nu sunt vizibile public)')
+                    SC\Section::make(__('Note interne'))
+                        ->description(__('Note interne (nu sunt vizibile public)'))
                         ->icon('heroicon-o-lock-closed')
                         ->collapsible()
                         ->collapsed()
                         ->schema([
                             Forms\Components\Textarea::make('partner_notes')
-                                ->label('Note')
-                                ->placeholder('Note despre această configurație...')
+                                ->label(__('Note'))
+                                ->placeholder(__('Note despre această configurație...'))
                                 ->rows(4)
                                 ->columnSpanFull(),
                         ]),
@@ -374,7 +374,7 @@ class EventSeatingLayoutResource extends Resource
 
                 SC\Group::make()->columnSpan(1)->schema([
                     // Seat inventory (only on edit)
-                    SC\Section::make('Inventar locuri')
+                    SC\Section::make(__('Inventar locuri'))
                         ->icon('heroicon-o-chart-bar')
                         ->compact()
                         ->visible(fn ($operation) => $operation === 'edit')
@@ -414,28 +414,28 @@ class EventSeatingLayoutResource extends Resource
                         ]),
 
                     // Metadata (only on edit)
-                    SC\Section::make('Metadate')
+                    SC\Section::make(__('Metadate'))
                         ->icon('heroicon-o-information-circle')
                         ->compact()
                         ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
                             Forms\Components\Placeholder::make('created_at')
-                                ->label('Creat la')
+                                ->label(__('Creat la'))
                                 ->content(fn ($record) => $record?->created_at?->format('d.m.Y H:i') ?? '-'),
 
                             Forms\Components\Placeholder::make('updated_at')
-                                ->label('Actualizat la')
+                                ->label(__('Actualizat la'))
                                 ->content(fn ($record) => $record?->updated_at?->format('d.m.Y H:i') ?? '-'),
                         ]),
 
                     // Partner status
-                    SC\Section::make('Status partener')
+                    SC\Section::make(__('Status partener'))
                         ->icon('heroicon-o-user-group')
                         ->compact()
                         ->schema([
                             Forms\Components\Toggle::make('is_partner')
-                                ->label('Configurație partener')
-                                ->helperText('Importată din Core')
+                                ->label(__('Configurație partener'))
+                                ->helperText(__('Importată din Core'))
                                 ->disabled(),
                         ]),
                 ]),
@@ -448,19 +448,19 @@ class EventSeatingLayoutResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('marketplaceEvent.name')
-                    ->label('Eveniment')
+                    ->label(__('Eveniment'))
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::Bold)
                     ->url(fn (EventSeatingLayout $record) => static::getUrl('edit', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('baseLayout.name')
-                    ->label('Layout')
+                    ->label(__('Layout'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'draft' => 'gray',
@@ -476,47 +476,47 @@ class EventSeatingLayoutResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('seats.total')
-                    ->label('Total')
+                    ->label(__('Total'))
                     ->formatStateUsing(fn (EventSeatingLayout $record) => $record->getSeatStatusCounts()['total'] ?? 0)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('seats.available')
-                    ->label('Disponibile')
+                    ->label(__('Disponibile'))
                     ->formatStateUsing(fn (EventSeatingLayout $record) => $record->getSeatStatusCounts()['available'] ?? 0)
                     ->badge()
                     ->color('success'),
 
                 Tables\Columns\TextColumn::make('seats.sold')
-                    ->label('Vândute')
+                    ->label(__('Vândute'))
                     ->formatStateUsing(fn (EventSeatingLayout $record) => $record->getSeatStatusCounts()['sold'] ?? 0)
                     ->badge()
                     ->color('info'),
 
                 Tables\Columns\IconColumn::make('is_partner')
-                    ->label('Partener')
+                    ->label(__('Partener'))
                     ->boolean()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Actualizat')
+                    ->label(__('Actualizat'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->options([
-                        'draft' => 'Draft',
-                        'published' => 'Publicat',
-                        'archived' => 'Arhivat',
+                        'draft' => __('Draft'),
+                        'published' => __('Publicat'),
+                        'archived' => __('Arhivat'),
                     ]),
 
                 Tables\Filters\TernaryFilter::make('is_partner')
-                    ->label('Doar parteneri'),
+                    ->label(__('Doar parteneri')),
 
                 Tables\Filters\SelectFilter::make('marketplace_event')
-                    ->label('Eveniment')
+                    ->label(__('Eveniment'))
                     ->relationship('marketplaceEvent', 'name')
                     ->searchable()
                     ->preload(),

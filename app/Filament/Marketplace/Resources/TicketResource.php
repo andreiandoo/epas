@@ -108,7 +108,7 @@ class TicketResource extends Resource
             ->filtersFormColumns(2)
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Cod Bilet')
+                    ->label(__('Cod Bilet'))
                     ->icon(fn ($record) => ($record->meta['has_insurance'] ?? false) ? 'heroicon-o-shield-check' : null)
                     ->iconColor('success')
                     ->iconPosition('before')
@@ -119,7 +119,7 @@ class TicketResource extends Resource
                 Tables\Columns\TextColumn::make('ticketType.event.title')
                     // A ticket of the activities module (bilete.online) has no event and no ticket type: it belongs to
                     // an activity booking, so these two columns read the product and the variant instead of staying empty.
-                    ->label('Eveniment / produs')
+                    ->label(__('Eveniment / produs'))
                     ->state(fn ($record) => static::subjectTitle($record))
                     ->description(fn ($record) => static::subjectPlace($record))
                     ->searchable()
@@ -127,12 +127,12 @@ class TicketResource extends Resource
                     ->limit(30)
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('ticketType.name')
-                    ->label('Tip bilet / variantă')
+                    ->label(__('Tip bilet / variantă'))
                     ->state(fn ($record) => static::variantTitle($record))
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('order.id')
-                    ->label('Nr. Comandă')
+                    ->label(__('Nr. Comandă'))
                     ->formatStateUsing(fn ($state, $record) =>
                         $state
                             ? '#' . str_pad($state, 6, '0', STR_PAD_LEFT) .
@@ -148,7 +148,7 @@ class TicketResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('beneficiary_name')
-                    ->label('Beneficiar')
+                    ->label(__('Beneficiar'))
                     ->getStateUsing(function ($record) {
                         // Check if ticket has beneficiary in meta
                         $meta = $record->meta ?? [];
@@ -190,7 +190,7 @@ class TicketResource extends Resource
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('beneficiary_email')
-                    ->label('Email')
+                    ->label(__('Email'))
                     ->getStateUsing(function ($record) {
                         // Check if ticket has beneficiary email in meta (for invitations)
                         $meta = $record->meta ?? [];
@@ -216,7 +216,7 @@ class TicketResource extends Resource
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->colors([
                         'success' => 'valid',
                         'warning' => 'used',
@@ -232,7 +232,7 @@ class TicketResource extends Resource
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('seat_label')
-                    ->label('Loc')
+                    ->label(__('Loc'))
                     ->getStateUsing(function ($record) {
                         // Prefer the resolved seat details (section name,
                         // row label, seat number) so paid tickets show
@@ -255,7 +255,7 @@ class TicketResource extends Resource
                     })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Data achiziție')
+                    ->label(__('Data achiziție'))
                     ->dateTime('d M Y H:i', timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(),
@@ -263,10 +263,10 @@ class TicketResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'valid' => 'Valid',
-                        'used' => 'Utilizat',
-                        'cancelled' => 'Anulat',
-                        'refunded' => 'Rambursat',
+                        'valid' => __('Valid'),
+                        'used' => __('Utilizat'),
+                        'cancelled' => __('Anulat'),
+                        'refunded' => __('Rambursat'),
                     ]),
                 Tables\Filters\Filter::make('event_id')
                     ->query(fn ($query, array $data) => $query->when(
@@ -275,7 +275,7 @@ class TicketResource extends Resource
                     ))
                     ->form([
                         \Filament\Forms\Components\Select::make('event_id')
-                            ->label('Eveniment')
+                            ->label(__('Eveniment'))
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search) {
                                 $marketplace = static::getMarketplaceClient();
@@ -293,10 +293,10 @@ class TicketResource extends Resource
                             ->getOptionLabelUsing(fn ($value) => \App\Models\Event::find($value)?->getTranslation('title', 'ro') ?? $value),
                     ]),
                 Tables\Filters\TernaryFilter::make('is_invitation')
-                    ->label('Tip')
-                    ->placeholder('Toate')
-                    ->trueLabel('Doar Invitații')
-                    ->falseLabel('Doar Comenzi')
+                    ->label(__('Tip'))
+                    ->placeholder(__('Toate'))
+                    ->trueLabel(__('Doar Invitații'))
+                    ->falseLabel(__('Doar Comenzi'))
                     ->queries(
                         true: fn (Builder $query) => $query->whereJsonContains('meta->is_invitation', true),
                         false: fn (Builder $query) => $query->where(function ($q) {
@@ -305,14 +305,14 @@ class TicketResource extends Resource
                         }),
                     ),
                 Tables\Filters\Filter::make('purchase_period')
-                    ->label('Perioadă achiziție')
+                    ->label(__('Perioadă achiziție'))
                     ->form([
                         \Filament\Forms\Components\DatePicker::make('from')
-                            ->label('De la')
+                            ->label(__('De la'))
                             ->native(false)
                             ->displayFormat('d M Y'),
                         \Filament\Forms\Components\DatePicker::make('to')
-                            ->label('Până la')
+                            ->label(__('Până la'))
                             ->native(false)
                             ->displayFormat('d M Y'),
                     ])
@@ -336,17 +336,17 @@ class TicketResource extends Resource
             ->bulkActions([
                 \Filament\Actions\BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('change_status')
-                        ->label('Schimbă status')
+                        ->label(__('Schimbă status'))
                         ->icon('heroicon-o-arrow-path')
                         ->form([
                             \Filament\Forms\Components\Select::make('status')
-                                ->label('Status nou')
+                                ->label(__('Status nou'))
                                 ->options([
-                                    'valid' => 'Valid',
-                                    'used' => 'Utilizat',
-                                    'cancelled' => 'Anulat',
+                                    'valid' => __('Valid'),
+                                    'used' => __('Utilizat'),
+                                    'cancelled' => __('Anulat'),
                                 ])
-                                ->helperText('Statusul Rambursat se setează automat la rambursarea comenzii.')
+                                ->helperText(__('Statusul Rambursat se setează automat la rambursarea comenzii.'))
                                 ->required(),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
@@ -378,7 +378,7 @@ class TicketResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
                     \Filament\Actions\BulkAction::make('export_data')
-                        ->label('Export date')
+                        ->label(__('Export date'))
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('info')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
@@ -387,12 +387,12 @@ class TicketResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
                     \Filament\Actions\BulkAction::make('bulk_delete')
-                        ->label('Șterge')
+                        ->label(__('Șterge'))
                         ->icon('heroicon-o-trash')
                         ->color('danger')
                         ->requiresConfirmation()
-                        ->modalHeading('Șterge biletele selectate')
-                        ->modalDescription('Biletele valide/utilizate care aparțin unei comenzi active nu pot fi șterse. Biletele orfane (comanda a fost ștearsă) se pot șterge indiferent de status.')
+                        ->modalHeading(__('Șterge biletele selectate'))
+                        ->modalDescription(__('Biletele valide/utilizate care aparțin unei comenzi active nu pot fi șterse. Biletele orfane (comanda a fost ștearsă) se pot șterge indiferent de status.'))
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
                             // Pre-load which order_ids still exist so we can detect orphans
                             // (tickets whose order was deleted leaving order_id NULL, or

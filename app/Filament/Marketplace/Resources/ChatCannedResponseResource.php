@@ -50,18 +50,18 @@ class ChatCannedResponseResource extends Resource
         return $form->components([
             Section::make()->schema([
                 Forms\Components\TextInput::make('shortcut')
-                    ->label('Scurtătură')
-                    ->helperText('ex: /refund')
+                    ->label(__('Scurtătură'))
+                    ->helperText(__('ex: /refund'))
                     ->required()
                     ->maxLength(64),
 
                 Forms\Components\TextInput::make('title')
-                    ->label('Titlu')
+                    ->label(__('Titlu'))
                     ->required()
                     ->maxLength(191),
 
                 Forms\Components\Select::make('support_department_id')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->options(fn () => SupportDepartment::query()
                         ->where('marketplace_client_id', $adminClientId)
                         ->get()
@@ -69,21 +69,21 @@ class ChatCannedResponseResource extends Resource
                         ->toArray())
                     ->nullable()
                     ->searchable()
-                    ->placeholder('Toate departamentele'),
+                    ->placeholder(__('Toate departamentele')),
 
                 Forms\Components\Textarea::make('body')
-                    ->label('Conținut')
+                    ->label(__('Conținut'))
                     ->required()
                     ->rows(5)
-                    ->helperText('Poți folosi {name}, {event} ca variabile.'),
+                    ->helperText(__('Poți folosi {name}, {event} ca variabile.')),
 
                 Forms\Components\TextInput::make('sort_order')
-                    ->label('Ordine')
+                    ->label(__('Ordine'))
                     ->numeric()
                     ->default(0),
 
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Activ')
+                    ->label(__('Activ'))
                     ->default(true),
             ])->columns(2),
         ]);
@@ -93,14 +93,14 @@ class ChatCannedResponseResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('shortcut')->label('Scurtătură')->badge(),
-                Tables\Columns\TextColumn::make('title')->label('Titlu')->searchable(),
+                Tables\Columns\TextColumn::make('shortcut')->label(__('Scurtătură'))->badge(),
+                Tables\Columns\TextColumn::make('title')->label(__('Titlu'))->searchable(),
                 Tables\Columns\TextColumn::make('department.name')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->placeholder('—')
                     ->formatStateUsing(fn ($state) => is_array($state) ? ($state['ro'] ?? $state['en'] ?? reset($state)) : $state),
-                Tables\Columns\IconColumn::make('is_active')->label('Activ')->boolean(),
-                Tables\Columns\TextColumn::make('sort_order')->label('Ordine')->sortable(),
+                Tables\Columns\IconColumn::make('is_active')->label(__('Activ'))->boolean(),
+                Tables\Columns\TextColumn::make('sort_order')->label(__('Ordine'))->sortable(),
             ])
             ->defaultSort('sort_order')
             ->recordActions([

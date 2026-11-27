@@ -62,48 +62,48 @@ class CouponCampaignResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Campaign Details')
+                SC\Section::make(__('Campaign Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
-                            ->label('Campaign Name')
+                            ->label(__('Campaign Name'))
                             ->required()
                             ->maxLength(190),
 
                         Forms\Components\Textarea::make("description.{$marketplaceLanguage}")
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(3),
 
                         Forms\Components\Select::make('status')
                             ->options([
-                                'draft' => 'Draft',
-                                'active' => 'Active',
-                                'paused' => 'Paused',
-                                'expired' => 'Expired',
-                                'archived' => 'Archived',
+                                'draft' => __('Draft'),
+                                'active' => __('Active'),
+                                'paused' => __('Paused'),
+                                'expired' => __('Expired'),
+                                'archived' => __('Archived'),
                             ])
                             ->default('draft')
                             ->required(),
                     ])->columns(1),
 
-                SC\Section::make('Schedule')
+                SC\Section::make(__('Schedule'))
                     ->schema([
                         Forms\Components\DateTimePicker::make('starts_at')
-                            ->label('Start Date'),
+                            ->label(__('Start Date')),
 
                         Forms\Components\DateTimePicker::make('ends_at')
-                            ->label('End Date'),
+                            ->label(__('End Date')),
                     ])->columns(2),
 
-                SC\Section::make('Limits')
+                SC\Section::make(__('Limits'))
                     ->schema([
                         Forms\Components\TextInput::make('budget_limit')
-                            ->label('Budget Limit')
+                            ->label(__('Budget Limit'))
                             ->numeric()
                             ->prefix('€')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Maximum total discount amount (leave empty for unlimited)'),
 
                         Forms\Components\TextInput::make('redemption_limit')
-                            ->label('Redemption Limit')
+                            ->label(__('Redemption Limit'))
                             ->numeric()
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Maximum number of redemptions (leave empty for unlimited)'),
                     ])->columns(2),
@@ -118,7 +118,7 @@ class CouponCampaignResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
@@ -131,19 +131,19 @@ class CouponCampaignResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('codes_count')
-                    ->label('Codes')
+                    ->label(__('Codes'))
                     ->counts('codes'),
 
                 Tables\Columns\TextColumn::make('redemption_count')
-                    ->label('Redemptions'),
+                    ->label(__('Redemptions')),
 
                 Tables\Columns\TextColumn::make('starts_at')
-                    ->label('Starts')
+                    ->label(__('Starts'))
                     ->dateTime('M d, Y')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('ends_at')
-                    ->label('Ends')
+                    ->label(__('Ends'))
                     ->dateTime('M d, Y')
                     ->sortable(),
 
@@ -155,38 +155,38 @@ class CouponCampaignResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'active' => 'Active',
-                        'paused' => 'Paused',
-                        'expired' => 'Expired',
-                        'archived' => 'Archived',
+                        'draft' => __('Draft'),
+                        'active' => __('Active'),
+                        'paused' => __('Paused'),
+                        'expired' => __('Expired'),
+                        'archived' => __('Archived'),
                     ]),
             ])
             ->recordActions([
                 EditAction::make(),
                 Actions\Action::make('generate_codes')
-                    ->label('Generate Codes')
+                    ->label(__('Generate Codes'))
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
                     ->form([
                         Forms\Components\TextInput::make('quantity')
-                            ->label('Number of codes to generate')
+                            ->label(__('Number of codes to generate'))
                             ->numeric()
                             ->default(10)
                             ->minValue(1)
                             ->maxValue(1000)
                             ->required(),
                         Forms\Components\Select::make('discount_type')
-                            ->label('Discount Type')
+                            ->label(__('Discount Type'))
                             ->options([
-                                'percentage' => 'Percentage',
-                                'fixed_amount' => 'Fixed Amount',
-                                'free_shipping' => 'Free Shipping',
+                                'percentage' => __('Percentage'),
+                                'fixed_amount' => __('Fixed Amount'),
+                                'free_shipping' => __('Free Shipping'),
                             ])
                             ->default('percentage')
                             ->required(),
                         Forms\Components\TextInput::make('discount_value')
-                            ->label('Discount Value')
+                            ->label(__('Discount Value'))
                             ->numeric()
                             ->required()
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Percentage (e.g., 10 for 10%) or fixed amount in EUR'),
@@ -205,7 +205,7 @@ class CouponCampaignResource extends Resource
                         }
                         \Filament\Notifications\Notification::make()
                             ->success()
-                            ->title('Codes Generated')
+                            ->title(__('Codes Generated'))
                             ->body("{$data['quantity']} coupon codes have been created.")
                             ->send();
                     }),

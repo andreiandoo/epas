@@ -38,13 +38,13 @@ class SupportDepartmentResource extends Resource
         return $form->components([
             Section::make()->schema([
                 Forms\Components\TextInput::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->required()
                     ->maxLength(64)
-                    ->helperText('Identificator stabil; nu schimba după ce ai tichete care folosesc departamentul.'),
+                    ->helperText(__('Identificator stabil; nu schimba după ce ai tichete care folosesc departamentul.')),
 
                 Forms\Components\KeyValue::make('name')
-                    ->label('Nume (per limbă)')
+                    ->label(__('Nume (per limbă)'))
                     ->keyLabel('Cod limbă')
                     ->valueLabel('Denumire')
                     ->keyPlaceholder('ro')
@@ -52,18 +52,18 @@ class SupportDepartmentResource extends Resource
                     ->required(),
 
                 Forms\Components\KeyValue::make('description')
-                    ->label('Descriere (per limbă)')
+                    ->label(__('Descriere (per limbă)'))
                     ->keyLabel('Cod limbă')
                     ->valueLabel('Descriere'),
 
                 Forms\Components\TagsInput::make('notify_emails')
-                    ->label('Email-uri pentru notificare')
-                    ->placeholder('suport@ambilet.ro')
-                    ->helperText('Echipa care primește email când se deschide un tichet pe acest departament.'),
+                    ->label(__('Email-uri pentru notificare'))
+                    ->placeholder(__('suport@ambilet.ro'))
+                    ->helperText(__('Echipa care primește email când se deschide un tichet pe acest departament.')),
 
                 Forms\Components\Select::make('admins')
-                    ->label('Membri echipă alocați')
-                    ->helperText('Acești utilizatori vor putea fi asignați pe tichetele care ajung pe acest departament.')
+                    ->label(__('Membri echipă alocați'))
+                    ->helperText(__('Acești utilizatori vor putea fi asignați pe tichetele care ajung pe acest departament.'))
                     ->relationship(
                         'admins',
                         'name',
@@ -78,27 +78,27 @@ class SupportDepartmentResource extends Resource
                     ->getOptionLabelFromRecordUsing(fn (MarketplaceAdmin $admin) => $admin->name . ' — ' . $admin->email),
 
                 Forms\Components\TextInput::make('sort_order')
-                    ->label('Ordine')
+                    ->label(__('Ordine'))
                     ->numeric()
                     ->default(0),
 
                 Forms\Components\Toggle::make('is_active')
-                    ->label('Activ')
+                    ->label(__('Activ'))
                     ->default(true),
             ])->columns(2),
 
-            Section::make('Ce primește departamentul în bara de atenție')
-                ->description('Membrii departamentului văd în bara din dreapta doar ce bifezi aici. Nimic bifat înseamnă tot. Un operator din mai multe departamente primește tot ce primesc ele la un loc. Super-adminul vede mereu tot.')
+            Section::make(__('Ce primește departamentul în bara de atenție'))
+                ->description(__('Membrii departamentului văd în bara din dreapta doar ce bifezi aici. Nimic bifat înseamnă tot. Un operator din mai multe departamente primește tot ce primesc ele la un loc. Super-adminul vede mereu tot.'))
                 ->schema([
                     Forms\Components\CheckboxList::make('cockpit_scope.categories')
-                        ->label('Acțiuni (pătratele din bară)')
+                        ->label(__('Acțiuni (pătratele din bară)'))
                         ->options(\App\Services\OperatorCockpit\DepartmentScope::CATEGORIES)
                         ->columns(1)
                         ->bulkToggleable(),
 
                     Forms\Components\CheckboxList::make('cockpit_scope.journal_types')
-                        ->label('Jurnalul zilei (notificări informative)')
-                        ->helperText('Se aplică în plus față de rol: un moderator nu vede deconturile chiar dacă le bifezi aici.')
+                        ->label(__('Jurnalul zilei (notificări informative)'))
+                        ->helperText(__('Se aplică în plus față de rol: un moderator nu vede deconturile chiar dacă le bifezi aici.'))
                         ->options(fn () => \App\Services\OperatorCockpit\DepartmentScope::journalTypeOptions())
                         ->columns(2)
                         ->bulkToggleable()
@@ -115,13 +115,13 @@ class SupportDepartmentResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('sort_order')->label('#')->sortable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->state(fn (SupportDepartment $r) => $r->getTranslation('name', 'ro') ?: $r->slug),
                 Tables\Columns\TextColumn::make('slug')->fontFamily('mono')->size('xs'),
                 Tables\Columns\TextColumn::make('problem_types_count')
-                    ->label('Tipuri probleme')
+                    ->label(__('Tipuri probleme'))
                     ->counts('problemTypes'),
-                Tables\Columns\IconColumn::make('is_active')->label('Activ')->boolean(),
+                Tables\Columns\IconColumn::make('is_active')->label(__('Activ'))->boolean(),
             ])
             ->defaultSort('sort_order')
             ->recordActions([

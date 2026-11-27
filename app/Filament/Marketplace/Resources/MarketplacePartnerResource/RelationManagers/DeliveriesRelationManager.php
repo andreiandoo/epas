@@ -30,12 +30,12 @@ class DeliveriesRelationManager extends RelationManager
             ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Data')
+                    ->label(__('Data'))
                     ->dateTime('d.m.Y H:i:s', timezone: 'Europe/Bucharest'),
-                Tables\Columns\TextColumn::make('type')->label('Tip')->badge(),
-                Tables\Columns\TextColumn::make('subject_id')->label('ID')->placeholder('—'),
+                Tables\Columns\TextColumn::make('type')->label(__('Tip'))->badge(),
+                Tables\Columns\TextColumn::make('subject_id')->label(__('ID'))->placeholder('—'),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Stare')
+                    ->label(__('Stare'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => match ($state) {
                         MarketplacePartnerDelivery::STATUS_SENT => 'Trimis',
@@ -47,17 +47,17 @@ class DeliveriesRelationManager extends RelationManager
                         MarketplacePartnerDelivery::STATUS_FAILED => 'danger',
                         default => 'warning',
                     }),
-                Tables\Columns\TextColumn::make('attempts')->label('Încercări'),
-                Tables\Columns\TextColumn::make('http_status')->label('HTTP')->placeholder('—'),
+                Tables\Columns\TextColumn::make('attempts')->label(__('Încercări')),
+                Tables\Columns\TextColumn::make('http_status')->label(__('HTTP'))->placeholder('—'),
                 Tables\Columns\TextColumn::make('error')
-                    ->label('Eroare')
+                    ->label(__('Eroare'))
                     ->limit(60)
                     ->tooltip(fn (MarketplacePartnerDelivery $record) => $record->error)
                     ->placeholder('—'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Stare')
+                    ->label(__('Stare'))
                     ->options([
                         MarketplacePartnerDelivery::STATUS_PENDING => 'În așteptare',
                         MarketplacePartnerDelivery::STATUS_SENT => 'Trimis',
@@ -66,14 +66,14 @@ class DeliveriesRelationManager extends RelationManager
             ])
             ->recordActions([
                 Actions\Action::make('resend')
-                    ->label('Retrimite')
+                    ->label(__('Retrimite'))
                     ->icon('heroicon-o-arrow-path')
                     ->visible(fn (MarketplacePartnerDelivery $record) => $record->status === MarketplacePartnerDelivery::STATUS_FAILED)
                     ->action(function (MarketplacePartnerDelivery $record) {
                         $record->forceFill(['status' => MarketplacePartnerDelivery::STATUS_PENDING, 'error' => null])->save();
                         DeliverPartnerRequestJob::dispatch($record->id);
 
-                        Notification::make()->title('Trimiterea a fost pusă din nou în coadă')->success()->send();
+                        Notification::make()->title(__('Trimiterea a fost pusă din nou în coadă'))->success()->send();
                     }),
             ]);
     }

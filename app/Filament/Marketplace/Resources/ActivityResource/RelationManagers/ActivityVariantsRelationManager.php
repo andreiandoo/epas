@@ -34,63 +34,63 @@ class ActivityVariantsRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         return $schema->schema([
-            SC\Section::make('Identitate variantă')
+            SC\Section::make(__('Identitate variantă'))
                 ->schema([
                     SC\Tabs::make('Name Translations')
                         ->tabs([
                             SC\Tabs\Tab::make('Română')
                                 ->schema([
                                     Forms\Components\TextInput::make('name.ro')
-                                        ->label('Nume (RO)')
+                                        ->label(__('Nume (RO)'))
                                         ->required()
                                         ->maxLength(120)
-                                        ->placeholder('ex: Adult, Copil, Grup 4 persoane'),
+                                        ->placeholder(__('ex: Adult, Copil, Grup 4 persoane')),
                                     Forms\Components\Textarea::make('description.ro')
-                                        ->label('Descriere (RO)')
+                                        ->label(__('Descriere (RO)'))
                                         ->rows(2)
                                         ->maxLength(280),
                                 ]),
                             SC\Tabs\Tab::make('English')
                                 ->schema([
                                     Forms\Components\TextInput::make('name.en')
-                                        ->label('Name (EN)')
+                                        ->label(__('Name (EN)'))
                                         ->maxLength(120),
                                     Forms\Components\Textarea::make('description.en')
-                                        ->label('Description (EN)')
+                                        ->label(__('Description (EN)'))
                                         ->rows(2)
                                         ->maxLength(280),
                                 ]),
                         ])->columnSpanFull(),
 
                     Forms\Components\TextInput::make('sku')
-                        ->label('SKU')
+                        ->label(__('SKU'))
                         ->maxLength(64)
-                        ->placeholder('opțional')
+                        ->placeholder(__('opțional'))
                         ->columnSpanFull(),
                 ])
                 ->columns(1),
 
-            SC\Section::make('Preț')
+            SC\Section::make(__('Preț'))
                 ->schema([
                     // Storage column is `price_cents` (integer, bani). Admin types in
                     // the value as absolute RON ("95" or "94.50"). formatStateUsing
                     // converts on form load, dehydrateStateUsing converts back on
                     // save — DB stays in cents, no schema change needed.
                     Forms\Components\TextInput::make('price_cents')
-                        ->label('Preț')
+                        ->label(__('Preț'))
                         ->numeric()
                         ->required()
                         ->default(0)
                         ->minValue(0)
                         ->step(0.01)
                         ->suffix('lei')
-                        ->helperText('Suma în lei. Ex: 95 sau 94.50.')
+                        ->helperText(__('Suma în lei. Ex: 95 sau 94.50.'))
                         ->formatStateUsing(fn ($state) => $state !== null ? round($state / 100, 2) : null)
                         ->dehydrateStateUsing(fn ($state) => $state !== null && $state !== '' ? (int) round(((float) $state) * 100) : null)
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('currency')
-                        ->label('Monedă')
+                        ->label(__('Monedă'))
                         // An operator with a selling currency of his own has every variant saved in it
                         // (ActivityVariantObserver), whatever is chosen here.
                         ->options(array_combine(array_keys(\App\Services\Activities\ActivityCurrency::CHOICES), array_keys(\App\Services\Activities\ActivityCurrency::CHOICES)))
@@ -100,27 +100,27 @@ class ActivityVariantsRelationManager extends RelationManager
                 ])
                 ->columns(1),
 
-            SC\Section::make('Capacitate & comandă')
+            SC\Section::make(__('Capacitate & comandă'))
                 ->schema([
                     Forms\Components\TextInput::make('capacity_share')
-                        ->label('Locuri ocupate / unitate')
+                        ->label(__('Locuri ocupate / unitate'))
                         ->numeric()
                         ->default(1)
                         ->minValue(1)
                         ->maxValue(50)
                         ->required()
-                        ->helperText('1 = o persoană. Pentru "Grup 4 persoane" → 4.')
+                        ->helperText(__('1 = o persoană. Pentru "Grup 4 persoane" → 4.'))
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('min_per_order')
-                        ->label('Minim per comandă')
+                        ->label(__('Minim per comandă'))
                         ->numeric()
                         ->default(0)
                         ->minValue(0)
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('max_per_order')
-                        ->label('Maxim per comandă')
+                        ->label(__('Maxim per comandă'))
                         ->numeric()
                         ->default(10)
                         ->minValue(1)
@@ -128,67 +128,67 @@ class ActivityVariantsRelationManager extends RelationManager
                 ])
                 ->columns(1),
 
-            SC\Section::make('Tip, durată, grup')
-                ->description('Adult / copil, bilete pe mai multe zile, durate diferite (30 / 60 min), grupuri, unități (barcă, mașină).')
+            SC\Section::make(__('Tip, durată, grup'))
+                ->description(__('Adult / copil, bilete pe mai multe zile, durate diferite (30 / 60 min), grupuri, unități (barcă, mașină).'))
                 ->schema([
                     Forms\Components\Select::make('price_type')
-                        ->label('Prețul este')
+                        ->label(__('Prețul este'))
                         ->options([
-                            'per_person' => 'pe persoană',
-                            'per_unit' => 'pe unitate (barcă, mașină, familie)',
+                            'per_person' => __('pe persoană'),
+                            'per_unit' => __('pe unitate (barcă, mașină, familie)'),
                         ])
                         ->default('per_person')
                         ->required(),
                     Forms\Components\Toggle::make('is_child')
-                        ->label('Bilet de copil')
-                        ->helperText('Contează la regula „bilet de acces pentru adult”.'),
+                        ->label(__('Bilet de copil'))
+                        ->helperText(__('Contează la regula „bilet de acces pentru adult”.')),
                     Forms\Components\TextInput::make('persons_min')
-                        ->label('Persoane (minim)')
+                        ->label(__('Persoane (minim)'))
                         ->numeric()->minValue(1)->maxValue(500),
                     Forms\Components\TextInput::make('persons_max')
-                        ->label('Persoane (maxim)')
+                        ->label(__('Persoane (maxim)'))
                         ->numeric()->minValue(1)->maxValue(500)
-                        ->helperText('Câte persoane acoperă o unitate (ex: 4 într-o barcă).'),
+                        ->helperText(__('Câte persoane acoperă o unitate (ex: 4 într-o barcă).')),
                     Forms\Components\TextInput::make('duration_minutes')
-                        ->label('Durată (minute)')
+                        ->label(__('Durată (minute)'))
                         ->numeric()->minValue(5)->maxValue(1440)
-                        ->helperText('Lasă gol pentru durata produsului. Ex: 30 sau 60 la închirieri.'),
+                        ->helperText(__('Lasă gol pentru durata produsului. Ex: 30 sau 60 la închirieri.')),
                     Forms\Components\TextInput::make('validity_days')
-                        ->label('Valabil (zile)')
+                        ->label(__('Valabil (zile)'))
                         ->numeric()->default(1)->minValue(1)->maxValue(60)
-                        ->helperText('Bilete pe toată ziua: 2 = două zile la rând (abonament, camping).'),
+                        ->helperText(__('Bilete pe toată ziua: 2 = două zile la rând (abonament, camping).')),
                     Forms\Components\TextInput::make('step_qty')
-                        ->label('Se cumpără câte')
+                        ->label(__('Se cumpără câte'))
                         ->numeric()->minValue(1)->maxValue(100)
-                        ->helperText('Gol = oricâte. Pentru grupuri, după minimul pe comandă.'),
+                        ->helperText(__('Gol = oricâte. Pentru grupuri, după minimul pe comandă.')),
                     Forms\Components\TextInput::make('companion_label')
-                        ->label('Bilet gratuit de însoțitor')
+                        ->label(__('Bilet gratuit de însoțitor'))
                         ->maxLength(80)
-                        ->placeholder('ex: Ghid / însoțitor')
-                        ->helperText('Se emite automat când se cumpără cel puțin minimul pe comandă.'),
+                        ->placeholder(__('ex: Ghid / însoțitor'))
+                        ->helperText(__('Se emite automat când se cumpără cel puțin minimul pe comandă.')),
                     Forms\Components\TextInput::make('pos_price_cents')
-                        ->label('Preț la casă')
+                        ->label(__('Preț la casă'))
                         ->numeric()->minValue(0)->step(0.01)->suffix('lei')
-                        ->helperText('Gol = același ca online.')
+                        ->helperText(__('Gol = același ca online.'))
                         ->formatStateUsing(fn ($state) => $state !== null ? round($state / 100, 2) : null)
                         ->dehydrateStateUsing(fn ($state) => $state !== null && $state !== '' ? (int) round(((float) $state) * 100) : null),
                     Forms\Components\Toggle::make('pos_only')
-                        ->label('Doar la casă (ascuns online)'),
+                        ->label(__('Doar la casă (ascuns online)')),
                 ])
                 ->columns(2)
                 ->collapsed(),
 
-            SC\Section::make('Vârstă')
+            SC\Section::make(__('Vârstă'))
                 ->schema([
                     Forms\Components\TextInput::make('min_age')
-                        ->label('Vârsta minimă')
+                        ->label(__('Vârsta minimă'))
                         ->numeric()
                         ->minValue(0)
                         ->maxValue(99)
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('max_age')
-                        ->label('Vârsta maximă')
+                        ->label(__('Vârsta maximă'))
                         ->numeric()
                         ->minValue(0)
                         ->maxValue(99)
@@ -197,63 +197,63 @@ class ActivityVariantsRelationManager extends RelationManager
                 ->columns(1)
                 ->collapsed(),
 
-            SC\Section::make('Comision (override)')
-                ->description('Lasă gol pentru a moșteni comisionul de la organizator / marketplace.')
+            SC\Section::make(__('Comision (override)'))
+                ->description(__('Lasă gol pentru a moșteni comisionul de la organizator / marketplace.'))
                 ->collapsed()
                 ->schema([
                     Forms\Components\Select::make('commission_type')
-                        ->label('Tip comision')
+                        ->label(__('Tip comision'))
                         ->options([
-                            'percentage' => 'Procent',
-                            'fixed' => 'Sumă fixă',
-                            'both' => 'Procent + sumă fixă',
+                            'percentage' => __('Procent'),
+                            'fixed' => __('Sumă fixă'),
+                            'both' => __('Procent + sumă fixă'),
                         ])
-                        ->placeholder('Moștenește')
+                        ->placeholder(__('Moștenește'))
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('commission_rate')
-                        ->label('Procent (%)')
+                        ->label(__('Procent (%)'))
                         ->numeric()
                         ->minValue(0)
                         ->maxValue(100)
                         ->step(0.01)
                         ->columnSpanFull(),
                     Forms\Components\TextInput::make('commission_fixed')
-                        ->label('Sumă fixă (RON)')
+                        ->label(__('Sumă fixă (RON)'))
                         ->numeric()
                         ->minValue(0)
                         ->step(0.01)
                         ->columnSpanFull(),
                     Forms\Components\Select::make('commission_mode')
-                        ->label('Mod aplicare')
+                        ->label(__('Mod aplicare'))
                         ->options([
-                            'included' => 'Inclus în preț',
-                            'added_on_top' => 'Adăugat peste preț',
+                            'included' => __('Inclus în preț'),
+                            'added_on_top' => __('Adăugat peste preț'),
                         ])
-                        ->placeholder('Moștenește')
+                        ->placeholder(__('Moștenește'))
                         ->columnSpanFull(),
                 ])
                 ->columns(1),
 
-            SC\Section::make('Detalii suplimentare')
+            SC\Section::make(__('Detalii suplimentare'))
                 ->collapsed()
                 ->schema([
                     Forms\Components\TagsInput::make('perks')
-                        ->label('Perks / beneficii')
-                        ->placeholder('Acces VIP, drink, manual…')
+                        ->label(__('Perks / beneficii'))
+                        ->placeholder(__('Acces VIP, drink, manual…'))
                         ->columnSpanFull(),
 
                     Forms\Components\Toggle::make('is_active')
-                        ->label('Activă')
+                        ->label(__('Activă'))
                         ->default(true)
                         ->columnSpanFull(),
 
                     Forms\Components\Toggle::make('is_refundable')
-                        ->label('Refundabilă')
+                        ->label(__('Refundabilă'))
                         ->default(true)
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('sort_order')
-                        ->label('Ordine afișare')
+                        ->label(__('Ordine afișare'))
                         ->numeric()
                         ->default(0)
                         ->columnSpanFull(),
@@ -268,11 +268,11 @@ class ActivityVariantsRelationManager extends RelationManager
             ->recordTitleAttribute('sku')
             ->columns([
                 Tables\Columns\TextColumn::make('name.ro')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('price_cents')
-                    ->label('Preț')
+                    ->label(__('Preț'))
                     ->formatStateUsing(fn ($state, $record) => $state
                         ? number_format($state / 100, 2, ',', '.') . ' ' . ($record->currency ?? 'RON')
                         : '—')
@@ -280,11 +280,11 @@ class ActivityVariantsRelationManager extends RelationManager
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('capacity_share')
-                    ->label('Locuri')
+                    ->label(__('Locuri'))
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('min_age')
-                    ->label('Vârstă')
+                    ->label(__('Vârstă'))
                     ->formatStateUsing(function ($state, $record) {
                         $min = $record->min_age;
                         $max = $record->max_age;
@@ -294,17 +294,17 @@ class ActivityVariantsRelationManager extends RelationManager
                         return '—';
                     }),
 
-                Tables\Columns\IconColumn::make('is_active')->label('Activă')->boolean(),
-                Tables\Columns\IconColumn::make('is_refundable')->label('Refundabilă')->boolean(),
+                Tables\Columns\IconColumn::make('is_active')->label(__('Activă'))->boolean(),
+                Tables\Columns\IconColumn::make('is_refundable')->label(__('Refundabilă'))->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Ordine')
+                    ->label(__('Ordine'))
                     ->sortable(),
             ])
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->headerActions([
-                CreateAction::make()->label('Adaugă variantă'),
+                CreateAction::make()->label(__('Adaugă variantă')),
             ])
             ->recordActions([
                 EditAction::make(),

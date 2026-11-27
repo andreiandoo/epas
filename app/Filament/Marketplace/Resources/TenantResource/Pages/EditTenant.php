@@ -23,8 +23,8 @@ class EditTenant extends EditRecord
     {
         return [
             Actions\DeleteAction::make()
-                ->label('Șterge')
-                ->modalDescription('Aceasta șterge tenant-ul + userul de login. Locațiile linked rămân în DB (tenant_id se resetează).')
+                ->label(__('Șterge'))
+                ->modalDescription(__('Aceasta șterge tenant-ul + userul de login. Locațiile linked rămân în DB (tenant_id se resetează).'))
                 ->before(function () {
                     /** @var Tenant $tenant */
                     $tenant = $this->record;
@@ -133,7 +133,7 @@ class EditTenant extends EditRecord
     protected function getSavedNotification(): ?Notification
     {
         return Notification::make()
-            ->title('Venue owner actualizat')
+            ->title(__('Venue owner actualizat'))
             ->success();
     }
 }

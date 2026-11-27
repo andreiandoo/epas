@@ -57,16 +57,16 @@ class MarketplaceTodoResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->components([
-            Section::make('Detalii TODO')
+            Section::make(__('Detalii TODO'))
                 ->schema([
                     Forms\Components\TextInput::make('title')
-                        ->label('Titlu')
+                        ->label(__('Titlu'))
                         ->required()
                         ->maxLength(255)
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('marketplace_todo_category_id')
-                        ->label('Categorie problemă')
+                        ->label(__('Categorie problemă'))
                         ->options(fn () => MarketplaceTodoCategory::query()
                             ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                             ->where('is_active', true)
@@ -78,14 +78,14 @@ class MarketplaceTodoResource extends Resource
                         ->nullable(),
 
                     Forms\Components\Select::make('priority')
-                        ->label('Prioritate')
+                        ->label(__('Prioritate'))
                         ->options(MarketplaceTodo::PRIORITY_LABELS)
                         ->required()
                         ->default('normal'),
 
                     Forms\Components\Select::make('assigned_to_marketplace_admin_id')
-                        ->label('Asignat la')
-                        ->helperText('Implicit: admin-ul desemnat al marketplace-ului.')
+                        ->label(__('Asignat la'))
+                        ->helperText(__('Implicit: admin-ul desemnat al marketplace-ului.'))
                         ->options(fn () => MarketplaceAdmin::query()
                             ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                             ->orderBy('name')
@@ -97,20 +97,20 @@ class MarketplaceTodoResource extends Resource
                         ->default(fn () => Auth::guard('marketplace_admin')->user()?->marketplaceClient?->default_todo_admin_id),
 
                     Forms\Components\Select::make('status')
-                        ->label('Status')
+                        ->label(__('Status'))
                         ->options(MarketplaceTodo::STATUS_LABELS)
                         ->required()
                         ->default('open')
                         ->visibleOn('edit'),
 
                     Forms\Components\RichEditor::make('description')
-                        ->label('Descriere')
+                        ->label(__('Descriere'))
                         ->toolbarButtons(['bold', 'italic', 'underline', 'strike', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'codeBlock', 'undo', 'redo'])
                         ->columnSpanFull(),
 
                     Forms\Components\FileUpload::make('attachments')
-                        ->label('Imagini (drag & drop)')
-                        ->helperText('Imagini jpg/png/webp, max 5 MB per fișier.')
+                        ->label(__('Imagini (drag & drop)'))
+                        ->helperText(__('Imagini jpg/png/webp, max 5 MB per fișier.'))
                         ->multiple()
                         ->image()
                         ->imageEditor()
@@ -134,35 +134,35 @@ class MarketplaceTodoResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('todo_number')
-                    ->label('Nr.')
+                    ->label(__('Nr.'))
                     ->fontFamily('mono')
                     ->size('xs')
                     ->copyable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titlu')
+                    ->label(__('Titlu'))
                     ->searchable()
                     ->limit(60),
 
                 Tables\Columns\TextColumn::make('category.name')
-                    ->label('Categorie')
+                    ->label(__('Categorie'))
                     ->badge()
                     ->color(fn ($record) => $record->category?->color ?: 'gray')
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('creator.name')
-                    ->label('Creat de')
+                    ->label(__('Creat de'))
                     ->toggleable()
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('assignee.name')
-                    ->label('Asignat')
-                    ->placeholder('— nealocat —')
+                    ->label(__('Asignat'))
+                    ->placeholder(__('— nealocat —'))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('priority')
-                    ->label('Prioritate')
+                    ->label(__('Prioritate'))
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
                         'urgent' => 'danger',
@@ -174,7 +174,7 @@ class MarketplaceTodoResource extends Resource
                     ->formatStateUsing(fn (string $state) => MarketplaceTodo::PRIORITY_LABELS[$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
                         'open' => 'info',
@@ -187,18 +187,18 @@ class MarketplaceTodoResource extends Resource
                     ->formatStateUsing(fn (string $state) => MarketplaceTodo::STATUS_LABELS[$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('opened_at')
-                    ->label('Deschis')
+                    ->label(__('Deschis'))
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('last_activity_at')
-                    ->label('Activitate')
+                    ->label(__('Activitate'))
                     ->since()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('closed_at')
-                    ->label('Închis')
+                    ->label(__('Închis'))
                     ->dateTime('d M Y, H:i')
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -206,7 +206,7 @@ class MarketplaceTodoResource extends Resource
             ->defaultSort('last_activity_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('marketplace_todo_category_id')
-                    ->label('Categorie')
+                    ->label(__('Categorie'))
                     ->options(fn () => MarketplaceTodoCategory::query()
                         ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                         ->orderBy('sort_order')
@@ -218,11 +218,11 @@ class MarketplaceTodoResource extends Resource
                     ->options(MarketplaceTodo::STATUS_LABELS),
 
                 Tables\Filters\SelectFilter::make('priority')
-                    ->label('Prioritate')
+                    ->label(__('Prioritate'))
                     ->options(MarketplaceTodo::PRIORITY_LABELS),
 
                 Tables\Filters\SelectFilter::make('assigned_to_marketplace_admin_id')
-                    ->label('Asignat')
+                    ->label(__('Asignat'))
                     ->options(fn () => MarketplaceAdmin::query()
                         ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                         ->orderBy('name')
@@ -237,7 +237,7 @@ class MarketplaceTodoResource extends Resource
             ->toolbarActions([
                 \Filament\Actions\BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('close')
-                        ->label('Închide selectate')
+                        ->label(__('Închide selectate'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()

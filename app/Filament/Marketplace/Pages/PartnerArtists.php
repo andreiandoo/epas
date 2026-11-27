@@ -63,21 +63,21 @@ class PartnerArtists extends Page implements HasForms, HasTable
             ->searchPlaceholder('Caută artiști...')
             ->columns([
                 Tables\Columns\ImageColumn::make('main_image_url')
-                    ->label('Imagine')
+                    ->label(__('Imagine'))
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=A&color=7F9CF5&background=EBF4FF'),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('city')
-                    ->label('Oraș')
+                    ->label(__('Oraș'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('artistTypes.name')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->badge()
                     ->separator(','),
                 Tables\Columns\IconColumn::make('is_partner_status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->state(fn ($record) => $record->marketplaceClients->contains('id', $marketplace?->id))
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
@@ -87,17 +87,17 @@ class PartnerArtists extends Page implements HasForms, HasTable
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('partner_status')
-                    ->label('Status')
-                    ->placeholder('Toți')
-                    ->trueLabel('Parteneri')
-                    ->falseLabel('Disponibili')
+                    ->label(__('Status'))
+                    ->placeholder(__('Toți'))
+                    ->trueLabel(__('Parteneri'))
+                    ->falseLabel(__('Disponibili'))
                     ->queries(
                         true: fn (Builder $query) => $query->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $marketplace?->id)),
                         false: fn (Builder $query) => $query->whereDoesntHave('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $marketplace?->id)),
                         blank: fn (Builder $query) => $query,
                     ),
                 Tables\Filters\SelectFilter::make('city')
-                    ->label('Oraș')
+                    ->label(__('Oraș'))
                     ->options(fn () => Artist::whereNotNull('city')
                         ->where('city', '!=', '')
                         ->distinct()
@@ -108,20 +108,20 @@ class PartnerArtists extends Page implements HasForms, HasTable
             ])
             ->actions([
                 Actions\Action::make('add_partner')
-                    ->label('Adaugă partener')
+                    ->label(__('Adaugă partener'))
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
                     ->visible(fn (Artist $record): bool => !$record->marketplaceClients->contains('id', $marketplace?->id))
-                    ->modalHeading('Adaugă artist ca partener')
-                    ->modalDescription('Confirmă adăugarea acestui artist ca partener.')
+                    ->modalHeading(__('Adaugă artist ca partener'))
+                    ->modalDescription(__('Confirmă adăugarea acestui artist ca partener.'))
                     ->form([
                         Forms\Components\TextInput::make('artist_name')
-                            ->label('Artist')
+                            ->label(__('Artist'))
                             ->disabled()
                             ->dehydrated(false),
                         Forms\Components\Textarea::make('partner_notes')
-                            ->label('Note parteneriat (opțional)')
-                            ->placeholder('Note interne despre acest parteneriat...')
+                            ->label(__('Note parteneriat (opțional)'))
+                            ->placeholder(__('Note interne despre acest parteneriat...'))
                             ->rows(3),
                     ])
                     ->fillForm(fn (Artist $record): array => [
@@ -135,43 +135,43 @@ class PartnerArtists extends Page implements HasForms, HasTable
                         ]);
 
                         Notification::make()
-                            ->title('Artist adăugat')
+                            ->title(__('Artist adăugat'))
                             ->body('"' . $artistName . '" a fost adăugat ca partener.')
                             ->success()
                             ->send();
                     }),
 
                 Actions\Action::make('remove_partner')
-                    ->label('Elimină')
+                    ->label(__('Elimină'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn (Artist $record): bool => $record->marketplaceClients->contains('id', $marketplace?->id))
                     ->requiresConfirmation()
-                    ->modalHeading('Elimină artistul din parteneri')
-                    ->modalDescription('Această acțiune va elimina artistul din lista de parteneri.')
+                    ->modalHeading(__('Elimină artistul din parteneri'))
+                    ->modalDescription(__('Această acțiune va elimina artistul din lista de parteneri.'))
                     ->action(function (Artist $record) use ($marketplace) {
                         $artistName = static::getArtistName($record);
                         $record->marketplaceClients()->detach($marketplace->id);
 
                         Notification::make()
-                            ->title('Artist eliminat')
+                            ->title(__('Artist eliminat'))
                             ->body('"' . $artistName . '" a fost eliminat din lista de parteneri.')
                             ->success()
                             ->send();
                     }),
 
                 Actions\Action::make('edit_notes')
-                    ->label('Note')
+                    ->label(__('Note'))
                     ->icon('heroicon-o-pencil-square')
                     ->visible(fn (Artist $record): bool => $record->marketplaceClients->contains('id', $marketplace?->id))
-                    ->modalHeading('Editează notele')
+                    ->modalHeading(__('Editează notele'))
                     ->form([
                         Forms\Components\TextInput::make('artist_name')
-                            ->label('Artist')
+                            ->label(__('Artist'))
                             ->disabled()
                             ->dehydrated(false),
                         Forms\Components\Textarea::make('partner_notes')
-                            ->label('Note parteneriat')
+                            ->label(__('Note parteneriat'))
                             ->rows(3),
                     ])
                     ->fillForm(function (Artist $record) use ($marketplace): array {
@@ -188,14 +188,14 @@ class PartnerArtists extends Page implements HasForms, HasTable
                         ]);
 
                         Notification::make()
-                            ->title('Note actualizate')
+                            ->title(__('Note actualizate'))
                             ->success()
                             ->send();
                     }),
             ])
             ->bulkActions([
                 Actions\BulkAction::make('bulk_add_partners')
-                    ->label('Adaugă ca parteneri')
+                    ->label(__('Adaugă ca parteneri'))
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
                     ->requiresConfirmation()
@@ -217,8 +217,8 @@ class PartnerArtists extends Page implements HasForms, HasTable
                     })
                     ->deselectRecordsAfterCompletion(),
             ])
-            ->emptyStateHeading('Nu există artiști disponibili')
-            ->emptyStateDescription('Nu am găsit artiști disponibili pentru parteneriat.')
+            ->emptyStateHeading(__('Nu există artiști disponibili'))
+            ->emptyStateDescription(__('Nu am găsit artiști disponibili pentru parteneriat.'))
             ->defaultSort('name');
     }
 
@@ -250,7 +250,7 @@ class PartnerArtists extends Page implements HasForms, HasTable
     {
         return [
             Actions\Action::make('create_artist')
-                ->label('Adaugă artist nou')
+                ->label(__('Adaugă artist nou'))
                 ->icon('heroicon-o-plus')
                 ->url(fn () => \App\Filament\Marketplace\Resources\ArtistResource::getUrl('create')),
         ];

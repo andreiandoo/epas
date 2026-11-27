@@ -85,68 +85,68 @@ class TicketInsuranceSettings extends Page
 
         return $form
             ->schema([
-                SC\Section::make('Configurare Taxa de Retur')
-                    ->description('Configurați opțiunea de protecție pentru returnare bilete în checkout.')
+                SC\Section::make(__('Configurare Taxa de Retur'))
+                    ->description(__('Configurați opțiunea de protecție pentru returnare bilete în checkout.'))
                     ->schema([
                         Forms\Components\Toggle::make('is_enabled')
-                            ->label('Activat')
-                            ->helperText('Activează checkbox-ul de protecție retur în pagina de checkout')
+                            ->label(__('Activat'))
+                            ->helperText(__('Activează checkbox-ul de protecție retur în pagina de checkout'))
                             ->onColor('success')
                             ->offColor('gray')
                             ->live(),
 
                         Forms\Components\Toggle::make('show_in_checkout')
-                            ->label('Afișează în Checkout')
-                            ->helperText('Afișează opțiunea în pagina de finalizare comandă')
+                            ->label(__('Afișează în Checkout'))
+                            ->helperText(__('Afișează opțiunea în pagina de finalizare comandă'))
                             ->default(true)
                             ->visible(fn (Get $get) => $get('is_enabled')),
 
                         Forms\Components\Toggle::make('pre_checked')
-                            ->label('Pre-bifat')
-                            ->helperText('Checkbox-ul va fi bifat implicit (clientul poate debifa)')
+                            ->label(__('Pre-bifat'))
+                            ->helperText(__('Checkbox-ul va fi bifat implicit (clientul poate debifa)'))
                             ->default(false)
                             ->visible(fn (Get $get) => $get('is_enabled')),
                     ])->columns(3),
 
-                SC\Section::make('Denumire și Descriere')
+                SC\Section::make(__('Denumire și Descriere'))
                     ->visible(fn (Get $get) => $get('is_enabled'))
                     ->schema([
                         Forms\Components\TextInput::make('label')
-                            ->label('Etichetă')
-                            ->placeholder('Taxa de retur')
+                            ->label(__('Etichetă'))
+                            ->placeholder(__('Taxa de retur'))
                             ->required()
                             ->maxLength(100)
-                            ->helperText('Textul afișat lângă checkbox în checkout'),
+                            ->helperText(__('Textul afișat lângă checkbox în checkout')),
 
                         Forms\Components\Textarea::make('description')
-                            ->label('Descriere')
-                            ->placeholder('Descrierea opțiunii de protecție...')
+                            ->label(__('Descriere'))
+                            ->placeholder(__('Descrierea opțiunii de protecție...'))
                             ->rows(3)
                             ->maxLength(500)
-                            ->helperText('Text explicativ afișat sub checkbox'),
+                            ->helperText(__('Text explicativ afișat sub checkbox')),
 
                         Forms\Components\TextInput::make('terms_url')
-                            ->label('Link Termeni și Condiții')
+                            ->label(__('Link Termeni și Condiții'))
                             ->url()
                             ->placeholder('https://...')
-                            ->helperText('Link către termenii și condițiile pentru protecția returnare (opțional)'),
+                            ->helperText(__('Link către termenii și condițiile pentru protecția returnare (opțional)')),
                     ]),
 
-                SC\Section::make('Preț')
+                SC\Section::make(__('Preț'))
                     ->visible(fn (Get $get) => $get('is_enabled'))
                     ->schema([
                         Forms\Components\Radio::make('price_type')
-                            ->label('Tip preț')
+                            ->label(__('Tip preț'))
                             ->options([
-                                'fixed' => 'Sumă fixă',
-                                'percentage' => 'Procent din valoarea comenzii',
+                                'fixed' => __('Sumă fixă'),
+                                'percentage' => __('Procent din valoarea comenzii'),
                             ])
                             ->default('fixed')
                             ->live()
                             ->inline(),
 
                         Forms\Components\TextInput::make('price')
-                            ->label('Preț fix')
+                            ->label(__('Preț fix'))
                             ->numeric()
                             ->minValue(0)
                             ->step(0.01)
@@ -154,10 +154,10 @@ class TicketInsuranceSettings extends Page
                             ->placeholder('5.00')
                             ->required()
                             ->visible(fn (Get $get) => $get('price_type') === 'fixed')
-                            ->helperText('Suma fixă adăugată la comandă'),
+                            ->helperText(__('Suma fixă adăugată la comandă')),
 
                         Forms\Components\TextInput::make('price_percentage')
-                            ->label('Procent')
+                            ->label(__('Procent'))
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(100)
@@ -166,20 +166,20 @@ class TicketInsuranceSettings extends Page
                             ->placeholder('5')
                             ->required()
                             ->visible(fn (Get $get) => $get('price_type') === 'percentage')
-                            ->helperText('Procentul din valoarea totală a comenzii'),
+                            ->helperText(__('Procentul din valoarea totală a comenzii')),
                     ])->columns(2),
 
-                SC\Section::make('Aplicare')
+                SC\Section::make(__('Aplicare'))
                     ->visible(fn (Get $get) => $get('is_enabled'))
                     ->schema([
                         Forms\Components\Radio::make('apply_to')
-                            ->label('Aplică pentru')
+                            ->label(__('Aplică pentru'))
                             ->options([
-                                'all' => 'Toate evenimentele',
-                                'refundable_only' => 'Doar bilete returnabile (cu opțiunea "Returnabil" activată)',
+                                'all' => __('Toate evenimentele'),
+                                'refundable_only' => __('Doar bilete returnabile (cu opțiunea "Returnabil" activată)'),
                             ])
                             ->default('all')
-                            ->helperText('Selectați la ce tipuri de bilete se aplică opțiunea de protecție'),
+                            ->helperText(__('Selectați la ce tipuri de bilete se aplică opțiunea de protecție')),
                     ]),
             ])
             ->statePath('data');
@@ -205,8 +205,8 @@ class TicketInsuranceSettings extends Page
         $this->saveInsuranceSettings($settings);
 
         Notification::make()
-            ->title('Setări salvate')
-            ->body('Configurația pentru Taxa de Retur a fost actualizată cu succes.')
+            ->title(__('Setări salvate'))
+            ->body(__('Configurația pentru Taxa de Retur a fost actualizată cu succes.'))
             ->success()
             ->send();
     }

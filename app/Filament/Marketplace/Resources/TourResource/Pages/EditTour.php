@@ -21,14 +21,14 @@ class EditTour extends EditRecord
     {
         return [
             Actions\Action::make('viewPublic')
-                ->label('Vezi pe site')
+                ->label(__('Vezi pe site'))
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('primary')
                 ->url(fn () => $this->buildPublicUrl())
                 ->openUrlInNewTab()
                 ->visible(fn () => $this->record !== null && !empty($this->record->slug) && $this->buildPublicUrl() !== null),
             Actions\Action::make('saveAndClose')
-                ->label('Salvează și închide')
+                ->label(__('Salvează și închide'))
                 ->action(function () {
                     $this->shouldClose = true;
                     $this->save();
@@ -37,7 +37,7 @@ class EditTour extends EditRecord
                 ->icon('heroicon-o-check'),
             Actions\DeleteAction::make()
                 ->visible(fn () => $this->record !== null && $this->record->events()->count() === 0)
-                ->modalDescription('Turneul nu are evenimente atașate. Sigur vrei să-l ștergi?'),
+                ->modalDescription(__('Turneul nu are evenimente atașate. Sigur vrei să-l ștergi?')),
         ];
     }
 

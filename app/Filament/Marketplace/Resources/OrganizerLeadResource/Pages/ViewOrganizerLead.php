@@ -47,53 +47,53 @@ class ViewOrganizerLead extends ViewRecord
             EditAction::make(),
 
             Action::make('copy_campaign_link')
-                ->label('Link campanie')
+                ->label(__('Link campanie'))
                 ->icon('heroicon-o-link')
                 ->color('warning')
                 ->visible((bool) $campaignLink)
-                ->modalHeading('Link personalizat pentru acest lead')
-                ->modalDescription('Trimite linkul prin email/SMS. Pagina /parteneri se personalizează automat în funcție de parametrii tip + loc.')
+                ->modalHeading(__('Link personalizat pentru acest lead'))
+                ->modalDescription(__('Trimite linkul prin email/SMS. Pagina /parteneri se personalizează automat în funcție de parametrii tip + loc.'))
                 ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Închide')
+                ->modalCancelActionLabel(__('Închide'))
                 ->form([
                     Forms\Components\TextInput::make('url')
-                        ->label('URL campanie')
+                        ->label(__('URL campanie'))
                         ->default($campaignLink)
                         ->readOnly()
                         ->suffixAction(
                             // copied in the browser, no round trip (Filament 4: form field actions are Filament\Actions\Action)
                             Action::make('copy')
                                 ->icon('heroicon-o-clipboard')
-                                ->label('Copiază')
+                                ->label(__('Copiază'))
                                 ->alpineClickHandler('navigator.clipboard.writeText(' . \Illuminate\Support\Js::from($campaignLink) . '); $tooltip(\'Copiat!\', { timeout: 1500 })')
                         ),
                 ]),
 
             Action::make('change_status')
-                ->label('Schimbă status')
+                ->label(__('Schimbă status'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('primary')
                 ->form([
                     Forms\Components\Select::make('status')
-                        ->label('Status nou')
+                        ->label(__('Status nou'))
                         ->options($statuses)
                         ->required(),
                     Forms\Components\Textarea::make('summary')
-                        ->label('Notă (opțional)')
+                        ->label(__('Notă (opțional)'))
                         ->rows(2),
                 ])
                 ->action(function (array $data) use ($lead) {
                     $lead->transitionTo($data['status'], $data['summary'] ?? null, auth()->id());
-                    Notification::make()->success()->title('Status actualizat')->send();
+                    Notification::make()->success()->title(__('Status actualizat'))->send();
                     $this->refreshFormData(['status', 'contacted_at', 'accepted_at', 'rejected_at', 'ghosted_at']);
                 }),
 
             Action::make('add_note')
-                ->label('Adaugă notă')
+                ->label(__('Adaugă notă'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('gray')
                 ->form([
-                    Forms\Components\Textarea::make('note')->label('Notă')->required()->rows(3),
+                    Forms\Components\Textarea::make('note')->label(__('Notă'))->required()->rows(3),
                 ])
                 ->action(function (array $data) use ($lead) {
                     OrganizerLeadEvent::create([
@@ -103,16 +103,16 @@ class ViewOrganizerLead extends ViewRecord
                         'summary'               => $data['note'],
                         'performed_by_user_id'  => auth()->id(),
                     ]);
-                    Notification::make()->success()->title('Notă adăugată')->send();
+                    Notification::make()->success()->title(__('Notă adăugată'))->send();
                 }),
 
             Action::make('log_email')
-                ->label('Log email trimis')
+                ->label(__('Log email trimis'))
                 ->icon('heroicon-o-envelope')
                 ->color('gray')
                 ->form([
-                    Forms\Components\TextInput::make('subject')->label('Subiect')->required()->maxLength(200),
-                    Forms\Components\Textarea::make('body')->label('Rezumat conținut')->rows(3),
+                    Forms\Components\TextInput::make('subject')->label(__('Subiect'))->required()->maxLength(200),
+                    Forms\Components\Textarea::make('body')->label(__('Rezumat conținut'))->rows(3),
                 ])
                 ->action(function (array $data) use ($lead) {
                     OrganizerLeadEvent::create([
@@ -123,15 +123,15 @@ class ViewOrganizerLead extends ViewRecord
                         'payload'               => ['body' => $data['body'] ?? null],
                         'performed_by_user_id'  => auth()->id(),
                     ]);
-                    Notification::make()->success()->title('Email loggat')->send();
+                    Notification::make()->success()->title(__('Email loggat'))->send();
                 }),
 
             Action::make('log_call')
-                ->label('Log apel')
+                ->label(__('Log apel'))
                 ->icon('heroicon-o-phone')
                 ->color('gray')
                 ->form([
-                    Forms\Components\Textarea::make('note')->label('Rezumat apel')->required()->rows(3),
+                    Forms\Components\Textarea::make('note')->label(__('Rezumat apel'))->required()->rows(3),
                 ])
                 ->action(function (array $data) use ($lead) {
                     OrganizerLeadEvent::create([
@@ -141,16 +141,16 @@ class ViewOrganizerLead extends ViewRecord
                         'summary'               => $data['note'],
                         'performed_by_user_id'  => auth()->id(),
                     ]);
-                    Notification::make()->success()->title('Apel loggat')->send();
+                    Notification::make()->success()->title(__('Apel loggat'))->send();
                 }),
 
             Action::make('schedule_demo')
-                ->label('Programează demo')
+                ->label(__('Programează demo'))
                 ->icon('heroicon-o-calendar-days')
                 ->color('primary')
                 ->form([
-                    Forms\Components\DateTimePicker::make('demo_at')->label('Data + ora demo')->required(),
-                    Forms\Components\Textarea::make('note')->label('Notă (opțional)')->rows(2),
+                    Forms\Components\DateTimePicker::make('demo_at')->label(__('Data + ora demo'))->required(),
+                    Forms\Components\Textarea::make('note')->label(__('Notă (opțional)'))->rows(2),
                 ])
                 ->action(function (array $data) use ($lead) {
                     $lead->update([
@@ -165,7 +165,7 @@ class ViewOrganizerLead extends ViewRecord
                         'payload'               => ['demo_at' => $data['demo_at'], 'note' => $data['note'] ?? null],
                         'performed_by_user_id'  => auth()->id(),
                     ]);
-                    Notification::make()->success()->title('Demo programat')->send();
+                    Notification::make()->success()->title(__('Demo programat'))->send();
                     $this->refreshFormData(['status', 'next_action_at']);
                 }),
         ];

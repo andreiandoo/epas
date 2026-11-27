@@ -32,12 +32,12 @@ class ListMediaLibrary extends ListRecords
         return [
             // Upload Action
             Actions\Action::make('upload')
-                ->label('Încarcă Fișiere')
+                ->label(__('Încarcă Fișiere'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('primary')
                 ->form([
                     \Filament\Forms\Components\FileUpload::make('files')
-                        ->label('Selectează Fișiere')
+                        ->label(__('Selectează Fișiere'))
                         ->multiple()
                         ->disk('public')
                         ->directory(function () {
@@ -56,22 +56,22 @@ class ListMediaLibrary extends ListRecords
                             'application/vnd.ms-excel',
                             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                         ])
-                        ->helperText('Încarcă imagini, video-uri, PDF-uri sau documente (max 10MB fiecare)')
+                        ->helperText(__('Încarcă imagini, video-uri, PDF-uri sau documente (max 10MB fiecare)'))
                         ->storeFileNamesIn('original_filenames')
                         ->required(),
 
                     \Filament\Forms\Components\Hidden::make('original_filenames'),
 
                     \Filament\Forms\Components\Select::make('collection')
-                        ->label('Colecție')
+                        ->label(__('Colecție'))
                         ->options([
-                            'uploads' => 'Încărcări Generale',
-                            'artists' => 'Artiști',
-                            'events' => 'Evenimente',
-                            'products' => 'Produse',
-                            'blog' => 'Blog',
-                            'gallery' => 'Galerie',
-                            'documents' => 'Documente',
+                            'uploads' => __('Încărcări Generale'),
+                            'artists' => __('Artiști'),
+                            'events' => __('Evenimente'),
+                            'products' => __('Produse'),
+                            'blog' => __('Blog'),
+                            'gallery' => __('Galerie'),
+                            'documents' => __('Documente'),
                         ])
                         ->default('uploads'),
                 ])
@@ -124,7 +124,7 @@ class ListMediaLibrary extends ListRecords
 
                     if ($uploaded > 0) {
                         Notification::make()
-                            ->title('Fișiere Încărcate')
+                            ->title(__('Fișiere Încărcate'))
                             ->body("S-au încărcat cu succes {$uploaded} fișier(e) în biblioteca media.")
                             ->success()
                             ->send();
@@ -132,7 +132,7 @@ class ListMediaLibrary extends ListRecords
 
                     if (!empty($errors)) {
                         Notification::make()
-                            ->title('Erori la încărcare')
+                            ->title(__('Erori la încărcare'))
                             ->body(implode("\n", array_slice($errors, 0, 3)))
                             ->danger()
                             ->send();
@@ -141,29 +141,29 @@ class ListMediaLibrary extends ListRecords
 
             // Compress Images Action
             Actions\Action::make('compress_images')
-                ->label('Comprimă Imagini')
+                ->label(__('Comprimă Imagini'))
                 ->icon('heroicon-o-bolt')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('Comprimă Toate Imaginile Necompresate')
-                ->modalDescription('Aceasta va comprima toate imaginile care nu au fost încă comprimate. Acest lucru poate dura ceva timp în funcție de numărul de imagini.')
+                ->modalHeading(__('Comprimă Toate Imaginile Necompresate'))
+                ->modalDescription(__('Aceasta va comprima toate imaginile care nu au fost încă comprimate. Acest lucru poate dura ceva timp în funcție de numărul de imagini.'))
                 ->modalIcon('heroicon-o-bolt')
                 ->form([
                     \Filament\Forms\Components\TextInput::make('quality')
-                        ->label('Calitate Compresie')
+                        ->label(__('Calitate Compresie'))
                         ->numeric()
                         ->default(80)
                         ->minValue(1)
                         ->maxValue(100)
                         ->suffix('%')
-                        ->helperText('O calitate mai mare înseamnă fișiere mai mari dar imagini mai clare.'),
+                        ->helperText(__('O calitate mai mare înseamnă fișiere mai mari dar imagini mai clare.')),
 
                     \Filament\Forms\Components\TextInput::make('max_dimension')
-                        ->label('Dimensiune Maximă (opțional)')
+                        ->label(__('Dimensiune Maximă (opțional)'))
                         ->numeric()
-                        ->placeholder('ex: 1920')
+                        ->placeholder(__('ex: 1920'))
                         ->suffix('px')
-                        ->helperText('Redimensionează imaginile mai mari decât această dimensiune.'),
+                        ->helperText(__('Redimensionează imaginile mai mari decât această dimensiune.')),
                 ])
                 ->action(function (array $data) {
                     $marketplace = static::getMarketplaceClient();
@@ -172,12 +172,12 @@ class ListMediaLibrary extends ListRecords
 
             // Scan Storage Action
             Actions\Action::make('scan_storage')
-                ->label('Scanează')
+                ->label(__('Scanează'))
                 ->icon('heroicon-o-magnifying-glass')
                 ->color('info')
                 ->requiresConfirmation()
-                ->modalHeading('Scanează Storage pentru Fișiere Media')
-                ->modalDescription('Aceasta va scana directorul de storage pentru fișiere media și va adăuga fișierele noi în bibliotecă. Fișierele existente vor fi ignorate.')
+                ->modalHeading(__('Scanează Storage pentru Fișiere Media'))
+                ->modalDescription(__('Aceasta va scana directorul de storage pentru fișiere media și va adăuga fișierele noi în bibliotecă. Fișierele existente vor fi ignorate.'))
                 ->modalIcon('heroicon-o-magnifying-glass')
                 ->action(function () {
                     $marketplace = static::getMarketplaceClient();
@@ -186,12 +186,12 @@ class ListMediaLibrary extends ListRecords
 
             // Cleanup Missing Files
             Actions\Action::make('cleanup')
-                ->label('Curăță')
+                ->label(__('Curăță'))
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->modalHeading('Curăță Fișierele Lipsă')
-                ->modalDescription('Aceasta va elimina înregistrările din baza de date pentru fișierele care nu mai există pe disc.')
+                ->modalHeading(__('Curăță Fișierele Lipsă'))
+                ->modalDescription(__('Aceasta va elimina înregistrările din baza de date pentru fișierele care nu mai există pe disc.'))
                 ->modalIcon('heroicon-o-exclamation-triangle')
                 ->action(function () {
                     $marketplace = static::getMarketplaceClient();
@@ -209,7 +209,7 @@ class ListMediaLibrary extends ListRecords
                         });
 
                     Notification::make()
-                        ->title('Curățare Completă')
+                        ->title(__('Curățare Completă'))
                         ->body("S-au eliminat {$deleted} înregistrări orfane.")
                         ->success()
                         ->send();
@@ -248,8 +248,8 @@ class ListMediaLibrary extends ListRecords
 
         if ($images->isEmpty()) {
             Notification::make()
-                ->title('Fără Imagini de Comprimat')
-                ->body('Toate imaginile au fost deja compresate.')
+                ->title(__('Fără Imagini de Comprimat'))
+                ->body(__('Toate imaginile au fost deja compresate.'))
                 ->info()
                 ->send();
             return;
@@ -259,7 +259,7 @@ class ListMediaLibrary extends ListRecords
         $stats = ImageCompressionService::getStatistics($results);
 
         Notification::make()
-            ->title('Compresie Completă')
+            ->title(__('Compresie Completă'))
             ->body("Procesate: {$stats['successful']}/{$stats['total_processed']}. Spațiu salvat: {$stats['total_saved_human']} ({$stats['total_saved_percentage']}%)")
             ->success()
             ->send();
@@ -368,7 +368,7 @@ class ListMediaLibrary extends ListRecords
         $message .= " S-au ignorat {$skipped} fișier(e) existente.";
 
         Notification::make()
-            ->title('Scanare Completă')
+            ->title(__('Scanare Completă'))
             ->body($message)
             ->success()
             ->send();

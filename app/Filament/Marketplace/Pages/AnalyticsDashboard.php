@@ -61,8 +61,8 @@ class AnalyticsDashboard extends Page
         if (!$hasAccess) {
             Notification::make()
                 ->warning()
-                ->title('Microservice Not Active')
-                ->body('You need to activate the Analytics microservice first.')
+                ->title(__('Microservice Not Active'))
+                ->body(__('You need to activate the Analytics microservice first.'))
                 ->send();
 
             redirect()->route('filament.marketplace.pages.microservices');
@@ -79,12 +79,12 @@ class AnalyticsDashboard extends Page
         return $form
             ->schema([
                 Forms\Components\Select::make('date_range')
-                    ->label('Date Range')
+                    ->label(__('Date Range'))
                     ->options([
-                        '7d' => 'Last 7 days',
-                        '30d' => 'Last 30 days',
-                        '90d' => 'Last 90 days',
-                        'all' => 'All time',
+                        '7d' => __('Last 7 days'),
+                        '30d' => __('Last 30 days'),
+                        '90d' => __('Last 90 days'),
+                        'all' => __('All time'),
                     ])
                     ->default('30d')
                     ->live()

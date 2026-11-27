@@ -22,11 +22,11 @@ class EditMarketplaceOrganizerTeamMember extends EditRecord
     {
         return [
             Actions\Action::make('back_to_organizer')
-                ->label('← Înapoi la echipa organizatorului')
+                ->label(__('← Înapoi la echipa organizatorului'))
                 ->color('gray')
                 ->url(fn () => "/marketplace/organizers/{$this->record?->marketplace_organizer_id}?tab=echipa"),
             Actions\DeleteAction::make()
-                ->label('Șterge membru')
+                ->label(__('Șterge membru'))
                 ->requiresConfirmation(),
         ];
     }
@@ -40,7 +40,7 @@ class EditMarketplaceOrganizerTeamMember extends EditRecord
     {
         return Notification::make()
             ->success()
-            ->title('Membru actualizat')
-            ->body('Modificările au fost salvate.');
+            ->title(__('Membru actualizat'))
+            ->body(__('Modificările au fost salvate.'));
     }
 }

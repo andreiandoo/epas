@@ -76,11 +76,11 @@ class BulkCouponCodes extends Page implements HasTable
         return $form
             ->statePath('data')
             ->schema([
-                SC\Section::make('Generare')
-                    ->description('Codurile se generează automat: litere mari și cifre, fără caracterele care se confundă (0, O, 1, I, L). Fiecare cod e unic și se poate folosi o singură dată.')
+                SC\Section::make(__('Generare'))
+                    ->description(__('Codurile se generează automat: litere mari și cifre, fără caracterele care se confundă (0, O, 1, I, L). Fiecare cod e unic și se poate folosi o singură dată.'))
                     ->schema([
                         Forms\Components\TextInput::make('quantity')
-                            ->label('Număr de coduri')
+                            ->label(__('Număr de coduri'))
                             ->numeric()
                             ->integer()
                             ->required()
@@ -89,7 +89,7 @@ class BulkCouponCodes extends Page implements HasTable
                             ->helperText('Maximum ' . number_format(BulkCouponCodeGenerator::MAX_QUANTITY, 0, ',', '.') . ' pe lot.'),
 
                         Forms\Components\TextInput::make('code_length')
-                            ->label('Caractere per cod')
+                            ->label(__('Caractere per cod'))
                             ->numeric()
                             ->integer()
                             ->required()
@@ -99,16 +99,16 @@ class BulkCouponCodes extends Page implements HasTable
                             ->helperText('Între ' . BulkCouponCodeGenerator::MIN_LENGTH . ' și ' . BulkCouponCodeGenerator::MAX_LENGTH . ', fără prefix.'),
 
                         Forms\Components\TextInput::make('prefix')
-                            ->label('Prefix (opțional)')
+                            ->label(__('Prefix (opțional)'))
                             ->maxLength(10)
                             ->regex('/^[A-Za-z0-9-]*$/')
                             ->validationMessages(['regex' => 'Doar litere, cifre și cratimă.'])
                             ->live(onBlur: true)
                             ->dehydrateStateUsing(fn ($state) => BulkCouponCodeGenerator::normalizePrefix($state))
-                            ->placeholder('ex. QFEEL-'),
+                            ->placeholder(__('ex. QFEEL-')),
 
                         Forms\Components\Placeholder::make('preview')
-                            ->label('Exemplu')
+                            ->label(__('Exemplu'))
                             ->content(function (Get $get) {
                                 $length = max(BulkCouponCodeGenerator::MIN_LENGTH, min(BulkCouponCodeGenerator::MAX_LENGTH, (int) ($get('code_length') ?: 8)));
                                 $prefix = BulkCouponCodeGenerator::normalizePrefix($get('prefix')) ?? '';
@@ -117,18 +117,18 @@ class BulkCouponCodes extends Page implements HasTable
                             }),
                     ])->columns(4),
 
-                SC\Section::make('Eveniment și bilet')
-                    ->description('Codurile se aplică unui singur tip de bilet.')
+                SC\Section::make(__('Eveniment și bilet'))
+                    ->description(__('Codurile se aplică unui singur tip de bilet.'))
                     ->extraAttributes(['style' => 'overflow: visible;'])
                     ->schema([
                         Forms\Components\Select::make('campaign_id')
-                            ->label('Campanie')
+                            ->label(__('Campanie'))
                             ->options(fn () => CouponCampaign::where('marketplace_client_id', $marketplace?->id)->get()
                                 ->mapWithKeys(fn ($c) => [$c->id => is_array($c->name) ? ($c->name['ro'] ?? $c->name['en'] ?? (collect($c->name)->first() ?: 'Fără nume')) : ($c->name ?: 'Fără nume')]))
                             ->searchable(),
 
                         Forms\Components\Select::make('marketplace_organizer_id')
-                            ->label('Organizator')
+                            ->label(__('Organizator'))
                             ->options(fn () => MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->live()
@@ -136,10 +136,10 @@ class BulkCouponCodes extends Page implements HasTable
                                 $set('event_id', null);
                                 $set('ticket_type_id', null);
                             })
-                            ->helperText('Filtrează evenimentele.'),
+                            ->helperText(__('Filtrează evenimentele.')),
 
                         Forms\Components\Select::make('event_id')
-                            ->label('Eveniment')
+                            ->label(__('Eveniment'))
                             ->required()
                             ->searchable()
                             ->options(function (Get $get) use ($marketplace) {
@@ -163,7 +163,7 @@ class BulkCouponCodes extends Page implements HasTable
                             }),
 
                         Forms\Components\Select::make('ticket_type_id')
-                            ->label('Tip bilet')
+                            ->label(__('Tip bilet'))
                             ->required()
                             ->options(function (Get $get) {
                                 if (!$get('event_id')) {
@@ -182,19 +182,19 @@ class BulkCouponCodes extends Page implements HasTable
                             ->helperText(fn (Get $get) => $get('event_id') ? null : 'Alege întâi evenimentul.'),
                     ])->columns(4),
 
-                SC\Section::make('Reducere')
+                SC\Section::make(__('Reducere'))
                     ->schema([
                         Forms\Components\Select::make('discount_type')
-                            ->label('Tip reducere')
+                            ->label(__('Tip reducere'))
                             ->options([
-                                'percentage' => 'Procent',
-                                'fixed_amount' => 'Sumă fixă',
+                                'percentage' => __('Procent'),
+                                'fixed_amount' => __('Sumă fixă'),
                             ])
                             ->required()
                             ->live(),
 
                         Forms\Components\TextInput::make('discount_value')
-                            ->label('Valoare')
+                            ->label(__('Valoare'))
                             ->numeric()
                             ->required()
                             ->minValue(0.01)
@@ -202,37 +202,37 @@ class BulkCouponCodes extends Page implements HasTable
                             ->suffix(fn (Get $get) => $get('discount_type') === 'percentage' ? '%' : 'lei'),
 
                         Forms\Components\TextInput::make('max_discount_amount')
-                            ->label('Reducere maximă')
+                            ->label(__('Reducere maximă'))
                             ->numeric()
                             ->suffix('lei')
                             ->visible(fn (Get $get) => $get('discount_type') === 'percentage')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Plafon pentru reducerea procentuală'),
 
                         Forms\Components\TextInput::make('min_purchase_amount')
-                            ->label('Valoare minimă comandă')
+                            ->label(__('Valoare minimă comandă'))
                             ->numeric()
                             ->suffix('lei'),
                     ])->columns(4),
 
-                SC\Section::make('Valabilitate și opțiuni')
+                SC\Section::make(__('Valabilitate și opțiuni'))
                     ->schema([
                         Forms\Components\DateTimePicker::make('starts_at')
-                            ->label('Valabil de la')
+                            ->label(__('Valabil de la'))
                             ->seconds(false),
 
                         Forms\Components\DateTimePicker::make('expires_at')
-                            ->label('Expiră la')
+                            ->label(__('Expiră la'))
                             ->seconds(false)
                             ->after('starts_at'),
 
                         Forms\Components\Toggle::make('first_purchase_only')
-                            ->label('Doar la prima comandă'),
+                            ->label(__('Doar la prima comandă')),
 
                         Forms\Components\Toggle::make('combinable')
-                            ->label('Combinabil cu alte coduri'),
+                            ->label(__('Combinabil cu alte coduri')),
 
                         Forms\Components\Placeholder::make('usage_info')
-                            ->label('Utilizări')
+                            ->label(__('Utilizări'))
                             ->content('1 utilizare per cod, 1 per client. Codurile nu sunt publice și nu apar în contul organizatorului — le primește prin CSV.')
                             ->columnSpanFull(),
                     ])->columns(4),
@@ -254,13 +254,13 @@ class BulkCouponCodes extends Page implements HasTable
             );
         } catch (\Throwable $e) {
             report($e);
-            Notification::make()->danger()->title('Generarea a eșuat')->body($e->getMessage())->send();
+            Notification::make()->danger()->title(__('Generarea a eșuat'))->body($e->getMessage())->send();
 
             return null;
         }
 
         Notification::make()->success()
-            ->title('Coduri generate')
+            ->title(__('Coduri generate'))
             ->body(number_format($batch->quantity, 0, ',', '.') . ' coduri în ' . $batch->label . '. Descărcarea CSV pornește automat; îl găsești oricând în lista de loturi de mai jos.')
             ->send();
 
@@ -274,7 +274,7 @@ class BulkCouponCodes extends Page implements HasTable
         $marketplace = static::getMarketplaceClient();
 
         return $table
-            ->heading('Loturi generate')
+            ->heading(__('Loturi generate'))
             ->query(
                 CouponCodeBatch::query()
                     ->where('marketplace_client_id', $marketplace?->id)
@@ -287,18 +287,18 @@ class BulkCouponCodes extends Page implements HasTable
             )
             ->columns([
                 Tables\Columns\TextColumn::make('label')
-                    ->label('Lot')
+                    ->label(__('Lot'))
                     ->weight('bold')
                     ->description(fn ($record) => $record->prefix ? 'Prefix: ' . $record->prefix : null),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Generat la')
+                    ->label(__('Generat la'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->placeholder('—'),
                 Tables\Columns\TextColumn::make('event_title')
-                    ->label('Eveniment / bilet')
+                    ->label(__('Eveniment / bilet'))
                     ->state(function ($record) {
                         $e = $record->event;
                         $title = $e ? (is_array($e->title) ? ($e->title['ro'] ?? $e->title['en'] ?? (collect($e->title)->first() ?: '')) : $e->title) : '—';
@@ -310,7 +310,7 @@ class BulkCouponCodes extends Page implements HasTable
                         : null)
                     ->limit(40),
                 Tables\Columns\TextColumn::make('discount')
-                    ->label('Reducere')
+                    ->label(__('Reducere'))
                     ->state(function ($record) {
                         $s = $record->settings ?? [];
                         $v = (float) ($s['discount_value'] ?? 0);
@@ -320,31 +320,31 @@ class BulkCouponCodes extends Page implements HasTable
                             : number_format($v, 2, ',', '.') . ' lei';
                     }),
                 Tables\Columns\TextColumn::make('codes_count')
-                    ->label('Coduri')
+                    ->label(__('Coduri'))
                     ->numeric(locale: 'ro'),
                 Tables\Columns\TextColumn::make('used_count')
-                    ->label('Folosite')
+                    ->label(__('Folosite'))
                     ->numeric(locale: 'ro'),
                 Tables\Columns\TextColumn::make('active_count')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->numeric(locale: 'ro'),
             ])
             ->recordActions([
                 Action::make('download')
-                    ->label('Descarcă CSV')
+                    ->label(__('Descarcă CSV'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(fn (CouponCodeBatch $record) => app(BulkCouponCodeGenerator::class)->csv($record)),
                 Action::make('codes')
-                    ->label('Vezi codurile')
+                    ->label(__('Vezi codurile'))
                     ->icon('heroicon-o-list-bullet')
                     ->color('gray')
                     ->url(fn (CouponCodeBatch $record) => CouponCodeResource::getUrl('index', ['filters' => ['batch_id' => ['value' => $record->id]]])),
                 Action::make('deactivate')
-                    ->label('Dezactivează lotul')
+                    ->label(__('Dezactivează lotul'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalDescription('Codurile încă nefolosite din lot devin inactive și nu mai pot fi aplicate la checkout. Codurile deja folosite rămân neschimbate.')
+                    ->modalDescription(__('Codurile încă nefolosite din lot devin inactive și nu mai pot fi aplicate la checkout. Codurile deja folosite rămân neschimbate.'))
                     ->visible(fn (CouponCodeBatch $record) => $record->active_count > 0)
                     ->action(function (CouponCodeBatch $record) {
                         $n = $record->codes()->where('status', 'active')->update(['status' => 'disabled', 'updated_at' => now()]);
@@ -353,6 +353,6 @@ class BulkCouponCodes extends Page implements HasTable
                     }),
             ])
             ->defaultSort('created_at', 'desc')
-            ->emptyStateHeading('Niciun lot generat încă');
+            ->emptyStateHeading(__('Niciun lot generat încă'));
     }
 }

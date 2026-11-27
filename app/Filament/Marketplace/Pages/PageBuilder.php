@@ -71,8 +71,8 @@ class PageBuilder extends Page implements HasForms
         if (!$tenant->hasMicroservice(self::MICROSERVICE_SLUG)) {
             Notification::make()
                 ->warning()
-                ->title('Feature not available')
-                ->body('Please purchase the Website Visual Editor to access this feature.')
+                ->title(__('Feature not available'))
+                ->body(__('Please purchase the Website Visual Editor to access this feature.'))
                 ->persistent()
                 ->send();
 
@@ -163,13 +163,13 @@ class PageBuilder extends Page implements HasForms
 
             Notification::make()
                 ->success()
-                ->title('Block added')
+                ->title(__('Block added'))
                 ->body('Added: ' . $this->getBlockName($type))
                 ->send();
         } else {
             Notification::make()
                 ->danger()
-                ->title('Error adding block')
+                ->title(__('Error adding block'))
                 ->body('Block type not found: ' . $type)
                 ->send();
         }
@@ -185,7 +185,7 @@ class PageBuilder extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Block removed')
+            ->title(__('Block removed'))
             ->send();
     }
 
@@ -315,7 +315,7 @@ class PageBuilder extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Block updated')
+            ->title(__('Block updated'))
             ->send();
     }
 
@@ -346,7 +346,7 @@ class PageBuilder extends Page implements HasForms
 
         Notification::make()
             ->success()
-            ->title('Block duplicated')
+            ->title(__('Block duplicated'))
             ->send();
     }
 

@@ -99,7 +99,7 @@ class ListEvents extends ListRecords
                     'id' => 'create-event-btn',
                 ]),
             Actions\Action::make('import')
-                ->label('Import Events')
+                ->label(__('Import Events'))
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('import')),

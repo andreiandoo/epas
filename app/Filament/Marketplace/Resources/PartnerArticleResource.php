@@ -60,31 +60,31 @@ class PartnerArticleResource extends Resource
                     ->imageWidth(96)
                     ->imageHeight(54),
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titlu')
+                    ->label(__('Titlu'))
                     ->searchable()
                     ->limit(70)
                     ->tooltip(fn (PartnerArticle $record) => $record->title)
                     ->url(fn (PartnerArticle $record) => $record->url, shouldOpenInNewTab: true)
                     ->description(fn (PartnerArticle $record) => $record->partner?->name),
                 Tables\Columns\TextColumn::make('artists.name')
-                    ->label('Artiști')
+                    ->label(__('Artiști'))
                     ->badge()
                     ->limitList(3),
                 Tables\Columns\TextColumn::make('published_at')
-                    ->label('Publicat')
+                    ->label(__('Publicat'))
                     ->dateTime('d.m.Y H:i', timezone: 'Europe/Bucharest')
                     ->sortable(),
                 Tables\Columns\ToggleColumn::make('is_hidden')
-                    ->label('Ascuns'),
+                    ->label(__('Ascuns')),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('marketplace_partner_id')
-                    ->label('Partener')
+                    ->label(__('Partener'))
                     ->options(fn () => MarketplacePartner::where('marketplace_client_id', static::getMarketplaceClientId())
                         ->pluck('name', 'id')
                         ->all()),
                 Tables\Filters\TernaryFilter::make('is_hidden')
-                    ->label('Ascuns'),
+                    ->label(__('Ascuns')),
             ]);
     }
 

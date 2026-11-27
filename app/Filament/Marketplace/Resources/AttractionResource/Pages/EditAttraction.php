@@ -36,7 +36,7 @@ class EditAttraction extends EditRecord
     {
         return [
             Actions\Action::make('view_frontend')
-                ->label('Vizualizează')
+                ->label(__('Vizualizează'))
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('gray')
                 ->url(fn () => $this->frontendUrl(), shouldOpenInNewTab: true)

@@ -303,133 +303,133 @@ class Settings extends Page
                         SC\Tabs\Tab::make('Business Details')
                             ->icon('heroicon-o-building-office')
                             ->schema([
-                                SC\Section::make('Company Information')
+                                SC\Section::make(__('Company Information'))
                                     ->schema([
                                         Forms\Components\TextInput::make('company_name')
-                                            ->label('Legal Company Name')
+                                            ->label(__('Legal Company Name'))
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('cui')
-                                            ->label('CUI / VAT Number')
+                                            ->label(__('CUI / VAT Number'))
                                             ->maxLength(50),
 
                                         Forms\Components\TextInput::make('reg_com')
-                                            ->label('Trade Register')
+                                            ->label(__('Trade Register'))
                                             ->maxLength(50),
 
                                         Forms\Components\Toggle::make('vat_payer')
-                                            ->label('Platitor TVA')
-                                            ->helperText('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.')
+                                            ->label(__('Platitor TVA'))
+                                            ->helperText(__('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.'))
                                             ->onColor('success')
                                             ->offColor('gray')
                                             ->live(),
 
                                         Forms\Components\TextInput::make('vat_rate')
-                                            ->label('Cota TVA (%)')
+                                            ->label(__('Cota TVA (%)'))
                                             ->numeric()
                                             ->minValue(0)
                                             ->maxValue(100)
                                             ->step(0.01)
                                             ->default(21)
-                                            ->helperText('TVA-ul marketplace-ului: pe comisionul adăugat peste preț, pe taxa de retur, pe servicii și pe factura de comision către organizatori.')
+                                            ->helperText(__('TVA-ul marketplace-ului: pe comisionul adăugat peste preț, pe taxa de retur, pe servicii și pe factura de comision către organizatori.'))
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('vat_payer')),
 
                                         Forms\Components\DatePicker::make('vat_payer_since')
-                                            ->label('Plătitor TVA de la data')
+                                            ->label(__('Plătitor TVA de la data'))
                                             ->native(false)
                                             ->displayFormat('d.m.Y')
-                                            ->helperText('Vânzările făcute înainte de această dată rămân fără TVA. Gol = toate vânzările.')
+                                            ->helperText(__('Vânzările făcute înainte de această dată rămân fără TVA. Gol = toate vânzările.'))
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('vat_payer')),
 
                                         Forms\Components\Select::make('tax_display_mode')
-                                            ->label('Modul de afișare taxe')
+                                            ->label(__('Modul de afișare taxe'))
                                             ->options([
-                                                'included' => 'Incluse în preț (prețul afișat include taxele)',
-                                                'added' => 'Adăugate la preț (taxele se adaugă la checkout)',
+                                                'included' => __('Incluse în preț (prețul afișat include taxele)'),
+                                                'added' => __('Adăugate la preț (taxele se adaugă la checkout)'),
                                             ])
                                             ->default('included')
-                                            ->helperText('Alegeți cum vor fi afișate taxele pe website: incluse în prețul biletului sau adăugate separat la checkout.')
+                                            ->helperText(__('Alegeți cum vor fi afișate taxele pe website: incluse în prețul biletului sau adăugate separat la checkout.'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Aceasta setare afecteaza modul in care clientii vad preturile pe website.'),
 
                                         Forms\Components\Toggle::make('service_order_invoicing_enabled')
-                                            ->label('Factură automată pentru servicii extra')
-                                            ->helperText('După ce plata unui serviciu e marcată „plătit”, factura fiscală se emite automat în contabilitate pe seria din conector, cu datele de facturare ale organizatorului, și pleacă în SPV și pe email organizatorului.')
+                                            ->label(__('Factură automată pentru servicii extra'))
+                                            ->helperText(__('După ce plata unui serviciu e marcată „plătit”, factura fiscală se emite automat în contabilitate pe seria din conector, cu datele de facturare ale organizatorului, și pleacă în SPV și pe email organizatorului.'))
                                             ->onColor('success')
                                             ->offColor('gray'),
 
                                         Forms\Components\Toggle::make('company_invoicing_enabled')
-                                            ->label('Facturare pe persoană juridică')
-                                            ->helperText('Clientul poate cere factură pe firmă (CUI verificat la ANAF) în checkout, în cont sau prin operator. Platforma emite automat în contabilitate factura pentru comision + TVA și servicii; organizatorul primește cererea pentru factura biletelor.')
+                                            ->label(__('Facturare pe persoană juridică'))
+                                            ->helperText(__('Clientul poate cere factură pe firmă (CUI verificat la ANAF) în checkout, în cont sau prin operator. Platforma emite automat în contabilitate factura pentru comision + TVA și servicii; organizatorul primește cererea pentru factura biletelor.'))
                                             ->onColor('success')
                                             ->offColor('gray'),
 
                                         Forms\Components\Toggle::make('bulk_offers_enabled')
-                                            ->label('Oferte „Cumperi X primești Y gratis”')
-                                            ->helperText('Aplică la checkout regula setată pe tipul de bilet (Bilete → Reduceri la cantitate). Biletele gratuite se emit ca „Invitatie”, cu 0 lei, fără comision și fără coduri promo pe ofertă; rambursarea se face doar pe toată oferta.')
+                                            ->label(__('Oferte „Cumperi X primești Y gratis”'))
+                                            ->helperText(__('Aplică la checkout regula setată pe tipul de bilet (Bilete → Reduceri la cantitate). Biletele gratuite se emit ca „Invitatie”, cu 0 lei, fără comision și fără coduri promo pe ofertă; rambursarea se face doar pe toată oferta.'))
                                             ->onColor('success')
                                             ->offColor('gray'),
 
                                         Forms\Components\TextInput::make('fixed_commission')
-                                            ->label('Comision Fix')
+                                            ->label(__('Comision Fix'))
                                             ->numeric()
                                             ->step(0.01)
                                             ->minValue(0)
                                             ->suffix('LEI')
-                                            ->helperText('Comision fix per bilet (în LEI). Dacă este setat, poate fi folosit în locul comisionului procentual.')
+                                            ->helperText(__('Comision fix per bilet (în LEI). Dacă este setat, poate fi folosit în locul comisionului procentual.'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Această sumă fixă poate fi aplicată per bilet în loc de comisionul procentual.'),
 
                                         Forms\Components\TextInput::make('bank_name')
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('bank_account')
-                                            ->label('IBAN')
+                                            ->label(__('IBAN'))
                                             ->maxLength(50),
 
                                         Forms\Components\Select::make('currency')
-                                            ->label('Currency')
+                                            ->label(__('Currency'))
                                             ->options([
-                                                'RON' => 'RON - Romanian Leu',
-                                                'EUR' => 'EUR - Euro',
-                                                'USD' => 'USD - US Dollar',
-                                                'GBP' => 'GBP - British Pound',
+                                                'RON' => __('RON - Romanian Leu'),
+                                                'EUR' => __('EUR - Euro'),
+                                                'USD' => __('USD - US Dollar'),
+                                                'GBP' => __('GBP - British Pound'),
                                             ])
                                             ->default('EUR')
                                             ->required()
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Default currency for sales and invoices'),
 
                                         Forms\Components\Select::make('timezone')
-                                            ->label('Fus orar')
+                                            ->label(__('Fus orar'))
                                             ->options(fn () => collect(\DateTimeZone::listIdentifiers())
                                                 ->mapWithKeys(fn ($tz) => [$tz => $tz])
                                                 ->all())
                                             ->default(\App\Support\MarketplaceTz::DEFAULT_TIMEZONE)
                                             ->searchable()
                                             ->required()
-                                            ->helperText('Toate orele afișate (comenzi, bilete, rapoarte) vor fi convertite în acest fus orar. Datele rămân stocate în UTC.')
+                                            ->helperText(__('Toate orele afișate (comenzi, bilete, rapoarte) vor fi convertite în acest fus orar. Datele rămân stocate în UTC.'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Default: Europe/Bucharest. Schimbarea afectează doar afișarea — nu modifică datele istorice.'),
 
                                     ])->columns(3),
 
-                                SC\Section::make('Client general (facturi comision peste preț)')
-                                    ->description('Folosit ca destinatar pe facturile de comision când evenimentul are modul "comision peste preț" (comisionul a fost achitat de clienții finali, nu de organizator).')
+                                SC\Section::make(__('Client general (facturi comision peste preț)'))
+                                    ->description(__('Folosit ca destinatar pe facturile de comision când evenimentul are modul "comision peste preț" (comisionul a fost achitat de clienții finali, nu de organizator).'))
                                     ->schema([
                                         Forms\Components\TextInput::make('general_invoice_client_name')
-                                            ->label('Denumire')
+                                            ->label(__('Denumire'))
                                             ->maxLength(255)
                                             ->default('Client general'),
                                         Forms\Components\TextInput::make('general_invoice_client_cui')
-                                            ->label('CUI / CIF')
+                                            ->label(__('CUI / CIF'))
                                             ->maxLength(50),
                                         Forms\Components\TextInput::make('general_invoice_client_address')
-                                            ->label('Adresă')
+                                            ->label(__('Adresă'))
                                             ->maxLength(255)
                                             ->columnSpanFull(),
                                     ])->columns(2),
 
-                                SC\Section::make('Address')
+                                SC\Section::make(__('Address'))
                                     ->schema([
                                         Forms\Components\TextInput::make('address')
-                                            ->label('Street Address')
+                                            ->label(__('Street Address'))
                                             ->maxLength(255)
                                             ->columnSpanFull(),
 
@@ -437,7 +437,7 @@ class Settings extends Page
                                             ->maxLength(100),
 
                                         Forms\Components\TextInput::make('state')
-                                            ->label('State / County')
+                                            ->label(__('State / County'))
                                             ->maxLength(100),
 
                                         Forms\Components\TextInput::make('country')
@@ -448,7 +448,7 @@ class Settings extends Page
                                             ->maxLength(20),
                                     ])->columns(2),
 
-                                SC\Section::make('Contact')
+                                SC\Section::make(__('Contact'))
                                     ->schema([
                                         Forms\Components\TextInput::make('contact_email')
                                             ->email()
@@ -459,8 +459,8 @@ class Settings extends Page
                                             ->maxLength(50),
 
                                         Forms\Components\TextInput::make('operating_hours')
-                                            ->label('Program de funcționare')
-                                            ->placeholder('Luni - Vineri: 09:00 - 18:00')
+                                            ->label(__('Program de funcționare'))
+                                            ->placeholder(__('Luni - Vineri: 09:00 - 18:00'))
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Programul de lucru afișat pe site și în materialele de contact'),
 
@@ -480,35 +480,35 @@ class Settings extends Page
                         SC\Tabs\Tab::make('Taxe procesare card')
                             ->icon('heroicon-o-credit-card')
                             ->schema([
-                                SC\Section::make('Procesare plăți online')
-                                    ->description('Configurează ratele de comision percepute de procesatorii de plăți (Stripe, Netopia, RoPay) și cine plătește această taxă: clientul final sau marketplace-ul prin comisionul tău. Lasă providers gol pentru a dezactiva complet — comportamentul este identic cu cel actual.')
+                                SC\Section::make(__('Procesare plăți online'))
+                                    ->description(__('Configurează ratele de comision percepute de procesatorii de plăți (Stripe, Netopia, RoPay) și cine plătește această taxă: clientul final sau marketplace-ul prin comisionul tău. Lasă providers gol pentru a dezactiva complet — comportamentul este identic cu cel actual.'))
                                     ->schema([
                                         Forms\Components\Toggle::make('payment_fees_pass_to_customer')
-                                            ->label('Transferă taxa de procesare clientului')
-                                            ->helperText('Activ: linie nouă în checkout "Taxă procesare card", clientul plătește subtotal + taxă. Inactiv: marketplace-ul absoarbe taxa din comisionul propriu, clientul nu vede nimic în plus. Poți suprascrie per organizator pe pagina organizatorului.')
+                                            ->label(__('Transferă taxa de procesare clientului'))
+                                            ->helperText(__('Activ: linie nouă în checkout "Taxă procesare card", clientul plătește subtotal + taxă. Inactiv: marketplace-ul absoarbe taxa din comisionul propriu, clientul nu vede nimic în plus. Poți suprascrie per organizator pe pagina organizatorului.'))
                                             ->onColor('success')
                                             ->offColor('gray')
                                             ->default(false)
                                             ->columnSpanFull(),
 
                                         Forms\Components\Repeater::make('payment_fees_providers')
-                                            ->label('Provideri configurați')
-                                            ->helperText('Adaugă fiecare procesator de plăți pe care îl folosești. Formula taxei: (procent% × subtotal) + sumă fixă. Subtotal = bilet + comision marketplace + asigurare. Lasă gol = feature dezactivat complet.')
+                                            ->label(__('Provideri configurați'))
+                                            ->helperText(__('Adaugă fiecare procesator de plăți pe care îl folosești. Formula taxei: (procent% × subtotal) + sumă fixă. Subtotal = bilet + comision marketplace + asigurare. Lasă gol = feature dezactivat complet.'))
                                             ->schema([
                                                 Forms\Components\TextInput::make('slug')
-                                                    ->label('Slug provider')
-                                                    ->placeholder('stripe / netopia / ropay')
+                                                    ->label(__('Slug provider'))
+                                                    ->placeholder(__('stripe / netopia / ropay'))
                                                     ->required()
                                                     ->maxLength(32)
                                                     ->rule('alpha_dash')
                                                     ->columnSpan(1),
                                                 Forms\Components\TextInput::make('label')
-                                                    ->label('Etichetă afișată')
-                                                    ->placeholder('Stripe')
+                                                    ->label(__('Etichetă afișată'))
+                                                    ->placeholder(__('Stripe'))
                                                     ->maxLength(64)
                                                     ->columnSpan(1),
                                                 Forms\Components\TextInput::make('percent_rate')
-                                                    ->label('Procent (%)')
+                                                    ->label(__('Procent (%)'))
                                                     ->numeric()
                                                     ->step(0.01)
                                                     ->minValue(0)
@@ -517,13 +517,13 @@ class Settings extends Page
                                                     ->placeholder('1.50')
                                                     ->columnSpan(1),
                                                 Forms\Components\TextInput::make('fixed_lei')
-                                                    ->label('Fix (lei)')
+                                                    ->label(__('Fix (lei)'))
                                                     ->numeric()
                                                     ->step(0.01)
                                                     ->minValue(0)
                                                     ->suffix('lei')
                                                     ->placeholder('1.00')
-                                                    ->helperText('Stocat ca bani (× 100) intern.')
+                                                    ->helperText(__('Stocat ca bani (× 100) intern.'))
                                                     ->columnSpan(1),
                                             ])
                                             ->columns(4)
@@ -536,7 +536,7 @@ class Settings extends Page
                                                 $fix = $state['fixed_lei'] ?? '?';
                                                 return $slug ? strtoupper($slug) . " — {$rate}% + {$fix} lei" : null;
                                             })
-                                            ->addActionLabel('Adaugă provider')
+                                            ->addActionLabel(__('Adaugă provider'))
                                             ->columnSpanFull(),
                                     ])
                                     ->columns(1),
@@ -545,10 +545,10 @@ class Settings extends Page
                         SC\Tabs\Tab::make('Personalization')
                             ->icon('heroicon-o-paint-brush')
                             ->schema([
-                                SC\Section::make('Branding')
+                                SC\Section::make(__('Branding'))
                                     ->schema([
                                         Forms\Components\FileUpload::make('logo')
-                                            ->label('Logo')
+                                            ->label(__('Logo'))
                                             ->image()
                                             ->directory('tenant-branding')
                                             ->disk('public')
@@ -557,7 +557,7 @@ class Settings extends Page
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Recommended: 200x60px, PNG or SVG'),
 
                                         Forms\Components\FileUpload::make('favicon')
-                                            ->label('Favicon')
+                                            ->label(__('Favicon'))
                                             ->image()
                                             ->directory('tenant-branding')
                                             ->disk('public')
@@ -566,38 +566,38 @@ class Settings extends Page
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Recommended: 32x32px or 64x64px, ICO or PNG'),
                                     ])->columns(2),
 
-                                SC\Section::make('Site Information')
+                                SC\Section::make(__('Site Information'))
                                     ->schema([
                                         Forms\Components\TextInput::make('site_title')
-                                            ->label('Site Title')
+                                            ->label(__('Site Title'))
                                             ->required()
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'The name of your site displayed in browser tab and header'),
 
                                         // Language is set in Core Admin (Tenant Edit page)
                                         // Forms\Components\Select::make('site_language')
-                                        //     ->label('Site Language')
+                                        //     ->label(__('Site Language'))
                                         //     ->options([
-                                        //         'en' => 'English',
-                                        //         'ro' => 'Romanian (Română)',
+                                        //         'en' => __('English'),
+                                        //         'ro' => __('Romanian (Română)'),
                                         //     ])
                                         //     ->default('en')
                                         //     ->required()
                                         //     ->hintIcon('heroicon-o-information-circle', tooltip: 'Primary language for your public site'),
 
                                         Forms\Components\Textarea::make('site_description')
-                                            ->label('Site Description')
+                                            ->label(__('Site Description'))
                                             ->rows(3)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Brief description for SEO and social sharing')
                                             ->maxLength(500),
 
                                         Forms\Components\TextInput::make('site_tagline')
-                                            ->label('Site Tagline')
+                                            ->label(__('Site Tagline'))
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Short tagline displayed on the site'),
 
                                         Forms\Components\RichEditor::make('ticket_terms')
-                                            ->label('Ticket Terms')
+                                            ->label(__('Ticket Terms'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -609,22 +609,22 @@ class Settings extends Page
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Terms displayed on tickets'),
                                     ]),
 
-                                SC\Section::make('Theme & Colors')
+                                SC\Section::make(__('Theme & Colors'))
                                     ->schema([
                                         Forms\Components\ColorPicker::make('primary_color')
-                                            ->label('Primary Color'),
+                                            ->label(__('Primary Color')),
 
                                         Forms\Components\ColorPicker::make('secondary_color')
-                                            ->label('Secondary Color'),
+                                            ->label(__('Secondary Color')),
 
                                         Forms\Components\Select::make('site_template')
-                                            ->label('Site Template')
+                                            ->label(__('Site Template'))
                                             ->options([
-                                                'default' => 'Default',
-                                                'modern' => 'Modern',
-                                                'sleek' => 'Sleek (Minimalist)',
-                                                'theater' => 'Theater (Dark)',
-                                                'pub' => 'Pub (Warm)',
+                                                'default' => __('Default'),
+                                                'modern' => __('Modern'),
+                                                'sleek' => __('Sleek (Minimalist)'),
+                                                'theater' => __('Theater (Dark)'),
+                                                'pub' => __('Pub (Warm)'),
                                             ])
                                             ->default('default'),
                                     ])->columns(3),
@@ -639,65 +639,65 @@ class Settings extends Page
                                 // — so page_view / purchase never stops being tracked
                                 // just because a specific organizer forgot to set
                                 // their TikTok/GA4 up.
-                                SC\Section::make('Tracking & Pixels marketplace (fallback)')
-                                    ->description('Aceste pixeluri se declanșează pe toate paginile marketplace-ului. Dacă un organizator are propriul ID setat pentru un provider (GA4, GTM etc.), pixelul organizatorului îl înlocuiește pe cel marketplace pentru paginile lui. Pe paginile fără context de organizator (home, listare, etc.) tot pixelul marketplace se folosește.')
+                                SC\Section::make(__('Tracking & Pixels marketplace (fallback)'))
+                                    ->description(__('Aceste pixeluri se declanșează pe toate paginile marketplace-ului. Dacă un organizator are propriul ID setat pentru un provider (GA4, GTM etc.), pixelul organizatorului îl înlocuiește pe cel marketplace pentru paginile lui. Pe paginile fără context de organizator (home, listare, etc.) tot pixelul marketplace se folosește.'))
                                     ->icon('heroicon-o-chart-bar')
                                     ->collapsible()
                                     ->collapsed()
                                     ->schema([
                                         SC\Grid::make(2)->schema([
                                             Forms\Components\Toggle::make('tracking_ga4_enabled')
-                                                ->label('Google Analytics 4')
-                                                ->helperText('Enable GA4 tracking')
+                                                ->label(__('Google Analytics 4'))
+                                                ->helperText(__('Enable GA4 tracking'))
                                                 ->live(),
                                             Forms\Components\TextInput::make('tracking_ga4_id')
-                                                ->label('GA4 Measurement ID')
-                                                ->placeholder('G-XXXXXXXXXX')
+                                                ->label(__('GA4 Measurement ID'))
+                                                ->placeholder(__('G-XXXXXXXXXX'))
                                                 ->maxLength(20)
-                                                ->helperText('Format: G-XXXXXXXXXX'),
+                                                ->helperText(__('Format: G-XXXXXXXXXX')),
 
                                             Forms\Components\Toggle::make('tracking_gtm_enabled')
-                                                ->label('Google Tag Manager')
-                                                ->helperText('Enable GTM container'),
+                                                ->label(__('Google Tag Manager'))
+                                                ->helperText(__('Enable GTM container')),
                                             Forms\Components\TextInput::make('tracking_gtm_id')
-                                                ->label('GTM Container ID')
-                                                ->placeholder('GTM-XXXXXX')
+                                                ->label(__('GTM Container ID'))
+                                                ->placeholder(__('GTM-XXXXXX'))
                                                 ->maxLength(15)
-                                                ->helperText('Format: GTM-XXXXXX'),
+                                                ->helperText(__('Format: GTM-XXXXXX')),
 
                                             Forms\Components\Toggle::make('tracking_meta_enabled')
-                                                ->label('Meta Pixel (Facebook)')
-                                                ->helperText('Enable Meta Pixel'),
+                                                ->label(__('Meta Pixel (Facebook)'))
+                                                ->helperText(__('Enable Meta Pixel')),
                                             Forms\Components\TextInput::make('tracking_meta_id')
-                                                ->label('Meta Pixel ID')
+                                                ->label(__('Meta Pixel ID'))
                                                 ->placeholder('1234567890123456')
                                                 ->maxLength(20)
-                                                ->helperText('Format: 15-16 digit Pixel ID'),
+                                                ->helperText(__('Format: 15-16 digit Pixel ID')),
 
                                             Forms\Components\Toggle::make('tracking_tiktok_enabled')
-                                                ->label('TikTok Pixel')
-                                                ->helperText('Enable TikTok Pixel')
+                                                ->label(__('TikTok Pixel'))
+                                                ->helperText(__('Enable TikTok Pixel'))
                                                 ->live(),
                                             Forms\Components\TextInput::make('tracking_tiktok_id')
-                                                ->label('TikTok Pixel ID')
-                                                ->placeholder('CXXXXXXXXXXXXXXXXX')
+                                                ->label(__('TikTok Pixel ID'))
+                                                ->placeholder(__('CXXXXXXXXXXXXXXXXX'))
                                                 ->maxLength(25)
-                                                ->helperText('Format: C followed by 17 characters'),
+                                                ->helperText(__('Format: C followed by 17 characters')),
 
                                             Forms\Components\Toggle::make('tracking_google_ads_enabled')
-                                                ->label('Google Ads')
-                                                ->helperText('Enable Google Ads conversion tracking'),
+                                                ->label(__('Google Ads'))
+                                                ->helperText(__('Enable Google Ads conversion tracking')),
                                             Forms\Components\TextInput::make('tracking_google_ads_id')
-                                                ->label('Google Ads Conversion ID')
-                                                ->placeholder('AW-XXXXXXXXX')
+                                                ->label(__('Google Ads Conversion ID'))
+                                                ->placeholder(__('AW-XXXXXXXXX'))
                                                 ->maxLength(25)
-                                                ->helperText('Format: AW-XXXXXXXXX'),
+                                                ->helperText(__('Format: AW-XXXXXXXXX')),
                                         ]),
 
                                         Forms\Components\TextInput::make('tracking_ga4_linker_domains')
-                                            ->label('GA4 cross-domain linker (optional)')
-                                            ->placeholder('domain-a.com, subdomain.domain-b.ro')
-                                            ->helperText('Optional CSV of domains for GA4 cross-domain measurement. Leave empty if you only have one domain.')
+                                            ->label(__('GA4 cross-domain linker (optional)'))
+                                            ->placeholder(__('domain-a.com, subdomain.domain-b.ro'))
+                                            ->helperText(__('Optional CSV of domains for GA4 cross-domain measurement. Leave empty if you only have one domain.'))
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('tracking_ga4_enabled')),
 
                                         // Server-side conversion credentials. When these are set,
@@ -706,28 +706,28 @@ class Settings extends Page
                                         // to the browser pixel — so tracking survives adblockers,
                                         // iOS ATT, and cookie deletion. These credentials are
                                         // encrypted at rest (Laravel Crypt + APP_KEY).
-                                        SC\Section::make('Server-side conversion APIs (fallback for organizers without their own credentials)')
-                                            ->description('Optional. Fill only when you want ambilet/bilete.online to send events server-side under YOUR own GA4 property / TikTok pixel when an organizer has not configured their own. Leave empty to disable server-side dispatch for that provider.')
+                                        SC\Section::make(__('Server-side conversion APIs (fallback for organizers without their own credentials)'))
+                                            ->description(__('Optional. Fill only when you want ambilet/bilete.online to send events server-side under YOUR own GA4 property / TikTok pixel when an organizer has not configured their own. Leave empty to disable server-side dispatch for that provider.'))
                                             ->collapsible()
                                             ->collapsed()
                                             ->schema([
                                                 Forms\Components\TextInput::make('tracking_ga4_api_secret')
-                                                    ->label('GA4 Measurement Protocol API Secret')
+                                                    ->label(__('GA4 Measurement Protocol API Secret'))
                                                     ->password()
                                                     ->revealable()
                                                     ->autocomplete('new-password')
                                                     ->placeholder('••••••••')
-                                                    ->helperText('GA4 Admin → Data Streams → your web stream → Measurement Protocol API secrets. Leave empty to keep existing.')
+                                                    ->helperText(__('GA4 Admin → Data Streams → your web stream → Measurement Protocol API secrets. Leave empty to keep existing.'))
                                                     ->dehydrated(fn ($state) => filled($state))
                                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('tracking_ga4_enabled')),
 
                                                 Forms\Components\TextInput::make('tracking_tiktok_access_token')
-                                                    ->label('TikTok Events API Access Token')
+                                                    ->label(__('TikTok Events API Access Token'))
                                                     ->password()
                                                     ->revealable()
                                                     ->autocomplete('new-password')
                                                     ->placeholder('••••••••')
-                                                    ->helperText('Events Manager → Settings → Events API → Generate access token. Leave empty to keep existing.')
+                                                    ->helperText(__('Events Manager → Settings → Events API → Generate access token. Leave empty to keep existing.'))
                                                     ->dehydrated(fn ($state) => filled($state))
                                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('tracking_tiktok_enabled')),
                                             ]),
@@ -738,13 +738,13 @@ class Settings extends Page
                                 // central per-country curated taxonomies. Idempotent
                                 // and safe to re-run; bilete.online's existing data
                                 // is the production-tested example.
-                                SC\Section::make('Geo Catalog Importer')
-                                    ->description('Import macro-regions, counties and the official city catalogue for one country at a time. Existing rows are preserved — re-running just no-ops on what already exists.')
+                                SC\Section::make(__('Geo Catalog Importer'))
+                                    ->description(__('Import macro-regions, counties and the official city catalogue for one country at a time. Existing rows are preserved — re-running just no-ops on what already exists.'))
                                     ->icon('heroicon-o-globe-europe-africa')
                                     ->collapsed()
                                     ->schema([
                                         Forms\Components\Placeholder::make('current_geo_stats')
-                                            ->label('Current state of this marketplace')
+                                            ->label(__('Current state of this marketplace'))
                                             ->content(function () {
                                                 $client = static::getMarketplaceClient();
                                                 if (!$client) {
@@ -759,7 +759,7 @@ class Settings extends Page
                                             }),
 
                                         Forms\Components\Select::make('geo_import_country')
-                                            ->label('Country to import')
+                                            ->label(__('Country to import'))
                                             ->options(array_combine(
                                                 \App\Services\Geo\CountryGeoImporter::SUPPORTED_COUNTRIES,
                                                 array_map(
@@ -770,72 +770,72 @@ class Settings extends Page
                                                     \App\Services\Geo\CountryGeoImporter::SUPPORTED_COUNTRIES
                                                 )
                                             ))
-                                            ->placeholder('Pick a country to import')
-                                            ->helperText('Importing replaces this marketplace\'s region + county lookup tables but does NOT delete existing city rows — only their region_id + county_id are re-linked. Custom descriptions, GYG ids, lat/lng, etc. on each city are preserved.'),
+                                            ->placeholder(__('Pick a country to import'))
+                                            ->helperText(__('Importing replaces this marketplace\'s region + county lookup tables but does NOT delete existing city rows — only their region_id + county_id are re-linked. Custom descriptions, GYG ids, lat/lng, etc. on each city are preserved.')),
 
                                         SC\Actions::make([
                                             \Filament\Actions\Action::make('runGeoImport')
-                                                ->label('Run geo import')
+                                                ->label(__('Run geo import'))
                                                 ->icon('heroicon-o-arrow-down-tray')
                                                 ->color('warning')
                                                 ->requiresConfirmation()
-                                                ->modalHeading('Import country geo data?')
-                                                ->modalDescription('This will rebuild the marketplace\'s region + county lookup tables for the chosen country and link existing cities to the new IDs. City rows themselves are not deleted; their custom data is preserved. Safe to re-run.')
-                                                ->modalSubmitActionLabel('Yes, import')
+                                                ->modalHeading(__('Import country geo data?'))
+                                                ->modalDescription(__('This will rebuild the marketplace\'s region + county lookup tables for the chosen country and link existing cities to the new IDs. City rows themselves are not deleted; their custom data is preserved. Safe to re-run.'))
+                                                ->modalSubmitActionLabel(__('Yes, import'))
                                                 ->action(fn () => $this->runGeoImport()),
                                         ]),
                                     ]),
 
-                                SC\Section::make('Serii documente')
-                                    ->description('Configurează prefixele și numerotarea pentru comenzi, facturi și deconturi')
+                                SC\Section::make(__('Serii documente'))
+                                    ->description(__('Configurează prefixele și numerotarea pentru comenzi, facturi și deconturi'))
                                     ->schema([
                                         Forms\Components\TextInput::make('order_prefix')
-                                            ->label('Prefix serie comenzi')
+                                            ->label(__('Prefix serie comenzi'))
                                             ->default('CMD')
                                             ->maxLength(10)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: CMD → CMD0001, CMD0002...'),
 
                                         Forms\Components\TextInput::make('order_next_number')
-                                            ->label('Număr curent comenzi')
+                                            ->label(__('Număr curent comenzi'))
                                             ->numeric()
                                             ->default(1)
                                             ->minValue(1),
 
                                         Forms\Components\TextInput::make('invoice_prefix')
-                                            ->label('Prefix serie facturi')
+                                            ->label(__('Prefix serie facturi'))
                                             ->default('FACT')
                                             ->maxLength(10)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: FACT → FACT0001, FACT0002...'),
 
                                         Forms\Components\TextInput::make('invoice_next_number')
-                                            ->label('Număr curent facturi')
+                                            ->label(__('Număr curent facturi'))
                                             ->numeric()
                                             ->default(1)
                                             ->minValue(1),
 
                                         Forms\Components\TextInput::make('invoice_due_days')
-                                            ->label('Zile scadență facturi')
+                                            ->label(__('Zile scadență facturi'))
                                             ->numeric()
                                             ->default(30)
                                             ->minValue(1)
                                             ->maxValue(365)
                                             ->suffix('zile')
-                                            ->helperText('Numărul de zile între data emiterii și data scadenței. Poate fi suprascris per organizator.'),
+                                            ->helperText(__('Numărul de zile între data emiterii și data scadenței. Poate fi suprascris per organizator.')),
 
                                         Forms\Components\TextInput::make('decont_prefix')
-                                            ->label('Prefix serie deconturi')
+                                            ->label(__('Prefix serie deconturi'))
                                             ->default('DEC')
                                             ->maxLength(10)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: DEC → DEC0001, DEC0002...'),
 
                                         Forms\Components\TextInput::make('decont_next_number')
-                                            ->label('Număr curent deconturi')
+                                            ->label(__('Număr curent deconturi'))
                                             ->numeric()
                                             ->default(1)
                                             ->minValue(1),
 
                                         Forms\Components\TextInput::make('contract_prefix')
-                                            ->label('Prefix serie contracte')
+                                            ->label(__('Prefix serie contracte'))
                                             ->default('CTR')
                                             ->maxLength(10)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: AMB → AMB605, AMB606... (folosit la generarea automată de contract la onboarding organizator)'),
@@ -848,43 +848,43 @@ class Settings extends Page
                                         // counters even though it's a column, not a
                                         // settings JSON key.
                                         Forms\Components\TextInput::make('contract_next_number')
-                                            ->label('Număr curent contracte')
+                                            ->label(__('Număr curent contracte'))
                                             ->numeric()
                                             ->default(1)
                                             ->minValue(1)
-                                            ->helperText('Următorul număr atribuit când se generează un contract nou. Formatul final e prefix+număr (ex. AMB605).'),
+                                            ->helperText(__('Următorul număr atribuit când se generează un contract nou. Formatul final e prefix+număr (ex. AMB605).')),
                                     ])->columns(2),
 
-                                SC\Section::make('Emitere facturi (Oblio)')
-                                    ->description('Numele + CNP-ul persoanei care apare pe facturile generate prin Oblio. Trimise ca `issuerName` / `issuerCnp` la generare; când sunt goale, Oblio folosește default-ul din contul lor.')
+                                SC\Section::make(__('Emitere facturi (Oblio)'))
+                                    ->description(__('Numele + CNP-ul persoanei care apare pe facturile generate prin Oblio. Trimise ca `issuerName` / `issuerCnp` la generare; când sunt goale, Oblio folosește default-ul din contul lor.'))
                                     ->icon('heroicon-o-user-circle')
                                     ->schema([
                                         Forms\Components\TextInput::make('invoice_preparer')
-                                            ->label('Persoana care completează documentele')
+                                            ->label(__('Persoana care completează documentele'))
                                             ->maxLength(255)
-                                            ->helperText('Numele persoanei care semnează/completează facturile. Trimis la Oblio ca `issuerName` — apare în partea de jos a facturii generate.'),
+                                            ->helperText(__('Numele persoanei care semnează/completează facturile. Trimis la Oblio ca `issuerName` — apare în partea de jos a facturii generate.')),
 
                                         Forms\Components\TextInput::make('invoice_preparer_cnp')
-                                            ->label('CNP persoană care completează')
+                                            ->label(__('CNP persoană care completează'))
                                             ->maxLength(13)
-                                            ->helperText('CNP-ul persoanei de mai sus. Trimis la Oblio ca `issuerCnp` — apare în partea de jos a facturii generate.'),
+                                            ->helperText(__('CNP-ul persoanei de mai sus. Trimis la Oblio ca `issuerCnp` — apare în partea de jos a facturii generate.')),
                                     ])->columns(2),
                             ]),
 
                         SC\Tabs\Tab::make('Legal Pages')
                             ->icon('heroicon-o-document-text')
                             ->schema([
-                                SC\Section::make('Terms & Conditions')
-                                    ->description('Content displayed on your Terms & Conditions page')
+                                SC\Section::make(__('Terms & Conditions'))
+                                    ->description(__('Content displayed on your Terms & Conditions page'))
                                     ->schema([
                                         Forms\Components\TextInput::make('terms_title')
-                                            ->label('Page Title')
+                                            ->label(__('Page Title'))
                                             ->default('Terms & Conditions')
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'The title displayed on the Terms page'),
 
                                         Forms\Components\RichEditor::make('terms_content')
-                                            ->label('Content')
+                                            ->label(__('Content'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -902,17 +902,17 @@ class Settings extends Page
                                             ->columnSpanFull(),
                                     ]),
 
-                                SC\Section::make('Privacy Policy')
-                                    ->description('Content displayed on your Privacy Policy page')
+                                SC\Section::make(__('Privacy Policy'))
+                                    ->description(__('Content displayed on your Privacy Policy page'))
                                     ->schema([
                                         Forms\Components\TextInput::make('privacy_title')
-                                            ->label('Page Title')
+                                            ->label(__('Page Title'))
                                             ->default('Privacy Policy')
                                             ->maxLength(255)
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'The title displayed on the Privacy page'),
 
                                         Forms\Components\RichEditor::make('privacy_content')
-                                            ->label('Content')
+                                            ->label(__('Content'))
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -934,41 +934,41 @@ class Settings extends Page
                         SC\Tabs\Tab::make('Links')
                             ->icon('heroicon-o-link')
                             ->schema([
-                                SC\Section::make('Social Media Links')
-                                    ->description('Add links to your social media profiles. Icons will appear in the footer.')
+                                SC\Section::make(__('Social Media Links'))
+                                    ->description(__('Add links to your social media profiles. Icons will appear in the footer.'))
                                     ->schema([
                                         Forms\Components\TextInput::make('social_facebook')
-                                            ->label('Facebook')
+                                            ->label(__('Facebook'))
                                             ->url()
                                             ->placeholder('https://facebook.com/yourpage')
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('social_instagram')
-                                            ->label('Instagram')
+                                            ->label(__('Instagram'))
                                             ->url()
                                             ->placeholder('https://instagram.com/yourprofile')
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('social_twitter')
-                                            ->label('Twitter / X')
+                                            ->label(__('Twitter / X'))
                                             ->url()
                                             ->placeholder('https://twitter.com/yourhandle')
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('social_youtube')
-                                            ->label('YouTube')
+                                            ->label(__('YouTube'))
                                             ->url()
                                             ->placeholder('https://youtube.com/@yourchannel')
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('social_tiktok')
-                                            ->label('TikTok')
+                                            ->label(__('TikTok'))
                                             ->url()
                                             ->placeholder('https://tiktok.com/@yourprofile')
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('social_linkedin')
-                                            ->label('LinkedIn')
+                                            ->label(__('LinkedIn'))
                                             ->url()
                                             ->placeholder('https://linkedin.com/company/yourcompany')
                                             ->maxLength(255),
@@ -979,29 +979,29 @@ class Settings extends Page
                         SC\Tabs\Tab::make('Emails')
                             ->icon('heroicon-o-envelope')
                             ->schema([
-                                SC\Section::make('Routare mailuri tranzacționale')
-                                    ->description('Alege prin ce provider pleacă toate mailurile tranzacționale (bilete, facturi, resetare parolă, alerte stoc, refunds, etc.). Pentru testarea comparativă Brevo vs SMTP propriu.')
+                                SC\Section::make(__('Routare mailuri tranzacționale'))
+                                    ->description(__('Alege prin ce provider pleacă toate mailurile tranzacționale (bilete, facturi, resetare parolă, alerte stoc, refunds, etc.). Pentru testarea comparativă Brevo vs SMTP propriu.'))
                                     ->icon('heroicon-o-arrows-right-left')
                                     ->schema([
                                         Forms\Components\Radio::make('transactional_mode')
                                             ->label(false)
                                             ->options([
-                                                'auto' => 'Automat (recomandat) — încearcă SMTP propriu, cu fallback la providerul primar dacă cel tranzacțional pică',
-                                                'primary_only' => 'Forțează providerul primar (Brevo) — pentru testare A/B',
-                                                'transactional_only' => 'Forțează SMTP propriu — fără fallback (surprinde erorile silențioase ale tranzacționalului)',
+                                                'auto' => __('Automat (recomandat) — încearcă SMTP propriu, cu fallback la providerul primar dacă cel tranzacțional pică'),
+                                                'primary_only' => __('Forțează providerul primar (Brevo) — pentru testare A/B'),
+                                                'transactional_only' => __('Forțează SMTP propriu — fără fallback (surprinde erorile silențioase ale tranzacționalului)'),
                                             ])
                                             ->default('auto')
                                             ->required()
                                             ->columnSpanFull(),
                                     ])->columns(1),
 
-                                SC\Section::make('Email Configuration')
-                                    ->description('Configure custom mail settings for sending emails. Leave empty to use platform default.')
+                                SC\Section::make(__('Email Configuration'))
+                                    ->description(__('Configure custom mail settings for sending emails. Leave empty to use platform default.'))
                                     ->schema([
                                         Forms\Components\Select::make('mail_driver')
-                                            ->label('Mail Provider')
+                                            ->label(__('Mail Provider'))
                                             ->options($this->getMailDriverOptions())
-                                            ->placeholder('Select mail provider')
+                                            ->placeholder(__('Select mail provider'))
                                             ->live()
                                             ->afterStateUpdated(fn (Forms\Components\Select $component) => $component
                                                 ->getContainer()
@@ -1030,20 +1030,20 @@ class Settings extends Page
                                         // Test Connection Button (shown only when provider is selected)
                                         SC\Actions::make([
                                             \Filament\Actions\Action::make('testConnection')
-                                                ->label('Test Email Connection')
+                                                ->label(__('Test Email Connection'))
                                                 ->icon('heroicon-o-paper-airplane')
                                                 ->color('gray')
                                                 ->requiresConfirmation()
-                                                ->modalHeading('Test Email Connection')
-                                                ->modalDescription('A test email will be sent to verify your mail configuration is working correctly.')
-                                                ->modalSubmitActionLabel('Send Test Email')
+                                                ->modalHeading(__('Test Email Connection'))
+                                                ->modalDescription(__('A test email will be sent to verify your mail configuration is working correctly.'))
+                                                ->modalSubmitActionLabel(__('Send Test Email'))
                                                 ->form([
                                                     Forms\Components\TextInput::make('test_email')
-                                                        ->label('Send test email to')
+                                                        ->label(__('Send test email to'))
                                                         ->email()
                                                         ->required()
                                                         ->default(fn () => auth()->user()?->email)
-                                                        ->helperText('Enter the email address where you want to receive the test email'),
+                                                        ->helperText(__('Enter the email address where you want to receive the test email')),
                                                 ])
                                                 ->action(function (array $data) {
                                                     // First save current form state to the marketplace
@@ -1055,8 +1055,8 @@ class Settings extends Page
                                                     if (!$marketplace) {
                                                         Notification::make()
                                                             ->danger()
-                                                            ->title('Error')
-                                                            ->body('Could not find marketplace configuration.')
+                                                            ->title(__('Error'))
+                                                            ->body(__('Could not find marketplace configuration.'))
                                                             ->send();
                                                         return;
                                                     }
@@ -1066,13 +1066,13 @@ class Settings extends Page
                                                     if ($result['success']) {
                                                         Notification::make()
                                                             ->success()
-                                                            ->title('Test email sent!')
+                                                            ->title(__('Test email sent!'))
                                                             ->body($result['message'])
                                                             ->send();
                                                     } else {
                                                         Notification::make()
                                                             ->danger()
-                                                            ->title('Failed to send test email')
+                                                            ->title(__('Failed to send test email'))
                                                             ->body($result['error'] ?? 'Unknown error occurred')
                                                             ->duration(10000)
                                                             ->send();
@@ -1083,14 +1083,14 @@ class Settings extends Page
                                         ->columnSpanFull(),
                                     ])->columns(2),
 
-                                SC\Section::make('Provider tranzacțional (SMTP propriu platformă)')
-                                    ->description('Provider dedicat pentru emailurile tranzacționale (confirmări comandă, parolă reset, livrare bilete, alerte stoc, etc.). Lasă gol pentru a folosi providerul principal de mai sus.')
+                                SC\Section::make(__('Provider tranzacțional (SMTP propriu platformă)'))
+                                    ->description(__('Provider dedicat pentru emailurile tranzacționale (confirmări comandă, parolă reset, livrare bilete, alerte stoc, etc.). Lasă gol pentru a folosi providerul principal de mai sus.'))
                                     ->icon('heroicon-o-shield-check')
                                     ->schema([
                                         Forms\Components\Select::make('transactional_mail_driver')
-                                            ->label('Mail Provider')
+                                            ->label(__('Mail Provider'))
                                             ->options($this->getMailDriverOptions())
-                                            ->placeholder('Select mail provider')
+                                            ->placeholder(__('Select mail provider'))
                                             ->live()
                                             ->afterStateUpdated(fn (Forms\Components\Select $component) => $component
                                                 ->getContainer()
@@ -1117,16 +1117,16 @@ class Settings extends Page
 
                                         SC\Actions::make([
                                             \Filament\Actions\Action::make('testTransactionalConnection')
-                                                ->label('Test Transactional Email Connection')
+                                                ->label(__('Test Transactional Email Connection'))
                                                 ->icon('heroicon-o-paper-airplane')
                                                 ->color('gray')
                                                 ->requiresConfirmation()
-                                                ->modalHeading('Test Transactional Email Connection')
-                                                ->modalDescription('A test email will be sent through the transactional provider to verify the configuration.')
-                                                ->modalSubmitActionLabel('Send Test Email')
+                                                ->modalHeading(__('Test Transactional Email Connection'))
+                                                ->modalDescription(__('A test email will be sent through the transactional provider to verify the configuration.'))
+                                                ->modalSubmitActionLabel(__('Send Test Email'))
                                                 ->form([
                                                     Forms\Components\TextInput::make('test_email')
-                                                        ->label('Send test email to')
+                                                        ->label(__('Send test email to'))
                                                         ->email()
                                                         ->required()
                                                         ->default(fn () => auth()->user()?->email),
@@ -1138,8 +1138,8 @@ class Settings extends Page
                                                     if (!$marketplace) {
                                                         Notification::make()
                                                             ->danger()
-                                                            ->title('Error')
-                                                            ->body('Could not find marketplace configuration.')
+                                                            ->title(__('Error'))
+                                                            ->body(__('Could not find marketplace configuration.'))
                                                             ->send();
                                                         return;
                                                     }
@@ -1149,13 +1149,13 @@ class Settings extends Page
                                                     if ($result['success']) {
                                                         Notification::make()
                                                             ->success()
-                                                            ->title('Test email sent!')
+                                                            ->title(__('Test email sent!'))
                                                             ->body($result['message'])
                                                             ->send();
                                                     } else {
                                                         Notification::make()
                                                             ->danger()
-                                                            ->title('Failed to send test email')
+                                                            ->title(__('Failed to send test email'))
                                                             ->body($result['error'] ?? 'Unknown error occurred')
                                                             ->duration(10000)
                                                             ->send();
@@ -1163,13 +1163,13 @@ class Settings extends Page
                                                 }),
 
                                             \Filament\Actions\Action::make('clearTransactionalConfig')
-                                                ->label('Șterge configurare')
+                                                ->label(__('Șterge configurare'))
                                                 ->icon('heroicon-o-trash')
                                                 ->color('danger')
                                                 ->requiresConfirmation()
-                                                ->modalHeading('Șterge configurarea providerului tranzacțional')
-                                                ->modalDescription('După ștergere, emailurile tranzacționale vor pleca prin providerul principal (de mai sus). Această acțiune nu afectează providerul principal.')
-                                                ->modalSubmitActionLabel('Da, șterge')
+                                                ->modalHeading(__('Șterge configurarea providerului tranzacțional'))
+                                                ->modalDescription(__('După ștergere, emailurile tranzacționale vor pleca prin providerul principal (de mai sus). Această acțiune nu afectează providerul principal.'))
+                                                ->modalSubmitActionLabel(__('Da, șterge'))
                                                 ->action(function () {
                                                     $marketplace = static::getMarketplaceClient();
                                                     if (!$marketplace) {
@@ -1178,8 +1178,8 @@ class Settings extends Page
                                                     $marketplace->update(['transactional_smtp_settings' => []]);
                                                     Notification::make()
                                                         ->success()
-                                                        ->title('Configurare ștearsă')
-                                                        ->body('Providerul tranzacțional a fost resetat. Reîncarcă pagina pentru a vedea valorile actualizate.')
+                                                        ->title(__('Configurare ștearsă'))
+                                                        ->body(__('Providerul tranzacțional a fost resetat. Reîncarcă pagina pentru a vedea valorile actualizate.'))
                                                         ->send();
                                                 }),
                                         ])
@@ -1187,45 +1187,45 @@ class Settings extends Page
                                         ->columnSpanFull(),
                                     ])->columns(2),
 
-                                SC\Section::make('Alerte stoc bilete')
-                                    ->description('Primește notificări automate când stocul unui tip de bilet scade sub un anumit prag.')
+                                SC\Section::make(__('Alerte stoc bilete'))
+                                    ->description(__('Primește notificări automate când stocul unui tip de bilet scade sub un anumit prag.'))
                                     ->icon('heroicon-o-bell-alert')
                                     ->schema([
                                         Forms\Components\TextInput::make('stock_alert_threshold')
-                                            ->label('Prag alertă stoc')
-                                            ->helperText('Când un tip de bilet are mai puțin sau egal cu acest număr de bilete disponibile, se trimite o alertă.')
+                                            ->label(__('Prag alertă stoc'))
+                                            ->helperText(__('Când un tip de bilet are mai puțin sau egal cu acest număr de bilete disponibile, se trimite o alertă.'))
                                             ->numeric()
                                             ->minValue(0)
-                                            ->placeholder('ex: 5')
+                                            ->placeholder(__('ex: 5'))
                                             ->suffix('bilete'),
                                         Forms\Components\TextInput::make('stock_alert_email')
-                                            ->label('Email notificări stoc')
-                                            ->helperText('Adresa pe care se trimit alertele de stoc scăzut.')
+                                            ->label(__('Email notificări stoc'))
+                                            ->helperText(__('Adresa pe care se trimit alertele de stoc scăzut.'))
                                             ->email()
-                                            ->placeholder('alerts@exemplu.ro'),
+                                            ->placeholder(__('alerts@exemplu.ro')),
                                     ])->columns(2),
 
-                                SC\Section::make('Notificări admin')
-                                    ->description('Adrese de email către care se trimit notificări automate. Lasă gol pentru a dezactiva un anumit tip de notificare.')
+                                SC\Section::make(__('Notificări admin'))
+                                    ->description(__('Adrese de email către care se trimit notificări automate. Lasă gol pentru a dezactiva un anumit tip de notificare.'))
                                     ->schema([
                                         Forms\Components\TextInput::make('admin_notification_orders_email')
-                                            ->label('Comenzi bilete & cereri de retur')
+                                            ->label(__('Comenzi bilete & cereri de retur'))
                                             ->email()
-                                            ->placeholder('admin@exemplu.ro')
-                                            ->helperText('Primește notificare la fiecare comandă plătită și la fiecare cerere de retur.'),
+                                            ->placeholder(__('admin@exemplu.ro'))
+                                            ->helperText(__('Primește notificare la fiecare comandă plătită și la fiecare cerere de retur.')),
                                         Forms\Components\TextInput::make('admin_notification_service_orders_email')
-                                            ->label('Comenzi servicii extra')
+                                            ->label(__('Comenzi servicii extra'))
                                             ->email()
-                                            ->placeholder('admin@exemplu.ro')
-                                            ->helperText('Primește notificare la fiecare comandă de servicii noi (featuring, email, tracking, campaign).'),
+                                            ->placeholder(__('admin@exemplu.ro'))
+                                            ->helperText(__('Primește notificare la fiecare comandă de servicii noi (featuring, email, tracking, campaign).')),
                                     ])->columns(2),
                             ]),
 
                         SC\Tabs\Tab::make('Meniu')
                             ->icon('heroicon-o-bars-3')
                             ->schema([
-                                SC\Section::make('Ascunde din meniu')
-                                    ->description('Intrările bifate dispar din meniul acestui marketplace, pentru toți administratorii lui, iar paginile lor nu se mai deschid nici din link direct. Celelalte marketplace-uri nu sunt afectate. Panoul principal și pagina Setări rămân mereu vizibile. Ascunderea unei intrări ascunde și intrările de sub ea. Se aplică după ce salvezi.')
+                                SC\Section::make(__('Ascunde din meniu'))
+                                    ->description(__('Intrările bifate dispar din meniul acestui marketplace, pentru toți administratorii lui, iar paginile lor nu se mai deschid nici din link direct. Celelalte marketplace-uri nu sunt afectate. Panoul principal și pagina Setări rămân mereu vizibile. Ascunderea unei intrări ascunde și intrările de sub ea. Se aplică după ce salvezi.'))
                                     ->schema([
                                         Forms\Components\CheckboxList::make('hidden_navigation')
                                             ->hiddenLabel()
@@ -1483,8 +1483,8 @@ class Settings extends Page
 
         Notification::make()
             ->success()
-            ->title('Settings saved')
-            ->body('Your settings have been updated successfully.')
+            ->title(__('Settings saved'))
+            ->body(__('Your settings have been updated successfully.'))
             ->send();
     }
 
@@ -1586,14 +1586,14 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make($prefix . 'host')
-                    ->label('SMTP Host')
+                    ->label(__('SMTP Host'))
                     ->placeholder('smtp.example.com')
                     ->maxLength(255)
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your mail server hostname'),
 
                 Forms\Components\TextInput::make($prefix . 'port')
-                    ->label('SMTP Port')
+                    ->label(__('SMTP Port'))
                     ->numeric()
                     ->default(587)
                     ->placeholder('587')
@@ -1601,13 +1601,13 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually 587 for TLS, 465 for SSL'),
 
                 Forms\Components\TextInput::make($prefix . 'username')
-                    ->label('Username')
+                    ->label(__('Username'))
                     ->maxLength(255)
                     ->placeholder('your-username')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SMTP authentication username'),
 
                 Forms\Components\TextInput::make($prefix . 'password')
-                    ->label('Password')
+                    ->label(__('Password'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1616,28 +1616,28 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\Select::make($prefix . 'encryption')
-                    ->label('Encryption')
+                    ->label(__('Encryption'))
                     ->options([
-                        'tls' => 'TLS (Recommended)',
-                        'ssl' => 'SSL',
-                        '' => 'None',
+                        'tls' => __('TLS (Recommended)'),
+                        'ssl' => __('SSL'),
+                        '' => __('None'),
                     ])
                     ->default('tls')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Security protocol'),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('noreply@yourdomain.com')
+                    ->placeholder(__('noreply@yourdomain.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender email address'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1651,15 +1651,15 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make($prefix . 'username')
-                    ->label('SMTP Login (Account Email)')
+                    ->label(__('SMTP Login (Account Email)'))
                     ->email()
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('your-brevo-account@email.com')
+                    ->placeholder(__('your-brevo-account@email.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Brevo account email used for SMTP login'),
 
                 Forms\Components\TextInput::make($prefix . 'api_key')
-                    ->label('SMTP Key')
+                    ->label(__('SMTP Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1669,18 +1669,18 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('noreply@yourdomain.com')
+                    ->placeholder(__('noreply@yourdomain.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be a verified sender in Brevo'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1694,7 +1694,7 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make($prefix . 'api_key')
-                    ->label('Server API Token')
+                    ->label(__('Server API Token'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1705,18 +1705,18 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('noreply@yourdomain.com')
+                    ->placeholder(__('noreply@yourdomain.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender signature'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1730,7 +1730,7 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make($prefix . 'api_key')
-                    ->label('API Key')
+                    ->label(__('API Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1740,35 +1740,35 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make($prefix . 'domain')
-                    ->label('Sending Domain')
+                    ->label(__('Sending Domain'))
                     ->maxLength(255)
                     ->placeholder('mg.yourdomain.com')
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified sending domain'),
 
                 Forms\Components\Select::make($prefix . 'region')
-                    ->label('Region')
+                    ->label(__('Region'))
                     ->options([
-                        'us' => 'US (api.mailgun.net)',
-                        'eu' => 'EU (api.eu.mailgun.net)',
+                        'us' => __('US (api.mailgun.net)'),
+                        'eu' => __('EU (api.eu.mailgun.net)'),
                     ])
                     ->default('us')
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Mailgun API region'),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('noreply@mg.yourdomain.com')
+                    ->placeholder(__('noreply@mg.yourdomain.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must use verified domain'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1782,29 +1782,29 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make($prefix . 'api_key')
-                    ->label('API Key')
+                    ->label(__('API Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
-                    ->placeholder('SG.xxxxxxxxxxxxxxxxxxxx')
+                    ->placeholder(__('SG.xxxxxxxxxxxxxxxxxxxx'))
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SendGrid API key with Mail Send permission')
                     ->dehydrated(fn ($state) => filled($state))
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('noreply@yourdomain.com')
+                    ->placeholder(__('noreply@yourdomain.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1818,17 +1818,17 @@ class Settings extends Page
         return [
             SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make($prefix . 'api_key')
-                    ->label('Access Key ID')
+                    ->label(__('Access Key ID'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
-                    ->placeholder('AKIAIOSFODNN7EXAMPLE')
+                    ->placeholder(__('AKIAIOSFODNN7EXAMPLE'))
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'AWS IAM access key')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make($prefix . 'api_secret')
-                    ->label('Secret Access Key')
+                    ->label(__('Secret Access Key'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1838,33 +1838,33 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\Select::make($prefix . 'region')
-                    ->label('AWS Region')
+                    ->label(__('AWS Region'))
                     ->options([
-                        'us-east-1' => 'US East (N. Virginia)',
-                        'us-east-2' => 'US East (Ohio)',
-                        'us-west-1' => 'US West (N. California)',
-                        'us-west-2' => 'US West (Oregon)',
-                        'eu-west-1' => 'EU (Ireland)',
-                        'eu-west-2' => 'EU (London)',
-                        'eu-west-3' => 'EU (Paris)',
-                        'eu-central-1' => 'EU (Frankfurt)',
+                        'us-east-1' => __('US East (N. Virginia)'),
+                        'us-east-2' => __('US East (Ohio)'),
+                        'us-west-1' => __('US West (N. California)'),
+                        'us-west-2' => __('US West (Oregon)'),
+                        'eu-west-1' => __('EU (Ireland)'),
+                        'eu-west-2' => __('EU (London)'),
+                        'eu-west-3' => __('EU (Paris)'),
+                        'eu-central-1' => __('EU (Frankfurt)'),
                     ])
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SES region'),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('noreply@yourdomain.com')
+                    ->placeholder(__('noreply@yourdomain.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified email or domain'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1888,35 +1888,35 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make($prefix . 'username')
-                    ->label('Gmail Address')
+                    ->label(__('Gmail Address'))
                     ->email()
                     ->maxLength(255)
-                    ->placeholder('your-email@gmail.com')
+                    ->placeholder(__('your-email@gmail.com'))
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Gmail address'),
 
                 Forms\Components\TextInput::make($prefix . 'password')
-                    ->label('App Password')
+                    ->label(__('App Password'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
-                    ->placeholder('xxxx xxxx xxxx xxxx')
+                    ->placeholder(__('xxxx xxxx xxxx xxxx'))
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: '16-character app password')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
-                    ->placeholder('your-email@gmail.com')
+                    ->placeholder(__('your-email@gmail.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as Gmail address'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1940,15 +1940,15 @@ class Settings extends Page
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make($prefix . 'username')
-                    ->label('Email Address')
+                    ->label(__('Email Address'))
                     ->email()
                     ->maxLength(255)
-                    ->placeholder('your-email@outlook.com')
+                    ->placeholder(__('your-email@outlook.com'))
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Microsoft 365 / Outlook email'),
 
                 Forms\Components\TextInput::make($prefix . 'password')
-                    ->label('Password / App Password')
+                    ->label(__('Password / App Password'))
                     ->password()
                     ->maxLength(255)
                     ->autocomplete('new-password')
@@ -1958,17 +1958,17 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make($prefix . 'from_address')
-                    ->label('From Email')
+                    ->label(__('From Email'))
                     ->email()
                     ->maxLength(255)
-                    ->placeholder('your-email@outlook.com')
+                    ->placeholder(__('your-email@outlook.com'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as login email'),
 
                 Forms\Components\TextInput::make($prefix . 'from_name')
-                    ->label('From Name')
+                    ->label(__('From Name'))
                     ->maxLength(255)
                     ->required()
-                    ->placeholder('Your Company')
+                    ->placeholder(__('Your Company'))
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
@@ -1986,8 +1986,8 @@ class Settings extends Page
         if (!$marketplace) {
             \Filament\Notifications\Notification::make()
                 ->danger()
-                ->title('No marketplace context')
-                ->body('Could not determine which marketplace to import for. Try the marketplace switcher first.')
+                ->title(__('No marketplace context'))
+                ->body(__('Could not determine which marketplace to import for. Try the marketplace switcher first.'))
                 ->send();
             return;
         }
@@ -1996,8 +1996,8 @@ class Settings extends Page
         if (!$country) {
             \Filament\Notifications\Notification::make()
                 ->warning()
-                ->title('Pick a country first')
-                ->body('Select a country from the dropdown above before running the import.')
+                ->title(__('Pick a country first'))
+                ->body(__('Select a country from the dropdown above before running the import.'))
                 ->send();
             return;
         }
@@ -2036,7 +2036,7 @@ class Settings extends Page
             ]);
             \Filament\Notifications\Notification::make()
                 ->danger()
-                ->title('Geo import failed')
+                ->title(__('Geo import failed'))
                 ->body($e->getMessage())
                 ->persistent()
                 ->send();

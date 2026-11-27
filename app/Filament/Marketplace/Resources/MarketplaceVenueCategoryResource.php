@@ -47,14 +47,14 @@ class MarketplaceVenueCategoryResource extends Resource
                 ->default($marketplace?->id),
 
             // Main Info
-            SC\Section::make('Informații categorie')
+            SC\Section::make(__('Informații categorie'))
                 ->schema([
                     SC\Tabs::make('Name Translations')
                         ->tabs([
                             SC\Tabs\Tab::make('Română')
                                 ->schema([
                                     Forms\Components\TextInput::make('name.ro')
-                                        ->label('Nume categorie (RO)')
+                                        ->label(__('Nume categorie (RO)'))
                                         ->required()
                                         ->maxLength(255)
                                         ->live(onBlur: true)
@@ -62,22 +62,22 @@ class MarketplaceVenueCategoryResource extends Resource
                                             if ($state) $set('slug', Str::slug($state));
                                         }),
                                     Forms\Components\Textarea::make('description.ro')
-                                        ->label('Descriere (RO)')
+                                        ->label(__('Descriere (RO)'))
                                         ->rows(3),
                                 ]),
                             SC\Tabs\Tab::make('English')
                                 ->schema([
                                     Forms\Components\TextInput::make('name.en')
-                                        ->label('Category name (EN)')
+                                        ->label(__('Category name (EN)'))
                                         ->maxLength(255),
                                     Forms\Components\Textarea::make('description.en')
-                                        ->label('Description (EN)')
+                                        ->label(__('Description (EN)'))
                                         ->rows(3),
                                 ]),
                         ])->columnSpanFull(),
 
                     Forms\Components\TextInput::make('slug')
-                        ->label('Slug')
+                        ->label(__('Slug'))
                         ->required()
                         ->maxLength(190)
                         ->unique(ignoreRecord: true)
@@ -86,16 +86,16 @@ class MarketplaceVenueCategoryResource extends Resource
                 ])->columns(1),
 
             // Appearance
-            SC\Section::make('Aspect')
+            SC\Section::make(__('Aspect'))
                 ->schema([
                     Forms\Components\TextInput::make('icon')
-                        ->label('Icon (emoji)')
+                        ->label(__('Icon (emoji)'))
                         ->placeholder('🎭')
                         ->maxLength(10),
                     Forms\Components\ColorPicker::make('color')
-                        ->label('Culoare'),
+                        ->label(__('Culoare')),
                     Forms\Components\FileUpload::make('image_url')
-                        ->label('Imagine')
+                        ->label(__('Imagine'))
                         ->image()
                         ->disk('public')
                         ->directory('venue-categories')
@@ -103,27 +103,27 @@ class MarketplaceVenueCategoryResource extends Resource
                 ])->columns(2),
 
             // Settings
-            SC\Section::make('Setări')
+            SC\Section::make(__('Setări'))
                 ->schema([
                     Forms\Components\TextInput::make('sort_order')
-                        ->label('Ordine afișare')
+                        ->label(__('Ordine afișare'))
                         ->numeric()
                         ->default(0)
                         ->minValue(0),
                     Forms\Components\Toggle::make('is_active')
-                        ->label('Activă')
+                        ->label(__('Activă'))
                         ->default(true),
                     Forms\Components\Toggle::make('is_featured')
-                        ->label('Promovată')
+                        ->label(__('Promovată'))
                         ->default(false),
                 ])->columns(3),
 
             // Venues in this category
-            SC\Section::make('Locații în această categorie')
-                ->description('Selectează locațiile care aparțin acestei categorii')
+            SC\Section::make(__('Locații în această categorie'))
+                ->description(__('Selectează locațiile care aparțin acestei categorii'))
                 ->schema([
                     Forms\Components\Select::make('venues')
-                        ->label('Locații')
+                        ->label(__('Locații'))
                         ->relationship(
                             'venues',
                             'name',
@@ -150,33 +150,33 @@ class MarketplaceVenueCategoryResource extends Resource
                     ->label('')
                     ->alignCenter(),
                 Tables\Columns\TextColumn::make("name.{$lang}")
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\ColorColumn::make('color')
-                    ->label('Culoare'),
+                    ->label(__('Culoare')),
                 Tables\Columns\TextColumn::make('venues_count')
-                    ->label('Locații')
+                    ->label(__('Locații'))
                     ->counts('venues')
                     ->badge()
                     ->color('success'),
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Ordine')
+                    ->label(__('Ordine'))
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Activă')
+                    ->label(__('Activă'))
                     ->boolean(),
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Promovată')
+                    ->label(__('Promovată'))
                     ->boolean(),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Promovate'),
+                    ->label(__('Promovate')),
             ])
             ->actions([
                 EditAction::make(),

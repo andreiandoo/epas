@@ -851,7 +851,7 @@ class EventActivityLog extends Page
     {
         return [
             \Filament\Actions\Action::make('back_to_edit')
-                ->label('Înapoi la editare')
+                ->label(__('Înapoi la editare'))
                 ->icon('heroicon-o-arrow-left')
                 ->url(EventResource::getUrl('edit', ['record' => $this->record])),
         ];

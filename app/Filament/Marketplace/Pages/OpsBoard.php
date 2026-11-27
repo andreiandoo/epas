@@ -149,7 +149,7 @@ class OpsBoard extends Page
         $label = fn (array $arguments) => EventDocumentFilingService::TYPE_LABELS[$arguments['type'] ?? ''] ?? 'Document';
 
         return Actions\Action::make('markFiled')
-            ->label('Am depus')
+            ->label(__('Am depus'))
             ->modalHeading(fn (array $arguments) => 'Am depus: ' . $label($arguments))
             ->modalDescription(function (array $arguments) use ($event) {
                 $record = $event($arguments);
@@ -159,25 +159,25 @@ class OpsBoard extends Page
                 return $title !== '' ? $title : null;
             })
             ->modalWidth('md')
-            ->modalSubmitActionLabel('Confirmă depunerea')
+            ->modalSubmitActionLabel(__('Confirmă depunerea'))
             ->fillForm(fn () => ['filed_on' => Carbon::now($this->tz())->toDateString()])
             ->form([
                 Forms\Components\DatePicker::make('filed_on')
                     ->native(false)
                     ->displayFormat('d/m/Y')
-                    ->label('Data depunerii')
+                    ->label(__('Data depunerii'))
                     ->maxDate(Carbon::now($this->tz())->toDateString())
                     ->required(),
                 Forms\Components\TextInput::make('registration_number')
-                    ->label('Nr. înregistrare')
-                    ->helperText('Opțional, se poate adăuga și mai târziu din tab-ul Documente.')
+                    ->label(__('Nr. înregistrare'))
+                    ->helperText(__('Opțional, se poate adăuga și mai târziu din tab-ul Documente.'))
                     ->maxLength(100)
                     ->live(onBlur: true),
                 Forms\Components\DatePicker::make('registration_date')
                     ->native(false)
                     ->displayFormat('d/m/Y')
-                    ->label('Data înregistrării')
-                    ->helperText('Implicit, ziua depunerii.')
+                    ->label(__('Data înregistrării'))
+                    ->helperText(__('Implicit, ziua depunerii.'))
                     ->maxDate(Carbon::now($this->tz())->toDateString())
                     ->visible(fn ($get) => filled($get('registration_number'))),
             ])
@@ -185,7 +185,7 @@ class OpsBoard extends Page
                 $record = $event($arguments);
                 $admin = Auth::guard('marketplace_admin')->user();
                 if (! $record || ! $admin) {
-                    Notification::make()->danger()->title('Evenimentul nu a fost găsit.')->send();
+                    Notification::make()->danger()->title(__('Evenimentul nu a fost găsit.'))->send();
 
                     return;
                 }
@@ -209,12 +209,12 @@ class OpsBoard extends Page
     {
         return [
             Actions\Action::make('settings')
-                ->label('Setări')
+                ->label(__('Setări'))
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
                 ->visible(fn () => $this->canManage())
-                ->modalHeading('Setări tablă')
-                ->modalSubmitActionLabel('Salvează')
+                ->modalHeading(__('Setări tablă'))
+                ->modalSubmitActionLabel(__('Salvează'))
                 ->fillForm(fn () => [
                     'default_view' => $this->setting('default_view') === 'month' ? 'month' : 'week',
                     'track_from' => $this->trackFrom()->toDateString(),
@@ -223,21 +223,21 @@ class OpsBoard extends Page
                 ])
                 ->form([
                     Forms\Components\Select::make('default_view')
-                        ->label('Perioada afișată implicit')
-                        ->options(['week' => 'Săptămână', 'month' => 'Lună'])
+                        ->label(__('Perioada afișată implicit'))
+                        ->options(['week' => __('Săptămână'), 'month' => __('Lună')])
                         ->required()
                         ->native(false),
                     Forms\Components\DatePicker::make('track_from')
-                        ->label('Urmărim restanțele de la')
-                        ->helperText('Evenimentele încheiate înainte de această dată nu apar la restanțe.')
+                        ->label(__('Urmărim restanțele de la'))
+                        ->helperText(__('Evenimentele încheiate înainte de această dată nu apar la restanțe.'))
                         ->maxDate(now())
                         ->required(),
                     Forms\Components\Toggle::make('digest_enabled')
-                        ->label('Rezumat pe email luni dimineața')
-                        ->helperText('Către administratori și super administratori: ce e restant și ce e de făcut în săptămâna care începe.'),
+                        ->label(__('Rezumat pe email luni dimineața'))
+                        ->helperText(__('Către administratori și super administratori: ce e restant și ce e de făcut în săptămâna care începe.')),
                     Forms\Components\TextInput::make('escalate_days')
-                        ->label('Escaladare către super administratori după')
-                        ->helperText('În zilele lucrătoare, super administratorii primesc lista cu ce e restant de cel puțin atâtea zile. 0 = fără escaladare.')
+                        ->label(__('Escaladare către super administratori după'))
+                        ->helperText(__('În zilele lucrătoare, super administratorii primesc lista cu ce e restant de cel puțin atâtea zile. 0 = fără escaladare.'))
                         ->numeric()
                         ->minValue(0)
                         ->maxValue(60)
@@ -255,7 +255,7 @@ class OpsBoard extends Page
                         'digest_enabled' => (bool) ($data['digest_enabled'] ?? false),
                         'escalate_days' => max(0, (int) ($data['escalate_days'] ?? 0)),
                     ])]);
-                    Notification::make()->success()->title('Setări salvate')->send();
+                    Notification::make()->success()->title(__('Setări salvate'))->send();
                 }),
         ];
     }

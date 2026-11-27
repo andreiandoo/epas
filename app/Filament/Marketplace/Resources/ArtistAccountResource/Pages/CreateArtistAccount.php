@@ -37,19 +37,19 @@ class CreateArtistAccount extends CreateRecord
     public function form(Schema $schema): Schema
     {
         return $schema->components([
-            SC\Section::make('Cont')
+            SC\Section::make(__('Cont'))
                 ->icon('heroicon-o-user')
                 ->schema([
                     Forms\Components\TextInput::make('first_name')
-                        ->label('Prenume')
+                        ->label(__('Prenume'))
                         ->required()
                         ->maxLength(100),
                     Forms\Components\TextInput::make('last_name')
-                        ->label('Nume')
+                        ->label(__('Nume'))
                         ->required()
                         ->maxLength(100),
                     Forms\Components\TextInput::make('email')
-                        ->label('Email')
+                        ->label(__('Email'))
                         ->email()
                         ->required()
                         ->maxLength(190)
@@ -60,21 +60,21 @@ class CreateArtistAccount extends CreateRecord
                                 ->where('marketplace_client_id', static::getMarketplaceClient()?->id),
                         ]),
                     Forms\Components\TextInput::make('phone')
-                        ->label('Telefon')
+                        ->label(__('Telefon'))
                         ->tel()
                         ->maxLength(50),
                     Forms\Components\Select::make('locale')
-                        ->label('Limbă')
-                        ->options(['ro' => 'Română', 'en' => 'English', 'de' => 'Deutsch', 'fr' => 'Français', 'es' => 'Español'])
+                        ->label(__('Limbă'))
+                        ->options(['ro' => __('Română'), 'en' => __('English'), 'de' => __('Deutsch'), 'fr' => __('Français'), 'es' => __('Español')])
                         ->default('ro')
                         ->required(),
                 ])->columns(2),
 
-            SC\Section::make('Profil revendicat')
+            SC\Section::make(__('Profil revendicat'))
                 ->icon('heroicon-o-musical-note')
                 ->schema([
                     Forms\Components\Select::make('artist_id')
-                        ->label('Artist')
+                        ->label(__('Artist'))
                         ->required()
                         ->searchable()
                         // Initial list (shown before the user types). We
@@ -107,7 +107,7 @@ class CreateArtistAccount extends CreateRecord
                                 ->toArray();
                         })
                         ->getOptionLabelUsing(fn ($value) => Artist::find($value)?->name)
-                        ->helperText('Doar artiștii care sunt parteneri ai marketplace-ului tău apar aici. Caută cu sau fără diacritice.')
+                        ->helperText(__('Doar artiștii care sunt parteneri ai marketplace-ului tău apar aici. Caută cu sau fără diacritice.'))
                         ->rules([
                             // Reject if the artist already has an active or
                             // pending claim on this marketplace.
@@ -127,12 +127,12 @@ class CreateArtistAccount extends CreateRecord
                         ]),
                 ]),
 
-            SC\Section::make('Parolă')
+            SC\Section::make(__('Parolă'))
                 ->icon('heroicon-o-key')
-                ->description('Setează manual sau generează una aleator. Artistul își poate schimba parola din /artist/cont/setari.')
+                ->description(__('Setează manual sau generează una aleator. Artistul își poate schimba parola din /artist/cont/setari.'))
                 ->schema([
                     Forms\Components\TextInput::make('password')
-                        ->label('Parolă')
+                        ->label(__('Parolă'))
                         ->password()
                         ->required()
                         ->minLength(8)
@@ -141,14 +141,14 @@ class CreateArtistAccount extends CreateRecord
                         ->suffixAction(
                             \Filament\Actions\Action::make('generate_password')
                                 ->icon('heroicon-m-arrow-path')
-                                ->label('Generează')
+                                ->label(__('Generează'))
                                 ->action(function (Set $set) {
                                     $set('password', Str::random(12));
                                 })
                         ),
                     Forms\Components\Toggle::make('send_credentials_email')
-                        ->label('Trimite email cu credențiale')
-                        ->helperText('Artistul primește pe email-ul de mai sus credențialele de login. (Funcție pregătită pentru viitor — momentan necredențialele se transmit manual.)')
+                        ->label(__('Trimite email cu credențiale'))
+                        ->helperText(__('Artistul primește pe email-ul de mai sus credențialele de login. (Funcție pregătită pentru viitor — momentan necredențialele se transmit manual.)'))
                         ->default(false)
                         ->disabled()
                         ->dehydrated(false),
@@ -192,8 +192,8 @@ class CreateArtistAccount extends CreateRecord
     protected function afterCreate(): void
     {
         Notification::make()
-            ->title('Cont creat')
-            ->body('Contul de artist a fost creat și marcat ca activ.')
+            ->title(__('Cont creat'))
+            ->body(__('Contul de artist a fost creat și marcat ca activ.'))
             ->success()
             ->send();
     }

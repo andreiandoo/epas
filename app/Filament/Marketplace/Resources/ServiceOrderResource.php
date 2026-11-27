@@ -57,26 +57,26 @@ class ServiceOrderResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Order Information')
+                Section::make(__('Order Information'))
                     ->schema([
                         Forms\Components\Placeholder::make('order_number_display')
-                            ->label('Order Number')
+                            ->label(__('Order Number'))
                             ->content(fn (?ServiceOrder $record): string => $record?->order_number ?? '-'),
 
                         Forms\Components\Placeholder::make('organizer_display')
-                            ->label('Organizer')
+                            ->label(__('Organizer'))
                             ->content(fn (?ServiceOrder $record): string => $record?->organizer?->name ?? '-'),
 
                         Forms\Components\Placeholder::make('event_display')
-                            ->label('Event')
+                            ->label(__('Event'))
                             ->content(fn (?ServiceOrder $record): string => $record?->event?->name ?? '-'),
 
                         Forms\Components\Placeholder::make('type_display')
-                            ->label('Service Type')
+                            ->label(__('Service Type'))
                             ->content(fn (?ServiceOrder $record): string => $record?->service_type_label ?? '-'),
 
                         Forms\Components\Placeholder::make('locations_display')
-                            ->label('Plasamente / Detalii')
+                            ->label(__('Plasamente / Detalii'))
                             ->columnSpanFull()
                             ->content(function (?ServiceOrder $record): string {
                                 if (! $record) return '-';
@@ -117,10 +117,10 @@ class ServiceOrderResource extends Resource
                     ])
                     ->columns(4),
 
-                Section::make('Pricing')
+                Section::make(__('Pricing'))
                     ->schema([
                         Forms\Components\Placeholder::make('subtotal_display')
-                            ->label('Subtotal (fără TVA)')
+                            ->label(__('Subtotal (fără TVA)'))
                             ->content(fn (?ServiceOrder $record): string =>
                                 $record ? number_format($record->subtotal, 2) . ' ' . $record->currency : '-'),
 
@@ -132,24 +132,24 @@ class ServiceOrderResource extends Resource
                                 $record ? number_format($record->tax, 2) . ' ' . $record->currency : '-'),
 
                         Forms\Components\Placeholder::make('total_display')
-                            ->label('Total')
+                            ->label(__('Total'))
                             ->content(fn (?ServiceOrder $record): string =>
                                 $record ? number_format($record->total, 2) . ' ' . $record->currency : '-'),
 
                         Forms\Components\Placeholder::make('payment_status_display')
-                            ->label('Payment Status')
+                            ->label(__('Payment Status'))
                             ->content(fn (?ServiceOrder $record): string => $record?->payment_status_label ?? '-'),
                     ])
                     ->columns(4),
 
-                Section::make('Status & Dates')
+                Section::make(__('Status & Dates'))
                     ->schema([
                         Forms\Components\Placeholder::make('status_display')
-                            ->label('Status')
+                            ->label(__('Status'))
                             ->content(fn (?ServiceOrder $record): string => $record?->status_label ?? '-'),
 
                         Forms\Components\Placeholder::make('service_start_display')
-                            ->label('Service Start')
+                            ->label(__('Service Start'))
                             ->content(function (?ServiceOrder $record): string {
                                 if (!$record) return '-';
                                 // For email: show scheduled_at (when emails should start sending)
@@ -160,7 +160,7 @@ class ServiceOrderResource extends Resource
                             }),
 
                         Forms\Components\Placeholder::make('service_end_display')
-                            ->label('Service End')
+                            ->label(__('Service End'))
                             ->content(function (?ServiceOrder $record): string {
                                 if (!$record) return '-';
                                 // For email: show executed_at (when sending completed)
@@ -171,13 +171,13 @@ class ServiceOrderResource extends Resource
                             }),
 
                         Forms\Components\Placeholder::make('created_display')
-                            ->label('Created At')
+                            ->label(__('Created At'))
                             ->content(fn (?ServiceOrder $record): string =>
                                 $record?->created_at?->format('Y-m-d H:i') ?? '-'),
                     ])
                     ->columns(4),
 
-                Section::make('Email Campaign Stats')
+                Section::make(__('Email Campaign Stats'))
                     ->schema([
                         Forms\Components\Placeholder::make('email_stats_display')
                             ->label('')
@@ -242,7 +242,7 @@ class ServiceOrderResource extends Resource
                         $record?->service_type === 'email'
                     ),
 
-                Section::make('Status pixel-uri Ad Tracking')
+                Section::make(__('Status pixel-uri Ad Tracking'))
                     ->visible(fn (?ServiceOrder $record): bool => $record?->service_type === ServiceOrder::TYPE_TRACKING)
                     ->schema([
                         Forms\Components\Placeholder::make('tracking_pixels_status')
@@ -297,17 +297,17 @@ class ServiceOrderResource extends Resource
                             }),
                     ]),
 
-                Section::make('Service Configuration')
+                Section::make(__('Service Configuration'))
                     ->schema([
                         Forms\Components\Placeholder::make('config_display')
-                            ->label('Configuration')
+                            ->label(__('Configuration'))
                             ->content(fn (?ServiceOrder $record): string =>
                                 $record ? json_encode($record->config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) : '-')
                             ->columnSpanFull(),
                     ])
                     ->collapsed(),
 
-                Section::make('Admin Notes')
+                Section::make(__('Admin Notes'))
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
                             ->rows(3)
@@ -322,28 +322,28 @@ class ServiceOrderResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('order_number')
-                    ->label('Order #')
+                    ->label(__('Order #'))
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->searchable()
                     ->sortable()
                     ->limit(25)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('event.name')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->searchable()
                     ->sortable()
                     ->limit(25)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('service_type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'featuring' => 'primary',
@@ -364,7 +364,7 @@ class ServiceOrderResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total')
-                    ->label('Total (incl. TVA)')
+                    ->label(__('Total (incl. TVA)'))
                     ->money('RON')
                     ->sortable()
                     ->toggleable(),
@@ -405,13 +405,13 @@ class ServiceOrderResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('service_start_date')
-                    ->label('Start Date')
+                    ->label(__('Start Date'))
                     ->date()
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('service_end_date')
-                    ->label('End Date')
+                    ->label(__('End Date'))
                     ->date()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -424,32 +424,32 @@ class ServiceOrderResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'pending_payment' => 'Pending Payment',
-                        'processing' => 'Processing',
-                        'active' => 'Active',
-                        'completed' => 'Completed',
-                        'cancelled' => 'Cancelled',
-                        'refunded' => 'Refunded',
+                        'draft' => __('Draft'),
+                        'pending_payment' => __('Pending Payment'),
+                        'processing' => __('Processing'),
+                        'active' => __('Active'),
+                        'completed' => __('Completed'),
+                        'cancelled' => __('Cancelled'),
+                        'refunded' => __('Refunded'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('service_type')
-                    ->label('Service Type')
+                    ->label(__('Service Type'))
                     ->options([
-                        'featuring' => 'Featuring',
+                        'featuring' => __('Featuring'),
                         // bilete.online only (activities module).
-                        'location_featuring' => 'Promovare locatie',
-                        'email' => 'Email Marketing',
-                        'tracking' => 'Ad Tracking',
-                        'campaign' => 'Campaign Creation',
+                        'location_featuring' => __('Promovare locatie'),
+                        'email' => __('Email Marketing'),
+                        'tracking' => __('Ad Tracking'),
+                        'campaign' => __('Campaign Creation'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('payment_status')
                     ->options([
-                        'pending' => 'Pending',
-                        'paid' => 'Paid',
-                        'failed' => 'Failed',
-                        'refunded' => 'Refunded',
+                        'pending' => __('Pending'),
+                        'paid' => __('Paid'),
+                        'failed' => __('Failed'),
+                        'refunded' => __('Refunded'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('organizer')
@@ -457,7 +457,7 @@ class ServiceOrderResource extends Resource
             ])
             ->recordActions([
                 Action::make('mark_paid')
-                    ->label('Mark as Paid')
+                    ->label(__('Mark as Paid'))
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
                     ->requiresConfirmation()
@@ -467,7 +467,7 @@ class ServiceOrderResource extends Resource
                     )
                     ->form([
                         Forms\Components\TextInput::make('payment_reference')
-                            ->label('Payment Reference')
+                            ->label(__('Payment Reference'))
                             ->required()
                             ->maxLength(255),
                     ])
@@ -477,7 +477,7 @@ class ServiceOrderResource extends Resource
                     }),
 
                 Action::make('activate')
-                    ->label('Activate')
+                    ->label(__('Activate'))
                     ->icon('heroicon-o-play')
                     ->color('success')
                     ->requiresConfirmation()
@@ -490,7 +490,7 @@ class ServiceOrderResource extends Resource
                     }),
 
                 Action::make('complete')
-                    ->label('Complete')
+                    ->label(__('Complete'))
                     ->icon('heroicon-o-check-circle')
                     ->color('primary')
                     ->requiresConfirmation()
@@ -502,14 +502,14 @@ class ServiceOrderResource extends Resource
                     }),
 
                 Action::make('cancel')
-                    ->label('Cancel')
+                    ->label(__('Cancel'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (ServiceOrder $record): bool => $record->canBeCancelled())
                     ->form([
                         Forms\Components\Textarea::make('cancellation_reason')
-                            ->label('Reason')
+                            ->label(__('Reason'))
                             ->rows(2),
                     ])
                     ->action(function (ServiceOrder $record, array $data): void {

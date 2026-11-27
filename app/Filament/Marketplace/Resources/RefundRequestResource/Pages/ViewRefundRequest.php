@@ -21,19 +21,19 @@ class ViewRefundRequest extends ViewRecord
                 ->color('success')
                 ->form([
                     \Filament\Forms\Components\TextInput::make('approved_amount')
-                        ->label('Approved Amount')
+                        ->label(__('Approved Amount'))
                         ->numeric()
                         ->required()
                         ->default(fn () => $this->record->requested_amount)
                         ->prefix('RON'),
                     \Filament\Forms\Components\Textarea::make('notes')
-                        ->label('Admin Notes'),
+                        ->label(__('Admin Notes')),
                 ])
                 ->visible(fn () => in_array($this->record->status, ['pending', 'under_review']))
                 ->action(function (array $data) {
                     $this->record->approve($data['approved_amount'], $data['notes']);
                     Notification::make()
-                        ->title('Refund Approved')
+                        ->title(__('Refund Approved'))
                         ->success()
                         ->send();
                     $this->refreshFormData(['status', 'approved_amount', 'admin_notes']);
@@ -44,7 +44,7 @@ class ViewRefundRequest extends ViewRecord
                 ->color('danger')
                 ->form([
                     \Filament\Forms\Components\Textarea::make('reason')
-                        ->label('Rejection Reason')
+                        ->label(__('Rejection Reason'))
                         ->required(),
                 ])
                 ->visible(fn () => in_array($this->record->status, ['pending', 'under_review']))
@@ -52,28 +52,28 @@ class ViewRefundRequest extends ViewRecord
                 ->action(function (array $data) {
                     $this->record->reject($data['reason']);
                     Notification::make()
-                        ->title('Refund Rejected')
+                        ->title(__('Refund Rejected'))
                         ->warning()
                         ->send();
                     $this->refreshFormData(['status', 'admin_notes']);
                 }),
 
             Actions\Action::make('process_refund')
-                ->label('Process Refund')
+                ->label(__('Process Refund'))
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
                 ->form([
                     \Filament\Forms\Components\Select::make('method')
-                        ->label('Refund Method')
+                        ->label(__('Refund Method'))
                         ->options([
-                            'auto' => 'Automatic (via payment provider)',
-                            'manual' => 'Manual (mark as completed)',
+                            'auto' => __('Automatic (via payment provider)'),
+                            'manual' => __('Manual (mark as completed)'),
                         ])
                         ->required()
                         ->default('auto'),
                     \Filament\Forms\Components\TextInput::make('reference')
-                        ->label('Reference Number')
-                        ->helperText('Required for manual refunds'),
+                        ->label(__('Reference Number'))
+                        ->helperText(__('Required for manual refunds')),
                 ])
                 ->visible(fn () => $this->record->status === 'approved')
                 ->action(function (array $data) {
@@ -81,7 +81,7 @@ class ViewRefundRequest extends ViewRecord
                         $success = $this->record->attemptAutoRefund();
                         if (!$success) {
                             Notification::make()
-                                ->title('Auto Refund Failed')
+                                ->title(__('Auto Refund Failed'))
                                 ->body($this->record->auto_refund_error)
                                 ->danger()
                                 ->send();
@@ -92,7 +92,7 @@ class ViewRefundRequest extends ViewRecord
                     }
 
                     Notification::make()
-                        ->title('Refund Processed')
+                        ->title(__('Refund Processed'))
                         ->success()
                         ->send();
 

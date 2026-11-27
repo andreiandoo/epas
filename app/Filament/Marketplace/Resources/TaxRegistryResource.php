@@ -56,11 +56,11 @@ class TaxRegistryResource extends Resource
         return $schema
             ->columns(1)
             ->components([
-                Section::make('Tax Registry')
+                Section::make(__('Tax Registry'))
                     ->icon('heroicon-o-building-library')
                     ->schema([
                         Forms\Components\Select::make('country')
-                            ->label('Country')
+                            ->label(__('Country'))
                             ->options($countries)
                             ->default('Romania')
                             ->required()
@@ -81,7 +81,7 @@ class TaxRegistryResource extends Resource
                         // misses. Free text accepts everything; the
                         // datalist still suggests what's available.
                         Forms\Components\TextInput::make('county')
-                            ->label('County / Județ')
+                            ->label(__('County / Județ'))
                             ->maxLength(255)
                             ->live(onBlur: true)
                             ->datalist(function (SGet $get) use ($locationService) {
@@ -91,10 +91,10 @@ class TaxRegistryResource extends Resource
                                 if (!$code) return [];
                                 return array_values($locationService->getStates($code));
                             })
-                            ->helperText('Sugestii din dataset (datalist). Poți tasta orice — București, Bucuresti, Ilfov etc.'),
+                            ->helperText(__('Sugestii din dataset (datalist). Poți tasta orice — București, Bucuresti, Ilfov etc.')),
 
                         Forms\Components\TextInput::make('city')
-                            ->label('City / Oraș')
+                            ->label(__('City / Oraș'))
                             ->maxLength(255)
                             ->datalist(function (SGet $get) use ($locationService) {
                                 $country = $get('country');
@@ -104,53 +104,53 @@ class TaxRegistryResource extends Resource
                                 if (!$code) return [];
                                 return array_values($locationService->getCities($code, $county));
                             })
-                            ->helperText('Pentru sectoarele Bucureștiului: County = "Bucharest" → datalist va sugera Sector 1-6.'),
+                            ->helperText(__('Pentru sectoarele Bucureștiului: County = "Bucharest" → datalist va sugera Sector 1-6.')),
 
                         Forms\Components\TextInput::make('commune')
-                            ->label('Comună / Sector')
+                            ->label(__('Comună / Sector'))
                             ->maxLength(255)
-                            ->placeholder('ex: Comuna Berceni, sau Sector 1 dacă City nu acoperă cazul')
-                            ->helperText('Câmp liber pentru subdiviziuni (comune, sectoare etc.) care nu apar în lista City.'),
+                            ->placeholder(__('ex: Comuna Berceni, sau Sector 1 dacă City nu acoperă cazul'))
+                            ->helperText(__('Câmp liber pentru subdiviziuni (comune, sectoare etc.) care nu apar în lista City.')),
 
                         Forms\Components\TextInput::make('name')
-                            ->label('Name')
+                            ->label(__('Name'))
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('Company or Person Name'),
+                            ->placeholder(__('Company or Person Name')),
 
                         Forms\Components\TextInput::make('subname')
-                            ->label('Subname / Department')
+                            ->label(__('Subname / Department'))
                             ->maxLength(255)
-                            ->placeholder('Optional subdivision'),
+                            ->placeholder(__('Optional subdivision')),
 
                         Forms\Components\Textarea::make('address')
-                            ->label('Address')
+                            ->label(__('Address'))
                             ->rows(2)
                             ->columnSpanFull(),
 
                         Forms\Components\Textarea::make('directions')
-                            ->label('Indicații')
+                            ->label(__('Indicații'))
                             ->rows(3)
                             ->columnSpanFull()
-                            ->placeholder('Indicații de acces, puncte de reper, etc.'),
+                            ->placeholder(__('Indicații de acces, puncte de reper, etc.')),
 
                         Forms\Components\TextInput::make('phone')
-                            ->label('Phone')
+                            ->label(__('Phone'))
                             ->maxLength(255)
-                            ->placeholder('ex: 021 318 03 40 / 0312 256 411 (poate conține mai multe numere, fax, etc.)'),
+                            ->placeholder(__('ex: 021 318 03 40 / 0312 256 411 (poate conține mai multe numere, fax, etc.)')),
 
                         Forms\Components\TextInput::make('email')
-                            ->label('Email')
+                            ->label(__('Email'))
                             ->email()
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('email2')
-                            ->label('Email 2')
+                            ->label(__('Email 2'))
                             ->email()
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('website_url')
-                            ->label('Website URL')
+                            ->label(__('Website URL'))
                             // ->url() removed 2026-08-17 — some tax
                             // registries publish plain hostnames ("dgitl-s1.ro")
                             // instead of proper URLs, and the validator
@@ -159,22 +159,22 @@ class TaxRegistryResource extends Resource
                             ->placeholder('https://...'),
 
                         Forms\Components\TextInput::make('cif')
-                            ->label('CIF / Tax ID')
+                            ->label(__('CIF / Tax ID'))
                             ->maxLength(50)
-                            ->placeholder('e.g., RO12345678'),
+                            ->placeholder(__('e.g., RO12345678')),
 
                         Forms\Components\TextInput::make('iban')
-                            ->label('IBAN')
+                            ->label(__('IBAN'))
                             ->maxLength(50)
-                            ->placeholder('e.g., RO49AAAA1B31007593840000'),
+                            ->placeholder(__('e.g., RO49AAAA1B31007593840000')),
 
                         Forms\Components\TextInput::make('siruta_code')
-                            ->label('Cod SIRUTA')
+                            ->label(__('Cod SIRUTA'))
                             ->maxLength(50),
 
                         Forms\Components\TextInput::make('tax_rate')
-                            ->label('Cotă')
-                            ->helperText('Procent de impozitare (ex: 2 sau 5)')
+                            ->label(__('Cotă'))
+                            ->helperText(__('Procent de impozitare (ex: 2 sau 5)'))
                             ->numeric()
                             ->minValue(0)
                             ->maxValue(100)
@@ -182,8 +182,8 @@ class TaxRegistryResource extends Resource
                             ->suffix('%'),
 
                         Forms\Components\FileUpload::make('coat_of_arms')
-                            ->label('Stema')
-                            ->helperText('Imagine PNG/JPG cu stema unității administrativ-teritoriale.')
+                            ->label(__('Stema'))
+                            ->helperText(__('Imagine PNG/JPG cu stema unității administrativ-teritoriale.'))
                             ->disk('public')
                             ->directory('tax-registry-coat-of-arms')
                             ->image()
@@ -195,49 +195,49 @@ class TaxRegistryResource extends Resource
                             ->columnSpanFull(),
 
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
+                            ->label(__('Active'))
                             ->default(true),
                     ])
                     ->columns(2),
 
-                Section::make('Depunerea documentelor')
+                Section::make(__('Depunerea documentelor'))
                     ->icon('heroicon-o-paper-airplane')
-                    ->description('Cum ajung la această primărie cererea de vizare, impozitul și PV-ul de distrugere.')
+                    ->description(__('Cum ajung la această primărie cererea de vizare, impozitul și PV-ul de distrugere.'))
                     ->schema([
                         Forms\Components\Select::make('submission_method')
-                            ->label('Cum se depun actele')
+                            ->label(__('Cum se depun actele'))
                             ->options([
                                 MarketplaceTaxRegistry::SUBMISSION_EMAIL => 'Pe email',
                                 MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY => 'Prin soluție terță',
                             ])
-                            ->placeholder('Nesetat')
+                            ->placeholder(__('Nesetat'))
                             ->native(false)
                             ->live(),
 
                         Forms\Components\TextInput::make('submission_email')
-                            ->label('Email pentru documente')
+                            ->label(__('Email pentru documente'))
                             ->email()
                             ->maxLength(255)
-                            ->helperText('Lasă gol ca să folosim adresa de Email de mai sus.')
+                            ->helperText(__('Lasă gol ca să folosim adresa de Email de mai sus.'))
                             ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_EMAIL),
 
                         Forms\Components\TextInput::make('third_party_name')
-                            ->label('Numele soluției terțe')
+                            ->label(__('Numele soluției terțe'))
                             ->maxLength(255)
                             ->required(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY)
                             ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY),
 
                         Forms\Components\TextInput::make('third_party_url')
-                            ->label('Link către soluția terță')
+                            ->label(__('Link către soluția terță'))
                             ->maxLength(500)
                             ->placeholder('https://...')
                             ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY),
 
                         Forms\Components\Textarea::make('third_party_procedure')
-                            ->label('Procedura de depunere')
+                            ->label(__('Procedura de depunere'))
                             ->rows(6)
                             ->columnSpanFull()
-                            ->placeholder('Pașii de urmat: unde te autentifici, ce formular alegi, ce atașezi...')
+                            ->placeholder(__('Pașii de urmat: unde te autentifici, ce formular alegi, ce atașezi...'))
                             ->visible(fn (SGet $get) => $get('submission_method') === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY),
                     ])
                     ->columns(2),
@@ -249,66 +249,66 @@ class TaxRegistryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable()
                     ->description(fn ($record) => $record->subname),
 
                 Tables\Columns\TextColumn::make('cif')
-                    ->label('CIF')
+                    ->label(__('CIF'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('county')
-                    ->label('County')
+                    ->label(__('County'))
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('city')
-                    ->label('City')
+                    ->label(__('City'))
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('submission_method')
-                    ->label('Depunere')
+                    ->label(__('Depunere'))
                     ->state(fn ($record) => $record->submissionLabel() ?? 'Nesetat')
                     ->badge()
                     ->color(fn ($record) => $record->submission_method ? 'success' : 'warning')
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('email')
-                    ->label('Email')
+                    ->label(__('Email'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('phone')
-                    ->label('Phone')
+                    ->label(__('Phone'))
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Last Modified')
+                    ->label(__('Last Modified'))
                     ->dateTime('d M Y, H:i')
                     ->sortable(),
             ])
             ->defaultSort('updated_at', 'desc')
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
 
                 Tables\Filters\SelectFilter::make('submission_method')
-                    ->label('Depunere')
+                    ->label(__('Depunere'))
                     ->options([
                         MarketplaceTaxRegistry::SUBMISSION_EMAIL => 'Pe email',
                         MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY => 'Prin soluție terță',
                     ]),
 
                 Tables\Filters\SelectFilter::make('county')
-                    ->label('County')
+                    ->label(__('County'))
                     ->options(function () {
                         $locationService = app(LocationService::class);
                         return $locationService->getStates('ro');

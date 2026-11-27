@@ -78,10 +78,10 @@ class CouponCodeResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Code Information')
+                SC\Section::make(__('Code Information'))
                     ->schema([
                         Forms\Components\TextInput::make('code')
-                            ->label('Code')
+                            ->label(__('Code'))
                             ->required()
                             ->maxLength(50)
                             ->unique(
@@ -97,7 +97,7 @@ class CouponCodeResource extends Resource
                             ->dehydrateStateUsing(fn ($state) => strtoupper((string) $state)),
 
                         Forms\Components\Select::make('campaign_id')
-                            ->label('Campaign')
+                            ->label(__('Campaign'))
                             ->relationship(
                                 'campaign',
                                 'name',
@@ -109,20 +109,20 @@ class CouponCodeResource extends Resource
 
                         Forms\Components\Select::make('status')
                             ->options([
-                                'active' => 'Active',
-                                'disabled' => 'Inactive',
-                                'exhausted' => 'Exhausted',
-                                'expired' => 'Expired',
+                                'active' => __('Active'),
+                                'disabled' => __('Inactive'),
+                                'exhausted' => __('Exhausted'),
+                                'expired' => __('Expired'),
                             ])
                             ->default('active')
                             ->required(),
                     ])->columns(3),
 
-                SC\Section::make('Event & Ticket Targeting')
+                SC\Section::make(__('Event & Ticket Targeting'))
                     ->extraAttributes(['style' => 'overflow: visible;'])
                     ->schema([
                         Forms\Components\Select::make('marketplace_organizer_id')
-                            ->label('Organizer')
+                            ->label(__('Organizer'))
                             ->options(function () use ($marketplace) {
                                 return MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
                                     ->orderBy('name')
@@ -137,7 +137,7 @@ class CouponCodeResource extends Resource
                             }),
 
                         Forms\Components\Select::make('applicable_events')
-                            ->label('Events')
+                            ->label(__('Events'))
                             ->multiple()
                             ->searchable()
                             ->preload()
@@ -171,10 +171,10 @@ class CouponCodeResource extends Resource
                                     }
                                 }
                             })
-                            ->helperText('Select events this code applies to. Leave empty for all events.'),
+                            ->helperText(__('Select events this code applies to. Leave empty for all events.')),
 
                         Forms\Components\Select::make('applicable_ticket_types')
-                            ->label('Ticket Types')
+                            ->label(__('Ticket Types'))
                             ->multiple()
                             ->searchable()
                             ->options(function (Get $get) {
@@ -191,84 +191,84 @@ class CouponCodeResource extends Resource
                                     ]);
                             })
                             ->visible(fn (Get $get) => !empty($get('applicable_events')))
-                            ->helperText('Leave empty to apply to all ticket types of selected events.'),
+                            ->helperText(__('Leave empty to apply to all ticket types of selected events.')),
                     ])->columns(3),
 
-                SC\Section::make('Discount')
+                SC\Section::make(__('Discount'))
                     ->schema([
                         Forms\Components\Select::make('discount_type')
                             ->options([
-                                'percentage' => 'Percentage',
-                                'fixed_amount' => 'Fixed Amount',
-                                'free_shipping' => 'Free Shipping',
+                                'percentage' => __('Percentage'),
+                                'fixed_amount' => __('Fixed Amount'),
+                                'free_shipping' => __('Free Shipping'),
                             ])
                             ->default('percentage')
                             ->required(),
 
                         Forms\Components\TextInput::make('discount_value')
-                            ->label('Discount Value')
+                            ->label(__('Discount Value'))
                             ->numeric()
                             ->required()
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Percentage (10 = 10%) or fixed amount'),
 
                         Forms\Components\TextInput::make('max_discount_amount')
-                            ->label('Max Discount')
+                            ->label(__('Max Discount'))
                             ->numeric()
                             ->prefix('€')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Cap for percentage discounts'),
 
                         Forms\Components\TextInput::make('min_purchase_amount')
-                            ->label('Min. Purchase')
+                            ->label(__('Min. Purchase'))
                             ->numeric()
                             ->prefix('€'),
                     ])->columns(4),
 
-                SC\Section::make('Usage Limits')
+                SC\Section::make(__('Usage Limits'))
                     ->schema([
                         Forms\Components\TextInput::make('max_uses_total')
-                            ->label('Max Uses (Total)')
+                            ->label(__('Max Uses (Total)'))
                             ->numeric()
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty for unlimited'),
 
                         Forms\Components\TextInput::make('max_uses_per_user')
-                            ->label('Max Uses (Per User)')
+                            ->label(__('Max Uses (Per User)'))
                             ->numeric()
                             ->default(1),
 
                         Forms\Components\TextInput::make('current_uses')
-                            ->label('Current Uses')
+                            ->label(__('Current Uses'))
                             ->numeric()
                             ->default(0)
                             ->disabled(),
                     ])->columns(3),
 
-                SC\Section::make('Schedule')
+                SC\Section::make(__('Schedule'))
                     ->schema([
                         Forms\Components\DateTimePicker::make('starts_at')
-                            ->label('Valid From'),
+                            ->label(__('Valid From')),
 
                         Forms\Components\DateTimePicker::make('expires_at')
-                            ->label('Expires At'),
+                            ->label(__('Expires At')),
                     ])->columns(2),
 
-                SC\Section::make('Options')
+                SC\Section::make(__('Options'))
                     ->schema([
                         Forms\Components\Toggle::make('is_public')
-                            ->label('Public Code')
+                            ->label(__('Public Code'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Show in public listings'),
 
                         Forms\Components\Toggle::make('first_purchase_only')
-                            ->label('First Purchase Only'),
+                            ->label(__('First Purchase Only')),
 
                         Forms\Components\Toggle::make('combinable')
-                            ->label('Combinable')
+                            ->label(__('Combinable'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Can be combined with other codes'),
                     ])->columns(3),
 
                 // Audit log — afișat doar pe edit/view (record există); arată
                 // cine a creat codul + istoricul de editări cu IP + device.
-                SC\Section::make('Audit log')
-                    ->description('Cine, când și de pe ce dispozitiv a creat / modificat acest cod')
+                SC\Section::make(__('Audit log'))
+                    ->description(__('Cine, când și de pe ce dispozitiv a creat / modificat acest cod'))
                     ->collapsible()
                     ->collapsed(false)
                     ->schema([
@@ -289,14 +289,14 @@ class CouponCodeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold')
                     ->copyable(),
 
                 Tables\Columns\TextColumn::make('event_name')
-                    ->label('Eveniment')
+                    ->label(__('Eveniment'))
                     ->getStateUsing(function ($record) {
                         $eventIds = $record->applicable_events ?? [];
                         if (empty($eventIds)) {
@@ -318,10 +318,10 @@ class CouponCodeResource extends Resource
                             : ($e->title ?? '')
                         )->filter()->implode(', ');
                     })
-                    ->placeholder('Toate evenimentele'),
+                    ->placeholder(__('Toate evenimentele')),
 
                 Tables\Columns\TextColumn::make('organizer_name')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->getStateUsing(function ($record) {
                         // Try direct column first
                         if ($record->marketplace_organizer_id) {
@@ -343,7 +343,7 @@ class CouponCodeResource extends Resource
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('discount_display')
-                    ->label('Discount')
+                    ->label(__('Discount'))
                     ->getStateUsing(function ($record) {
                         if ($record->discount_type === 'percentage') {
                             return $record->discount_value . '%';
@@ -362,32 +362,32 @@ class CouponCodeResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('usage')
-                    ->label('Usage')
+                    ->label(__('Usage'))
                     ->getStateUsing(function ($record) {
                         $max = $record->max_uses_total ?? '∞';
                         return "{$record->current_uses}/{$max}";
                     }),
 
                 Tables\Columns\TextColumn::make('expires_at')
-                    ->label('Expires')
+                    ->label(__('Expires'))
                     ->dateTime('d M Y')
                     ->sortable()
-                    ->placeholder('Never'),
+                    ->placeholder(__('Never')),
 
                 Tables\Columns\TextColumn::make('source')
-                    ->label('Sursa')
+                    ->label(__('Sursa'))
                     ->badge()
                     ->getStateUsing(fn ($record) => $record->source === 'organizer' ? 'Organizator' : 'Admin')
                     ->color(fn ($state) => $state === 'Organizator' ? 'info' : 'gray')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('is_public')
-                    ->label('Public')
+                    ->label(__('Public'))
                     ->boolean()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Created')
+                    ->label(__('Created'))
                     ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -395,20 +395,20 @@ class CouponCodeResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'active' => 'Active',
-                        'disabled' => 'Inactive',
-                        'exhausted' => 'Exhausted',
-                        'expired' => 'Expired',
+                        'active' => __('Active'),
+                        'disabled' => __('Inactive'),
+                        'exhausted' => __('Exhausted'),
+                        'expired' => __('Expired'),
                     ]),
                 Tables\Filters\SelectFilter::make('discount_type')
                     ->options([
-                        'percentage' => 'Percentage',
-                        'fixed_amount' => 'Fixed Amount',
+                        'percentage' => __('Percentage'),
+                        'fixed_amount' => __('Fixed Amount'),
                     ]),
                 Tables\Filters\TernaryFilter::make('is_public')
-                    ->label('Public'),
+                    ->label(__('Public')),
                 Tables\Filters\SelectFilter::make('batch_id')
-                    ->label('Lot')
+                    ->label(__('Lot'))
                     ->options(fn () => \App\Models\Coupon\CouponCodeBatch::enabled()
                         ? \App\Models\Coupon\CouponCodeBatch::where('marketplace_client_id', static::getMarketplaceClientId())
                             ->orderByDesc('id')->limit(200)->pluck('id')
@@ -416,10 +416,10 @@ class CouponCodeResource extends Resource
                         : [])
                     ->visible(fn () => \App\Models\Coupon\CouponCodeBatch::enabled()),
                 Tables\Filters\SelectFilter::make('source')
-                    ->label('Sursa')
+                    ->label(__('Sursa'))
                     ->options([
-                        'organizer' => 'Organizator',
-                        'admin' => 'Admin',
+                        'organizer' => __('Organizator'),
+                        'admin' => __('Admin'),
                     ]),
             ])
             ->recordActions([
@@ -441,13 +441,13 @@ class CouponCodeResource extends Resource
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                     BulkAction::make('activate')
-                        ->label('Activate Selected')
+                        ->label(__('Activate Selected'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->action(fn (Collection $records) => $records->each->update(['status' => 'active']))
                         ->deselectRecordsAfterCompletion(),
                     BulkAction::make('deactivate')
-                        ->label('Deactivate Selected')
+                        ->label(__('Deactivate Selected'))
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->action(fn (Collection $records) => $records->each->update(['status' => 'disabled']))

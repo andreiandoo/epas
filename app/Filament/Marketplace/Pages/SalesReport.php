@@ -80,25 +80,25 @@ class SalesReport extends Page implements HasForms
         return $schema
             ->statePath('data')
             ->components([
-                Section::make('Filtre raport')
-                    ->description('Alege perioada, evenimentele și statusurile, apoi apasă "Generează raport".')
+                Section::make(__('Filtre raport'))
+                    ->description(__('Alege perioada, evenimentele și statusurile, apoi apasă "Generează raport".'))
                     ->columns(2)
                     // The actual collapse-after-generate UX is handled by
                     // an Alpine wrapper in the blade — Filament's
                     // collapsed() only fires at initial render.
                     ->schema([
                         Forms\Components\Radio::make('period')
-                            ->label('Perioadă')
+                            ->label(__('Perioadă'))
                             ->options([
-                                'today'      => 'Azi',
-                                '7d'         => '7 zile',
-                                '30d'        => '30 zile',
-                                'this_month' => 'Luna curentă',
-                                'last_month' => 'Luna trecută',
-                                'this_year'  => 'Anul curent',
-                                'custom'     => 'Personalizat',
+                                'today'      => __('Azi'),
+                                '7d'         => __('7 zile'),
+                                '30d'        => __('30 zile'),
+                                'this_month' => __('Luna curentă'),
+                                'last_month' => __('Luna trecută'),
+                                'this_year'  => __('Anul curent'),
+                                'custom'     => __('Personalizat'),
                             ])
-                            ->helperText('Restrânge raportul la comenzile cu data (plată sau creare, după "Bază dată") în acest interval. Pentru toate vânzările unui eveniment, alege "Anul curent" sau "Personalizat".')
+                            ->helperText(__('Restrânge raportul la comenzile cu data (plată sau creare, după "Bază dată") în acest interval. Pentru toate vânzările unui eveniment, alege "Anul curent" sau "Personalizat".'))
                             ->inline()
                             ->columnSpanFull()
                             ->live()
@@ -113,11 +113,11 @@ class SalesReport extends Page implements HasForms
                         Grid::make(2)
                             ->schema([
                                 Forms\Components\DatePicker::make('customFrom')
-                                    ->label('De la')
+                                    ->label(__('De la'))
                                     ->live()
                                     ->afterStateUpdated(fn () => $this->resetReport()),
                                 Forms\Components\DatePicker::make('customTo')
-                                    ->label('Până la')
+                                    ->label(__('Până la'))
                                     ->live()
                                     ->afterStateUpdated(fn () => $this->resetReport()),
                             ])
@@ -125,10 +125,10 @@ class SalesReport extends Page implements HasForms
                             ->columnSpanFull(),
 
                         Forms\Components\Radio::make('dateColumn')
-                            ->label('Bază dată')
+                            ->label(__('Bază dată'))
                             ->options([
-                                'paid_at'    => 'După data plății',
-                                'created_at' => 'După data creării',
+                                'paid_at'    => __('După data plății'),
+                                'created_at' => __('După data creării'),
                             ])
                             ->inline()
                             ->columnSpanFull()
@@ -136,11 +136,11 @@ class SalesReport extends Page implements HasForms
                             ->afterStateUpdated(fn () => $this->resetReport()),
 
                         Forms\Components\Radio::make('filterBy')
-                            ->label('Selectează după')
+                            ->label(__('Selectează după'))
                             ->options([
-                                'event'          => 'Eveniment(e)',
-                                'organizer'      => 'Organizator',
-                                'all_in_period'  => 'Toate evenimentele publicate din perioadă',
+                                'event'          => __('Eveniment(e)'),
+                                'organizer'      => __('Organizator'),
+                                'all_in_period'  => __('Toate evenimentele publicate din perioadă'),
                             ])
                             ->inline()
                             ->columnSpanFull()
@@ -156,38 +156,38 @@ class SalesReport extends Page implements HasForms
                             }),
 
                         Forms\Components\Select::make('eventIds')
-                            ->label('Evenimente')
+                            ->label(__('Evenimente'))
                             ->multiple()
                             ->searchable()
                             ->getSearchResultsUsing(fn (string $search) => $this->searchEvents($search))
                             ->getOptionLabelsUsing(fn (array $values) => $this->resolveEventLabels($values))
-                            ->placeholder('Caută evenimente după nume sau dată...')
-                            ->helperText('Search server-side pe toate evenimentele clientului. Diacritice ignorate.')
+                            ->placeholder(__('Caută evenimente după nume sau dată...'))
+                            ->helperText(__('Search server-side pe toate evenimentele clientului. Diacritice ignorate.'))
                             ->columnSpanFull()
                             ->visible(fn (Get $get) => $get('filterBy') === 'event')
                             ->live()
                             ->afterStateUpdated(fn () => $this->resetReport()),
 
                         Forms\Components\Select::make('organizerId')
-                            ->label('Organizator')
+                            ->label(__('Organizator'))
                             ->searchable()
                             ->getSearchResultsUsing(fn (string $search) => $this->searchOrganizers($search))
                             ->getOptionLabelUsing(fn ($value) => $this->resolveOrganizerLabel($value))
-                            ->placeholder('Caută organizator după nume sau CUI...')
-                            ->helperText('Toate evenimentele acestui organizator vor fi incluse.')
+                            ->placeholder(__('Caută organizator după nume sau CUI...'))
+                            ->helperText(__('Toate evenimentele acestui organizator vor fi incluse.'))
                             ->columnSpanFull()
                             ->visible(fn (Get $get) => $get('filterBy') === 'organizer')
                             ->live()
                             ->afterStateUpdated(fn () => $this->resetReport()),
 
                         Forms\Components\CheckboxList::make('eventStatuses')
-                            ->label('Status evenimente')
-                            ->helperText('Lasă gol pentru a include toate evenimentele (din selecția curentă), indiferent de status. Bifează una sau mai multe pentru a restrânge.')
+                            ->label(__('Status evenimente'))
+                            ->helperText(__('Lasă gol pentru a include toate evenimentele (din selecția curentă), indiferent de status. Bifează una sau mai multe pentru a restrânge.'))
                             ->options([
-                                'live'      => 'Live (publicate, neanulate, în viitor)',
-                                'past'      => 'Încheiat (data trecută)',
-                                'draft'     => 'Draft (nepublicat)',
-                                'cancelled' => 'Anulat',
+                                'live'      => __('Live (publicate, neanulate, în viitor)'),
+                                'past'      => __('Încheiat (data trecută)'),
+                                'draft'     => __('Draft (nepublicat)'),
+                                'cancelled' => __('Anulat'),
                             ])
                             ->columns(2)
                             ->columnSpanFull()
@@ -195,17 +195,17 @@ class SalesReport extends Page implements HasForms
                             ->afterStateUpdated(fn () => $this->resetReport()),
 
                         Forms\Components\CheckboxList::make('statuses')
-                            ->label('Status comenzi')
+                            ->label(__('Status comenzi'))
                             ->options([
-                                'paid'                => 'Plătit',
-                                'confirmed'           => 'Confirmat',
-                                'completed'           => 'Finalizat',
-                                'failed'              => 'Eșuat',
-                                'expired'             => 'Expirat',
-                                'cancelled'           => 'Anulat',
-                                'refunded'            => 'Rambursat',
-                                'partially_refunded'  => 'Rambursat parțial',
-                                'pending'             => 'În așteptare',
+                                'paid'                => __('Plătit'),
+                                'confirmed'           => __('Confirmat'),
+                                'completed'           => __('Finalizat'),
+                                'failed'              => __('Eșuat'),
+                                'expired'             => __('Expirat'),
+                                'cancelled'           => __('Anulat'),
+                                'refunded'            => __('Rambursat'),
+                                'partially_refunded'  => __('Rambursat parțial'),
+                                'pending'             => __('În așteptare'),
                             ])
                             ->columns(3)
                             ->columnSpanFull()
@@ -213,10 +213,10 @@ class SalesReport extends Page implements HasForms
                             ->afterStateUpdated(fn () => $this->resetReport()),
 
                         Forms\Components\Radio::make('viewMode')
-                            ->label('Mod afișare')
+                            ->label(__('Mod afișare'))
                             ->options([
-                                'compact'  => 'Compact (per tip bilet)',
-                                'extended' => 'Extins (per comandă)',
+                                'compact'  => __('Compact (per tip bilet)'),
+                                'extended' => __('Extins (per comandă)'),
                             ])
                             ->inline()
                             ->columnSpanFull()
@@ -230,12 +230,12 @@ class SalesReport extends Page implements HasForms
     {
         return [
             Actions\Action::make('generate')
-                ->label('Generează raport')
+                ->label(__('Generează raport'))
                 ->icon('heroicon-o-play')
                 ->color('primary')
                 ->action(fn () => $this->generate()),
             Actions\Action::make('export')
-                ->label('Export CSV')
+                ->label(__('Export CSV'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->visible(fn () => $this->compactData !== null || !empty($this->extendedRows))
@@ -449,8 +449,8 @@ class SalesReport extends Page implements HasForms
         }
         if (empty($eventIds) || empty($statuses)) {
             \Filament\Notifications\Notification::make()
-                ->title('Selecție incompletă')
-                ->body('Alege cel puțin un eveniment/organizator și un status.')
+                ->title(__('Selecție incompletă'))
+                ->body(__('Alege cel puțin un eveniment/organizator și un status.'))
                 ->warning()
                 ->send();
             return;

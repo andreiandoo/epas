@@ -60,22 +60,22 @@ class AttractionTypeResource extends Resource
 
         return $schema->schema([
             Forms\Components\Hidden::make('marketplace_client_id')->default($marketplace?->id),
-            SC\Section::make('Tip de atracție')->schema([
+            SC\Section::make(__('Tip de atracție'))->schema([
                 Forms\Components\TextInput::make("name.{$lang}")
-                    ->label('Nume')->required()->maxLength(120)->live(onBlur: true)
+                    ->label(__('Nume'))->required()->maxLength(120)->live(onBlur: true)
                     ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                         if ($state && ! $get('slug')) {
                             $set('slug', Str::slug($state));
                         }
                     }),
-                Forms\Components\TextInput::make('name.en')->label('Nume (EN)')->maxLength(120),
-                Forms\Components\TextInput::make('slug')->label('Slug')->required()->maxLength(191)->rule('alpha_dash'),
+                Forms\Components\TextInput::make('name.en')->label(__('Nume (EN)'))->maxLength(120),
+                Forms\Components\TextInput::make('slug')->label(__('Slug'))->required()->maxLength(191)->rule('alpha_dash'),
                 SC\Grid::make(3)->schema([
-                    Forms\Components\TextInput::make('icon_emoji')->label('Emoji')->maxLength(8)->placeholder('🏛️'),
-                    Forms\Components\TextInput::make('color')->label('Culoare (hex)')->maxLength(16),
-                    Forms\Components\TextInput::make('sort_order')->label('Ordine')->numeric()->default(0),
+                    Forms\Components\TextInput::make('icon_emoji')->label(__('Emoji'))->maxLength(8)->placeholder('🏛️'),
+                    Forms\Components\TextInput::make('color')->label(__('Culoare (hex)'))->maxLength(16),
+                    Forms\Components\TextInput::make('sort_order')->label(__('Ordine'))->numeric()->default(0),
                 ]),
-                Forms\Components\Toggle::make('is_visible')->label('Vizibil')->default(true),
+                Forms\Components\Toggle::make('is_visible')->label(__('Vizibil'))->default(true),
             ])->columns(2),
         ]);
     }
@@ -88,11 +88,11 @@ class AttractionTypeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('icon_emoji')->label('')->width('3rem'),
-                Tables\Columns\TextColumn::make('name')->label('Nume')
+                Tables\Columns\TextColumn::make('name')->label(__('Nume'))
                     ->getStateUsing(fn (AttractionType $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name),
-                Tables\Columns\TextColumn::make('slug')->label('Slug')->color('gray'),
-                Tables\Columns\TextColumn::make('attractions_count')->label('Atracții')->counts('attractions')->badge(),
-                Tables\Columns\ToggleColumn::make('is_visible')->label('Vizibil'),
+                Tables\Columns\TextColumn::make('slug')->label(__('Slug'))->color('gray'),
+                Tables\Columns\TextColumn::make('attractions_count')->label(__('Atracții'))->counts('attractions')->badge(),
+                Tables\Columns\ToggleColumn::make('is_visible')->label(__('Vizibil')),
             ])
             ->defaultSort('sort_order')
             ->recordActions([EditAction::make(), DeleteAction::make()])

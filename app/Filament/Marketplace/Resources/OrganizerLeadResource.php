@@ -181,38 +181,38 @@ class OrganizerLeadResource extends Resource
             // One wide section — collapsing contact + location + activity +
             // pipeline into a single grid so the page reads top-to-bottom
             // instead of jumping between fragmented section cards.
-            SC\Section::make('Lead')
-                ->description('Datele despre lead + linkul pe care îl trimiți. Categoria + Numele locației construiesc automat URL-ul personalizat.')
+            SC\Section::make(__('Lead'))
+                ->description(__('Datele despre lead + linkul pe care îl trimiți. Categoria + Numele locației construiesc automat URL-ul personalizat.'))
                 ->columns(12)
                 ->schema([
                     // ─── Contact ─────────────────────────────────────────
                     Forms\Components\TextInput::make('contact_name')
-                        ->label('Nume contact')->required()->maxLength(160)
+                        ->label(__('Nume contact'))->required()->maxLength(160)
                         ->columnSpan(['md' => 6, 'sm' => 12]),
                     Forms\Components\TextInput::make('email')
-                        ->label('Email')->email()->required()->maxLength(190)
+                        ->label(__('Email'))->email()->required()->maxLength(190)
                         ->columnSpan(['md' => 4, 'sm' => 12]),
                     Forms\Components\TextInput::make('phone')
-                        ->label('Telefon')->maxLength(40)
+                        ->label(__('Telefon'))->maxLength(40)
                         ->columnSpan(['md' => 2, 'sm' => 12]),
 
                     // ─── Locație ─────────────────────────────────────────
                     Forms\Components\TextInput::make('location_name')
-                        ->label('Numele locației')->required()->maxLength(200)
+                        ->label(__('Numele locației'))->required()->maxLength(200)
                         ->live(debounce: 400)
-                        ->helperText('Va apărea ca „loc=…" în URL-ul personalizat')
+                        ->helperText(__('Va apărea ca „loc=…" în URL-ul personalizat'))
                         ->columnSpan(['md' => 6, 'sm' => 12]),
                     Forms\Components\TextInput::make('city')
-                        ->label('Oraș')->required()->maxLength(120)
+                        ->label(__('Oraș'))->required()->maxLength(120)
                         ->columnSpan(['md' => 3, 'sm' => 12]),
                     Forms\Components\TextInput::make('website')
-                        ->label('Website (opțional)')->url()->maxLength(255)
+                        ->label(__('Website (opțional)'))->url()->maxLength(255)
                         ->placeholder('https://…')
                         ->columnSpan(['md' => 3, 'sm' => 12]),
 
                     // ─── Activitate ──────────────────────────────────────
                     Forms\Components\Select::make('category_slug')
-                        ->label('Categorie activitate')
+                        ->label(__('Categorie activitate'))
                         ->options(self::CATEGORY_OPTIONS)
                         ->live()
                         ->afterStateUpdated(function ($state, callable $set) {
@@ -221,17 +221,17 @@ class OrganizerLeadResource extends Resource
                             $set('category_name', self::CATEGORY_OPTIONS[$state] ?? null);
                         })
                         ->searchable()
-                        ->helperText('Determină „tip=…" din URL — pagina /parteneri afișează copy specific categoriei.')
+                        ->helperText(__('Determină „tip=…" din URL — pagina /parteneri afișează copy specific categoriei.'))
                         ->columnSpan(['md' => 6, 'sm' => 12]),
                     Forms\Components\TextInput::make('category_other')
-                        ->label('Sau descriere alternativă (dacă nu se potrivește niciuna)')
-                        ->placeholder('ex. Centru de echitație, planetariu')
+                        ->label(__('Sau descriere alternativă (dacă nu se potrivește niciuna)'))
+                        ->placeholder(__('ex. Centru de echitație, planetariu'))
                         ->maxLength(200)
                         ->columnSpan(['md' => 6, 'sm' => 12]),
                     Forms\Components\Hidden::make('category_name'),
 
                     Forms\Components\TextInput::make('volume_estimate')
-                        ->label('Volum estimat bilete/lună (ex: 100-500)')
+                        ->label(__('Volum estimat bilete/lună (ex: 100-500)'))
                         ->maxLength(40)
                         ->columnSpan(['md' => 4, 'sm' => 12]),
 
@@ -247,35 +247,35 @@ class OrganizerLeadResource extends Resource
                         ->required()
                         ->columnSpan(['md' => 4, 'sm' => 12]),
                     Forms\Components\Select::make('assigned_to_user_id')
-                        ->label('Asignat lui')
+                        ->label(__('Asignat lui'))
                         ->relationship('assignedTo', 'name')
                         ->searchable()->preload()
                         ->columnSpan(['md' => 4, 'sm' => 12]),
                     Forms\Components\DateTimePicker::make('next_action_at')
-                        ->label('Următoarea acțiune')
+                        ->label(__('Următoarea acțiune'))
                         ->columnSpan(['md' => 4, 'sm' => 12]),
                     Forms\Components\Textarea::make('notes')
-                        ->label('Note interne')->rows(2)
+                        ->label(__('Note interne'))->rows(2)
                         ->columnSpan(12),
                 ]),
 
             // What the public form collected beyond the columns: the company as ANAF has it (never typed by the
             // visitor) and the needs they ticked. Read-only; hidden on leads that came without them.
-            SC\Section::make('Firmă (ANAF), nevoi și cont')
-                ->description('Din formularul /inregistrare-locatie: datele firmei sunt preluate de la ANAF după CUI, nevoile sunt bifate de lead, iar contul de operator se creează la trimitere (în așteptare până îl aprobi).')
+            SC\Section::make(__('Firmă (ANAF), nevoi și cont'))
+                ->description(__('Din formularul /inregistrare-locatie: datele firmei sunt preluate de la ANAF după CUI, nevoile sunt bifate de lead, iar contul de operator se creează la trimitere (în așteptare până îl aprobi).'))
                 ->visible(fn (?OrganizerLead $record) => filled($record?->meta['company'] ?? null) || filled($record?->meta['needs'] ?? null) || filled($record?->meta['organizer_id'] ?? null))
                 ->columns(2)
                 ->schema([
                     Forms\Components\Placeholder::make('meta_account')
-                        ->label('Cont de operator')
+                        ->label(__('Cont de operator'))
                         ->columnSpanFull()
                         ->visible(fn (?OrganizerLead $record) => filled($record?->meta['organizer_id'] ?? null))
                         ->content(fn (?OrganizerLead $record) => self::accountSummary((int) ($record?->meta['organizer_id'] ?? 0))),
                     Forms\Components\Placeholder::make('meta_company')
-                        ->label('Firmă')
+                        ->label(__('Firmă'))
                         ->content(fn (?OrganizerLead $record) => self::companySummary($record?->meta['company'] ?? null)),
                     Forms\Components\Placeholder::make('meta_needs')
-                        ->label('De ce are nevoie')
+                        ->label(__('De ce are nevoie'))
                         ->content(function (?OrganizerLead $record) {
                             $needs = (array) ($record?->meta['needs'] ?? []);
                             if (!$needs) {
@@ -290,8 +290,8 @@ class OrganizerLeadResource extends Resource
             // in category + location. Hidden until both are set; clickable
             // anchor opens the destination in a new tab so the rep can
             // verify the page renders correctly with that personalization.
-            SC\Section::make('Link partener personalizat')
-                ->description('Linkul pe care îl trimiți leadului. Se actualizează automat când completezi categoria + numele locației.')
+            SC\Section::make(__('Link partener personalizat'))
+                ->description(__('Linkul pe care îl trimiți leadului. Se actualizează automat când completezi categoria + numele locației.'))
                 ->schema([
                     Forms\Components\Placeholder::make('campaign_link')
                         ->hiddenLabel()
@@ -325,13 +325,13 @@ HTML);
             // Read-only acquisition context — collapsed by default; useful
             // when a lead actually arrived via the public form and the
             // utm/referrer fields got auto-filled.
-            SC\Section::make('Sursă vizită (din public form)')
-                ->description('Aceste câmpuri sunt populate automat când leadul ajunge prin /inregistrare-locatie. La adăugare manuală pot fi lăsate goale.')
+            SC\Section::make(__('Sursă vizită (din public form)'))
+                ->description(__('Aceste câmpuri sunt populate automat când leadul ajunge prin /inregistrare-locatie. La adăugare manuală pot fi lăsate goale.'))
                 ->collapsed()
                 ->columns(4)
                 ->schema([
-                    Forms\Components\TextInput::make('prefill_tip')->label('Prefill tip')->disabled(),
-                    Forms\Components\TextInput::make('prefill_loc')->label('Prefill loc')->disabled(),
+                    Forms\Components\TextInput::make('prefill_tip')->label(__('Prefill tip'))->disabled(),
+                    Forms\Components\TextInput::make('prefill_loc')->label(__('Prefill loc'))->disabled(),
                     Forms\Components\TextInput::make('utm_source')->disabled(),
                     Forms\Components\TextInput::make('utm_medium')->disabled(),
                     Forms\Components\TextInput::make('utm_campaign')->disabled(),
@@ -348,17 +348,17 @@ HTML);
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('#')->sortable()->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('location_name')->label('Locație')->searchable()->wrap()->weight('bold')
+                Tables\Columns\TextColumn::make('location_name')->label(__('Locație'))->searchable()->wrap()->weight('bold')
                     ->description(fn (OrganizerLead $r) => $r->city),
-                Tables\Columns\TextColumn::make('contact_name')->label('Contact')->searchable()
+                Tables\Columns\TextColumn::make('contact_name')->label(__('Contact'))->searchable()
                     ->description(fn (OrganizerLead $r) => $r->email),
-                Tables\Columns\TextColumn::make('activity_type_label')->label('Tip activitate')->wrap(),
+                Tables\Columns\TextColumn::make('activity_type_label')->label(__('Tip activitate'))->wrap(),
 
                 // Filament 4: TextColumn::make()->badge()->color(fn) — there's
                 // no separate BadgeColumn class. Color callback uses match()
                 // to return one Tailwind-equivalent color name per status.
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => OrganizerLead::STATUSES[$state] ?? $state)
                     ->color(fn (string $state): string => match ($state) {
@@ -373,32 +373,32 @@ HTML);
                         default                              => 'gray',
                     }),
 
-                Tables\Columns\TextColumn::make('landing_views')->label('LP')->numeric()->alignCenter()
-                    ->tooltip('Câte vizite a făcut pe paginile pentru parteneri (/parteneri, /devino-partener)'),
-                Tables\Columns\TextColumn::make('onboarding_views')->label('OB')->numeric()->alignCenter()
-                    ->tooltip('Câte vizite a făcut pe /inregistrare-locatie'),
-                Tables\Columns\TextColumn::make('assignedTo.name')->label('Asignat')->placeholder('—')->toggleable(),
-                Tables\Columns\TextColumn::make('next_action_at')->label('Next action')->dateTime('d M Y H:i')->toggleable(),
-                Tables\Columns\TextColumn::make('submitted_at')->label('Trimis')->dateTime('d M Y H:i')->sortable(),
-                Tables\Columns\TextColumn::make('utm_source')->label('UTM src')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('utm_campaign')->label('Campanie')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('landing_views')->label(__('LP'))->numeric()->alignCenter()
+                    ->tooltip(__('Câte vizite a făcut pe paginile pentru parteneri (/parteneri, /devino-partener)')),
+                Tables\Columns\TextColumn::make('onboarding_views')->label(__('OB'))->numeric()->alignCenter()
+                    ->tooltip(__('Câte vizite a făcut pe /inregistrare-locatie')),
+                Tables\Columns\TextColumn::make('assignedTo.name')->label(__('Asignat'))->placeholder('—')->toggleable(),
+                Tables\Columns\TextColumn::make('next_action_at')->label(__('Next action'))->dateTime('d M Y H:i')->toggleable(),
+                Tables\Columns\TextColumn::make('submitted_at')->label(__('Trimis'))->dateTime('d M Y H:i')->sortable(),
+                Tables\Columns\TextColumn::make('utm_source')->label(__('UTM src'))->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('utm_campaign')->label(__('Campanie'))->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('status')->options(OrganizerLead::STATUSES)->multiple(),
                 SelectFilter::make('source')->options(OrganizerLead::SOURCES)->multiple(),
                 SelectFilter::make('assigned_to_user_id')
-                    ->label('Asignat lui')
+                    ->label(__('Asignat lui'))
                     ->relationship('assignedTo', 'name'),
                 Filter::make('city')->schema([Forms\Components\TextInput::make('city')])
                     ->query(fn ($q, array $data) => isset($data['city']) && $data['city'] !== ''
                         ? $q->where('city', 'ILIKE', '%'.$data['city'].'%')
                         : $q),
                 Filter::make('has_phone')
-                    ->label('Are telefon')
+                    ->label(__('Are telefon'))
                     ->query(fn ($q) => $q->whereNotNull('phone'))
                     ->toggle(),
                 Filter::make('needs_action')
-                    ->label('Necesită acțiune (next_action_at trecut)')
+                    ->label(__('Necesită acțiune (next_action_at trecut)'))
                     ->query(fn ($q) => $q->where('next_action_at', '<', now()))
                     ->toggle(),
             ])
@@ -407,24 +407,24 @@ HTML);
                 ViewAction::make(),
                 EditAction::make(),
                 Action::make('contacted')
-                    ->label('Marchează contactat')
+                    ->label(__('Marchează contactat'))
                     ->icon('heroicon-o-phone')
                     ->color('info')
                     ->visible(fn (OrganizerLead $r) => $r->status === OrganizerLead::STATUS_NEW)
                     ->action(function (OrganizerLead $r) {
                         $r->transitionTo(OrganizerLead::STATUS_CONTACTED, 'Marcat contactat din tabel', auth()->id());
-                        Notification::make()->success()->title('Marcat contactat')->send();
+                        Notification::make()->success()->title(__('Marcat contactat'))->send();
                     }),
             ])
             // Filament 4 — bulk actions live under ->toolbarActions()
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('assign')
-                        ->label('Asignează lui…')
+                        ->label(__('Asignează lui…'))
                         ->icon('heroicon-o-user')
                         ->form([
                             Forms\Components\Select::make('user_id')
-                                ->label('User')
+                                ->label(__('User'))
                                 ->options(User::query()->pluck('name', 'id'))
                                 ->searchable()
                                 ->required(),
@@ -441,7 +441,7 @@ HTML);
                                     'performed_by_user_id'  => auth()->id(),
                                 ]);
                             }
-                            Notification::make()->success()->title('Asignat')->send();
+                            Notification::make()->success()->title(__('Asignat'))->send();
                         }),
                 ]),
             ]);

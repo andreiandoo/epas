@@ -64,10 +64,10 @@ class ShopAttributeResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Attribute Details')
+                SC\Section::make(__('Attribute Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
-                            ->label('Attribute Name')
+                            ->label(__('Attribute Name'))
                             ->required()
                             ->maxLength(100)
                             ->live(onBlur: true)
@@ -77,33 +77,33 @@ class ShopAttributeResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'e.g., Size, Color, Material'),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(100)
                             ->rule('alpha_dash'),
 
                         Forms\Components\Select::make('type')
                             ->options([
-                                'select' => 'Dropdown Select',
-                                'color' => 'Color Picker',
-                                'text' => 'Text Input',
+                                'select' => __('Dropdown Select'),
+                                'color' => __('Color Picker'),
+                                'text' => __('Text Input'),
                             ])
                             ->default('select')
                             ->required(),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
                     ])->columns(2),
 
-                SC\Section::make('Attribute Values')
+                SC\Section::make(__('Attribute Values'))
                     ->schema([
                         Forms\Components\Repeater::make('values')
                             ->relationship('values')
                             ->schema([
                                 Forms\Components\TextInput::make("value.{$marketplaceLanguage}")
-                                    ->label('Value')
+                                    ->label(__('Value'))
                                     ->required()
                                     ->maxLength(100)
                                     ->live(onBlur: true)
@@ -112,16 +112,16 @@ class ShopAttributeResource extends Resource
                                     }),
 
                                 Forms\Components\TextInput::make('slug')
-                                    ->label('Slug')
+                                    ->label(__('Slug'))
                                     ->required()
                                     ->maxLength(100),
 
                                 Forms\Components\ColorPicker::make('color_code')
-                                    ->label('Color')
+                                    ->label(__('Color'))
                                     ->visible(fn ($get) => $get('../../type') === 'color'),
 
                                 Forms\Components\TextInput::make('sort_order')
-                                    ->label('Order')
+                                    ->label(__('Order'))
                                     ->numeric()
                                     ->default(0)
                                     ->columnSpan(1),
@@ -130,7 +130,7 @@ class ShopAttributeResource extends Resource
                             ->defaultItems(0)
                             ->reorderable()
                             ->orderColumn('sort_order')
-                            ->addActionLabel('Add Value')
+                            ->addActionLabel(__('Add Value'))
                             ->collapsible()
                             ->itemLabel(fn (array $state): ?string =>
                                 $state['value'][$marketplaceLanguage] ?? $state['slug'] ?? null
@@ -147,17 +147,17 @@ class ShopAttributeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\BadgeColumn::make('type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->colors([
                         'primary' => 'select',
                         'success' => 'color',
@@ -165,17 +165,17 @@ class ShopAttributeResource extends Resource
                     ]),
 
                 Tables\Columns\TextColumn::make('values_count')
-                    ->label('Values')
+                    ->label(__('Values'))
                     ->counts('values')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('products_count')
-                    ->label('Products')
+                    ->label(__('Products'))
                     ->counts('products')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -186,9 +186,9 @@ class ShopAttributeResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
                     ->options([
-                        'select' => 'Dropdown Select',
-                        'color' => 'Color Picker',
-                        'text' => 'Text Input',
+                        'select' => __('Dropdown Select'),
+                        'color' => __('Color Picker'),
+                        'text' => __('Text Input'),
                     ]),
             ])
             ->recordActions([

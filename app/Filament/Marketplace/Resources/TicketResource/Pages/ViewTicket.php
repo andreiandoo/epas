@@ -39,7 +39,7 @@ class ViewTicket extends ViewRecord
     {
         return [
             Actions\Action::make('download')
-                ->label('Download Ticket')
+                ->label(__('Download Ticket'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->action(function () {
                     $ticket = $this->record;
@@ -70,20 +70,20 @@ class ViewTicket extends ViewRecord
                 }),
 
             Actions\Action::make('email')
-                ->label('Email Ticket')
+                ->label(__('Email Ticket'))
                 ->icon('heroicon-o-envelope')
                 ->form([
                     \Filament\Forms\Components\Radio::make('recipient_type')
-                        ->label('Send to')
+                        ->label(__('Send to'))
                         ->options([
-                            'customer' => 'Customer Email',
-                            'custom' => 'Custom Email',
+                            'customer' => __('Customer Email'),
+                            'custom' => __('Custom Email'),
                         ])
                         ->default('customer')
                         ->live()
                         ->required(),
                     \Filament\Forms\Components\TextInput::make('custom_email')
-                        ->label('Email Address')
+                        ->label(__('Email Address'))
                         ->email()
                         ->required()
                         ->visible(fn ($get) => $get('recipient_type') === 'custom'),
@@ -97,8 +97,8 @@ class ViewTicket extends ViewRecord
 
                     if (!$email) {
                         Notification::make()
-                            ->title('Adresă email lipsă')
-                            ->body('Nu există o adresă de email asociată acestui bilet.')
+                            ->title(__('Adresă email lipsă'))
+                            ->body(__('Nu există o adresă de email asociată acestui bilet.'))
                             ->danger()
                             ->send();
                         return;
@@ -111,8 +111,8 @@ class ViewTicket extends ViewRecord
 
                     if (!$marketplaceClient?->hasMailConfigured() && !$marketplaceClient?->hasTransactionalMailConfigured()) {
                         Notification::make()
-                            ->title('Email neconfigurat')
-                            ->body('Configurați SMTP-ul în setările marketplace-ului pentru a trimite emailuri.')
+                            ->title(__('Email neconfigurat'))
+                            ->body(__('Configurați SMTP-ul în setările marketplace-ului pentru a trimite emailuri.'))
                             ->danger()
                             ->send();
                         return;
@@ -160,7 +160,7 @@ class ViewTicket extends ViewRecord
                                 'error' => $result['error'],
                             ]);
                             Notification::make()
-                                ->title('Eroare trimitere email')
+                                ->title(__('Eroare trimitere email'))
                                 ->body('Nu s-a putut trimite emailul: ' . ($result['error'] ?? 'unknown'))
                                 ->danger()
                                 ->send();
@@ -176,7 +176,7 @@ class ViewTicket extends ViewRecord
 
                         $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
                         Notification::make()
-                            ->title('Bilet trimis!')
+                            ->title(__('Bilet trimis!'))
                             ->body("Biletul a fost trimis la {$email}{$suffix}")
                             ->success()
                             ->send();
@@ -198,7 +198,7 @@ class ViewTicket extends ViewRecord
                         ]);
 
                         Notification::make()
-                            ->title('Eroare trimitere email')
+                            ->title(__('Eroare trimitere email'))
                             ->body('Nu s-a putut trimite emailul: ' . $e->getMessage())
                             ->danger()
                             ->send();
@@ -206,17 +206,17 @@ class ViewTicket extends ViewRecord
                 }),
 
             Actions\Action::make('change_status')
-                ->label('Schimbă status')
+                ->label(__('Schimbă status'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
                 ->form([
                     \Filament\Forms\Components\Select::make('status')
-                        ->label('Status nou')
+                        ->label(__('Status nou'))
                         ->options([
-                            'valid' => 'Valid',
-                            'used' => 'Folosit',
-                            'cancelled' => 'Anulat',
-                            'pending' => 'În așteptare',
+                            'valid' => __('Valid'),
+                            'used' => __('Folosit'),
+                            'cancelled' => __('Anulat'),
+                            'pending' => __('În așteptare'),
                         ])
                         ->default(fn () => $this->record->status)
                         ->required(),
@@ -232,7 +232,7 @@ class ViewTicket extends ViewRecord
                     // real change to make, not a no-op. Bailing out here is what
                     // made it impossible to undo an accidental check-in.
                     if ($oldStatus === $newStatus && ! ($newStatus === 'valid' && $hadCheckIn)) {
-                        Notification::make()->title('Statusul nu s-a schimbat')->info()->send();
+                        Notification::make()->title(__('Statusul nu s-a schimbat'))->info()->send();
                         return;
                     }
 
@@ -253,7 +253,7 @@ class ViewTicket extends ViewRecord
                         ->log("Ticket status changed: {$oldStatus} → {$newStatus}");
 
                     Notification::make()
-                        ->title('Status actualizat')
+                        ->title(__('Status actualizat'))
                         ->body($clearedCheckIn
                             ? "Biletul este {$newStatus} și check-in-ul a fost anulat."
                             : "Biletul a fost schimbat din {$oldStatus} în {$newStatus}")
@@ -261,8 +261,8 @@ class ViewTicket extends ViewRecord
                         ->send();
                 })
                 ->requiresConfirmation()
-                ->modalHeading('Schimbă statusul biletului')
-                ->modalDescription('Ești sigur că vrei să schimbi statusul acestui bilet?'),
+                ->modalHeading(__('Schimbă statusul biletului'))
+                ->modalDescription(__('Ești sigur că vrei să schimbi statusul acestui bilet?')),
 
             // Check-in lives on its own axis (checked_in_at / scanned_at), not
             // on `status` — a scanned ticket stays status='valid'. So undoing an
@@ -270,13 +270,13 @@ class ViewTicket extends ViewRecord
             // "Nevalidat" entry in the status dropdown, which would allow
             // impossible combinations like "not checked in + cancelled".
             Actions\Action::make('undo_checkin')
-                ->label('Anulează check-in')
+                ->label(__('Anulează check-in'))
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('danger')
                 ->visible(fn () => $this->record->checked_in_at !== null || $this->record->scanned_at !== null)
                 ->requiresConfirmation()
-                ->modalHeading('Anulează check-in-ul biletului')
-                ->modalDescription('Biletul redevine nevalidat și poate fi scanat din nou la intrare. Folosește asta când un organizator a validat un bilet din greșeală.')
+                ->modalHeading(__('Anulează check-in-ul biletului'))
+                ->modalDescription(__('Biletul redevine nevalidat și poate fi scanat din nou la intrare. Folosește asta când un organizator a validat un bilet din greșeală.'))
                 ->action(function () {
                     $ticket = $this->record;
                     $checkedInAt = $ticket->checked_in_at;
@@ -302,8 +302,8 @@ class ViewTicket extends ViewRecord
                         ->log('Ticket check-in undone');
 
                     Notification::make()
-                        ->title('Check-in anulat')
-                        ->body('Biletul este din nou nevalidat și poate fi scanat la intrare.')
+                        ->title(__('Check-in anulat'))
+                        ->body(__('Biletul este din nou nevalidat și poate fi scanat la intrare.'))
                         ->success()
                         ->send();
                 }),

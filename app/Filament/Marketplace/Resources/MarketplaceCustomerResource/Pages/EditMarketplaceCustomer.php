@@ -22,29 +22,29 @@ class EditMarketplaceCustomer extends EditRecord
     {
         return [
             Actions\Action::make('viewProfile')
-                ->label('Profil Client')
+                ->label(__('Profil Client'))
                 ->icon('heroicon-o-user-circle')
                 ->color('info')
                 ->url(fn () => static::getResource()::getUrl('view', ['record' => $this->record])),
             Actions\Action::make('detectCity')
-                ->label('Re-detectează oraș')
+                ->label(__('Re-detectează oraș'))
                 ->icon('heroicon-o-map')
                 ->color('gray')
                 ->requiresConfirmation()
-                ->modalHeading('Re-detectează oraș')
-                ->modalDescription('Recalculează distribuția de orașe pentru acest client din istoricul de comenzi.')
-                ->modalSubmitActionLabel('Recalculează')
+                ->modalHeading(__('Re-detectează oraș'))
+                ->modalDescription(__('Recalculează distribuția de orașe pentru acest client din istoricul de comenzi.'))
+                ->modalSubmitActionLabel(__('Recalculează'))
                 ->action(function () {
                     $exitCode = \Illuminate\Support\Facades\Artisan::call('customers:detect-cities', [
                         '--marketplace' => $this->record->marketplace_client_id,
                         '--customer' => $this->record->id,
                     ]);
                     if ($exitCode !== 0) {
-                        Notification::make()->title('Detectarea a eșuat')->danger()->send();
+                        Notification::make()->title(__('Detectarea a eșuat'))->danger()->send();
                         return;
                     }
-                    Notification::make()->title('Oraș re-detectat')
-                        ->body('Reîncarcă pagina ca să vezi noua distribuție.')
+                    Notification::make()->title(__('Oraș re-detectat'))
+                        ->body(__('Reîncarcă pagina ca să vezi noua distribuție.'))
                         ->success()->send();
                     $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->record]));
                 }),
@@ -102,7 +102,7 @@ class EditMarketplaceCustomer extends EditRecord
             }
 
             Notification::make()
-                ->title('Parola a fost schimbată')
+                ->title(__('Parola a fost schimbată'))
                 ->body("Clientul {$name} a fost notificat pe email." . ($linkedUpdated ? ' ' . \App\Services\Marketplace\AccountPasswordSync::appliedNotice($linkedUpdated) : ''))
                 ->success()
                 ->send();

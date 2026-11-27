@@ -64,10 +64,10 @@ class ShopCategoryResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Category Details')
+                SC\Section::make(__('Category Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
-                            ->label('Category Name')
+                            ->label(__('Category Name'))
                             ->required()
                             ->maxLength(190)
                             ->live(onBlur: true)
@@ -76,18 +76,18 @@ class ShopCategoryResource extends Resource
                             }),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
                         Forms\Components\Textarea::make("description.{$marketplaceLanguage}")
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(3)
                             ->columnSpanFull(),
 
                         Forms\Components\Select::make('parent_id')
-                            ->label('Parent Category')
+                            ->label(__('Parent Category'))
                             ->options(function () {
                                 $marketplace = static::getMarketplaceClient();
                                 $lang = $marketplace->language ?? $marketplace->locale ?? 'en';
@@ -97,23 +97,23 @@ class ShopCategoryResource extends Resource
                                     ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
                             })
                             ->searchable()
-                            ->placeholder('None (Top-level category)'),
+                            ->placeholder(__('None (Top-level category)')),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
 
                         Forms\Components\Toggle::make('is_visible')
-                            ->label('Visible')
+                            ->label(__('Visible'))
                             ->default(true),
                     ])->columns(2),
 
-                SC\Section::make('Appearance')
+                SC\Section::make(__('Appearance'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\FileUpload::make('image_url')
-                            ->label('Category Image')
+                            ->label(__('Category Image'))
                             ->image()
                             ->disk('public')
                             ->directory('shop/categories')
@@ -123,55 +123,55 @@ class ShopCategoryResource extends Resource
                             ->columnSpanFull(),
 
                         Forms\Components\Select::make('icon')
-                            ->label('Icon')
+                            ->label(__('Icon'))
                             ->options([
-                                'heroicon-o-shopping-bag' => '🛍️ Shopping Bag',
-                                'heroicon-o-shopping-cart' => '🛒 Shopping Cart',
-                                'heroicon-o-gift' => '🎁 Gift',
-                                'heroicon-o-heart' => '❤️ Heart',
-                                'heroicon-o-star' => '⭐ Star',
-                                'heroicon-o-sparkles' => '✨ Sparkles',
-                                'heroicon-o-tag' => '🏷️ Tag',
-                                'heroicon-o-cube' => '📦 Cube/Box',
-                                'heroicon-o-truck' => '🚚 Truck/Delivery',
-                                'heroicon-o-ticket' => '🎫 Ticket',
-                                'heroicon-o-musical-note' => '🎵 Music',
-                                'heroicon-o-film' => '🎬 Film',
-                                'heroicon-o-camera' => '📷 Camera',
-                                'heroicon-o-device-phone-mobile' => '📱 Phone',
-                                'heroicon-o-computer-desktop' => '💻 Computer',
-                                'heroicon-o-tv' => '📺 TV',
-                                'heroicon-o-book-open' => '📖 Book',
-                                'heroicon-o-academic-cap' => '🎓 Academic',
-                                'heroicon-o-beaker' => '🧪 Science',
-                                'heroicon-o-puzzle-piece' => '🧩 Puzzle',
-                                'heroicon-o-face-smile' => '😊 Smile',
-                                'heroicon-o-hand-thumb-up' => '👍 Thumbs Up',
-                                'heroicon-o-fire' => '🔥 Fire/Hot',
-                                'heroicon-o-bolt' => '⚡ Bolt/Electric',
-                                'heroicon-o-sun' => '☀️ Sun',
-                                'heroicon-o-moon' => '🌙 Moon',
-                                'heroicon-o-cloud' => '☁️ Cloud',
-                                'heroicon-o-globe-alt' => '🌍 Globe',
-                                'heroicon-o-home' => '🏠 Home',
-                                'heroicon-o-building-storefront' => '🏪 Store',
+                                'heroicon-o-shopping-bag' => __('🛍️ Shopping Bag'),
+                                'heroicon-o-shopping-cart' => __('🛒 Shopping Cart'),
+                                'heroicon-o-gift' => __('🎁 Gift'),
+                                'heroicon-o-heart' => __('❤️ Heart'),
+                                'heroicon-o-star' => __('⭐ Star'),
+                                'heroicon-o-sparkles' => __('✨ Sparkles'),
+                                'heroicon-o-tag' => __('🏷️ Tag'),
+                                'heroicon-o-cube' => __('📦 Cube/Box'),
+                                'heroicon-o-truck' => __('🚚 Truck/Delivery'),
+                                'heroicon-o-ticket' => __('🎫 Ticket'),
+                                'heroicon-o-musical-note' => __('🎵 Music'),
+                                'heroicon-o-film' => __('🎬 Film'),
+                                'heroicon-o-camera' => __('📷 Camera'),
+                                'heroicon-o-device-phone-mobile' => __('📱 Phone'),
+                                'heroicon-o-computer-desktop' => __('💻 Computer'),
+                                'heroicon-o-tv' => __('📺 TV'),
+                                'heroicon-o-book-open' => __('📖 Book'),
+                                'heroicon-o-academic-cap' => __('🎓 Academic'),
+                                'heroicon-o-beaker' => __('🧪 Science'),
+                                'heroicon-o-puzzle-piece' => __('🧩 Puzzle'),
+                                'heroicon-o-face-smile' => __('😊 Smile'),
+                                'heroicon-o-hand-thumb-up' => __('👍 Thumbs Up'),
+                                'heroicon-o-fire' => __('🔥 Fire/Hot'),
+                                'heroicon-o-bolt' => __('⚡ Bolt/Electric'),
+                                'heroicon-o-sun' => __('☀️ Sun'),
+                                'heroicon-o-moon' => __('🌙 Moon'),
+                                'heroicon-o-cloud' => __('☁️ Cloud'),
+                                'heroicon-o-globe-alt' => __('🌍 Globe'),
+                                'heroicon-o-home' => __('🏠 Home'),
+                                'heroicon-o-building-storefront' => __('🏪 Store'),
                             ])
                             ->searchable()
-                            ->placeholder('Select an icon'),
+                            ->placeholder(__('Select an icon')),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
                     ])->columns(2),
 
-                SC\Section::make('SEO')
+                SC\Section::make(__('SEO'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
-                            ->label('Meta Title')
+                            ->label(__('Meta Title'))
                             ->maxLength(70),
 
                         Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
-                            ->label('Meta Description')
+                            ->label(__('Meta Description'))
                             ->rows(2)
                             ->maxLength(160),
                     ])->columns(1),
@@ -186,17 +186,17 @@ class ShopCategoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent')
+                    ->label(__('Parent'))
                     ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
                             return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
@@ -205,16 +205,16 @@ class ShopCategoryResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('products_count')
-                    ->label('Products')
+                    ->label(__('Products'))
                     ->counts('products')
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -224,9 +224,9 @@ class ShopCategoryResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
                 Tables\Filters\SelectFilter::make('parent_id')
-                    ->label('Parent Category')
+                    ->label(__('Parent Category'))
                     ->options(function () {
                         $marketplace = static::getMarketplaceClient();
                         $lang = $marketplace->language ?? $marketplace->locale ?? 'en';
@@ -235,7 +235,7 @@ class ShopCategoryResource extends Resource
                             ->get()
                             ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
                     })
-                    ->placeholder('All'),
+                    ->placeholder(__('All')),
             ])
             ->recordActions([
                 EditAction::make(),

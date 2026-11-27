@@ -49,16 +49,16 @@ class MarketplaceOrganizerTeamMemberResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            SC\Section::make('Detalii membru')
-                ->description('Modificări pe contul de team member. Parola nu se schimbă aici.')
+            SC\Section::make(__('Detalii membru'))
+                ->description(__('Modificări pe contul de team member. Parola nu se schimbă aici.'))
                 ->columns(2)
                 ->schema([
                     Forms\Components\TextInput::make('name')
-                        ->label('Nume complet')
+                        ->label(__('Nume complet'))
                         ->required()
                         ->maxLength(255),
                     Forms\Components\TextInput::make('email')
-                        ->label('Email')
+                        ->label(__('Email'))
                         ->email()
                         ->required()
                         ->maxLength(255)
@@ -69,49 +69,49 @@ class MarketplaceOrganizerTeamMemberResource extends Resource
                                 ->ignore($record?->id);
                         }),
                     Forms\Components\Select::make('role')
-                        ->label('Rol')
+                        ->label(__('Rol'))
                         ->options([
-                            'admin' => 'Administrator',
-                            'manager' => 'Manager',
-                            'staff' => 'Staff',
+                            'admin' => __('Administrator'),
+                            'manager' => __('Manager'),
+                            'staff' => __('Staff'),
                         ])
                         ->required(),
                     Forms\Components\Select::make('leisure_role')
-                        ->label('Rol leisure (opțional)')
+                        ->label(__('Rol leisure (opțional)'))
                         ->options([
-                            'check_in' => '✅ Check-in',
-                            'rental_operator' => '🛶 Operator închirieri',
-                            'pos_cashier' => '💵 Casier POS',
-                            'inventory_manager' => '📦 Manager inventar',
-                            'pos_manager' => '🧾 Manager POS',
-                            'admin' => '⭐ Admin leisure',
+                            'check_in' => __('✅ Check-in'),
+                            'rental_operator' => __('🛶 Operator închirieri'),
+                            'pos_cashier' => __('💵 Casier POS'),
+                            'inventory_manager' => __('📦 Manager inventar'),
+                            'pos_manager' => __('🧾 Manager POS'),
+                            'admin' => __('⭐ Admin leisure'),
                         ])
                         ->searchable()
                         ->nullable(),
                     Forms\Components\Select::make('status')
-                        ->label('Status')
+                        ->label(__('Status'))
                         ->options([
-                            'active' => 'Activ',
-                            'pending' => 'Invitat (pending)',
-                            'inactive' => 'Inactiv',
+                            'active' => __('Activ'),
+                            'pending' => __('Invitat (pending)'),
+                            'inactive' => __('Inactiv'),
                         ])
                         ->required(),
                     Forms\Components\Placeholder::make('organizer_info')
-                        ->label('Organizator')
+                        ->label(__('Organizator'))
                         ->content(fn (?MarketplaceOrganizerTeamMember $record) => $record?->organizer?->name
                             . ' (id ' . ($record?->marketplace_organizer_id ?? '—') . ')'),
                 ]),
-            SC\Section::make('Metadata')
+            SC\Section::make(__('Metadata'))
                 ->columns(3)
                 ->schema([
                     Forms\Components\Placeholder::make('accepted_at')
-                        ->label('Invitația acceptată')
+                        ->label(__('Invitația acceptată'))
                         ->content(fn (?MarketplaceOrganizerTeamMember $record) => $record?->accepted_at?->timezone('Europe/Bucharest')->format('d.m.Y H:i') ?? '— niciodată'),
                     Forms\Components\Placeholder::make('invite_sent_at')
-                        ->label('Invitația trimisă')
+                        ->label(__('Invitația trimisă'))
                         ->content(fn (?MarketplaceOrganizerTeamMember $record) => $record?->invite_sent_at?->timezone('Europe/Bucharest')->format('d.m.Y H:i') ?? '—'),
                     Forms\Components\Placeholder::make('created_at')
-                        ->label('Adăugat')
+                        ->label(__('Adăugat'))
                         ->content(fn (?MarketplaceOrganizerTeamMember $record) => $record?->created_at?->timezone('Europe/Bucharest')->format('d.m.Y H:i') ?? '—'),
                 ])
                 ->collapsed(),

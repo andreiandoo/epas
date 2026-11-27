@@ -64,32 +64,32 @@ class EmailSettings extends Page
     {
         return $form
             ->schema([
-                Section::make('SMTP Configuration')
-                    ->description('Configure your SMTP server for sending newsletters and transactional emails')
+                Section::make(__('SMTP Configuration'))
+                    ->description(__('Configure your SMTP server for sending newsletters and transactional emails'))
                     ->schema([
                         Forms\Components\TextInput::make('host')
-                            ->label('SMTP Host')
+                            ->label(__('SMTP Host'))
                             ->placeholder('smtp.example.com')
                             ->required(),
                         Forms\Components\TextInput::make('port')
-                            ->label('SMTP Port')
+                            ->label(__('SMTP Port'))
                             ->numeric()
                             ->default(587)
                             ->required(),
                         Forms\Components\TextInput::make('username')
-                            ->label('Username')
+                            ->label(__('Username'))
                             ->required(),
                         Forms\Components\TextInput::make('password')
-                            ->label('Password')
+                            ->label(__('Password'))
                             ->password()
                             ->revealable()
                             ->required(),
                         Forms\Components\Select::make('encryption')
-                            ->label('Encryption')
+                            ->label(__('Encryption'))
                             ->options([
-                                'tls' => 'TLS',
-                                'ssl' => 'SSL',
-                                'none' => 'None',
+                                'tls' => __('TLS'),
+                                'ssl' => __('SSL'),
+                                'none' => __('None'),
                             ])
                             ->default('tls')
                             ->required(),
@@ -102,23 +102,23 @@ class EmailSettings extends Page
     {
         return $form
             ->schema([
-                Section::make('Default Email Settings')
-                    ->description('Default sender information for all outgoing emails')
+                Section::make(__('Default Email Settings'))
+                    ->description(__('Default sender information for all outgoing emails'))
                     ->schema([
                         Forms\Components\TextInput::make('from_name')
-                            ->label('From Name')
+                            ->label(__('From Name'))
                             ->required()
                             ->maxLength(100),
                         Forms\Components\TextInput::make('from_email')
-                            ->label('From Email')
+                            ->label(__('From Email'))
                             ->email()
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('reply_to')
-                            ->label('Reply-To Email')
+                            ->label(__('Reply-To Email'))
                             ->email()
                             ->maxLength(255)
-                            ->helperText('If different from the From email'),
+                            ->helperText(__('If different from the From email')),
                     ])->columns(3),
             ])
             ->statePath('emailData');
@@ -134,7 +134,7 @@ class EmailSettings extends Page
         ]);
 
         Notification::make()
-            ->title('SMTP Settings Saved')
+            ->title(__('SMTP Settings Saved'))
             ->success()
             ->send();
     }
@@ -149,7 +149,7 @@ class EmailSettings extends Page
         ]);
 
         Notification::make()
-            ->title('Email Settings Saved')
+            ->title(__('Email Settings Saved'))
             ->success()
             ->send();
     }
@@ -160,8 +160,8 @@ class EmailSettings extends Page
 
         if (!$marketplace->hasSmtpConfigured()) {
             Notification::make()
-                ->title('SMTP Not Configured')
-                ->body('Please save your SMTP settings first.')
+                ->title(__('SMTP Not Configured'))
+                ->body(__('Please save your SMTP settings first.'))
                 ->danger()
                 ->send();
             return;
@@ -183,13 +183,13 @@ class EmailSettings extends Page
             $transport->send($testEmail);
 
             Notification::make()
-                ->title('Test Email Sent')
+                ->title(__('Test Email Sent'))
                 ->body('A test email has been sent to ' . auth()->user()->email)
                 ->success()
                 ->send();
         } catch (\Exception $e) {
             Notification::make()
-                ->title('SMTP Test Failed')
+                ->title(__('SMTP Test Failed'))
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
@@ -200,11 +200,11 @@ class EmailSettings extends Page
     {
         return [
             Action::make('test_smtp')
-                ->label('Test SMTP')
+                ->label(__('Test SMTP'))
                 ->icon('heroicon-o-paper-airplane')
                 ->action('testSmtp')
                 ->requiresConfirmation()
-                ->modalDescription('Send a test email to your account email address?'),
+                ->modalDescription(__('Send a test email to your account email address?')),
         ];
     }
 }

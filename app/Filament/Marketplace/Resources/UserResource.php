@@ -50,14 +50,14 @@ class UserResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('User Details')
+                SC\Section::make(__('User Details'))
                     ->schema([
                         Forms\Components\TextInput::make('first_name')
-                            ->label('First Name')
+                            ->label(__('First Name'))
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('last_name')
-                            ->label('Last Name')
+                            ->label(__('Last Name'))
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('email')
@@ -77,7 +77,7 @@ class UserResource extends Resource
                             ->tel()
                             ->maxLength(50),
                         Forms\Components\TextInput::make('position')
-                            ->label('Position/Title')
+                            ->label(__('Position/Title'))
                             ->maxLength(255),
                         Forms\Components\Hidden::make('role')
                             ->default('editor'),
@@ -95,11 +95,11 @@ class UserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('first_name')
-                    ->label('First Name')
+                    ->label(__('First Name'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('last_name')
-                    ->label('Last Name')
+                    ->label(__('Last Name'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('email')

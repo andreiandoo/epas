@@ -63,10 +63,10 @@ class BlogCategoryResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Category Details')
+                SC\Section::make(__('Category Details'))
                     ->schema([
                         Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
-                            ->label('Category Name')
+                            ->label(__('Category Name'))
                             ->required()
                             ->maxLength(190)
                             ->live(onBlur: true)
@@ -75,17 +75,17 @@ class BlogCategoryResource extends Resource
                             }),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
                         Forms\Components\Textarea::make("description.{$marketplaceLanguage}")
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(3),
 
                         Forms\Components\Select::make('parent_id')
-                            ->label('Parent Category')
+                            ->label(__('Parent Category'))
                             ->options(function () {
                                 $marketplace = static::getMarketplaceClient();
                                 $lang = $marketplace->language ?? $marketplace->locale ?? 'en';
@@ -95,44 +95,44 @@ class BlogCategoryResource extends Resource
                                     ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
                             })
                             ->searchable()
-                            ->placeholder('None (Top-level category)'),
+                            ->placeholder(__('None (Top-level category)')),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
 
                         Forms\Components\Toggle::make('is_visible')
-                            ->label('Visible')
+                            ->label(__('Visible'))
                             ->default(true),
                     ])->columns(2),
 
-                SC\Section::make('Appearance')
+                SC\Section::make(__('Appearance'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\TextInput::make('image_url')
-                            ->label('Image URL')
+                            ->label(__('Image URL'))
                             ->url()
                             ->maxLength(500),
 
                         Forms\Components\TextInput::make('icon')
-                            ->label('Icon')
+                            ->label(__('Icon'))
                             ->placeholder('heroicon-o-folder')
                             ->maxLength(100),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
                     ])->columns(3),
 
-                SC\Section::make('SEO')
+                SC\Section::make(__('SEO'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
-                            ->label('Meta Title')
+                            ->label(__('Meta Title'))
                             ->maxLength(70),
 
                         Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
-                            ->label('Meta Description')
+                            ->label(__('Meta Description'))
                             ->rows(2)
                             ->maxLength(160),
                     ])->columns(1),
@@ -147,16 +147,16 @@ class BlogCategoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent')
+                    ->label(__('Parent'))
                     ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
                             return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
@@ -166,16 +166,16 @@ class BlogCategoryResource extends Resource
 
                 // Live count; the stored article_count column is never refreshed.
                 Tables\Columns\TextColumn::make('articles_count')
-                    ->label('Articles')
+                    ->label(__('Articles'))
                     ->counts('articles')
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')
@@ -185,7 +185,7 @@ class BlogCategoryResource extends Resource
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
             ])
             ->recordActions([
                 EditAction::make(),

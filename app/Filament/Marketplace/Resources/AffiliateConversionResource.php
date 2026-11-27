@@ -40,34 +40,34 @@ class AffiliateConversionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('order_ref')
-                    ->label('Order Ref')
+                    ->label(__('Order Ref'))
                     ->searchable()
                     ->sortable()
                     ->copyable(),
 
                 Tables\Columns\TextColumn::make('affiliate.name')
-                    ->label('Affiliate')
+                    ->label(__('Affiliate'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('affiliate.code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->badge()
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('amount')
-                    ->label('Order Amount')
+                    ->label(__('Order Amount'))
                     ->money('RON')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('commission_value')
-                    ->label('Commission')
+                    ->label(__('Commission'))
                     ->money('RON')
                     ->sortable()
                     ->color('success'),
 
                 Tables\Columns\BadgeColumn::make('attributed_by')
-                    ->label('Attribution')
+                    ->label(__('Attribution'))
                     ->colors([
                         'primary' => 'link',
                         'success' => 'coupon',
@@ -75,7 +75,7 @@ class AffiliateConversionResource extends Resource
                     ->formatStateUsing(fn ($state) => ucfirst($state)),
 
                 Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->colors([
                         'warning' => 'pending',
                         'success' => 'approved',
@@ -84,27 +84,27 @@ class AffiliateConversionResource extends Resource
                     ->formatStateUsing(fn ($state) => ucfirst($state)),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
+                    ->label(__('Date'))
                     ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'Pending',
-                        'approved' => 'Approved',
-                        'reversed' => 'Reversed',
+                        'pending' => __('Pending'),
+                        'approved' => __('Approved'),
+                        'reversed' => __('Reversed'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('attributed_by')
-                    ->label('Attribution Type')
+                    ->label(__('Attribution Type'))
                     ->options([
-                        'link' => 'Link',
-                        'coupon' => 'Coupon',
+                        'link' => __('Link'),
+                        'coupon' => __('Coupon'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('affiliate_id')
-                    ->label('Affiliate')
+                    ->label(__('Affiliate'))
                     ->relationship('affiliate', 'name'),
             ])
             ->recordActions([])
@@ -112,7 +112,7 @@ class AffiliateConversionResource extends Resource
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve_selected')
-                        ->label('Approve Selected')
+                        ->label(__('Approve Selected'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()

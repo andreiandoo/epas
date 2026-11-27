@@ -60,7 +60,7 @@ class ImportEvents extends Page implements HasForms
 
         return [
             Forms\Components\Select::make('marketplace_organizer_id')
-                ->label('Organizator')
+                ->label(__('Organizator'))
                 ->searchable()
                 ->preload()
                 ->options(function () use ($marketplace) {

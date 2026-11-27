@@ -20,7 +20,7 @@ class ViewActivityBooking extends ViewRecord
     {
         return [
             Actions\Action::make('checkIn')
-                ->label('Validează la intrare')
+                ->label(__('Validează la intrare'))
                 ->icon('heroicon-o-check-badge')
                 ->color('success')
                 ->visible(fn (): bool => in_array($this->record->status, [
@@ -28,7 +28,7 @@ class ViewActivityBooking extends ViewRecord
                     ActivityBooking::STATUS_CONFIRMED,
                 ], true))
                 ->requiresConfirmation()
-                ->modalHeading('Validează rezervarea')
+                ->modalHeading(__('Validează rezervarea'))
                 ->modalDescription(fn () => sprintf(
                     'Marchezi rezervarea %s ca validată. Toate biletele asociate (%d) vor fi marcate ca verificate la intrare.',
                     $this->record->confirmation_code,
@@ -50,19 +50,19 @@ class ViewActivityBooking extends ViewRecord
                     });
                     $this->refreshFormData(['status', 'checked_in_at']);
                     Notification::make()
-                        ->title('Rezervarea a fost validată')
+                        ->title(__('Rezervarea a fost validată'))
                         ->success()
                         ->send();
                 }),
 
             Actions\Action::make('undoCheckIn')
-                ->label('Anulează validarea')
+                ->label(__('Anulează validarea'))
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('gray')
                 ->visible(fn (): bool => $this->record->status === ActivityBooking::STATUS_CHECKED_IN)
                 ->requiresConfirmation()
-                ->modalHeading('Anulează validarea')
-                ->modalDescription('Rezervarea va reveni la statusul de plătită. Biletele asociate redevin valide.')
+                ->modalHeading(__('Anulează validarea'))
+                ->modalDescription(__('Rezervarea va reveni la statusul de plătită. Biletele asociate redevin valide.'))
                 ->action(function () {
                     DB::transaction(function () {
                         $this->record->update([
@@ -79,13 +79,13 @@ class ViewActivityBooking extends ViewRecord
                     });
                     $this->refreshFormData(['status', 'checked_in_at']);
                     Notification::make()
-                        ->title('Validarea a fost anulată')
+                        ->title(__('Validarea a fost anulată'))
                         ->success()
                         ->send();
                 }),
 
             Actions\Action::make('markNoShow')
-                ->label('No-show')
+                ->label(__('No-show'))
                 ->icon('heroicon-o-no-symbol')
                 ->color('warning')
                 ->visible(fn (): bool => in_array($this->record->status, [
@@ -96,11 +96,11 @@ class ViewActivityBooking extends ViewRecord
                 ->action(function () {
                     $this->record->update(['status' => ActivityBooking::STATUS_NO_SHOW]);
                     $this->refreshFormData(['status']);
-                    Notification::make()->title('Marcat ca no-show')->success()->send();
+                    Notification::make()->title(__('Marcat ca no-show'))->success()->send();
                 }),
 
             Actions\Action::make('cancelBooking')
-                ->label('Anulează rezervarea')
+                ->label(__('Anulează rezervarea'))
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
                 ->visible(fn (): bool => ! in_array($this->record->status, [
@@ -108,7 +108,7 @@ class ViewActivityBooking extends ViewRecord
                     ActivityBooking::STATUS_CHECKED_IN,
                 ], true))
                 ->requiresConfirmation()
-                ->modalDescription('Locurile vor fi eliberate. Nu se efectuează rambursare automată.')
+                ->modalDescription(__('Locurile vor fi eliberate. Nu se efectuează rambursare automată.'))
                 ->action(function () {
                     DB::transaction(function () {
                         $this->record->update([
@@ -120,7 +120,7 @@ class ViewActivityBooking extends ViewRecord
                             ->update(['status' => 'cancelled']);
                     });
                     $this->refreshFormData(['status']);
-                    Notification::make()->title('Rezervarea a fost anulată')->success()->send();
+                    Notification::make()->title(__('Rezervarea a fost anulată'))->success()->send();
                 }),
         ];
     }

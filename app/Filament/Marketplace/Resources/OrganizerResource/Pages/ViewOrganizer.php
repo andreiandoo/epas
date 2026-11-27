@@ -27,20 +27,20 @@ class ViewOrganizer extends ViewRecord
 
             // Secondary actions: pushed to the RIGHT via margin-left:auto on first one
             Actions\Action::make('login_as')
-                ->label('Login as Organizer')
+                ->label(__('Login as Organizer'))
                 ->icon('heroicon-o-arrow-right-on-rectangle')
                 ->color('warning')
                 ->extraAttributes(['style' => 'margin-left: auto;'])
                 ->url(fn () => url('/marketplace/organizers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
 
             Actions\Action::make('view_events')
-                ->label('View Events')
+                ->label(__('View Events'))
                 ->icon('heroicon-o-calendar')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('index', ['organizer' => $record->id])),
 
             Actions\Action::make('create_event')
-                ->label('Create Event')
+                ->label(__('Create Event'))
                 ->icon('heroicon-o-plus')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('create', ['organizer' => $record->id])),
@@ -48,21 +48,21 @@ class ViewOrganizer extends ViewRecord
             // Activities module — only shown when the marketplace has the
             // `activities-module` microservice active.
             Actions\Action::make('view_activities')
-                ->label('View Activities')
+                ->label(__('View Activities'))
                 ->icon('heroicon-o-rocket-launch')
                 ->color('gray')
                 ->visible(fn () => static::marketplaceHasMicroservice('activities-module'))
                 ->url(fn () => ActivityResource::getUrl('index', ['tableFilters[marketplace_organizer_id][value]' => $record->id])),
 
             Actions\Action::make('create_activity')
-                ->label('Create Activity')
+                ->label(__('Create Activity'))
                 ->icon('heroicon-o-plus')
                 ->color('gray')
                 ->visible(fn () => static::marketplaceHasMicroservice('activities-module'))
                 ->url(fn () => ActivityResource::getUrl('create', ['organizer' => $record->id])),
 
             Actions\Action::make('view_contract')
-                ->label('Vezi Contract')
+                ->label(__('Vezi Contract'))
                 ->icon('heroicon-o-document-text')
                 ->color('primary')
                 ->visible(fn () => \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
@@ -74,37 +74,37 @@ class ViewOrganizer extends ViewRecord
                     ->first()?->download_url, shouldOpenInNewTab: true),
 
             Actions\Action::make('view_balance')
-                ->label('View Balance')
+                ->label(__('View Balance'))
                 ->icon('heroicon-o-wallet')
                 ->color('warning')
                 ->url(fn () => url('/marketplace/organizers/' . $record->id . '/balance')),
 
             Actions\Action::make('create_payout')
-                ->label('Create Payout')
+                ->label(__('Create Payout'))
                 ->icon('heroicon-o-banknotes')
                 ->color('info')
                 ->visible(fn () => $record->available_balance > 0)
                 ->url(fn () => url('/marketplace/organizers/' . $record->id . '/balance')),
 
             Actions\Action::make('suspend')
-                ->label('Suspend Organizer')
+                ->label(__('Suspend Organizer'))
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
                 ->requiresConfirmation()
                 ->visible(fn () => $record->status === 'active')
                 ->action(function () use ($record) {
                     $record->update(['status' => 'suspended']);
-                    \Filament\Notifications\Notification::make()->title('Organizer suspended')->success()->send();
+                    \Filament\Notifications\Notification::make()->title(__('Organizer suspended'))->success()->send();
                 }),
 
             Actions\Action::make('reactivate')
-                ->label('Reactivate')
+                ->label(__('Reactivate'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('success')
                 ->visible(fn () => $record->status === 'suspended')
                 ->action(function () use ($record) {
                     $record->update(['status' => 'active']);
-                    \Filament\Notifications\Notification::make()->title('Organizer reactivated')->success()->send();
+                    \Filament\Notifications\Notification::make()->title(__('Organizer reactivated'))->success()->send();
                 }),
         ];
     }

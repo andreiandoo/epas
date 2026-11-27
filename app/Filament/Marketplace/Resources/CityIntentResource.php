@@ -73,13 +73,13 @@ class CityIntentResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Identificare')
+                SC\Section::make(__('Identificare'))
                     ->schema([
                         SC\Tabs::make('Label')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')->schema([
                                     Forms\Components\TextInput::make('name.ro')
-                                        ->label('Etichetă scurtă (RO)')
+                                        ->label(__('Etichetă scurtă (RO)'))
                                         ->required()
                                         ->maxLength(120)
                                         ->live(onBlur: true)
@@ -91,14 +91,14 @@ class CityIntentResource extends Resource
                                 ]),
                                 SC\Tabs\Tab::make('English')->schema([
                                     Forms\Components\TextInput::make('name.en')
-                                        ->label('Short label (EN)')
+                                        ->label(__('Short label (EN)'))
                                         ->maxLength(120),
                                 ]),
                             ])->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug URL')
-                            ->helperText('Convenție: începe cu "activitati-" ca routing-ul să-l distingă de categorii/orașe. URL final: /{oras}/{slug}.')
+                            ->label(__('Slug URL'))
+                            ->helperText(__('Convenție: începe cu "activitati-" ca routing-ul să-l distingă de categorii/orașe. URL final: /{oras}/{slug}.'))
                             ->required()
                             ->maxLength(120)
                             ->rule('alpha_dash')
@@ -107,73 +107,73 @@ class CityIntentResource extends Resource
                             }),
 
                         Forms\Components\TextInput::make('icon')
-                            ->label('Icon / emoji')
-                            ->placeholder('🎯 sau heroicon-o-sparkles')
+                            ->label(__('Icon / emoji'))
+                            ->placeholder(__('🎯 sau heroicon-o-sparkles'))
                             ->maxLength(80),
 
                         Forms\Components\Select::make('accent_color')
-                            ->label('Culoare accent')
+                            ->label(__('Culoare accent'))
                             ->options([
-                                'vermilion' => 'Vermilion (roșu)',
-                                'forest' => 'Forest (verde)',
-                                'ochre' => 'Ochre (galben-portocaliu)',
-                                'sky' => 'Sky (albastru)',
+                                'vermilion' => __('Vermilion (roșu)'),
+                                'forest' => __('Forest (verde)'),
+                                'ochre' => __('Ochre (galben-portocaliu)'),
+                                'sky' => __('Sky (albastru)'),
                             ])
                             ->default('vermilion'),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Ordine afișare')
+                            ->label(__('Ordine afișare'))
                             ->numeric()
                             ->default(0),
                     ])->columns(2),
 
-                SC\Section::make('SEO — template-uri')
-                    ->description('Suportă placeholderii: {intent_label}, {city_name}, {result_count}')
+                SC\Section::make(__('SEO — template-uri'))
+                    ->description(__('Suportă placeholderii: {intent_label}, {city_name}, {result_count}'))
                     ->schema([
                         SC\Tabs::make('SEO templates')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')->schema([
                                     Forms\Components\TextInput::make('title_template.ro')
-                                        ->label('Title template (<title>)')
-                                        ->placeholder('Activități {intent_label} în {city_name} · bilete.online')
+                                        ->label(__('Title template (<title>)'))
+                                        ->placeholder(__('Activități {intent_label} în {city_name} · bilete.online'))
                                         ->maxLength(255),
                                     Forms\Components\TextInput::make('h1_template.ro')
-                                        ->label('H1 template (opțional)')
-                                        ->placeholder('Activități {intent_label} în {city_name}')
+                                        ->label(__('H1 template (opțional)'))
+                                        ->placeholder(__('Activități {intent_label} în {city_name}'))
                                         ->maxLength(255),
                                     Forms\Components\Textarea::make('meta_description_template.ro')
-                                        ->label('Meta description template')
+                                        ->label(__('Meta description template'))
                                         ->rows(2)
                                         ->maxLength(255),
                                     Forms\Components\Textarea::make('intro_copy.ro')
-                                        ->label('Intro (apare deasupra rezultatelor)')
+                                        ->label(__('Intro (apare deasupra rezultatelor)'))
                                         ->rows(2),
                                     Forms\Components\Textarea::make('seo_copy.ro')
-                                        ->label('SEO copy lung (apare sub rezultate)')
+                                        ->label(__('SEO copy lung (apare sub rezultate)'))
                                         ->rows(6),
                                 ]),
                                 SC\Tabs\Tab::make('English')->schema([
                                     Forms\Components\TextInput::make('title_template.en')
-                                        ->label('Title template')
+                                        ->label(__('Title template'))
                                         ->maxLength(255),
                                     Forms\Components\TextInput::make('h1_template.en')
-                                        ->label('H1 template')
+                                        ->label(__('H1 template'))
                                         ->maxLength(255),
                                     Forms\Components\Textarea::make('meta_description_template.en')
-                                        ->label('Meta description template')
+                                        ->label(__('Meta description template'))
                                         ->rows(2)
                                         ->maxLength(255),
                                     Forms\Components\Textarea::make('intro_copy.en')
-                                        ->label('Intro')
+                                        ->label(__('Intro'))
                                         ->rows(2),
                                     Forms\Components\Textarea::make('seo_copy.en')
-                                        ->label('SEO copy')
+                                        ->label(__('SEO copy'))
                                         ->rows(6),
                                 ]),
                             ])->columnSpanFull(),
                     ]),
 
-                SC\Section::make('Regulă de filtrare (DSL JSON)')
+                SC\Section::make(__('Regulă de filtrare (DSL JSON)'))
                     ->description(
                         'Editor JSON. Tipuri de regulă: in_city, event_attr, category_slug, cheapest_price_max/min/eq, ' .
                         'has_session_today/_tomorrow/_this_weekend, tag, age_includes. Combinatori: all, any, not. ' .
@@ -190,21 +190,21 @@ class CityIntentResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                SC\Section::make('Setări vizibilitate')
+                SC\Section::make(__('Setări vizibilitate'))
                     ->schema([
                         Forms\Components\Toggle::make('is_active')
-                            ->label('Activă')
+                            ->label(__('Activă'))
                             ->default(true),
 
                         Forms\Components\TextInput::make('min_results_for_index')
-                            ->label('Minim rezultate pentru indexare')
-                            ->helperText('Sub acest prag, paginile primesc <meta robots="noindex"> ca să evite penalizarea de thin content.')
+                            ->label(__('Minim rezultate pentru indexare'))
+                            ->helperText(__('Sub acest prag, paginile primesc <meta robots="noindex"> ca să evite penalizarea de thin content.'))
                             ->numeric()
                             ->default(3)
                             ->minValue(0),
 
                         Forms\Components\FileUpload::make('cover_image_url')
-                            ->label('Imagine cover (opțional, pentru OG share)')
+                            ->label(__('Imagine cover (opțional, pentru OG share)'))
                             ->image()
                             ->disk('public')
                             ->directory('intents')
@@ -221,37 +221,37 @@ class CityIntentResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$lang}")
-                    ->label('Etichetă')
+                    ->label(__('Etichetă'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
+                    ->label(__('Slug'))
                     ->badge()
                     ->copyable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('icon')
-                    ->label('Icon'),
+                    ->label(__('Icon')),
 
                 Tables\Columns\TextColumn::make('accent_color')
-                    ->label('Accent')
+                    ->label(__('Accent'))
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('min_results_for_index')
-                    ->label('Min. rezultate')
+                    ->label(__('Min. rezultate'))
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Activă')
+                    ->label(__('Activă'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Ordine')
+                    ->label(__('Ordine'))
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active')->label('Activă'),
+                Tables\Filters\TernaryFilter::make('is_active')->label(__('Activă')),
             ])
             ->recordActions([
                 EditAction::make(),

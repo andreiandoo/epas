@@ -30,7 +30,7 @@ class EditMarketplacePartner extends EditRecord
     {
         return [
             Actions\Action::make('pingWebhook')
-                ->label('Trimite test')
+                ->label(__('Trimite test'))
                 ->icon('heroicon-o-signal')
                 ->color('gray')
                 ->visible(fn () => !empty($this->record->webhook_url) && !empty($this->record->outbound_secret))
@@ -45,11 +45,11 @@ class EditMarketplacePartner extends EditRecord
                         ->send();
                 }),
             Actions\Action::make('regenerateApiKey')
-                ->label('Generează cheie nouă')
+                ->label(__('Generează cheie nouă'))
                 ->icon('heroicon-o-key')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalDescription('Cheia actuală nu va mai funcționa. Partenerul trebuie să primească noua cheie.')
+                ->modalDescription(__('Cheia actuală nu va mai funcționa. Partenerul trebuie să primească noua cheie.'))
                 ->action(function () {
                     MarketplacePartnerResource::notifyNewKey($this->record, $this->record->regenerateApiKey());
                 }),

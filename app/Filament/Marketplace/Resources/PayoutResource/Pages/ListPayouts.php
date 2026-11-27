@@ -81,7 +81,7 @@ class ListPayouts extends ListRecords
     protected function getCreatePayoutAction(): Actions\Action
     {
         return Actions\Action::make('create_payout')
-            ->label('Crează Decont Manual')
+            ->label(__('Crează Decont Manual'))
             ->icon('heroicon-o-plus-circle')
             ->color('primary')
             // Option A (2026-07-28): the "Generează decont" button in the
@@ -124,7 +124,7 @@ class ListPayouts extends ListRecords
             })
             ->form([
                 Forms\Components\Select::make('marketplace_organizer_id')
-                    ->label('Organizator')
+                    ->label(__('Organizator'))
                     ->options(function () {
                         $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
                         return MarketplaceOrganizer::where('marketplace_client_id', $marketplaceAdmin->marketplace_client_id)
@@ -144,7 +144,7 @@ class ListPayouts extends ListRecords
                     }),
 
                 Forms\Components\Select::make('event_id')
-                    ->label('Eveniment')
+                    ->label(__('Eveniment'))
                     ->options(function (Get $get) {
                         $organizerId = $get('marketplace_organizer_id');
                         if (!$organizerId) return [];
@@ -253,7 +253,7 @@ class ListPayouts extends ListRecords
                     }),
 
                 Forms\Components\Placeholder::make('available_balance_info')
-                    ->label('Sold disponibil')
+                    ->label(__('Sold disponibil'))
                     ->content(function (Get $get) {
                         $eventId = $get('event_id');
                         if (!$eventId) return '-';
@@ -337,7 +337,7 @@ class ListPayouts extends ListRecords
                 // ale biletelor plătite într-un decont anterior; restul apar
                 // informativ (rândul 2 din PDF, factura organizator).
                 Forms\Components\Placeholder::make('auto_refunds_summary')
-                    ->label('Rambursări incluse automat în acest decont')
+                    ->label(__('Rambursări incluse automat în acest decont'))
                     ->content(function (Get $get) {
                         $eventId = (int) $get('event_id');
                         if (!$eventId) return '';
@@ -388,7 +388,7 @@ class ListPayouts extends ListRecords
                 // Quick payout amount — auto-distributes tickets
                 \Filament\Schemas\Components\Grid::make(3)->schema([
                     Forms\Components\TextInput::make('desired_net_amount')
-                        ->label('Cât vrei să decontezi?')
+                        ->label(__('Cât vrei să decontezi?'))
                         ->helperText(function (Get $get) {
                             $eventId = $get('event_id');
                             if (!$eventId) return 'Introdu suma netă dorită, apoi apasă pe Distribuie automat.';
@@ -415,7 +415,7 @@ class ListPayouts extends ListRecords
                         }),
                     \Filament\Schemas\Components\Actions::make([
                         \Filament\Actions\Action::make('auto_distribute')
-                            ->label('Distribuie automat')
+                            ->label(__('Distribuie automat'))
                             ->icon('heroicon-o-sparkles')
                             ->color('primary')
                             ->size('sm')
@@ -505,7 +505,7 @@ class ListPayouts extends ListRecords
                                 $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
 
                                 \Filament\Notifications\Notification::make()
-                                    ->title('Bilete distribuite automat')
+                                    ->title(__('Bilete distribuite automat'))
                                     ->body('Suma netă: ' . number_format($gross - $commission - $discount - $fees, 2) . ' RON din ' . number_format($desiredNet, 2) . ' RON solicitate')
                                     ->success()
                                     ->send();
@@ -518,30 +518,30 @@ class ListPayouts extends ListRecords
                         // back-filling a decont generated offline at a past
                         // date — aligned with the "Data creării" override.
                         \Filament\Actions\Action::make('fill_tickets_as_of_date')
-                            ->label('Calculează la o dată')
+                            ->label(__('Calculează la o dată'))
                             ->icon('heroicon-o-clock')
                             ->color('gray')
                             ->size('sm')
-                            ->modalHeading('Calculează decontul la o dată din trecut')
-                            ->modalDescription('Repeater-ul de bilete + lista de rambursări se vor înlocui cu starea evenimentului la data aleasă (excluzând ce e deja în alte deconturi). Util pentru a recrea un decont făcut offline la o dată anterioară.')
-                            ->modalSubmitActionLabel('Calculează')
+                            ->modalHeading(__('Calculează decontul la o dată din trecut'))
+                            ->modalDescription(__('Repeater-ul de bilete + lista de rambursări se vor înlocui cu starea evenimentului la data aleasă (excluzând ce e deja în alte deconturi). Util pentru a recrea un decont făcut offline la o dată anterioară.'))
+                            ->modalSubmitActionLabel(__('Calculează'))
                             ->form([
                                 Forms\Components\DatePicker::make('cutoff_date')
-                                    ->label('Data limită (inclusiv)')
+                                    ->label(__('Data limită (inclusiv)'))
                                     ->required()
                                     ->default(fn () => now()->format('Y-m-d'))
                                     ->maxDate(now())
-                                    ->helperText('Vânzările și rambursările făcute până la sfârșitul acestei zile vor fi incluse.'),
+                                    ->helperText(__('Vânzările și rambursările făcute până la sfârșitul acestei zile vor fi incluse.')),
                             ])
                             ->action(function (array $data, Get $get, Set $set) {
                                 $eventId = $get('event_id');
                                 if (!$eventId) {
-                                    \Filament\Notifications\Notification::make()->title('Alege întâi un eveniment')->warning()->send();
+                                    \Filament\Notifications\Notification::make()->title(__('Alege întâi un eveniment'))->warning()->send();
                                     return;
                                 }
                                 $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
                                 if (!$event) {
-                                    \Filament\Notifications\Notification::make()->title('Evenimentul nu a fost găsit')->danger()->send();
+                                    \Filament\Notifications\Notification::make()->title(__('Evenimentul nu a fost găsit'))->danger()->send();
                                     return;
                                 }
                                 $cutoff = \Carbon\Carbon::parse($data['cutoff_date']);
@@ -550,7 +550,7 @@ class ListPayouts extends ListRecords
 
                                 if (empty($items) && empty($refundIds)) {
                                     \Filament\Notifications\Notification::make()
-                                        ->title('Nimic la data aleasă')
+                                        ->title(__('Nimic la data aleasă'))
                                         ->body('Nu există bilete sau rambursări noi până la ' . $cutoff->format('d.m.Y') . ' care să nu fie deja în alt decont.')
                                         ->warning()->send();
                                     return;
@@ -594,8 +594,8 @@ class ListPayouts extends ListRecords
 
                 // Ticket selection for partial payout
                 Forms\Components\Repeater::make('payout_tickets')
-                    ->label('Bilete pentru decont')
-                    ->helperText('Selectează câte bilete din fiecare tip incluzi în acest decont. Implicit: toate.')
+                    ->label(__('Bilete pentru decont'))
+                    ->helperText(__('Selectează câte bilete din fiecare tip incluzi în acest decont. Implicit: toate.'))
                     ->schema([
                         Forms\Components\Hidden::make('ticket_type_id'),
                         Forms\Components\Hidden::make('ticket_type_name'),
@@ -644,7 +644,7 @@ class ListPayouts extends ListRecords
                 // Recalculate button
                 \Filament\Schemas\Components\Actions::make([
                     \Filament\Actions\Action::make('recalculate_payout')
-                        ->label('Recalculează din bilete selectate')
+                        ->label(__('Recalculează din bilete selectate'))
                         ->icon('heroicon-o-calculator')
                         ->color('gray')
                         ->size('sm')
@@ -669,13 +669,13 @@ class ListPayouts extends ListRecords
                             $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
                         }),
                     \Filament\Actions\Action::make('reset_payout_tickets')
-                        ->label('Resetează la valori inițiale')
+                        ->label(__('Resetează la valori inițiale'))
                         ->icon('heroicon-o-arrow-path')
                         ->color('danger')
                         ->size('sm')
                         ->requiresConfirmation()
-                        ->modalHeading('Resetare bilete')
-                        ->modalDescription('Ești sigur? Se vor reseta cantitățile de bilete și sumele la valorile inițiale.')
+                        ->modalHeading(__('Resetare bilete'))
+                        ->modalDescription(__('Ești sigur? Se vor reseta cantitățile de bilete și sumele la valorile inițiale.'))
                         ->action(function (Get $get, Set $set) {
                             $eventId = $get('event_id');
                             if (!$eventId) return;
@@ -713,7 +713,7 @@ class ListPayouts extends ListRecords
                             }
 
                             \Filament\Notifications\Notification::make()
-                                ->title('Resetat la valori inițiale')
+                                ->title(__('Resetat la valori inițiale'))
                                 ->success()
                                 ->send();
                         }),
@@ -732,7 +732,7 @@ class ListPayouts extends ListRecords
                 Forms\Components\Hidden::make('net_amount')->default('0.00'),
 
                 Forms\Components\Select::make('bank_account_id')
-                    ->label('Cont bancar')
+                    ->label(__('Cont bancar'))
                     ->options(function (Get $get) {
                         $organizerId = $get('marketplace_organizer_id');
                         if (!$organizerId) return [];
@@ -755,7 +755,7 @@ class ListPayouts extends ListRecords
 
                 Forms\Components\Textarea::make('admin_notes')
                     ->visible(fn (Get $get) => $get('has_balance'))
-                    ->label('Note admin')
+                    ->label(__('Note admin'))
                     ->rows(2),
 
                 // Overrides for operators who need fine control: leave the
@@ -767,7 +767,7 @@ class ListPayouts extends ListRecords
                     ->visible(fn (Get $get) => (bool) $get('has_balance'))
                     ->schema([
                         Forms\Components\TextInput::make('decont_series')
-                            ->label('Serie decont')
+                            ->label(__('Serie decont'))
                             ->maxLength(40)
                             ->prefix(function () {
                                 $admin = Auth::guard('marketplace_admin')->user();
@@ -788,10 +788,10 @@ class ListPayouts extends ListRecords
                                 $settings = $client?->settings ?? [];
                                 return (int) ($settings['decont_next_number'] ?? 1);
                             })
-                            ->helperText('Precompletat cu următorul număr din Setări → Serii documente. Modifică doar dacă vrei un număr diferit — altfel se incrementează automat contorul.'),
+                            ->helperText(__('Precompletat cu următorul număr din Setări → Serii documente. Modifică doar dacă vrei un număr diferit — altfel se incrementează automat contorul.')),
 
                         Forms\Components\DateTimePicker::make('created_at_override')
-                            ->label('Data creării')
+                            ->label(__('Data creării'))
                             // Default Filament minute step (5) + now() (any
                             // minute) → the popover's hidden minute input fails
                             // HTML5 validation on submit ("invalid form control
@@ -801,19 +801,19 @@ class ListPayouts extends ListRecords
                             ->seconds(false)
                             ->minutesStep(1)
                             ->default(fn () => now()->setTime(now()->hour, now()->minute, 0))
-                            ->helperText('Influențează slicing-ul pentru deconturile viitoare ale evenimentului — păstrează data actuală dacă nu ai un motiv anume să o ajustezi.'),
+                            ->helperText(__('Influențează slicing-ul pentru deconturile viitoare ale evenimentului — păstrează data actuală dacă nu ai un motiv anume să o ajustezi.')),
                     ]),
             ])
-            ->modalSubmitActionLabel('Creează decont')
-            ->modalCancelActionLabel('Anulează')
+            ->modalSubmitActionLabel(__('Creează decont'))
+            ->modalCancelActionLabel(__('Anulează'))
             ->action(function (array $data): void {
                 $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
                 $bankAccount = MarketplaceOrganizerBankAccount::find($data['bank_account_id']);
 
                 if (!$bankAccount) {
                     \Filament\Notifications\Notification::make()
-                        ->title('Eroare')
-                        ->body('Contul bancar selectat nu a fost găsit.')
+                        ->title(__('Eroare'))
+                        ->body(__('Contul bancar selectat nu a fost găsit.'))
                         ->danger()
                         ->send();
                     return;
@@ -1082,7 +1082,7 @@ class ListPayouts extends ListRecords
                 }
 
                 \Filament\Notifications\Notification::make()
-                    ->title('Decont creat')
+                    ->title(__('Decont creat'))
                     ->body("Decontul {$payout->reference} a fost creat cu succes.")
                     ->success()
                     ->send();
@@ -1095,22 +1095,22 @@ class ListPayouts extends ListRecords
     protected function getFinishedEventsAction(): Actions\Action
     {
         return Actions\Action::make('finished_events')
-            ->label('Evenimente încheiate')
+            ->label(__('Evenimente încheiate'))
             ->icon('heroicon-o-calendar')
             ->color('gray')
-            ->modalHeading('Evenimente încheiate')
+            ->modalHeading(__('Evenimente încheiate'))
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel('Închide')
+            ->modalCancelActionLabel(__('Închide'))
             ->modalWidth('5xl')
             ->form([
                 Forms\Components\Radio::make('quick_filter')
-                    ->label('Perioadă rapidă')
+                    ->label(__('Perioadă rapidă'))
                     ->options([
-                        '' => 'Ultimele 10',
-                        '1' => '1 zi',
-                        '3' => '3 zile',
-                        '7' => '7 zile',
-                        'custom' => 'Personalizat',
+                        '' => __('Ultimele 10'),
+                        '1' => __('1 zi'),
+                        '3' => __('3 zile'),
+                        '7' => __('7 zile'),
+                        'custom' => __('Personalizat'),
                     ])
                     ->default('')
                     ->inline()
@@ -1124,14 +1124,14 @@ class ListPayouts extends ListRecords
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
                     Forms\Components\DatePicker::make('date_from')
-                        ->label('De la')
+                        ->label(__('De la'))
                         ->live()
-                        ->placeholder('Fără limită'),
+                        ->placeholder(__('Fără limită')),
 
                     Forms\Components\DatePicker::make('date_to')
-                        ->label('Până la')
+                        ->label(__('Până la'))
                         ->live()
-                        ->placeholder('Fără limită'),
+                        ->placeholder(__('Fără limită')),
                 ])->visible(fn (Get $get) => $get('quick_filter') === 'custom'),
 
                 Forms\Components\Placeholder::make('events_table')
@@ -1298,8 +1298,8 @@ class ListPayouts extends ListRecords
         $organizer = $event->marketplaceOrganizer;
         if (!$organizer) {
             \Filament\Notifications\Notification::make()
-                ->title('Eroare')
-                ->body('Evenimentul nu are organizator asociat.')
+                ->title(__('Eroare'))
+                ->body(__('Evenimentul nu are organizator asociat.'))
                 ->danger()
                 ->send();
             return;
@@ -1318,8 +1318,8 @@ class ListPayouts extends ListRecords
 
         if ($existing && self::calculateEventBalance($event) <= 0) {
             \Filament\Notifications\Notification::make()
-                ->title('Decont existent')
-                ->body('Există deja un decont pentru acest eveniment și nu mai există sold rămas.')
+                ->title(__('Decont existent'))
+                ->body(__('Există deja un decont pentru acest eveniment și nu mai există sold rămas.'))
                 ->warning()
                 ->send();
             return;

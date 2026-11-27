@@ -79,9 +79,9 @@ class PartnerAdResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Plasare')->schema([
+            Section::make(__('Plasare'))->schema([
                 Forms\Components\Select::make('marketplace_partner_id')
-                    ->label('Partener')
+                    ->label(__('Partener'))
                     ->options(fn () => static::adPartners()->pluck('name', 'id')->all())
                     ->default(fn () => static::adPartners()->count() === 1 ? static::adPartners()->first()->id : null)
                     ->required()
@@ -94,7 +94,7 @@ class PartnerAdResource extends Resource
 
                 // Value is "zone|format": format codes repeat across zones.
                 Forms\Components\Select::make('format')
-                    ->label('Model (zonă și dimensiune)')
+                    ->label(__('Model (zonă și dimensiune)'))
                     ->options(function (Get $get) {
                         $current = PartnerAdFormat::splitKey($get('format'));
 
@@ -113,25 +113,25 @@ class PartnerAdResource extends Resource
                     ->required()
                     ->native(false)
                     ->live()
-                    ->helperText('Modelele vin de la partener. Dacă lista e goală, apasă „Actualizează zonele” în lista de reclame.'),
+                    ->helperText(__('Modelele vin de la partener. Dacă lista e goală, apasă „Actualizează zonele” în lista de reclame.')),
 
                 Forms\Components\Placeholder::make('format_requirements')
-                    ->label('Cerințe model')
+                    ->label(__('Cerințe model'))
                     ->content(fn (Get $get) => static::formatSummary(static::formatFor($get)))
                     ->visible(fn (Get $get) => filled($get('format')))
                     ->columnSpanFull(),
             ])->columns(2),
 
-            Section::make('Conținut')->schema([
+            Section::make(__('Conținut'))->schema([
                 Forms\Components\TextInput::make('name')
-                    ->label('Nume intern')
+                    ->label(__('Nume intern'))
                     ->required()
                     ->maxLength(191)
-                    ->helperText('Doar pentru listă; devine utm_campaign dacă nu setezi alta.')
+                    ->helperText(__('Doar pentru listă; devine utm_campaign dacă nu setezi alta.'))
                     ->columnSpanFull(),
 
                 Forms\Components\FileUpload::make('image_path')
-                    ->label('Imagine')
+                    ->label(__('Imagine'))
                     ->image()
                     ->disk('public')
                     ->directory('partner-ads')
@@ -142,7 +142,7 @@ class PartnerAdResource extends Resource
                     ->helperText(fn (Get $get) => static::sizeHint(static::formatFor($get)?->imageSize('image'))),
 
                 Forms\Components\FileUpload::make('image_mobile_path')
-                    ->label('Imagine mobil')
+                    ->label(__('Imagine mobil'))
                     ->image()
                     ->disk('public')
                     ->directory('partner-ads')
@@ -153,28 +153,28 @@ class PartnerAdResource extends Resource
                     ->helperText(fn (Get $get) => static::sizeHint(static::formatFor($get)?->imageSize('image_mobile'))),
 
                 Forms\Components\TextInput::make('title')
-                    ->label('Titlu')
+                    ->label(__('Titlu'))
                     ->visible(fn (Get $get) => static::formatFor($get)?->usesField('title') ?? true)
                     ->maxLength(fn (Get $get) => static::formatFor($get)?->maxLength('title') ?? 191),
 
                 Forms\Components\TextInput::make('cta')
-                    ->label('Text buton')
-                    ->placeholder('ex. Ia bilete')
+                    ->label(__('Text buton'))
+                    ->placeholder(__('ex. Ia bilete'))
                     ->visible(fn (Get $get) => static::formatFor($get)?->usesField('cta') ?? true)
                     ->maxLength(fn (Get $get) => static::formatFor($get)?->maxLength('cta') ?? 64),
 
                 Forms\Components\Textarea::make('text')
-                    ->label('Subtitlu')
+                    ->label(__('Subtitlu'))
                     ->rows(2)
                     ->visible(fn (Get $get) => static::formatFor($get)?->usesField('text') ?? true)
                     ->maxLength(fn (Get $get) => static::formatFor($get)?->maxLength('text') ?? 500)
                     ->columnSpanFull(),
             ])->columns(2),
 
-            Section::make('Link')->schema([
+            Section::make(__('Link'))->schema([
                 Forms\Components\Radio::make('link_type')
-                    ->label('Duce către')
-                    ->options(['event' => 'Un eveniment', 'url' => 'Alt link'])
+                    ->label(__('Duce către'))
+                    ->options(['event' => __('Un eveniment'), 'url' => __('Alt link')])
                     ->default('event')
                     ->inline()
                     ->required()
@@ -182,7 +182,7 @@ class PartnerAdResource extends Resource
                     ->columnSpanFull(),
 
                 Forms\Components\Select::make('event_id')
-                    ->label('Eveniment')
+                    ->label(__('Eveniment'))
                     ->searchable()
                     ->getSearchResultsUsing(fn (string $search) => static::searchEvents($search))
                     ->getOptionLabelUsing(fn ($value) => static::ownEventLabel((int) $value))
@@ -198,16 +198,16 @@ class PartnerAdResource extends Resource
                     })
                     ->hintAction(
                         Action::make('fillFromEvent')
-                            ->label('Completează din eveniment')
+                            ->label(__('Completează din eveniment'))
                             ->icon('heroicon-m-sparkles')
                             ->visible(fn (Get $get) => filled($get('event_id')))
                             ->action(fn (Get $get, Set $set) => static::fillFromEvent($get, $set))
                     )
-                    ->helperText('Linkul spre pagina evenimentului, cu parametri UTM, se generează automat.')
+                    ->helperText(__('Linkul spre pagina evenimentului, cu parametri UTM, se generează automat.'))
                     ->columnSpanFull(),
 
                 Forms\Components\TextInput::make('custom_url')
-                    ->label('Link')
+                    ->label(__('Link'))
                     ->url()
                     ->maxLength(2048)
                     ->visible(fn (Get $get) => $get('link_type') === 'url')
@@ -216,26 +216,26 @@ class PartnerAdResource extends Resource
 
                 Forms\Components\TextInput::make('utm_campaign')
                     ->label('utm_campaign')
-                    ->placeholder('implicit: numele reclamei')
+                    ->placeholder(__('implicit: numele reclamei'))
                     ->maxLength(100),
             ])->columns(2),
 
-            Section::make('Perioadă și stare')->schema([
+            Section::make(__('Perioadă și stare'))->schema([
                 Forms\Components\DateTimePicker::make('starts_at')
-                    ->label('De la')
+                    ->label(__('De la'))
                     ->native(false)
                     ->seconds(false)
                     ->timezone(static::timezone()),
 
                 Forms\Components\DateTimePicker::make('ends_at')
-                    ->label('Până la')
+                    ->label(__('Până la'))
                     ->native(false)
                     ->seconds(false)
                     ->timezone(static::timezone())
-                    ->helperText('La un eveniment, implicit sfârșitul evenimentului.'),
+                    ->helperText(__('La un eveniment, implicit sfârșitul evenimentului.')),
 
                 Forms\Components\TextInput::make('priority')
-                    ->label('Prioritate')
+                    ->label(__('Prioritate'))
                     ->numeric()
                     ->minValue(1)
                     ->maxValue(100)
@@ -243,7 +243,7 @@ class PartnerAdResource extends Resource
                     ->required(),
 
                 Forms\Components\Select::make('status')
-                    ->label('Stare')
+                    ->label(__('Stare'))
                     ->options([
                         PartnerAd::STATUS_ACTIVE => 'Activă (se publică)',
                         PartnerAd::STATUS_PAUSED => 'Pe pauză (retrasă)',
@@ -254,7 +254,7 @@ class PartnerAdResource extends Resource
                     ->native(false),
 
                 Forms\Components\Placeholder::make('paused_reason_info')
-                    ->label('Pusă pe pauză automat')
+                    ->label(__('Pusă pe pauză automat'))
                     ->content(fn (?PartnerAd $record) => $record?->paused_reason)
                     ->visible(fn (?PartnerAd $record) => filled($record?->paused_reason))
                     ->columnSpanFull(),
@@ -272,22 +272,22 @@ class PartnerAdResource extends Resource
                     ->disk('public')
                     ->imageHeight(40),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Reclamă')
+                    ->label(__('Reclamă'))
                     ->searchable()
                     ->weight('bold')
                     ->description(fn (PartnerAd $record) => ($record->partner?->name ?? '—') . ' · ' . $record->format),
                 Tables\Columns\TextColumn::make('link')
-                    ->label('Link')
+                    ->label(__('Link'))
                     ->state(fn (PartnerAd $record) => $record->link_type === 'event'
                         ? static::eventLabel((int) $record->event_id)
                         : $record->custom_url)
                     ->limit(45)
                     ->wrap(),
                 Tables\Columns\TextColumn::make('period')
-                    ->label('Perioadă')
+                    ->label(__('Perioadă'))
                     ->state(fn (PartnerAd $record) => static::periodLabel($record)),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Stare')
+                    ->label(__('Stare'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => match ($state) {
                         PartnerAd::STATUS_ACTIVE => 'Activă',
@@ -301,7 +301,7 @@ class PartnerAdResource extends Resource
                     })
                     ->description(fn (PartnerAd $record) => $record->paused_reason),
                 Tables\Columns\TextColumn::make('sync_status')
-                    ->label('Pe site-ul partenerului')
+                    ->label(__('Pe site-ul partenerului'))
                     ->badge()
                     ->placeholder('—')
                     ->formatStateUsing(fn (?string $state) => match ($state) {
@@ -319,11 +319,11 @@ class PartnerAdResource extends Resource
                     })
                     ->tooltip(fn (PartnerAd $record) => $record->sync_error),
                 Tables\Columns\TextColumn::make('stats_sum_impressions')
-                    ->label('Afișări')
+                    ->label(__('Afișări'))
                     ->numeric()
                     ->placeholder('—'),
                 Tables\Columns\TextColumn::make('stats_sum_clicks')
-                    ->label('Click-uri')
+                    ->label(__('Click-uri'))
                     ->numeric()
                     ->placeholder('—')
                     ->description(fn (PartnerAd $record) => $record->stats_sum_impressions > 0
@@ -332,7 +332,7 @@ class PartnerAdResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Stare')
+                    ->label(__('Stare'))
                     ->options([
                         PartnerAd::STATUS_ACTIVE => 'Activă',
                         PartnerAd::STATUS_PAUSED => 'Pe pauză',
@@ -342,27 +342,27 @@ class PartnerAdResource extends Resource
             ->recordActions([
                 \Filament\Actions\EditAction::make(),
                 Action::make('pause')
-                    ->label('Pauză')
+                    ->label(__('Pauză'))
                     ->icon('heroicon-o-pause')
                     ->color('warning')
                     ->visible(fn (PartnerAd $record) => $record->status === PartnerAd::STATUS_ACTIVE)
                     ->action(fn (PartnerAd $record) => static::changeStatus($record, PartnerAd::STATUS_PAUSED)),
                 Action::make('activate')
-                    ->label('Activează')
+                    ->label(__('Activează'))
                     ->icon('heroicon-o-play')
                     ->color('success')
                     ->visible(fn (PartnerAd $record) => $record->status !== PartnerAd::STATUS_ACTIVE)
                     ->action(fn (PartnerAd $record) => static::changeStatus($record, PartnerAd::STATUS_ACTIVE)),
                 Action::make('resend')
-                    ->label('Retrimite')
+                    ->label(__('Retrimite'))
                     ->icon('heroicon-o-arrow-path')
                     ->visible(fn (PartnerAd $record) => $record->sync_status === PartnerAd::SYNC_FAILED)
                     ->action(function (PartnerAd $record) {
                         app(PartnerAds::class)->sync($record);
-                        Notification::make()->title('Reclama a fost pusă din nou la trimis')->success()->send();
+                        Notification::make()->title(__('Reclama a fost pusă din nou la trimis'))->success()->send();
                     }),
                 \Filament\Actions\DeleteAction::make()
-                    ->modalDescription('Reclama se retrage și de pe site-ul partenerului.')
+                    ->modalDescription(__('Reclama se retrage și de pe site-ul partenerului.'))
                     ->before(fn (PartnerAd $record) => app(PartnerAds::class)->withdrawBeforeDelete($record)),
             ]);
     }

@@ -17,7 +17,7 @@ class ListOrganizerLeads extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [CreateAction::make()->label('Adaugă lead manual')];
+        return [CreateAction::make()->label(__('Adaugă lead manual'))];
     }
 
     /**

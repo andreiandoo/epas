@@ -42,7 +42,7 @@ class PackageItemsRelationManager extends RelationManager
 
         return $schema->schema([
             Forms\Components\Select::make('component_activity_id')
-                ->label('Produs')
+                ->label(__('Produs'))
                 ->options(fn () => Activity::where('marketplace_client_id', $package->marketplace_client_id)
                     ->where('product_type', '<>', 'package')
                     ->when($package->location_id, fn ($q) => $q->where('location_id', $package->location_id))
@@ -53,23 +53,23 @@ class PackageItemsRelationManager extends RelationManager
                 ->searchable()
                 ->live(),
             Forms\Components\Select::make('component_variant_id')
-                ->label('Variantă')
+                ->label(__('Variantă'))
                 ->options(fn (Get $get) => ActivityVariant::where('activity_id', $get('component_activity_id'))
                     ->orderBy('sort_order')->get()
                     ->mapWithKeys(fn ($v) => [$v->id => ($v->name['ro'] ?? $v->name['en'] ?? '#' . $v->id) . ' — ' . number_format($v->price_cents / 100, 2, ',', '.') . ' lei'])
                     ->toArray())
-                ->placeholder('Prima variantă activă'),
+                ->placeholder(__('Prima variantă activă')),
             Forms\Components\TextInput::make('quantity')
-                ->label('Cantitate în pachet')
+                ->label(__('Cantitate în pachet'))
                 ->numeric()->required()->default(1)->minValue(1)->maxValue(50),
             Forms\Components\TextInput::make('allocated_price_cents')
-                ->label('Parte din prețul pachetului')
+                ->label(__('Parte din prețul pachetului'))
                 ->numeric()->minValue(0)->step(0.01)->suffix('lei')
-                ->helperText('Opțional, pentru toate bucățile din pachet. Dacă e gol la toate, se împarte după prețurile produselor.')
+                ->helperText(__('Opțional, pentru toate bucățile din pachet. Dacă e gol la toate, se împarte după prețurile produselor.'))
                 ->formatStateUsing(fn ($state) => $state !== null ? round($state / 100, 2) : null)
                 ->dehydrateStateUsing(fn ($state) => $state !== null && $state !== '' ? (int) round(((float) $state) * 100) : null),
             Forms\Components\TextInput::make('sort_order')
-                ->label('Ordine')
+                ->label(__('Ordine'))
                 ->numeric()->default(0),
         ])->columns(2);
     }
@@ -79,13 +79,13 @@ class PackageItemsRelationManager extends RelationManager
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('component.title')
-                    ->label('Produs')
+                    ->label(__('Produs'))
                     ->formatStateUsing(fn ($state, $record) => $record->component?->title['ro'] ?? $record->component?->slug),
                 Tables\Columns\TextColumn::make('componentVariant.name')
-                    ->label('Variantă')
+                    ->label(__('Variantă'))
                     ->formatStateUsing(fn ($state, $record) => $record->componentVariant?->name['ro'] ?? '—'),
-                Tables\Columns\TextColumn::make('quantity')->label('Cantitate'),
-                Tables\Columns\TextColumn::make('allocated_price_cents')->label('Parte din preț')
+                Tables\Columns\TextColumn::make('quantity')->label(__('Cantitate')),
+                Tables\Columns\TextColumn::make('allocated_price_cents')->label(__('Parte din preț'))
                     ->formatStateUsing(fn ($state) => $state !== null ? number_format($state / 100, 2, ',', '.') . ' lei' : 'automat'),
             ])
             ->defaultSort('sort_order')

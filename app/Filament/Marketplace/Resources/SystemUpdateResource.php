@@ -54,10 +54,10 @@ class SystemUpdateResource extends Resource
                 SC\Grid::make(3)->schema([
                     // ─── LEFT (2/3) — main content ───────────────────
                     SC\Group::make([
-                        SC\Section::make('Conținut')
+                        SC\Section::make(__('Conținut'))
                             ->schema([
                                 Forms\Components\TextInput::make('title')
-                                    ->label('Titlu')
+                                    ->label(__('Titlu'))
                                     ->required()
                                     ->maxLength(255)
                                     ->live(onBlur: true)
@@ -72,10 +72,10 @@ class SystemUpdateResource extends Resource
                                         }
                                     }),
                                 Forms\Components\TextInput::make('slug')
-                                    ->label('Slug (URL)')
+                                    ->label(__('Slug (URL)'))
                                     ->required()
                                     ->maxLength(255)
-                                    ->helperText('Se auto-completează din titlu. Poate fi editat înainte de publicare — după publish, nu mai schimba slug-ul ca să nu strici link-urile deja distribuite.')
+                                    ->helperText(__('Se auto-completează din titlu. Poate fi editat înainte de publicare — după publish, nu mai schimba slug-ul ca să nu strici link-urile deja distribuite.'))
                                     ->rule(function (?SystemUpdate $record) {
                                         // Uniqueness scoped per marketplace so
                                         // two marketplaces can each own a
@@ -85,67 +85,67 @@ class SystemUpdateResource extends Resource
                                             ->ignore($record?->id);
                                     }),
                                 Forms\Components\Textarea::make('excerpt')
-                                    ->label('Rezumat (excerpt)')
+                                    ->label(__('Rezumat (excerpt)'))
                                     ->rows(3)
                                     ->maxLength(300)
-                                    ->helperText('Max. 300 caractere. Apare pe cardul din pagina de listă /noutati.')
+                                    ->helperText(__('Max. 300 caractere. Apare pe cardul din pagina de listă /noutati.'))
                                     ->columnSpanFull(),
                                 Forms\Components\RichEditor::make('body')
-                                    ->label('Conținut complet')
-                                    ->helperText('Suportă text formatat, linkuri, imagini, embed video YouTube/Vimeo. Sanitizat automat pe salvare.')
+                                    ->label(__('Conținut complet'))
+                                    ->helperText(__('Suportă text formatat, linkuri, imagini, embed video YouTube/Vimeo. Sanitizat automat pe salvare.'))
                                     ->columnSpanFull()
                                     ->fileAttachmentsDisk('public')
                                     ->fileAttachmentsDirectory('system-updates')
                                     ->fileAttachmentsVisibility('public'),
                             ])->columns(2),
 
-                        SC\Section::make('SEO')
-                            ->description('Opțional. Dacă rămân goale, se folosesc titlul și rezumatul.')
+                        SC\Section::make(__('SEO'))
+                            ->description(__('Opțional. Dacă rămân goale, se folosesc titlul și rezumatul.'))
                             ->collapsed()
                             ->schema([
                                 Forms\Components\TextInput::make('meta_title')
-                                    ->label('Meta title')
+                                    ->label(__('Meta title'))
                                     ->maxLength(255)
-                                    ->helperText('Titlul afișat în tab-ul de browser + rezultate Google.'),
+                                    ->helperText(__('Titlul afișat în tab-ul de browser + rezultate Google.')),
                                 Forms\Components\Textarea::make('meta_description')
-                                    ->label('Meta description')
+                                    ->label(__('Meta description'))
                                     ->rows(2)
                                     ->maxLength(500)
-                                    ->helperText('Descriere sub rezultatul Google. 150-160 caractere e ideal.'),
+                                    ->helperText(__('Descriere sub rezultatul Google. 150-160 caractere e ideal.')),
                             ]),
                     ])->columnSpan(2),
 
                     // ─── RIGHT (1/3) — sidebar ───────────────────────
                     SC\Group::make([
-                        SC\Section::make('Publicare')
+                        SC\Section::make(__('Publicare'))
                             ->schema([
                                 Forms\Components\Select::make('status')
-                                    ->label('Status')
+                                    ->label(__('Status'))
                                     ->options([
-                                        'draft' => 'Draft (invizibil pe site)',
-                                        'published' => 'Publicat',
+                                        'draft' => __('Draft (invizibil pe site)'),
+                                        'published' => __('Publicat'),
                                     ])
                                     ->default('draft')
                                     ->required()
                                     ->live(),
                                 Forms\Components\DateTimePicker::make('published_at')
-                                    ->label('Data publicării')
+                                    ->label(__('Data publicării'))
                                     ->native(false)
                                     ->seconds(false)
-                                    ->helperText('Se completează automat când salvezi cu status "Publicat". Poți edita manual pentru a antedata sau programa.')
+                                    ->helperText(__('Se completează automat când salvezi cu status "Publicat". Poți edita manual pentru a antedata sau programa.'))
                                     ->visible(fn (Get $get) => $get('status') === 'published'),
                                 Forms\Components\Select::make('category')
-                                    ->label('Categorie')
+                                    ->label(__('Categorie'))
                                     ->options([
-                                        'interfata' => 'Interfață',
-                                        'organizator' => 'Organizator',
-                                        'client' => 'Client',
-                                        'aplicatie-mobila' => 'Aplicație mobilă',
+                                        'interfata' => __('Interfață'),
+                                        'organizator' => __('Organizator'),
+                                        'client' => __('Client'),
+                                        'aplicatie-mobila' => __('Aplicație mobilă'),
                                     ])
                                     ->required()
                                     ->native(false),
                             ]),
-                        SC\Section::make('Imagine reprezentativă')
+                        SC\Section::make(__('Imagine reprezentativă'))
                             ->schema([
                                 Forms\Components\FileUpload::make('featured_image')
                                     ->label('')
@@ -156,7 +156,7 @@ class SystemUpdateResource extends Resource
                                     ->maxSize(5120)
                                     ->imageEditor()
                                     ->imageEditorAspectRatios([null, '16:9', '4:3', '1:1'])
-                                    ->helperText('Recomandat: 16:9 (ex. 1200×675) — apare ca thumbnail pe /noutati și ca hero pe pagina de detail. Se acceptă orice dimensiune; poți decupa opțional cu creionul (editor).'),
+                                    ->helperText(__('Recomandat: 16:9 (ex. 1200×675) — apare ca thumbnail pe /noutati și ca hero pe pagina de detail. Se acceptă orice dimensiune; poți decupa opțional cu creionul (editor).')),
                             ]),
                     ])->columnSpan(1),
                 ]),
@@ -174,13 +174,13 @@ class SystemUpdateResource extends Resource
                     ->size(48)
                     ->defaultImageUrl(fn () => 'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="55" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#9ca3af">no image</text></svg>')),
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Titlu')
+                    ->label(__('Titlu'))
                     ->searchable()
                     ->sortable()
                     ->wrap()
                     ->description(fn (SystemUpdate $r) => $r->slug),
                 Tables\Columns\TextColumn::make('category')
-                    ->label('Categorie')
+                    ->label(__('Categorie'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => match ($state) {
                         'interfata' => 'Interfață',
@@ -197,17 +197,17 @@ class SystemUpdateResource extends Resource
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => $state === 'published' ? 'Publicat' : 'Draft')
                     ->color(fn (string $state) => $state === 'published' ? 'success' : 'gray'),
                 Tables\Columns\TextColumn::make('published_at')
-                    ->label('Publicat')
+                    ->label(__('Publicat'))
                     ->dateTime('d M Y, H:i')
                     ->placeholder('—')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Actualizat')
+                    ->label(__('Actualizat'))
                     ->since()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -215,15 +215,15 @@ class SystemUpdateResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'published' => 'Publicat',
+                        'draft' => __('Draft'),
+                        'published' => __('Publicat'),
                     ]),
                 Tables\Filters\SelectFilter::make('category')
                     ->options([
-                        'interfata' => 'Interfață',
-                        'organizator' => 'Organizator',
-                        'client' => 'Client',
-                        'aplicatie-mobila' => 'Aplicație mobilă',
+                        'interfata' => __('Interfață'),
+                        'organizator' => __('Organizator'),
+                        'client' => __('Client'),
+                        'aplicatie-mobila' => __('Aplicație mobilă'),
                     ]),
             ])
             ->recordActions([

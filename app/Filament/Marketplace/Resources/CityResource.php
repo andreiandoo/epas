@@ -63,14 +63,14 @@ class CityResource extends Resource
                 // ============ LEFT COLUMN (2/3) ============
                 SC\Grid::make(1)->columnSpan(2)->schema([
 
-                SC\Section::make('City Details')
+                SC\Section::make(__('City Details'))
                     ->schema([
                         SC\Tabs::make('Name Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.ro')
-                                            ->label('Nume oras (RO)')
+                                            ->label(__('Nume oras (RO)'))
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
@@ -83,19 +83,19 @@ class CityResource extends Resource
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.en')
-                                            ->label('City name (EN)')
+                                            ->label(__('City name (EN)'))
                                             ->maxLength(190),
                                     ]),
                             ])->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
                         Forms\Components\Select::make('county_id')
-                            ->label('County (Județ)')
+                            ->label(__('County (Județ)'))
                             ->options(function () {
                                 $marketplace = static::getMarketplaceClient();
                                 $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
@@ -110,7 +110,7 @@ class CityResource extends Resource
                             })
                             ->searchable()
                             ->required()
-                            ->placeholder('Select a county')
+                            ->placeholder(__('Select a county'))
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
                                 if ($state) {
@@ -122,7 +122,7 @@ class CityResource extends Resource
                             }),
 
                         Forms\Components\Select::make('region_id')
-                            ->label('Region')
+                            ->label(__('Region'))
                             ->options(function () {
                                 $marketplace = static::getMarketplaceClient();
                                 $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
@@ -134,86 +134,86 @@ class CityResource extends Resource
                             ->searchable()
                             ->disabled()
                             ->dehydrated()
-                            ->helperText('Auto-selected based on county'),
+                            ->helperText(__('Auto-selected based on county')),
 
                         Forms\Components\Select::make('country')
-                            ->label('Country')
+                            ->label(__('Country'))
                             ->options([
-                                'RO' => 'Romania',
-                                'MD' => 'Moldova',
-                                'HU' => 'Hungary',
-                                'BG' => 'Bulgaria',
+                                'RO' => __('Romania'),
+                                'MD' => __('Moldova'),
+                                'HU' => __('Hungary'),
+                                'BG' => __('Bulgaria'),
                             ])
                             ->default('RO')
                             ->required(),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
                     ])->columns(2),
 
-                SC\Section::make('Description')
+                SC\Section::make(__('Description'))
                     ->schema([
                         SC\Tabs::make('Description Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.ro')
-                                            ->label('Descriere (RO)')
+                                            ->label(__('Descriere (RO)'))
                                             ->rows(3),
                                     ]),
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.en')
-                                            ->label('Description (EN)')
+                                            ->label(__('Description (EN)'))
                                             ->rows(3),
                                     ]),
                             ])->columnSpanFull(),
                     ]),
 
-                SC\Section::make('SEO Body — "Tot ce trebuie să știi"')
-                    ->description('Titlu + corp rich-text afișat în ghidul local al orașului.')
+                SC\Section::make(__('SEO Body — "Tot ce trebuie să știi"'))
+                    ->description(__('Titlu + corp rich-text afișat în ghidul local al orașului.'))
                     ->schema([
                         SC\Tabs::make('SEO Body Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('seo_body_title.ro')
-                                            ->label('Titlu (RO)')
-                                            ->placeholder('Ce să faci în București: idei pentru weekend, familie sau o zi liberă')
+                                            ->label(__('Titlu (RO)'))
+                                            ->placeholder(__('Ce să faci în București: idei pentru weekend, familie sau o zi liberă'))
                                             ->maxLength(190),
                                         Forms\Components\RichEditor::make('seo_body.ro')
-                                            ->label('Corp text (RO)')
-                                            ->placeholder('Despre oraș — recomandări, ce să faci, ghid local. Poți folosi titluri, liste, link-uri, bold.')
+                                            ->label(__('Corp text (RO)'))
+                                            ->placeholder(__('Despre oraș — recomandări, ce să faci, ghid local. Poți folosi titluri, liste, link-uri, bold.'))
                                             ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                             ->columnSpanFull(),
                                     ]),
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('seo_body_title.en')
-                                            ->label('Title (EN)')
+                                            ->label(__('Title (EN)'))
                                             ->maxLength(190),
                                         Forms\Components\RichEditor::make('seo_body.en')
-                                            ->label('Body (EN)')
+                                            ->label(__('Body (EN)'))
                                             ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                             ->columnSpanFull(),
                                     ]),
                             ])->columnSpanFull(),
                     ])->columns(1),
 
-                SC\Section::make('Întrebări frecvente (FAQs)')
-                    ->description('Lista de FAQs afișată pe pagina orașului + inclusă ca FAQPage JSON-LD pentru rich SERP. Doar limba primară (RO).')
+                SC\Section::make(__('Întrebări frecvente (FAQs)'))
+                    ->description(__('Lista de FAQs afișată pe pagina orașului + inclusă ca FAQPage JSON-LD pentru rich SERP. Doar limba primară (RO).'))
                     ->schema([
                         Forms\Components\Repeater::make('faqs')
                             ->label(false)
                             ->schema([
                                 Forms\Components\TextInput::make('q')
-                                    ->label('Întrebare')
+                                    ->label(__('Întrebare'))
                                     ->required()
                                     ->maxLength(200),
                                 Forms\Components\Textarea::make('a')
-                                    ->label('Răspuns')
+                                    ->label(__('Răspuns'))
                                     ->required()
                                     ->rows(3),
                             ])
@@ -222,7 +222,7 @@ class CityResource extends Resource
                             ->collapsible()
                             ->cloneable()
                             ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
-                            ->addActionLabel('Adaugă întrebare')
+                            ->addActionLabel(__('Adaugă întrebare'))
                             ->columnSpanFull(),
                     ])->columns(1),
 
@@ -231,76 +231,76 @@ class CityResource extends Resource
                 // ============ RIGHT COLUMN (1/3) ============
                 SC\Grid::make(1)->columnSpan(1)->schema([
 
-                    SC\Section::make('Locație & coordonate')
+                    SC\Section::make(__('Locație & coordonate'))
                         ->schema([
                             Forms\Components\TextInput::make('latitude')
-                                ->label('Latitude')
+                                ->label(__('Latitude'))
                                 ->numeric()
                                 ->step('0.0000001')
                                 ->placeholder('44.4268'),
 
                             Forms\Components\TextInput::make('longitude')
-                                ->label('Longitude')
+                                ->label(__('Longitude'))
                                 ->numeric()
                                 ->step('0.0000001')
                                 ->placeholder('26.1025'),
 
                             Forms\Components\TextInput::make('timezone')
-                                ->label('Timezone')
-                                ->placeholder('Europe/Bucharest')
+                                ->label(__('Timezone'))
+                                ->placeholder(__('Europe/Bucharest'))
                                 ->maxLength(100),
 
                             Forms\Components\TextInput::make('population')
-                                ->label('Population')
+                                ->label(__('Population'))
                                 ->numeric()
                                 ->minValue(0),
                         ])->columns(2),
 
-                    SC\Section::make('Aspect & vizibilitate')
+                    SC\Section::make(__('Aspect & vizibilitate'))
                         ->schema([
                             Forms\Components\FileUpload::make('image_url')
-                                ->label('City Image')
+                                ->label(__('City Image'))
                                 ->image()
                                 ->disk('public')
                                 ->directory('cities')
                                 ->visibility('public'),
 
                             Forms\Components\FileUpload::make('cover_image_url')
-                                ->label('Cover Image')
+                                ->label(__('Cover Image'))
                                 ->image()
                                 ->disk('public')
                                 ->directory('cities/covers')
                                 ->visibility('public'),
 
                             Forms\Components\TextInput::make('icon')
-                                ->label('Icon')
+                                ->label(__('Icon'))
                                 ->placeholder('heroicon-o-building-library')
                                 ->maxLength(100),
 
                             Forms\Components\Toggle::make('is_visible')
-                                ->label('Visible')
+                                ->label(__('Visible'))
                                 ->default(true),
 
                             Forms\Components\Toggle::make('is_featured')
-                                ->label('Featured'),
+                                ->label(__('Featured')),
 
                             Forms\Components\Toggle::make('is_capital')
-                                ->label('Capital of Region'),
+                                ->label(__('Capital of Region')),
                         ])->columns(1),
 
-                    SC\Section::make('Widget GetYourGuide')
-                        ->description('ID-ul numeric al orașului pe GetYourGuide, pentru widget-ul de activități de pe pagina publică.')
+                    SC\Section::make(__('Widget GetYourGuide'))
+                        ->description(__('ID-ul numeric al orașului pe GetYourGuide, pentru widget-ul de activități de pe pagina publică.'))
                         ->schema([
                             Forms\Components\TextInput::make('getyourguide_city_id')
-                                ->label('GetYourGuide City ID')
-                                ->placeholder('ex. 124688')
+                                ->label(__('GetYourGuide City ID'))
+                                ->placeholder(__('ex. 124688'))
                                 ->maxLength(40)
                                 ->helperText(new \Illuminate\Support\HtmlString(
                                     'Caută orașul pe GetYourGuide → ID-ul e numărul după <code>-l</code> în URL (ex. <code>...-l<strong>124688</strong>/</code>).'
                                 ))
                                 ->hintAction(
                                     \Filament\Actions\Action::make('searchOnGyg')
-                                        ->label('Caută pe GetYourGuide ↗')
+                                        ->label(__('Caută pe GetYourGuide ↗'))
                                         ->icon('heroicon-o-magnifying-glass')
                                         ->url(function (\Filament\Schemas\Components\Utilities\Get $get, $record = null) {
                                             $name = $get('name');
@@ -332,17 +332,17 @@ class CityResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('county.code')
-                    ->label('County')
+                    ->label(__('County'))
                     ->badge()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('region.name')
-                    ->label('Region')
+                    ->label(__('Region'))
                     ->getStateUsing(function ($record) use ($marketplaceLanguage) {
                         $name = $record->region?->name;
                         if (is_array($name)) {
@@ -352,7 +352,7 @@ class CityResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('country')
-                    ->label('Country')
+                    ->label(__('Country'))
                     ->badge(),
 
                 // Events / Activities — same column physically, but the
@@ -376,24 +376,24 @@ class CityResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Featured')
+                    ->label(__('Featured'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_capital')
-                    ->label('Capital')
+                    ->label(__('Capital'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('region_id')
-                    ->label('Region')
+                    ->label(__('Region'))
                     ->options(function () {
                         $marketplace = static::getMarketplaceClient();
                         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
@@ -403,9 +403,9 @@ class CityResource extends Resource
                             ->mapWithKeys(fn ($r) => [$r->id => $r->name[$lang] ?? $r->name['en'] ?? 'Unnamed']);
                     }),
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                    ->label(__('Featured')),
             ])
             ->recordActions([
                 EditAction::make(),

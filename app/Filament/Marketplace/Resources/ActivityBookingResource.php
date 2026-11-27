@@ -106,16 +106,16 @@ class ActivityBookingResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return $schema->components([
-            SC\Section::make('Rezervare')
+            SC\Section::make(__('Rezervare'))
                 ->columns(3)
                 ->schema([
                     SC\TextEntry::make('confirmation_code')
-                        ->label('Cod confirmare')
+                        ->label(__('Cod confirmare'))
                         ->copyable()
                         ->weight('bold')
                         ->color('primary'),
                     SC\TextEntry::make('status')
-                        ->label('Status')
+                        ->label(__('Status'))
                         ->badge()
                         ->color(fn (string $state): string => match ($state) {
                             ActivityBooking::STATUS_PAID         => 'success',
@@ -127,94 +127,94 @@ class ActivityBookingResource extends Resource
                             default => 'gray',
                         }),
                     SC\TextEntry::make('booking_date')
-                        ->label('Data')
+                        ->label(__('Data'))
                         ->date('d M Y'),
                     SC\TextEntry::make('slot_start_time')
-                        ->label('Ora început')
+                        ->label(__('Ora început'))
                         ->formatStateUsing(fn ($state) => $state
                             ? (is_string($state) ? substr($state, 0, 5) : $state->format('H:i'))
                             : '—'),
                     SC\TextEntry::make('slot_end_time')
-                        ->label('Ora sfârșit')
+                        ->label(__('Ora sfârșit'))
                         ->formatStateUsing(fn ($state) => $state
                             ? (is_string($state) ? substr($state, 0, 5) : $state->format('H:i'))
                             : '—'),
                     SC\TextEntry::make('participants_count')
-                        ->label('Locuri folosite'),
+                        ->label(__('Locuri folosite')),
                     SC\TextEntry::make('checked_in_at')
-                        ->label('Validat la')
+                        ->label(__('Validat la'))
                         ->dateTime('d M Y H:i')
                         ->placeholder('—'),
                     SC\TextEntry::make('held_until')
-                        ->label('Hold expiră la')
+                        ->label(__('Hold expiră la'))
                         ->dateTime('d M Y H:i')
                         ->placeholder('—'),
                 ]),
 
-            SC\Section::make('Activitate')
+            SC\Section::make(__('Activitate'))
                 ->columns(3)
                 ->schema([
                     SC\TextEntry::make('activity.title')
-                        ->label('Activitate')
+                        ->label(__('Activitate'))
                         ->formatStateUsing(fn ($state) => is_array($state)
                             ? ($state['ro'] ?? $state['en'] ?? '—')
                             : ($state ?? '—')),
                     SC\TextEntry::make('activity.organizer.name')
-                        ->label('Organizator')
+                        ->label(__('Organizator'))
                         ->placeholder('—'),
                     SC\TextEntry::make('activity.city.name')
-                        ->label('Oraș')
+                        ->label(__('Oraș'))
                         ->formatStateUsing(fn ($state) => is_array($state)
                             ? ($state['ro'] ?? $state['en'] ?? '—')
                             : ($state ?? '—')),
                 ]),
 
-            SC\Section::make('Client')
+            SC\Section::make(__('Client'))
                 ->columns(3)
                 ->schema([
                     SC\TextEntry::make('customer.first_name')
-                        ->label('Prenume'),
+                        ->label(__('Prenume')),
                     SC\TextEntry::make('customer.last_name')
-                        ->label('Nume'),
+                        ->label(__('Nume')),
                     SC\TextEntry::make('customer.email')
-                        ->label('Email')
+                        ->label(__('Email'))
                         ->copyable(),
                     SC\TextEntry::make('customer.phone')
-                        ->label('Telefon')
+                        ->label(__('Telefon'))
                         ->placeholder('—'),
                 ]),
 
-            SC\Section::make('Plată')
+            SC\Section::make(__('Plată'))
                 ->columns(3)
                 ->schema([
                     SC\TextEntry::make('total_cents')
-                        ->label('Total')
+                        ->label(__('Total'))
                         ->formatStateUsing(fn ($state, $record) =>
                             number_format(($state ?? 0) / 100, 2, ',', '.') . ' ' . ($record->currency ?? 'RON')),
                     SC\TextEntry::make('commission_cents')
-                        ->label('Comision')
+                        ->label(__('Comision'))
                         ->formatStateUsing(fn ($state, $record) =>
                             number_format(($state ?? 0) / 100, 2, ',', '.') . ' ' . ($record->currency ?? 'RON')),
                     SC\TextEntry::make('order.order_number')
-                        ->label('Comandă')
+                        ->label(__('Comandă'))
                         ->copyable()
                         ->placeholder('—'),
                 ]),
 
-            SC\Section::make('Bilete')
+            SC\Section::make(__('Bilete'))
                 ->collapsible()
                 ->schema([
                     SC\RepeatableEntry::make('tickets')
                         ->label('')
                         ->schema([
                             SC\TextEntry::make('code')
-                                ->label('Cod bilet')
+                                ->label(__('Cod bilet'))
                                 ->copyable(),
                             SC\TextEntry::make('attendee_name')
-                                ->label('Beneficiar')
+                                ->label(__('Beneficiar'))
                                 ->placeholder('—'),
                             SC\TextEntry::make('status')
-                                ->label('Status')
+                                ->label(__('Status'))
                                 ->badge()
                                 ->color(fn (string $state): string => match ($state) {
                                     'valid'       => 'success',
@@ -225,7 +225,7 @@ class ActivityBookingResource extends Resource
                                     default       => 'gray',
                                 }),
                             SC\TextEntry::make('checked_in_at')
-                                ->label('Validat la')
+                                ->label(__('Validat la'))
                                 ->dateTime('d M H:i')
                                 ->placeholder('—'),
                         ])
@@ -239,14 +239,14 @@ class ActivityBookingResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('confirmation_code')
-                    ->label('Cod')
+                    ->label(__('Cod'))
                     ->searchable()
                     ->copyable()
                     ->weight('bold')
                     ->fontFamily('mono'),
 
                 Tables\Columns\TextColumn::make('activity.title')
-                    ->label('Activitate')
+                    ->label(__('Activitate'))
                     ->formatStateUsing(fn ($state) => is_array($state)
                         ? ($state['ro'] ?? $state['en'] ?? '—')
                         : ($state ?? '—'))
@@ -255,12 +255,12 @@ class ActivityBookingResource extends Resource
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('booking_date')
-                    ->label('Data')
+                    ->label(__('Data'))
                     ->date('d M Y')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('slot_start_time')
-                    ->label('Ora')
+                    ->label(__('Ora'))
                     ->formatStateUsing(fn ($state) => $state
                         ? (is_string($state) ? substr($state, 0, 5) : $state->format('H:i'))
                         : '—')
@@ -268,13 +268,13 @@ class ActivityBookingResource extends Resource
                     ->fontFamily('mono'),
 
                 Tables\Columns\TextColumn::make('participants_count')
-                    ->label('Locuri')
+                    ->label(__('Locuri'))
                     ->alignCenter()
                     ->badge()
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('customer.email')
-                    ->label('Client')
+                    ->label(__('Client'))
                     ->formatStateUsing(fn ($state, $record) => $record->customer
                         ? trim(($record->customer->first_name ?? '') . ' ' . ($record->customer->last_name ?? '')) . "\n" . $state
                         : ($state ?? '—'))
@@ -284,13 +284,13 @@ class ActivityBookingResource extends Resource
                     ->limit(40),
 
                 Tables\Columns\TextColumn::make('total_cents')
-                    ->label('Total')
+                    ->label(__('Total'))
                     ->formatStateUsing(fn ($state, $record) =>
                         number_format(($state ?? 0) / 100, 2, ',', '.') . ' ' . ($record->currency ?? 'RON'))
                     ->alignRight(),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         ActivityBooking::STATUS_PAID,
@@ -316,7 +316,7 @@ class ActivityBookingResource extends Resource
             ->modifyQueryUsing(fn (Builder $query) => $query->orderBy('booking_date')->orderBy('slot_start_time'))
             ->filters([
                 SelectFilter::make('activity_id')
-                    ->label('Activitate')
+                    ->label(__('Activitate'))
                     ->options(function () {
                         $marketplace = static::getMarketplaceClient();
                         if (! $marketplace) return [];
@@ -334,7 +334,7 @@ class ActivityBookingResource extends Resource
                     ->searchable(),
 
                 SelectFilter::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->multiple()
                     ->options([
                         ActivityBooking::STATUS_PAID            => 'Plătit',
@@ -347,8 +347,8 @@ class ActivityBookingResource extends Resource
 
                 Filter::make('booking_date_range')
                     ->schema([
-                        \Filament\Forms\Components\DatePicker::make('from')->label('De la'),
-                        \Filament\Forms\Components\DatePicker::make('to')->label('Până la'),
+                        \Filament\Forms\Components\DatePicker::make('from')->label(__('De la')),
+                        \Filament\Forms\Components\DatePicker::make('to')->label(__('Până la')),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -361,17 +361,17 @@ class ActivityBookingResource extends Resource
                     }),
 
                 Filter::make('today')
-                    ->label('Doar azi')
+                    ->label(__('Doar azi'))
                     ->query(fn (Builder $query) => $query->whereDate('booking_date', now()->toDateString()))
                     ->toggle(),
 
                 Filter::make('upcoming')
-                    ->label('Doar viitoare')
+                    ->label(__('Doar viitoare'))
                     ->query(fn (Builder $query) => $query->whereDate('booking_date', '>=', now()->toDateString()))
                     ->toggle(),
 
                 Filter::make('not_checked_in')
-                    ->label('Neîncă validate')
+                    ->label(__('Neîncă validate'))
                     ->query(fn (Builder $query) => $query
                         ->whereNull('checked_in_at')
                         ->where('status', '!=', ActivityBooking::STATUS_CANCELLED))
@@ -381,7 +381,7 @@ class ActivityBookingResource extends Resource
                 ViewAction::make(),
 
                 Action::make('checkIn')
-                    ->label('Validează')
+                    ->label(__('Validează'))
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn (ActivityBooking $record): bool => in_array($record->status, [
@@ -389,7 +389,7 @@ class ActivityBookingResource extends Resource
                         ActivityBooking::STATUS_CONFIRMED,
                     ], true))
                     ->requiresConfirmation()
-                    ->modalHeading('Validează rezervarea')
+                    ->modalHeading(__('Validează rezervarea'))
                     ->modalDescription(fn (ActivityBooking $record) => sprintf(
                         'Marchezi rezervarea %s ca validată? Toate biletele asociate (%d) vor fi marcate ca verificate la intrare.',
                         $record->confirmation_code,
@@ -410,13 +410,13 @@ class ActivityBookingResource extends Resource
                                 ]);
                         });
                         Notification::make()
-                            ->title('Rezervarea a fost validată')
+                            ->title(__('Rezervarea a fost validată'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('markNoShow')
-                    ->label('No-show')
+                    ->label(__('No-show'))
                     ->icon('heroicon-o-no-symbol')
                     ->color('warning')
                     ->visible(fn (ActivityBooking $record): bool => in_array($record->status, [
@@ -424,18 +424,18 @@ class ActivityBookingResource extends Resource
                         ActivityBooking::STATUS_CONFIRMED,
                     ], true))
                     ->requiresConfirmation()
-                    ->modalHeading('Marchează ca no-show')
-                    ->modalDescription('Clientul nu s-a prezentat. Locurile rămân blocate, dar rezervarea nu mai contează ca validată.')
+                    ->modalHeading(__('Marchează ca no-show'))
+                    ->modalDescription(__('Clientul nu s-a prezentat. Locurile rămân blocate, dar rezervarea nu mai contează ca validată.'))
                     ->action(function (ActivityBooking $record): void {
                         $record->update(['status' => ActivityBooking::STATUS_NO_SHOW]);
                         Notification::make()
-                            ->title('Rezervare marcată ca no-show')
+                            ->title(__('Rezervare marcată ca no-show'))
                             ->success()
                             ->send();
                     }),
 
                 Action::make('cancelBooking')
-                    ->label('Anulează')
+                    ->label(__('Anulează'))
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn (ActivityBooking $record): bool => ! in_array($record->status, [
@@ -443,8 +443,8 @@ class ActivityBookingResource extends Resource
                         ActivityBooking::STATUS_CHECKED_IN,
                     ], true))
                     ->requiresConfirmation()
-                    ->modalHeading('Anulează rezervarea')
-                    ->modalDescription('Locurile vor fi eliberate. Acțiunea NU declanșează rambursarea — gestionează manual din pagina comenzii dacă plata a fost încasată.')
+                    ->modalHeading(__('Anulează rezervarea'))
+                    ->modalDescription(__('Locurile vor fi eliberate. Acțiunea NU declanșează rambursarea — gestionează manual din pagina comenzii dacă plata a fost încasată.'))
                     ->action(function (ActivityBooking $record): void {
                         DB::transaction(function () use ($record) {
                             $record->update([
@@ -456,7 +456,7 @@ class ActivityBookingResource extends Resource
                                 ->update(['status' => 'cancelled']);
                         });
                         Notification::make()
-                            ->title('Rezervarea a fost anulată')
+                            ->title(__('Rezervarea a fost anulată'))
                             ->success()
                             ->send();
                     }),

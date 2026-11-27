@@ -57,14 +57,14 @@ class EventCategoryResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Category Details')
+                SC\Section::make(__('Category Details'))
                     ->schema([
                         SC\Tabs::make('Name Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.ro')
-                                            ->label('Nume categorie (RO)')
+                                            ->label(__('Nume categorie (RO)'))
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
@@ -77,7 +77,7 @@ class EventCategoryResource extends Resource
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.en')
-                                            ->label('Category name (EN)')
+                                            ->label(__('Category name (EN)'))
                                             ->maxLength(190),
                                     ]),
                             ])->columnSpanFull(),
@@ -87,25 +87,25 @@ class EventCategoryResource extends Resource
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.ro')
-                                            ->label('Descriere (RO)')
+                                            ->label(__('Descriere (RO)'))
                                             ->rows(3),
                                     ]),
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.en')
-                                            ->label('Description (EN)')
+                                            ->label(__('Description (EN)'))
                                             ->rows(3),
                                     ]),
                             ])->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
                         Forms\Components\Select::make('parent_id')
-                            ->label('Parent Category')
+                            ->label(__('Parent Category'))
                             ->options(function () {
                                 $marketplace = static::getMarketplaceClient();
                                 $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
@@ -116,44 +116,44 @@ class EventCategoryResource extends Resource
                                     ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? 'Unnamed']);
                             })
                             ->searchable()
-                            ->placeholder('None (Top-level category)'),
+                            ->placeholder(__('None (Top-level category)')),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
 
                         Forms\Components\TextInput::make('icon_emoji')
-                            ->label('Emoji Icon')
+                            ->label(__('Emoji Icon'))
                             ->placeholder('🎵')
                             ->maxLength(10),
 
                         Forms\Components\TextInput::make('icon')
-                            ->label('Heroicon')
+                            ->label(__('Heroicon'))
                             ->placeholder('heroicon-o-musical-note')
                             ->maxLength(100),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
 
                         Forms\Components\FileUpload::make('image_url')
-                            ->label('Category Image')
+                            ->label(__('Category Image'))
                             ->image()
                             ->disk('public')
                             ->directory('event-categories')
                             ->visibility('public')
-                            ->helperText('După ce încarci imaginea, apasă Save. Imaginea se salvează corect chiar dacă previzualizarea dispare momentan (glitch cosmetic).'),
+                            ->helperText(__('După ce încarci imaginea, apasă Save. Imaginea se salvează corect chiar dacă previzualizarea dispare momentan (glitch cosmetic).')),
 
                         Forms\Components\Toggle::make('is_visible')
-                            ->label('Visible')
+                            ->label(__('Visible'))
                             ->default(true),
 
                         Forms\Components\Toggle::make('is_featured')
-                            ->label('Featured'),
+                            ->label(__('Featured')),
 
                         Forms\Components\Select::make('event_type_ids')
-                            ->label('Linked Event Types')
-                            ->helperText('When this category is selected on an event, these event types will be auto-filled')
+                            ->label(__('Linked Event Types'))
+                            ->helperText(__('When this category is selected on an event, these event types will be auto-filled'))
                             ->multiple()
                             ->options(function () {
                                 return EventType::query()
@@ -174,28 +174,28 @@ class EventCategoryResource extends Resource
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('meta_title.ro')
-                                            ->label('Meta Title (RO)')
+                                            ->label(__('Meta Title (RO)'))
                                             ->maxLength(70),
                                         Forms\Components\Textarea::make('meta_description.ro')
-                                            ->label('Meta Description (RO)')
+                                            ->label(__('Meta Description (RO)'))
                                             ->rows(2)
                                             ->maxLength(160),
                                     ]),
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('meta_title.en')
-                                            ->label('Meta Title (EN)')
+                                            ->label(__('Meta Title (EN)'))
                                             ->maxLength(70),
                                         Forms\Components\Textarea::make('meta_description.en')
-                                            ->label('Meta Description (EN)')
+                                            ->label(__('Meta Description (EN)'))
                                             ->rows(2)
                                             ->maxLength(160),
                                     ]),
                             ])->columnSpanFull(),
                     ])->columns(3),
 
-                SC\Section::make('SEO Body — "Tot ce trebuie să știi"')
-                    ->description('Titlu + corp rich-text afișat sub listingul de activități pe pagina categoriei.')
+                SC\Section::make(__('SEO Body — "Tot ce trebuie să știi"'))
+                    ->description(__('Titlu + corp rich-text afișat sub listingul de activități pe pagina categoriei.'))
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('SEO Body Translations')
@@ -203,41 +203,41 @@ class EventCategoryResource extends Resource
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('seo_body_title.ro')
-                                            ->label('Titlu (RO)')
-                                            ->placeholder('Tot ce trebuie să știi despre escape rooms')
+                                            ->label(__('Titlu (RO)'))
+                                            ->placeholder(__('Tot ce trebuie să știi despre escape rooms'))
                                             ->maxLength(190),
                                         Forms\Components\RichEditor::make('seo_body.ro')
-                                            ->label('Corp text (RO)')
-                                            ->placeholder('Scrie aici despre categorie — explicații, sfaturi, recomandări. Poți folosi titluri, liste, link-uri, bold etc.')
+                                            ->label(__('Corp text (RO)'))
+                                            ->placeholder(__('Scrie aici despre categorie — explicații, sfaturi, recomandări. Poți folosi titluri, liste, link-uri, bold etc.'))
                                             ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                             ->columnSpanFull(),
                                     ]),
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('seo_body_title.en')
-                                            ->label('Title (EN)')
+                                            ->label(__('Title (EN)'))
                                             ->maxLength(190),
                                         Forms\Components\RichEditor::make('seo_body.en')
-                                            ->label('Body (EN)')
+                                            ->label(__('Body (EN)'))
                                             ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
                                             ->columnSpanFull(),
                                     ]),
                             ])->columnSpanFull(),
                     ])->columns(1),
 
-                SC\Section::make('Întrebări frecvente (FAQs)')
-                    ->description('Lista de întrebări + răspunsuri afișată sub corpul SEO și inclusă ca FAQPage JSON-LD pentru rich SERP. Doar limba primară (RO).')
+                SC\Section::make(__('Întrebări frecvente (FAQs)'))
+                    ->description(__('Lista de întrebări + răspunsuri afișată sub corpul SEO și inclusă ca FAQPage JSON-LD pentru rich SERP. Doar limba primară (RO).'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\Repeater::make('faqs')
                             ->label(false)
                             ->schema([
                                 Forms\Components\TextInput::make('q')
-                                    ->label('Întrebare')
+                                    ->label(__('Întrebare'))
                                     ->required()
                                     ->maxLength(200),
                                 Forms\Components\Textarea::make('a')
-                                    ->label('Răspuns')
+                                    ->label(__('Răspuns'))
                                     ->required()
                                     ->rows(3),
                             ])
@@ -246,7 +246,7 @@ class EventCategoryResource extends Resource
                             ->collapsible()
                             ->cloneable()
                             ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
-                            ->addActionLabel('Adaugă întrebare')
+                            ->addActionLabel(__('Adaugă întrebare'))
                             ->columnSpanFull(),
                     ])->columns(1),
             ]) ->columns(1);
@@ -265,12 +265,12 @@ class EventCategoryResource extends Resource
                     ->width(50),
 
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent')
+                    ->label(__('Parent'))
                     ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
                             return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
@@ -279,33 +279,33 @@ class EventCategoryResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('event_count')
-                    ->label('Events')
+                    ->label(__('Events'))
                     ->sortable(),
 
                 Tables\Columns\ColorColumn::make('color')
-                    ->label('Color'),
+                    ->label(__('Color')),
 
                 Tables\Columns\IconColumn::make('image_url')
-                    ->label('Image')
+                    ->label(__('Image'))
                     ->alignCenter()
                     ->boolean()
                     ->state(fn ($record) => filled($record->image_url)),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Featured')
+                    ->label(__('Featured'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('parent_id')
-                    ->label('Parent Category')
+                    ->label(__('Parent Category'))
                     ->options(function () {
                         $marketplace = static::getMarketplaceClient();
                         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
@@ -316,9 +316,9 @@ class EventCategoryResource extends Resource
                             ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? 'Unnamed']);
                     }),
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                    ->label(__('Featured')),
             ])
             ->recordActions([
                 EditAction::make(),

@@ -44,36 +44,36 @@ class EmailTemplateResource extends Resource
                     ->schema([
                         // LEFT COLUMN — Email Content (2/3 width)
                         SC\Group::make([
-                            SC\Section::make('Email Content')
+                            SC\Section::make(__('Email Content'))
                                 ->schema([
                                     Forms\Components\TextInput::make('subject')
-                                        ->label('Subject')
+                                        ->label(__('Subject'))
                                         ->required()
                                         ->maxLength(255)
-                                        ->helperText('Suportă variabile: {{customer_name}}, {{order_number}}, etc.'),
+                                        ->helperText(__('Suportă variabile: {{customer_name}}, {{order_number}}, etc.')),
                                     Forms\Components\Textarea::make('body_html')
-                                        ->label('HTML Body')
+                                        ->label(__('HTML Body'))
                                         ->required()
                                         ->rows(25)
                                         ->columnSpanFull()
                                         ->extraAttributes(['id' => 'body-html-editor'])
-                                        ->helperText('Cod HTML complet al emailului. Folosește {{variable}} pentru conținut dinamic.'),
+                                        ->helperText(__('Cod HTML complet al emailului. Folosește {{variable}} pentru conținut dinamic.')),
                                     SC\View::make('filament.marketplace.components.html-live-preview')
                                         ->columnSpanFull(),
                                     Forms\Components\Textarea::make('body_text')
-                                        ->label('Plain Text Body')
+                                        ->label(__('Plain Text Body'))
                                         ->rows(5)
                                         ->columnSpanFull()
-                                        ->helperText('Versiune text simplu (opțional). Se generează automat din HTML dacă lipsește.'),
+                                        ->helperText(__('Versiune text simplu (opțional). Se generează automat din HTML dacă lipsește.')),
                                 ]),
                         ])->columnSpan(2),
 
                         // RIGHT COLUMN — Template Details + Variables (1/3 width)
                         SC\Group::make([
-                            SC\Section::make('Template Details')
+                            SC\Section::make(__('Template Details'))
                                 ->schema([
                                     Forms\Components\Select::make('slug')
-                                        ->label('Template Type')
+                                        ->label(__('Template Type'))
                                         ->options(MarketplaceEmailTemplate::TEMPLATE_SLUGS)
                                         ->required()
                                         ->live()
@@ -81,28 +81,28 @@ class EmailTemplateResource extends Resource
                                             $marketplace = static::getMarketplaceClient();
                                             return $rule->where('marketplace_client_id', $marketplace?->id);
                                         })
-                                        ->helperText('Fiecare tip poate exista o singură dată'),
+                                        ->helperText(__('Fiecare tip poate exista o singură dată')),
                                     Forms\Components\TextInput::make('name')
                                         ->required()
                                         ->maxLength(255)
-                                        ->helperText('Nume intern'),
+                                        ->helperText(__('Nume intern')),
                                     Forms\Components\Select::make('category')
                                         ->options([
-                                            'transactional' => 'Tranzacțional',
-                                            'notification' => 'Notificare',
-                                            'marketing' => 'Marketing',
+                                            'transactional' => __('Tranzacțional'),
+                                            'notification' => __('Notificare'),
+                                            'marketing' => __('Marketing'),
                                         ])
                                         ->default('transactional'),
                                     Forms\Components\Toggle::make('is_active')
-                                        ->label('Active')
+                                        ->label(__('Active'))
                                         ->default(true),
                                     Forms\Components\Toggle::make('notify_organizer')
-                                        ->label('Se trimite și organizatorului')
-                                        ->helperText('Dacă e activat, acest tip de email poate fi trimis și pe adresa organizatorului (dacă evenimentul are notificările activate).')
+                                        ->label(__('Se trimite și organizatorului'))
+                                        ->helperText(__('Dacă e activat, acest tip de email poate fi trimis și pe adresa organizatorului (dacă evenimentul are notificările activate).'))
                                         ->default(false),
                                 ]),
 
-                            SC\Section::make('Variabile disponibile')
+                            SC\Section::make(__('Variabile disponibile'))
                                 ->schema([
                                     Forms\Components\Placeholder::make('variables_help')
                                         ->content(function ($get) {
@@ -137,7 +137,7 @@ class EmailTemplateResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('slug')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => MarketplaceEmailTemplate::TEMPLATE_SLUGS[$state] ?? $state),
                 Tables\Columns\TextColumn::make('category')
@@ -152,10 +152,10 @@ class EmailTemplateResource extends Resource
                     ->limit(40)
                     ->searchable(),
                 Tables\Columns\IconColumn::make('is_active')
-                    ->label('Active')
+                    ->label(__('Active'))
                     ->boolean(),
                 Tables\Columns\IconColumn::make('notify_organizer')
-                    ->label('Org.')
+                    ->label(__('Org.'))
                     ->boolean()
                     ->trueIcon('heroicon-o-user-plus')
                     ->falseIcon('heroicon-o-minus')
@@ -163,29 +163,29 @@ class EmailTemplateResource extends Resource
                     ->falseColor('gray')
                     ->tooltip(fn ($record) => $record->notify_organizer ? 'Se trimite și organizatorului' : 'Doar admin'),
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Last Updated')
+                    ->label(__('Last Updated'))
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('slug')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->options(MarketplaceEmailTemplate::TEMPLATE_SLUGS),
                 Tables\Filters\SelectFilter::make('category')
                     ->options([
-                        'transactional' => 'Tranzacțional',
-                        'notification' => 'Notificare',
-                        'marketing' => 'Marketing',
+                        'transactional' => __('Tranzacțional'),
+                        'notification' => __('Notificare'),
+                        'marketing' => __('Marketing'),
                     ]),
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label(__('Active')),
             ])
             ->recordActions([
                 EditAction::make(),
                 Action::make('preview')
                     ->icon('heroicon-o-eye')
                     ->modalContent(fn ($record) => view('filament.marketplace.email-preview', ['template' => $record]))
-                    ->modalHeading('Email Preview')
+                    ->modalHeading(__('Email Preview'))
                     ->modalSubmitAction(false),
             ])
             ->toolbarActions([

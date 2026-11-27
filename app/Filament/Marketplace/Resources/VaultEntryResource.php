@@ -173,20 +173,20 @@ class VaultEntryResource extends Resource
         return $schema
             ->columns(1)
             ->components([
-                Section::make('Date de acces')
+                Section::make(__('Date de acces'))
                     ->icon('heroicon-o-key')
-                    ->description('Datele sunt criptate în baza de date. Le văd doar conturile selectate la „Acces”.')
+                    ->description(__('Datele sunt criptate în baza de date. Le văd doar conturile selectate la „Acces”.'))
                     ->columns(2)
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Nume')
+                            ->label(__('Nume'))
                             ->required()
                             ->maxLength(191)
-                            ->placeholder('ex: Cont Brevo, Hosting Ploi, Google Ads')
+                            ->placeholder(__('ex: Cont Brevo, Hosting Ploi, Google Ads'))
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('url')
-                            ->label('URL')
+                            ->label(__('URL'))
                             ->maxLength(2048)
                             ->placeholder('https://')
                             ->prefixIcon('heroicon-o-globe-alt')
@@ -202,45 +202,45 @@ class VaultEntryResource extends Resource
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('username')
-                            ->label('Username')
+                            ->label(__('Username'))
                             ->maxLength(255)
                             ->autocomplete('off'),
 
                         Forms\Components\TextInput::make('password')
-                            ->label('Parolă')
+                            ->label(__('Parolă'))
                             ->password()
                             ->revealable()
                             ->maxLength(1000)
                             ->autocomplete('new-password'),
 
                         Forms\Components\Checkbox::make('requires_2fa')
-                            ->label('Necesită 2FA')
-                            ->helperText('Autentificarea cere și un cod de verificare (SMS, email sau aplicație).')
+                            ->label(__('Necesită 2FA'))
+                            ->helperText(__('Autentificarea cere și un cod de verificare (SMS, email sau aplicație).'))
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('phone')
-                            ->label('Telefon')
+                            ->label(__('Telefon'))
                             ->tel()
                             ->maxLength(50),
 
                         Forms\Components\TextInput::make('email')
-                            ->label('Email')
+                            ->label(__('Email'))
                             ->email()
                             ->maxLength(255),
                     ]),
 
-                Section::make('Acces')
+                Section::make(__('Acces'))
                     ->icon('heroicon-o-shield-check')
-                    ->description('Doar super-administratorii selectați aici văd această intrare. Ceilalți nu o văd deloc, nici în listă.')
+                    ->description(__('Doar super-administratorii selectați aici văd această intrare. Ceilalți nu o văd deloc, nici în listă.'))
                     ->schema([
                         Forms\Components\Select::make('access_admin_ids')
-                            ->label('Conturi cu acces')
+                            ->label(__('Conturi cu acces'))
                             ->multiple()
                             ->options(fn () => static::superAdminOptions())
                             ->default(fn () => ($id = static::vaultAdmin()?->id) ? [(string) $id] : [])
                             ->required()
                             ->searchable()
-                            ->helperText('Dacă te scoți din listă, pierzi accesul la intrare după salvare.'),
+                            ->helperText(__('Dacă te scoți din listă, pierzi accesul la intrare după salvare.')),
                     ]),
             ]);
     }
@@ -250,12 +250,12 @@ class VaultEntryResource extends Resource
         return $schema
             ->columns(1)
             ->components([
-                Section::make('Date de acces')
+                Section::make(__('Date de acces'))
                     ->icon('heroicon-o-key')
                     ->columns(2)
                     ->schema([
                         Infolists\Components\TextEntry::make('url')
-                            ->label('URL')
+                            ->label(__('URL'))
                             ->url(fn (MarketplaceVaultEntry $record) => $record->url, shouldOpenInNewTab: true)
                             ->color('primary')
                             ->copyable()
@@ -263,13 +263,13 @@ class VaultEntryResource extends Resource
                             ->columnSpanFull(),
 
                         Infolists\Components\TextEntry::make('username')
-                            ->label('Username')
+                            ->label(__('Username'))
                             ->copyable()
                             ->copyMessage('Username copiat')
                             ->placeholder('—'),
 
                         Infolists\Components\TextEntry::make('password')
-                            ->label('Parolă')
+                            ->label(__('Parolă'))
                             ->formatStateUsing(fn () => self::PASSWORD_MASK)
                             ->copyable()
                             ->copyableState(fn (MarketplaceVaultEntry $record) => $record->password)
@@ -277,11 +277,11 @@ class VaultEntryResource extends Resource
                             ->placeholder('—')
                             ->hintAction(
                                 Action::make('revealPassword')
-                                    ->label('Arată')
+                                    ->label(__('Arată'))
                                     ->icon('heroicon-m-eye')
                                     ->color('gray')
                                     ->visible(fn (MarketplaceVaultEntry $record) => filled($record->password))
-                                    ->modalHeading('Parolă')
+                                    ->modalHeading(__('Parolă'))
                                     ->modalWidth('md')
                                     ->modalContent(function (MarketplaceVaultEntry $record) {
                                         // Checked again here: access may have been revoked while the page was open.
@@ -294,44 +294,44 @@ class VaultEntryResource extends Resource
                                         );
                                     })
                                     ->modalSubmitAction(false)
-                                    ->modalCancelActionLabel('Închide')
+                                    ->modalCancelActionLabel(__('Închide'))
                             ),
 
                         Infolists\Components\IconEntry::make('requires_2fa')
-                            ->label('Necesită 2FA')
+                            ->label(__('Necesită 2FA'))
                             ->boolean()
                             ->columnSpanFull(),
 
                         Infolists\Components\TextEntry::make('phone')
-                            ->label('Telefon')
+                            ->label(__('Telefon'))
                             ->copyable()
                             ->placeholder('—'),
 
                         Infolists\Components\TextEntry::make('email')
-                            ->label('Email')
+                            ->label(__('Email'))
                             ->copyable()
                             ->placeholder('—'),
                     ]),
 
-                Section::make('Acces')
+                Section::make(__('Acces'))
                     ->icon('heroicon-o-shield-check')
                     ->columns(2)
                     ->schema([
                         Infolists\Components\TextEntry::make('accessAdmins.name')
-                            ->label('Conturi cu acces')
+                            ->label(__('Conturi cu acces'))
                             ->badge()
                             ->columnSpanFull(),
 
                         Infolists\Components\TextEntry::make('creator.name')
-                            ->label('Adăugat de')
+                            ->label(__('Adăugat de'))
                             ->placeholder('—'),
 
                         Infolists\Components\TextEntry::make('updated_at')
-                            ->label('Ultima modificare')
+                            ->label(__('Ultima modificare'))
                             ->dateTime('d.m.Y H:i'),
 
                         Infolists\Components\TextEntry::make('updater.name')
-                            ->label('Modificat de')
+                            ->label(__('Modificat de'))
                             ->placeholder('—'),
                     ]),
             ]);
@@ -342,26 +342,26 @@ class VaultEntryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('url')
-                    ->label('URL')
+                    ->label(__('URL'))
                     ->formatStateUsing(fn (?string $state) => $state ? (parse_url($state, PHP_URL_HOST) ?: $state) : null)
                     ->url(fn (MarketplaceVaultEntry $record) => $record->url, shouldOpenInNewTab: true)
                     ->color('primary')
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('username')
-                    ->label('Username')
+                    ->label(__('Username'))
                     ->copyable()
                     ->copyMessage('Username copiat')
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('password')
-                    ->label('Parolă')
+                    ->label(__('Parolă'))
                     ->formatStateUsing(fn () => self::PASSWORD_MASK)
                     ->copyable()
                     ->copyableState(fn (MarketplaceVaultEntry $record) => $record->password)
@@ -369,19 +369,19 @@ class VaultEntryResource extends Resource
                     ->placeholder('—'),
 
                 Tables\Columns\IconColumn::make('requires_2fa')
-                    ->label('2FA')
+                    ->label(__('2FA'))
                     ->boolean()
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('accessAdmins.name')
-                    ->label('Acces')
+                    ->label(__('Acces'))
                     ->badge()
                     ->color('gray')
                     ->limitList(3)
                     ->expandableLimitedList(),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Modificat')
+                    ->label(__('Modificat'))
                     ->since()
                     ->sortable()
                     ->toggleable(),
@@ -393,8 +393,8 @@ class VaultEntryResource extends Resource
                 DeleteAction::make(),
             ])
             ->emptyStateIcon('heroicon-o-lock-closed')
-            ->emptyStateHeading('Nicio intrare în seif')
-            ->emptyStateDescription('Aici apar doar intrările la care ai primit acces.');
+            ->emptyStateHeading(__('Nicio intrare în seif'))
+            ->emptyStateDescription(__('Aici apar doar intrările la care ai primit acces.'));
     }
 
     public static function getPages(): array

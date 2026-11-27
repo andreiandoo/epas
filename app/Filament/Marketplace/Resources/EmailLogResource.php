@@ -47,36 +47,36 @@ class EmailLogResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Email Details')
+                SC\Section::make(__('Email Details'))
                     ->schema([
                         Forms\Components\TextInput::make('to_email')
-                            ->label('To')
+                            ->label(__('To'))
                             ->disabled(),
                         Forms\Components\TextInput::make('to_name')
-                            ->label('Recipient Name')
+                            ->label(__('Recipient Name'))
                             ->disabled(),
                         Forms\Components\TextInput::make('from_email')
-                            ->label('From')
+                            ->label(__('From'))
                             ->disabled(),
                         Forms\Components\TextInput::make('subject')
                             ->disabled(),
                         Forms\Components\Select::make('status')
                             ->options([
-                                'pending' => 'Pending',
-                                'sent' => 'Sent',
-                                'delivered' => 'Delivered',
-                                'opened' => 'Opened',
-                                'clicked' => 'Clicked',
-                                'bounced' => 'Bounced',
-                                'failed' => 'Failed',
+                                'pending' => __('Pending'),
+                                'sent' => __('Sent'),
+                                'delivered' => __('Delivered'),
+                                'opened' => __('Opened'),
+                                'clicked' => __('Clicked'),
+                                'bounced' => __('Bounced'),
+                                'failed' => __('Failed'),
                             ])
                             ->disabled(),
                         Forms\Components\TextInput::make('template_slug')
-                            ->label('Template')
+                            ->label(__('Template'))
                             ->disabled(),
                     ])->columns(2),
 
-                SC\Section::make('Tracking')
+                SC\Section::make(__('Tracking'))
                     ->schema([
                         Forms\Components\DateTimePicker::make('sent_at')
                             ->timezone(MarketplaceTz::tz())
@@ -95,10 +95,10 @@ class EmailLogResource extends Resource
                             ->disabled(),
                     ])->columns(3),
 
-                SC\Section::make('Content')
+                SC\Section::make(__('Content'))
                     ->schema([
                         Forms\Components\Placeholder::make('body_html_rendered')
-                            ->label('HTML Body')
+                            ->label(__('HTML Body'))
                             ->content(function ($record) {
                                 if (empty($record?->body_html)) {
                                     return new \Illuminate\Support\HtmlString(
@@ -116,7 +116,7 @@ class EmailLogResource extends Resource
                             })
                             ->columnSpanFull(),
                         Forms\Components\Textarea::make('error_message')
-                            ->label('Error Message')
+                            ->label(__('Error Message'))
                             ->disabled()
                             ->visible(fn ($record) => !empty($record?->error_message))
                             ->columnSpanFull(),
@@ -129,14 +129,14 @@ class EmailLogResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('to_email')
-                    ->label('To')
+                    ->label(__('To'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('subject')
                     ->limit(40)
                     ->searchable(),
                 Tables\Columns\TextColumn::make('template_slug')
-                    ->label('Template')
+                    ->label(__('Template'))
                     ->badge(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -154,11 +154,11 @@ class EmailLogResource extends Resource
                     ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable(),
                 Tables\Columns\IconColumn::make('opened_at')
-                    ->label('Opened')
+                    ->label(__('Opened'))
                     ->boolean()
                     ->getStateUsing(fn ($record) => !is_null($record->opened_at)),
                 Tables\Columns\IconColumn::make('clicked_at')
-                    ->label('Clicked')
+                    ->label(__('Clicked'))
                     ->boolean()
                     ->getStateUsing(fn ($record) => !is_null($record->clicked_at)),
             ])
@@ -166,16 +166,16 @@ class EmailLogResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'Pending',
-                        'sent' => 'Sent',
-                        'delivered' => 'Delivered',
-                        'opened' => 'Opened',
-                        'clicked' => 'Clicked',
-                        'bounced' => 'Bounced',
-                        'failed' => 'Failed',
+                        'pending' => __('Pending'),
+                        'sent' => __('Sent'),
+                        'delivered' => __('Delivered'),
+                        'opened' => __('Opened'),
+                        'clicked' => __('Clicked'),
+                        'bounced' => __('Bounced'),
+                        'failed' => __('Failed'),
                     ]),
                 Tables\Filters\SelectFilter::make('template_slug')
-                    ->label('Template')
+                    ->label(__('Template'))
                     ->options(\App\Models\MarketplaceEmailTemplate::TEMPLATE_SLUGS),
                 Tables\Filters\Filter::make('sent_at')
                     ->form([
@@ -212,7 +212,7 @@ class EmailLogResource extends Resource
                         ResendEmailJob::dispatch($newLog);
 
                         Notification::make()
-                            ->title('Email queued for resend')
+                            ->title(__('Email queued for resend'))
                             ->success()
                             ->send();
                     }),

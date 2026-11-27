@@ -92,15 +92,15 @@ class SeatingLayoutResource extends Resource
                     // ============================================================
                     // SEARCH EXISTING LAYOUTS (only on create page)
                     // ============================================================
-                    SC\Section::make('Caută layout-uri existente')
+                    SC\Section::make(__('Caută layout-uri existente'))
                         ->icon('heroicon-o-magnifying-glass')
                         ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
                         ->visible(fn ($operation) => $operation === 'create')
                         ->columnSpanFull()
                         ->schema([
                             Forms\Components\Select::make('search_existing_layout')
-                                ->label('Caută o hartă existentă în biblioteca Tixello')
-                                ->placeholder('Scrie numele layout-ului sau al locației...')
+                                ->label(__('Caută o hartă existentă în biblioteca Tixello'))
+                                ->placeholder(__('Scrie numele layout-ului sau al locației...'))
                                 ->searchable()
                                 ->prefixIcon('heroicon-o-magnifying-glass')
                                 ->getOptionLabelUsing(function ($value) use ($marketplace): ?string {
@@ -225,7 +225,7 @@ class SeatingLayoutResource extends Resource
 
                             SC\Actions::make([
                                 Action::make('add_as_partner')
-                                    ->label('Importa model harta')
+                                    ->label(__('Importa model harta'))
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('success')
                                     ->size('lg')
@@ -236,16 +236,16 @@ class SeatingLayoutResource extends Resource
                                         return $layout && is_null($layout->marketplace_client_id);
                                     })
                                     ->requiresConfirmation()
-                                    ->modalHeading('Importa model harta')
-                                    ->modalDescription('Acest layout va fi importat în lista ta. Vei putea să îl folosești pentru evenimentele tale.')
+                                    ->modalHeading(__('Importa model harta'))
+                                    ->modalDescription(__('Acest layout va fi importat în lista ta. Vei putea să îl folosești pentru evenimentele tale.'))
                                     ->action(function (SGet $get) use ($marketplace) {
                                         $layoutId = $get('search_existing_layout');
                                         $layout = SeatingLayout::withoutGlobalScopes()->find($layoutId);
 
                                         if (!$layout) {
                                             Notification::make()
-                                                ->title('Eroare')
-                                                ->body('Layout-ul nu a fost găsit.')
+                                                ->title(__('Eroare'))
+                                                ->body(__('Layout-ul nu a fost găsit.'))
                                                 ->danger()
                                                 ->send();
                                             return;
@@ -253,8 +253,8 @@ class SeatingLayoutResource extends Resource
 
                                         if ($layout->marketplace_client_id) {
                                             Notification::make()
-                                                ->title('Eroare')
-                                                ->body('Acest layout aparține deja unui alt marketplace.')
+                                                ->title(__('Eroare'))
+                                                ->body(__('Acest layout aparține deja unui alt marketplace.'))
                                                 ->danger()
                                                 ->send();
                                             return;
@@ -266,7 +266,7 @@ class SeatingLayoutResource extends Resource
                                         ]);
 
                                         Notification::make()
-                                            ->title('Layout importat')
+                                            ->title(__('Layout importat'))
                                             ->body('"' . $layout->name . '" a fost importat cu succes.')
                                             ->success()
                                             ->send();
@@ -293,12 +293,12 @@ class SeatingLayoutResource extends Resource
                     // ============================================================
                     // CREATE NEW LAYOUT FORM
                     // ============================================================
-                    SC\Section::make('Informații de bază')
+                    SC\Section::make(__('Informații de bază'))
                         ->icon('heroicon-o-information-circle')
                         ->schema([
                             Forms\Components\Select::make('venue_id')
-                                ->label('Locație')
-                                ->helperText('Locația trebuie să aparțină acestui marketplace.')
+                                ->label(__('Locație'))
+                                ->helperText(__('Locația trebuie să aparțină acestui marketplace.'))
                                 ->relationship('venue', 'name', fn (Builder $query) => $query->where(fn ($q) => $q
                                     ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
                                     ->orWhereHas('marketplaceClients', fn ($q2) => $q2->where('marketplace_client_id', static::getMarketplaceClient()?->id))
@@ -323,35 +323,35 @@ class SeatingLayoutResource extends Resource
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('name')
-                                ->label('Nume model hartă')
+                                ->label(__('Nume model hartă'))
                                 ->required()
                                 ->maxLength(255)
                                 ->columnSpan(1),
 
                             Forms\Components\Select::make('status')
-                                ->label('Status')
+                                ->label(__('Status'))
                                 ->options([
-                                    'draft' => 'Draft',
-                                    'published' => 'Publicat',
+                                    'draft' => __('Draft'),
+                                    'published' => __('Publicat'),
                                 ])
                                 ->default('draft')
                                 ->required()
                                 ->columnSpan(1),
 
                             Forms\Components\Textarea::make('notes')
-                                ->label('Note')
-                                ->placeholder('Note despre acest layout. Informatii de uz intern ...')
+                                ->label(__('Note'))
+                                ->placeholder(__('Note despre acest layout. Informatii de uz intern ...'))
                                 ->maxLength(1000)
                                 ->rows(3)
                                 ->columnSpanFull(),
                         ])
                         ->columns(2),
 
-                    SC\Section::make('Setări Hartă')
+                    SC\Section::make(__('Setări Hartă'))
                         ->icon('heroicon-o-photo')
                         ->schema([
                             Forms\Components\TextInput::make('canvas_w')
-                                ->label('Lățime hartă (px)')
+                                ->label(__('Lățime hartă (px)'))
                                 ->required()
                                 ->numeric()
                                 ->default(config('seating.canvas.default_width', 1920))
@@ -360,7 +360,7 @@ class SeatingLayoutResource extends Resource
                                 ->columnSpan(1),
 
                             Forms\Components\TextInput::make('canvas_h')
-                                ->label('Înălțime hartă (px)')
+                                ->label(__('Înălțime hartă (px)'))
                                 ->required()
                                 ->numeric()
                                 ->default(config('seating.canvas.default_height', 1080))
@@ -369,7 +369,7 @@ class SeatingLayoutResource extends Resource
                                 ->columnSpan(1),
 
                             Forms\Components\FileUpload::make('background_image_path')
-                                ->label('Imagine de fundal')
+                                ->label(__('Imagine de fundal'))
                                 ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/jpg', 'image/webp'])
                                 ->disk('public')
                                 ->directory('seating/backgrounds')
@@ -384,15 +384,15 @@ class SeatingLayoutResource extends Resource
                         ->columns(2),
 
                     // Partner notes (internal)
-                    SC\Section::make('Note interne')
-                        ->description('Note interne despre acest layout (nu sunt vizibile public)')
+                    SC\Section::make(__('Note interne'))
+                        ->description(__('Note interne despre acest layout (nu sunt vizibile public)'))
                         ->icon('heroicon-o-lock-closed')
                         ->collapsible()
                         ->collapsed()
                         ->schema([
                             Forms\Components\Textarea::make('partner_notes')
-                                ->label('Note')
-                                ->placeholder('Note despre parteneriat, configurări speciale, etc.')
+                                ->label(__('Note'))
+                                ->placeholder(__('Note despre parteneriat, configurări speciale, etc.'))
                                 ->rows(4)
                                 ->columnSpanFull(),
                         ]),
@@ -400,17 +400,17 @@ class SeatingLayoutResource extends Resource
 
                 SC\Group::make()->columnSpan(1)->schema([
                     // Metadata (doar pe Edit)
-                    SC\Section::make('Metadate')
+                    SC\Section::make(__('Metadate'))
                         ->icon('heroicon-o-information-circle')
                         ->compact()
                         ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
                             Forms\Components\Placeholder::make('version')
-                                ->label('Versiune')
+                                ->label(__('Versiune'))
                                 ->content(fn ($record) => $record?->version ?? 1),
 
                             Forms\Components\Placeholder::make('created_info')
-                                ->label('Creat')
+                                ->label(__('Creat'))
                                 ->content(function ($record) {
                                     $date = $record?->created_at?->format('d.m.Y H:i') ?? '-';
                                     $user = $record?->creator?->name ?? '-';
@@ -418,7 +418,7 @@ class SeatingLayoutResource extends Resource
                                 }),
 
                             Forms\Components\Placeholder::make('updated_info')
-                                ->label('Actualizat')
+                                ->label(__('Actualizat'))
                                 ->content(function ($record) {
                                     $date = $record?->updated_at?->format('d.m.Y H:i') ?? '-';
                                     $user = $record?->updater?->name ?? ($record?->creator?->name ?? '-');
@@ -427,7 +427,7 @@ class SeatingLayoutResource extends Resource
                         ]),
 
                     // Statistici (doar pe Edit)
-                    SC\Section::make('Statistici')
+                    SC\Section::make(__('Statistici'))
                         ->icon('heroicon-o-chart-bar')
                         ->compact()
                         ->visible(fn ($operation) => $operation === 'edit')
@@ -462,14 +462,14 @@ class SeatingLayoutResource extends Resource
 
 
                     // Partner status (only on edit)
-                    SC\Section::make('Status partener')
+                    SC\Section::make(__('Status partener'))
                         ->icon('heroicon-o-user-group')
                         ->compact()
                         ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
                             Forms\Components\Toggle::make('is_partner')
-                                ->label('Layout partener')
-                                ->helperText('Layout importat din Core')
+                                ->label(__('Layout partener'))
+                                ->helperText(__('Layout importat din Core'))
                                 ->disabled(),
                         ]),
                 ]),
@@ -482,14 +482,14 @@ class SeatingLayoutResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable()
                     ->sortable()
                     ->weight(FontWeight::Bold)
                     ->url(fn (SeatingLayout $record) => static::getUrl('designer', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('venue_name')
-                    ->label('Locație')
+                    ->label(__('Locație'))
                     ->state(fn (SeatingLayout $record) => $record->venue
                         ? ($record->venue->getTranslation('name', 'ro') ?: $record->venue->getTranslation('name', 'en'))
                         : '-')
@@ -497,13 +497,13 @@ class SeatingLayoutResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_seats')
-                    ->label('Locuri')
+                    ->label(__('Locuri'))
                     ->state(fn (SeatingLayout $record) => $record->sections->sum(fn ($s) => $s->seats()->count()))
                     ->sortable(query: fn ($query, $direction) => $query)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('source')
-                    ->label('Sursă')
+                    ->label(__('Sursă'))
                     ->badge()
                     ->getStateUsing(fn (SeatingLayout $record) => $record->marketplace_client_id ? 'proprie' : 'biblioteca')
                     ->color(fn (string $state): string => match ($state) {
@@ -518,7 +518,7 @@ class SeatingLayoutResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'draft' => 'gray',
@@ -532,50 +532,50 @@ class SeatingLayoutResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('canvas_w')
-                    ->label('Canvas')
+                    ->label(__('Canvas'))
                     ->formatStateUsing(fn ($record) => "{$record->canvas_w}x{$record->canvas_h}")
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('sections_count')
                     ->counts('sections')
-                    ->label('Secțiuni')
+                    ->label(__('Secțiuni'))
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('is_partner')
-                    ->label('Partener')
+                    ->label(__('Partener'))
                     ->boolean()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Actualizat')
+                    ->label(__('Actualizat'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->options([
-                        'draft' => 'Draft',
-                        'published' => 'Publicat',
+                        'draft' => __('Draft'),
+                        'published' => __('Publicat'),
                     ]),
 
                 Tables\Filters\TernaryFilter::make('source')
-                    ->label('Sursă')
-                    ->placeholder('Toate')
-                    ->trueLabel('Doar proprii')
-                    ->falseLabel('Doar biblioteca Tixello')
+                    ->label(__('Sursă'))
+                    ->placeholder(__('Toate'))
+                    ->trueLabel(__('Doar proprii'))
+                    ->falseLabel(__('Doar biblioteca Tixello'))
                     ->queries(
                         true: fn (Builder $query) => $query->whereNotNull('marketplace_client_id'),
                         false: fn (Builder $query) => $query->whereNull('marketplace_client_id'),
                     ),
 
                 Tables\Filters\TernaryFilter::make('is_partner')
-                    ->label('Doar parteneri'),
+                    ->label(__('Doar parteneri')),
 
                 Tables\Filters\SelectFilter::make('venue')
-                    ->label('Locație')
+                    ->label(__('Locație'))
                     ->relationship('venue', 'name')
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en') ?? 'Unnamed')
                     ->searchable()
@@ -583,7 +583,7 @@ class SeatingLayoutResource extends Resource
             ])
             ->actions([
                 Action::make('designer')
-                    ->label('Designer')
+                    ->label(__('Designer'))
                     ->icon('heroicon-o-paint-brush')
                     ->color('primary')
                     ->url(fn (SeatingLayout $record) => static::getUrl('designer', ['record' => $record])),

@@ -56,28 +56,28 @@ class RefundRequestResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Request Details')
+                SC\Section::make(__('Request Details'))
                     ->schema([
                         Forms\Components\TextInput::make('reference')
-                            ->label('Reference Number')
+                            ->label(__('Reference Number'))
                             ->disabled(),
                         Forms\Components\Select::make('type')
                             ->options([
-                                'full_refund' => 'Full Refund',
-                                'partial_refund' => 'Partial Refund',
-                                'cancellation' => 'Cancellation',
+                                'full_refund' => __('Full Refund'),
+                                'partial_refund' => __('Partial Refund'),
+                                'cancellation' => __('Cancellation'),
                             ])
                             ->disabled(),
                         Forms\Components\Select::make('status')
                             ->options([
-                                'pending' => 'Pending',
-                                'under_review' => 'Under Review',
-                                'approved' => 'Approved',
-                                'rejected' => 'Rejected',
-                                'processing' => 'Processing',
-                                'refunded' => 'Refunded',
-                                'partially_refunded' => 'Partially Refunded',
-                                'failed' => 'Failed',
+                                'pending' => __('Pending'),
+                                'under_review' => __('Under Review'),
+                                'approved' => __('Approved'),
+                                'rejected' => __('Rejected'),
+                                'processing' => __('Processing'),
+                                'refunded' => __('Refunded'),
+                                'partially_refunded' => __('Partially Refunded'),
+                                'failed' => __('Failed'),
                             ])
                             ->disabled(),
                         Forms\Components\TextInput::make('reason')
@@ -85,33 +85,33 @@ class RefundRequestResource extends Resource
                             ->disabled(),
                     ])->columns(2),
 
-                SC\Section::make('Customer & Order')
+                SC\Section::make(__('Customer & Order'))
                     ->schema([
                         Forms\Components\Placeholder::make('customer_info')
-                            ->label('Customer')
+                            ->label(__('Customer'))
                             ->content(fn ($record) => $record?->customer?->full_name . ' <' . $record?->customer?->email . '>'),
                         Forms\Components\Placeholder::make('order_info')
-                            ->label('Order')
+                            ->label(__('Order'))
                             ->content(fn ($record) => '#' . str_pad($record?->order_id, 6, '0', STR_PAD_LEFT) . ' - ' . number_format($record?->order?->total, 2) . ' ' . ($record?->order?->currency ?? 'RON')),
                         Forms\Components\Placeholder::make('organizer_info')
-                            ->label('Organizer')
+                            ->label(__('Organizer'))
                             ->content(fn ($record) => $record?->organizer?->name ?? 'N/A'),
                     ])->columns(3),
 
-                SC\Section::make('Amount')
+                SC\Section::make(__('Amount'))
                     ->schema([
                         Forms\Components\TextInput::make('requested_amount')
-                            ->label('Requested Amount')
+                            ->label(__('Requested Amount'))
                             ->disabled()
                             ->prefix('RON'),
                         Forms\Components\TextInput::make('approved_amount')
-                            ->label('Approved Amount')
+                            ->label(__('Approved Amount'))
                             ->numeric()
                             ->prefix('RON')
                             ->visible(fn ($record) => $record?->canBeProcessed()),
                     ])->columns(2),
 
-                SC\Section::make('Customer Notes')
+                SC\Section::make(__('Customer Notes'))
                     ->schema([
                         Forms\Components\Textarea::make('customer_notes')
                             ->disabled()
@@ -119,35 +119,35 @@ class RefundRequestResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                SC\Section::make('Admin Notes')
+                SC\Section::make(__('Admin Notes'))
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
-                            ->label('Admin Notes / Rejection Reason')
+                            ->label(__('Admin Notes / Rejection Reason'))
                             ->rows(3)
                             ->columnSpanFull(),
                     ]),
 
-                SC\Section::make('Processing Details')
+                SC\Section::make(__('Processing Details'))
                     ->schema([
                         Forms\Components\Select::make('refund_method')
                             ->options([
-                                'original_payment' => 'Original Payment Method',
-                                'bank_transfer' => 'Bank Transfer',
-                                'store_credit' => 'Store Credit',
-                                'manual' => 'Manual (External)',
+                                'original_payment' => __('Original Payment Method'),
+                                'bank_transfer' => __('Bank Transfer'),
+                                'store_credit' => __('Store Credit'),
+                                'manual' => __('Manual (External)'),
                             ])
                             ->visible(fn ($record) => $record?->isApproved()),
                         Forms\Components\TextInput::make('payment_refund_id')
-                            ->label('Payment Reference')
+                            ->label(__('Payment Reference'))
                             ->visible(fn ($record) => $record?->isRefunded()),
                         Forms\Components\Placeholder::make('processed_info')
-                            ->label('Processed')
+                            ->label(__('Processed'))
                             ->content(fn ($record) => MarketplaceTz::fmt($record?->processed_at, 'Y-m-d H:i', $record?->marketplaceClient) . ' by ' . ($record?->processedBy?->name ?? 'System'))
                             ->visible(fn ($record) => $record?->processed_at),
                     ])->columns(2)
                     ->visible(fn ($record) => in_array($record?->status, ['approved', 'processing', 'refunded', 'partially_refunded', 'failed'])),
 
-                SC\Section::make('Auto-Refund Status')
+                SC\Section::make(__('Auto-Refund Status'))
                     ->schema([
                         Forms\Components\Placeholder::make('auto_refund_status')
                             ->content(function ($record) {
@@ -170,17 +170,17 @@ class RefundRequestResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('reference')
-                    ->label('Reference')
+                    ->label(__('Reference'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('customer.full_name')
-                    ->label('Customer')
+                    ->label(__('Customer'))
                     ->searchable(['customer.first_name', 'customer.last_name']),
                 Tables\Columns\TextColumn::make('order_id')
-                    ->label('Order #')
+                    ->label(__('Order #'))
                     ->formatStateUsing(fn ($state) => '#' . str_pad($state, 6, '0', STR_PAD_LEFT)),
                 Tables\Columns\TextColumn::make('organizer.name')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('type')
                     ->badge()
@@ -191,14 +191,14 @@ class RefundRequestResource extends Resource
                         default => $state,
                     }),
                 Tables\Columns\TextColumn::make('requested_amount')
-                    ->label('Amount')
+                    ->label(__('Amount'))
                     ->money('RON')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn ($record) => $record->status_color),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Requested')
+                    ->label(__('Requested'))
                     ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable(),
             ])
@@ -206,20 +206,20 @@ class RefundRequestResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'Pending',
-                        'under_review' => 'Under Review',
-                        'approved' => 'Approved',
-                        'rejected' => 'Rejected',
-                        'processing' => 'Processing',
-                        'refunded' => 'Refunded',
-                        'partially_refunded' => 'Partially Refunded',
-                        'failed' => 'Failed',
+                        'pending' => __('Pending'),
+                        'under_review' => __('Under Review'),
+                        'approved' => __('Approved'),
+                        'rejected' => __('Rejected'),
+                        'processing' => __('Processing'),
+                        'refunded' => __('Refunded'),
+                        'partially_refunded' => __('Partially Refunded'),
+                        'failed' => __('Failed'),
                     ]),
                 Tables\Filters\SelectFilter::make('type')
                     ->options([
-                        'full_refund' => 'Full Refund',
-                        'partial_refund' => 'Partial Refund',
-                        'cancellation' => 'Cancellation',
+                        'full_refund' => __('Full Refund'),
+                        'partial_refund' => __('Partial Refund'),
+                        'cancellation' => __('Cancellation'),
                     ]),
                 Tables\Filters\SelectFilter::make('organizer')
                     ->relationship('organizer', 'name'),
@@ -238,13 +238,13 @@ class RefundRequestResource extends Resource
                         ->color('success')
                         ->form([
                             Forms\Components\TextInput::make('approved_amount')
-                                ->label('Approved Amount')
+                                ->label(__('Approved Amount'))
                                 ->numeric()
                                 ->required()
                                 ->default(fn ($record) => $record->requested_amount)
                                 ->prefix('RON'),
                             Forms\Components\Textarea::make('notes')
-                                ->label('Admin Notes'),
+                                ->label(__('Admin Notes')),
                         ])
                         ->visible(fn ($record) => in_array($record->status, ['pending', 'under_review']))
                         ->action(function ($record, array $data) {
@@ -254,7 +254,7 @@ class RefundRequestResource extends Resource
                             SendRefundNotificationsJob::dispatch($record, SendRefundNotificationsJob::TYPE_APPROVED);
 
                             Notification::make()
-                                ->title('Refund Approved')
+                                ->title(__('Refund Approved'))
                                 ->success()
                                 ->send();
                         }),
@@ -264,7 +264,7 @@ class RefundRequestResource extends Resource
                         ->color('danger')
                         ->form([
                             Forms\Components\Textarea::make('reason')
-                                ->label('Rejection Reason')
+                                ->label(__('Rejection Reason'))
                                 ->required(),
                         ])
                         ->visible(fn ($record) => in_array($record->status, ['pending', 'under_review']))
@@ -276,18 +276,18 @@ class RefundRequestResource extends Resource
                             SendRefundNotificationsJob::dispatch($record, SendRefundNotificationsJob::TYPE_REJECTED);
 
                             Notification::make()
-                                ->title('Refund Rejected')
+                                ->title(__('Refund Rejected'))
                                 ->warning()
                                 ->send();
                         }),
 
                     Action::make('process_auto')
-                        ->label('Auto Refund')
+                        ->label(__('Auto Refund'))
                         ->icon('heroicon-o-bolt')
                         ->color('warning')
                         ->visible(fn ($record) => $record->status === 'approved')
                         ->requiresConfirmation()
-                        ->modalDescription('Attempt to process refund automatically through the payment provider.')
+                        ->modalDescription(__('Attempt to process refund automatically through the payment provider.'))
                         ->action(function ($record) {
                             // Operator-started refund the processor refused: same path as the order page
                             $service = app(\App\Services\PaymentRefundService::class);
@@ -307,13 +307,13 @@ class RefundRequestResource extends Resource
                                 SendRefundNotificationsJob::dispatch($record->fresh(), SendRefundNotificationsJob::TYPE_COMPLETED);
 
                                 Notification::make()
-                                    ->title('Auto Refund Successful')
+                                    ->title(__('Auto Refund Successful'))
                                     ->success()
                                     ->send();
                             } else {
                                 $record->refresh();
                                 Notification::make()
-                                    ->title('Auto Refund Failed')
+                                    ->title(__('Auto Refund Failed'))
                                     ->body($record->admin_notes ? 'Check admin notes for details' : 'Requires manual processing')
                                     ->danger()
                                     ->send();
@@ -321,13 +321,13 @@ class RefundRequestResource extends Resource
                         }),
 
                     Action::make('process_manual')
-                        ->label('Mark as Refunded')
+                        ->label(__('Mark as Refunded'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->form([
                             Forms\Components\TextInput::make('reference')
-                                ->label('Reference Number')
-                                ->helperText('External refund reference/transaction ID'),
+                                ->label(__('Reference Number'))
+                                ->helperText(__('External refund reference/transaction ID')),
                         ])
                         ->visible(fn ($record) => in_array($record->status, ['approved', 'failed']))
                         ->action(function ($record, array $data) {
@@ -335,7 +335,7 @@ class RefundRequestResource extends Resource
                             if ($service->isPendingManualRefund($record)) {
                                 $service->completeManualRefund($record, 'manual', $data['reference'] ?: null, auth()->id());
                                 Notification::make()
-                                    ->title('Marked as Refunded')
+                                    ->title(__('Marked as Refunded'))
                                     ->success()
                                     ->send();
                                 return;
@@ -347,7 +347,7 @@ class RefundRequestResource extends Resource
                             SendRefundNotificationsJob::dispatch($record, SendRefundNotificationsJob::TYPE_COMPLETED);
 
                             Notification::make()
-                                ->title('Marked as Refunded')
+                                ->title(__('Marked as Refunded'))
                                 ->success()
                                 ->send();
                         }),

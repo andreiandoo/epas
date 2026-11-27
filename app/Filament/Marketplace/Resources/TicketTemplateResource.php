@@ -61,46 +61,46 @@ class TicketTemplateResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Basic Information')
+                SC\Section::make(__('Basic Information'))
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Template Name')
+                            ->label(__('Template Name'))
                             ->required()
                             ->maxLength(255),
 
                         Forms\Components\Textarea::make('description')
-                            ->label('Description')
+                            ->label(__('Description'))
                             ->rows(3),
 
                         Forms\Components\Select::make('status')
                             ->options([
-                                'draft' => 'Draft',
-                                'active' => 'Active',
-                                'archived' => 'Archived',
+                                'draft' => __('Draft'),
+                                'active' => __('Active'),
+                                'archived' => __('Archived'),
                             ])
                             ->default('draft')
                             ->required(),
 
                         Forms\Components\Toggle::make('is_default')
-                            ->label('Set as Default')
+                            ->label(__('Set as Default'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Make this the default template'),
                     ])->columns(2),
 
-                SC\Section::make('Template Design')
-                    ->description('Canvas settings and dimensions')
+                SC\Section::make(__('Template Design'))
+                    ->description(__('Canvas settings and dimensions'))
                     ->schema([
                         Forms\Components\Select::make('template_data.meta.orientation')
-                            ->label('Orientation')
+                            ->label(__('Orientation'))
                             ->options([
-                                'portrait' => 'Portrait',
-                                'landscape' => 'Landscape',
+                                'portrait' => __('Portrait'),
+                                'landscape' => __('Landscape'),
                             ])
                             ->default('landscape')
                             ->required()
                             ->live(),
 
                         Forms\Components\TextInput::make('template_data.meta.dpi')
-                            ->label('DPI')
+                            ->label(__('DPI'))
                             ->numeric()
                             ->default(300)
                             ->required()
@@ -109,7 +109,7 @@ class TicketTemplateResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Print resolution (300 DPI recommended)'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.w')
-                            ->label('Width (mm)')
+                            ->label(__('Width (mm)'))
                             ->numeric()
                             ->default(200)
                             ->required()
@@ -117,7 +117,7 @@ class TicketTemplateResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Canvas width in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.h')
-                            ->label('Height (mm)')
+                            ->label(__('Height (mm)'))
                             ->numeric()
                             ->default(100)
                             ->required()
@@ -125,14 +125,14 @@ class TicketTemplateResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Canvas height in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.bleed_mm')
-                            ->label('Bleed (mm)')
+                            ->label(__('Bleed (mm)'))
                             ->numeric()
                             ->default(3)
                             ->minValue(0)
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Print bleed area in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.safe_area_mm')
-                            ->label('Safe Area (mm)')
+                            ->label(__('Safe Area (mm)'))
                             ->numeric()
                             ->default(5)
                             ->minValue(0)
@@ -142,12 +142,12 @@ class TicketTemplateResource extends Resource
                 // Multi-page opt-in: cand toggle-ul e activ, PDF-ul contine pagina 1 (design
                 // curent) + pagina 2 editabila separat prin Visual Editor. Util pentru
                 // Termeni & Conditii / Verso al biletului.
-                SC\Section::make('📄 Pagina 2 (Verso) — opțional')
-                    ->description('Activează dacă vrei ca PDF-ul biletului să includă o a doua pagină (ex. Termeni & Condiții, hartă, informații suplimentare).')
+                SC\Section::make(__('📄 Pagina 2 (Verso) — opțional'))
+                    ->description(__('Activează dacă vrei ca PDF-ul biletului să includă o a doua pagină (ex. Termeni & Condiții, hartă, informații suplimentare).'))
                     ->schema([
                         Forms\Components\Toggle::make('template_data.page_2.enabled')
-                            ->label('Activează pagina 2 (verso)')
-                            ->helperText('Când e activ, PDF-ul biletului va conține 2 pagini. Editează design-ul paginii 2 cu butonul Visual Editor Pagina 2 de mai jos.')
+                            ->label(__('Activează pagina 2 (verso)'))
+                            ->helperText(__('Când e activ, PDF-ul biletului va conține 2 pagini. Editează design-ul paginii 2 cu butonul Visual Editor Pagina 2 de mai jos.'))
                             ->live()
                             ->default(false),
 
@@ -170,7 +170,7 @@ class TicketTemplateResource extends Resource
                             ),
                     ])->columns(1),
 
-                SC\Section::make('Preview')
+                SC\Section::make(__('Preview'))
                     ->schema([
                         Forms\Components\Placeholder::make('preview_display')
                             ->label('')
@@ -217,7 +217,7 @@ class TicketTemplateResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('preview_image')
-                    ->label('Preview')
+                    ->label(__('Preview'))
                     ->square()
                     ->size(60),
 
@@ -234,11 +234,11 @@ class TicketTemplateResource extends Resource
                     ]),
 
                 Tables\Columns\IconColumn::make('is_default')
-                    ->label('Default')
+                    ->label(__('Default'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('size_display')
-                    ->label('Size')
+                    ->label(__('Size'))
                     ->getStateUsing(function ($record) {
                         $meta = $record->template_data['meta'] ?? [];
                         $w = $meta['size_mm']['w'] ?? '?';
@@ -247,32 +247,32 @@ class TicketTemplateResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Modified')
+                    ->label(__('Modified'))
                     ->dateTime('M d, Y')
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'draft' => 'Draft',
-                        'active' => 'Active',
-                        'archived' => 'Archived',
+                        'draft' => __('Draft'),
+                        'active' => __('Active'),
+                        'archived' => __('Archived'),
                     ]),
             ])
             ->recordActions([
                 EditAction::make(),
                 Actions\Action::make('editor')
-                    ->label('Visual Editor')
+                    ->label(__('Visual Editor'))
                     ->icon('heroicon-o-pencil-square')
                     ->color('warning')
                     ->url(fn ($record) => "/marketplace/ticket-customizer/{$record->id}/editor")
                     ->openUrlInNewTab(),
                 Actions\Action::make('duplicate')
-                    ->label('Duplicate')
+                    ->label(__('Duplicate'))
                     ->icon('heroicon-o-document-duplicate')
                     ->color('gray')
                     ->requiresConfirmation()
-                    ->modalDescription('This will create a copy of the template with status set to Draft.')
+                    ->modalDescription(__('This will create a copy of the template with status set to Draft.'))
                     ->action(function ($record) {
                         $duplicate = $record->replicate();
                         $duplicate->name = '[Duplicat] ' . $record->name;
@@ -282,12 +282,12 @@ class TicketTemplateResource extends Resource
                         $duplicate->save();
 
                         \Filament\Notifications\Notification::make()
-                            ->title('Template duplicated')
+                            ->title(__('Template duplicated'))
                             ->success()
                             ->send();
                     }),
                 Actions\Action::make('set_default')
-                    ->label('Set Default')
+                    ->label(__('Set Default'))
                     ->icon('heroicon-o-star')
                     ->color('gray')
                     ->visible(fn ($record) => !$record->is_default)

@@ -155,7 +155,7 @@ class EditNewsletter extends EditRecord
     {
         return [
             Actions\Action::make('preview')
-                ->label('Previzualizare')
+                ->label(__('Previzualizare'))
                 ->icon('heroicon-o-eye')
                 ->color('info')
                 ->modalContent(function () {
@@ -180,20 +180,20 @@ class EditNewsletter extends EditRecord
                         '</div>'
                     );
                 })
-                ->modalHeading('Newsletter Preview')
+                ->modalHeading(__('Newsletter Preview'))
                 ->modalSubmitAction(false)
                 ->modalWidth('5xl'),
 
             Actions\Action::make('sendTest')
-                ->label('Trimite test')
+                ->label(__('Trimite test'))
                 ->icon('heroicon-o-paper-airplane')
                 ->color('warning')
                 ->form([
                     Forms\Components\TextInput::make('test_email')
-                        ->label('Email de test')
+                        ->label(__('Email de test'))
                         ->email()
                         ->required()
-                        ->placeholder('test@example.com')
+                        ->placeholder(__('test@example.com'))
                         ->default(fn () => auth()->user()?->email),
                 ])
                 ->action(function (array $data) {
@@ -241,7 +241,7 @@ class EditNewsletter extends EditRecord
                         );
                         Notification::make()->title('Test trimis către ' . $testEmail)->success()->send();
                     } catch (\Throwable $e) {
-                        Notification::make()->title('Trimiterea a eșuat')->body($e->getMessage())->danger()->send();
+                        Notification::make()->title(__('Trimiterea a eșuat'))->body($e->getMessage())->danger()->send();
                     }
                 }),
 
@@ -250,13 +250,13 @@ class EditNewsletter extends EditRecord
             // is a clean draft. Recipients are a separate table and don't
             // get replicated.
             Actions\Action::make('duplicate')
-                ->label('Duplică')
+                ->label(__('Duplică'))
                 ->icon('heroicon-o-document-duplicate')
                 ->color('gray')
                 ->requiresConfirmation()
-                ->modalHeading('Duplică newsletter')
-                ->modalDescription('Setările (subiect, secțiuni, target, expeditor) se copiază. Statisticile nu se copiază.')
-                ->modalSubmitActionLabel('Duplică')
+                ->modalHeading(__('Duplică newsletter'))
+                ->modalDescription(__('Setările (subiect, secțiuni, target, expeditor) se copiază. Statisticile nu se copiază.'))
+                ->modalSubmitActionLabel(__('Duplică'))
                 ->action(function () {
                     $new = $this->record->replicate();
                     $new->name = 'DUPLICAT - ' . $this->record->name;
@@ -275,7 +275,7 @@ class EditNewsletter extends EditRecord
                     $new->created_by = auth()->id();
                     $new->save();
 
-                    Notification::make()->title('Duplicat creat')->success()->send();
+                    Notification::make()->title(__('Duplicat creat'))->success()->send();
 
                     return redirect(NewsletterResource::getUrl('edit', ['record' => $new]));
                 }),
@@ -283,32 +283,32 @@ class EditNewsletter extends EditRecord
             // Real send — same logic as the list-view recordAction so users
             // don't have to bounce back to the index to ship a draft.
             Actions\Action::make('send')
-                ->label('Trimite newsletter')
+                ->label(__('Trimite newsletter'))
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
                 ->requiresConfirmation()
-                ->modalHeading('Trimite newsletter')
-                ->modalDescription('Sigur vrei să trimiți acum? Acțiunea nu poate fi anulată.')
-                ->modalSubmitActionLabel('Trimite')
+                ->modalHeading(__('Trimite newsletter'))
+                ->modalDescription(__('Sigur vrei să trimiți acum? Acțiunea nu poate fi anulată.'))
+                ->modalSubmitActionLabel(__('Trimite'))
                 ->visible(fn () => $this->record->status === 'draft')
                 ->action(function () {
                     $this->record->createRecipients();
                     $this->record->startSending();
                     \App\Jobs\SendNewsletterJob::dispatch($this->record);
                     Notification::make()
-                        ->title('Newsletter pornit')
+                        ->title(__('Newsletter pornit'))
                         ->body('Destinatari: ' . (int) $this->record->total_recipients)
                         ->success()
                         ->send();
                 }),
 
             Actions\Action::make('schedule')
-                ->label('Programează')
+                ->label(__('Programează'))
                 ->icon('heroicon-o-clock')
                 ->color('warning')
                 ->form([
                     Forms\Components\DateTimePicker::make('scheduled_at')
-                        ->label('Trimite la')
+                        ->label(__('Trimite la'))
                         ->required()
                         ->minDate(now()),
                 ])
@@ -316,7 +316,7 @@ class EditNewsletter extends EditRecord
                 ->action(function (array $data) {
                     $this->record->createRecipients();
                     $this->record->schedule(new \DateTime($data['scheduled_at']));
-                    Notification::make()->title('Programat')->success()->send();
+                    Notification::make()->title(__('Programat'))->success()->send();
                 }),
 
             // Pause: flips status away from 'sending' so the next batch
@@ -326,17 +326,17 @@ class EditNewsletter extends EditRecord
             // resume path. Stops the chain in at most one batch delay
             // (~10-15s with default throttle).
             Actions\Action::make('pauseSending')
-                ->label('Pauză')
+                ->label(__('Pauză'))
                 ->icon('heroicon-o-pause')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('Pauză trimitere')
-                ->modalDescription('Trimiterea se va opri în maxim un batch (~10-15 secunde). Destinatarii rămași (pending) așteaptă o eventuală reluare.')
+                ->modalHeading(__('Pauză trimitere'))
+                ->modalDescription(__('Trimiterea se va opri în maxim un batch (~10-15 secunde). Destinatarii rămași (pending) așteaptă o eventuală reluare.'))
                 ->visible(fn () => $this->record->status === 'sending')
                 ->action(function () {
                     $this->record->update(['status' => 'scheduled']);
-                    Notification::make()->title('Trimitere pausată')
-                        ->body('Chain-ul se oprește la următorul batch.')
+                    Notification::make()->title(__('Trimitere pausată'))
+                        ->body(__('Chain-ul se oprește la următorul batch.'))
                         ->success()->send();
                 }),
 
@@ -346,11 +346,11 @@ class EditNewsletter extends EditRecord
             // which picks up the remaining pending recipients with the
             // CURRENT marketplace throttle.
             Actions\Action::make('resumeSending')
-                ->label('Reia')
+                ->label(__('Reia'))
                 ->icon('heroicon-o-play')
                 ->color('success')
                 ->requiresConfirmation()
-                ->modalHeading('Reia trimitere')
+                ->modalHeading(__('Reia trimitere'))
                 ->modalDescription(function () {
                     $pending = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
                         ->where('newsletter_id', $this->record->id)
@@ -371,8 +371,8 @@ class EditNewsletter extends EditRecord
                 ->action(function () {
                     $this->record->update(['status' => 'sending']);
                     \App\Jobs\SendNewsletterJob::dispatch($this->record);
-                    Notification::make()->title('Trimitere reluată')
-                        ->body('Job-ul a fost re-dispatched cu throttle-ul curent.')
+                    Notification::make()->title(__('Trimitere reluată'))
+                        ->body(__('Job-ul a fost re-dispatched cu throttle-ul curent.'))
                         ->success()->send();
                 }),
 
@@ -382,11 +382,11 @@ class EditNewsletter extends EditRecord
             // Distinct from "Anulează programare" which only applies
             // to never-started scheduled drafts.
             Actions\Action::make('stopSending')
-                ->label('Stop definitiv')
+                ->label(__('Stop definitiv'))
                 ->icon('heroicon-o-stop')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->modalHeading('Oprește definitiv trimiterea')
+                ->modalHeading(__('Oprește definitiv trimiterea'))
                 ->modalDescription(function () {
                     $pending = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
                         ->where('newsletter_id', $this->record->id)
@@ -394,7 +394,7 @@ class EditNewsletter extends EditRecord
                         ->count();
                     return "Newsletter-ul va fi marcat ca anulat. {$pending} destinatari rămași nu se mai trimit. Acțiunea NU se poate anula.";
                 })
-                ->modalSubmitActionLabel('Oprește definitiv')
+                ->modalSubmitActionLabel(__('Oprește definitiv'))
                 ->visible(function () {
                     if (!in_array($this->record->status, ['sending', 'scheduled'])) return false;
                     return \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
@@ -414,13 +414,13 @@ class EditNewsletter extends EditRecord
                         'status' => 'cancelled',
                         'completed_at' => $now,
                     ]);
-                    Notification::make()->title('Trimitere oprită definitiv')
-                        ->body('Newsletter marcat ca anulat.')
+                    Notification::make()->title(__('Trimitere oprită definitiv'))
+                        ->body(__('Newsletter marcat ca anulat.'))
                         ->success()->send();
                 }),
 
             Actions\Action::make('cancel')
-                ->label('Anulează programare')
+                ->label(__('Anulează programare'))
                 ->icon('heroicon-o-x-mark')
                 ->color('danger')
                 ->requiresConfirmation()
@@ -436,7 +436,7 @@ class EditNewsletter extends EditRecord
                 })
                 ->action(function () {
                     $this->record->cancel();
-                    Notification::make()->title('Anulat')->success()->send();
+                    Notification::make()->title(__('Anulat'))->success()->send();
                 }),
 
             Actions\DeleteAction::make()
@@ -453,14 +453,14 @@ class EditNewsletter extends EditRecord
         return [
             ...parent::getFormActions(),
             Actions\Action::make('saveDraft')
-                ->label('Save draft')
+                ->label(__('Save draft'))
                 ->color('gray')
                 ->visible(fn () => !in_array($this->record->status, ['sending', 'sent']))
                 ->action(function () {
                     $data = $this->form->getState();
                     $data['status'] = 'draft';
                     $this->record->update($data);
-                    Notification::make()->title('Draft salvat')->success()->send();
+                    Notification::make()->title(__('Draft salvat'))->success()->send();
                 }),
         ];
     }

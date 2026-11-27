@@ -55,39 +55,39 @@ class HeroBannerResource extends Resource
         return $schema->schema([
             Forms\Components\Hidden::make('marketplace_client_id')->default($marketplace?->id),
 
-            SC\Section::make('Banner')
-                ->description('Apare în caruselul de sus al homepage-ului, printre evenimentele recomandate.')
+            SC\Section::make(__('Banner'))
+                ->description(__('Apare în caruselul de sus al homepage-ului, printre evenimentele recomandate.'))
                 ->schema([
                     Forms\Components\TextInput::make('name')
-                        ->label('Nume intern')
-                        ->helperText('Doar pentru admin, nu apare pe site.')
+                        ->label(__('Nume intern'))
+                        ->helperText(__('Doar pentru admin, nu apare pe site.'))
                         ->required()->maxLength(191),
                     Forms\Components\TextInput::make('url')
-                        ->label('Link (URL)')
+                        ->label(__('Link (URL)'))
                         ->placeholder('https://ambilet.ro/... sau /bilete/...')
                         ->required()->maxLength(1000)
                         ->rule('regex:/^(https?:\/\/|\/)/i')
                         ->validationMessages(['regex' => 'Linkul trebuie să înceapă cu https:// sau /']),
                     Forms\Components\TextInput::make('title')
-                        ->label('Titlu (opțional)')
-                        ->helperText('Gol = bannerul se afișează fără text peste imagine.')
+                        ->label(__('Titlu (opțional)'))
+                        ->helperText(__('Gol = bannerul se afișează fără text peste imagine.'))
                         ->maxLength(191),
                     Forms\Components\TextInput::make('subtitle')
-                        ->label('Subtitlu (opțional)')
+                        ->label(__('Subtitlu (opțional)'))
                         ->maxLength(191),
                     Forms\Components\Toggle::make('open_in_new_tab')
-                        ->label('Deschide în tab nou'),
+                        ->label(__('Deschide în tab nou')),
                     Forms\Components\Toggle::make('is_active')
-                        ->label('Activ')
+                        ->label(__('Activ'))
                         ->default(true),
                 ])->columns(2),
 
-            SC\Section::make('Imagini')
-                ->description('Orizontal = desktop/tabletă, vertical = mobil. Dacă lipsește una, bannerul nu apare pe acel tip de ecran.')
+            SC\Section::make(__('Imagini'))
+                ->description(__('Orizontal = desktop/tabletă, vertical = mobil. Dacă lipsește una, bannerul nu apare pe acel tip de ecran.'))
                 ->schema([
                     Forms\Components\FileUpload::make('image_horizontal')
-                        ->label('Imagine orizontală')
-                        ->helperText('Recomandat 2058 × 1080 px (raport ~1.9:1).')
+                        ->label(__('Imagine orizontală'))
+                        ->helperText(__('Recomandat 2058 × 1080 px (raport ~1.9:1).'))
                         ->image()
                         ->disk('public')
                         ->directory('hero-banners')
@@ -95,8 +95,8 @@ class HeroBannerResource extends Resource
                         ->maxSize(4096)
                         ->requiredWithout('image_vertical'),
                     Forms\Components\FileUpload::make('image_vertical')
-                        ->label('Imagine verticală (mobil)')
-                        ->helperText('Recomandat 1080 × 1620 px (raport 2:3, ca posterele).')
+                        ->label(__('Imagine verticală (mobil)'))
+                        ->helperText(__('Recomandat 1080 × 1620 px (raport 2:3, ca posterele).'))
                         ->image()
                         ->disk('public')
                         ->directory('hero-banners')
@@ -105,17 +105,17 @@ class HeroBannerResource extends Resource
                         ->requiredWithout('image_horizontal'),
                 ])->columns(2),
 
-            SC\Section::make('Afișare')
+            SC\Section::make(__('Afișare'))
                 ->schema([
                     Forms\Components\TextInput::make('position')
-                        ->label('Poziția în carusel')
-                        ->helperText('1 = primul slide. Dacă sunt mai puține evenimente, bannerul ajunge la final.')
+                        ->label(__('Poziția în carusel'))
+                        ->helperText(__('1 = primul slide. Dacă sunt mai puține evenimente, bannerul ajunge la final.'))
                         ->numeric()->minValue(1)->maxValue(50)->default(1)->required(),
                     Forms\Components\DateTimePicker::make('starts_at')
-                        ->label('Afișează de la (opțional)')
+                        ->label(__('Afișează de la (opțional)'))
                         ->seconds(false),
                     Forms\Components\DateTimePicker::make('ends_at')
-                        ->label('Afișează până la (opțional)')
+                        ->label(__('Afișează până la (opțional)'))
                         ->seconds(false)
                 ])->columns(3),
         ]);
@@ -125,15 +125,15 @@ class HeroBannerResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('image_horizontal')->label('Orizontal')->disk('public')->height(40),
-                Tables\Columns\ImageColumn::make('image_vertical')->label('Vertical')->disk('public')->height(40),
-                Tables\Columns\TextColumn::make('name')->label('Nume')->searchable()
+                Tables\Columns\ImageColumn::make('image_horizontal')->label(__('Orizontal'))->disk('public')->height(40),
+                Tables\Columns\ImageColumn::make('image_vertical')->label(__('Vertical'))->disk('public')->height(40),
+                Tables\Columns\TextColumn::make('name')->label(__('Nume'))->searchable()
                     ->description(fn (MarketplaceHeroBanner $r) => $r->title),
-                Tables\Columns\TextColumn::make('url')->label('Link')->limit(40)->color('gray'),
-                Tables\Columns\TextColumn::make('position')->label('Poziție')->sortable()->badge(),
-                Tables\Columns\TextColumn::make('starts_at')->label('De la')->dateTime('d.m.Y H:i')->placeholder('—'),
-                Tables\Columns\TextColumn::make('ends_at')->label('Până la')->dateTime('d.m.Y H:i')->placeholder('—'),
-                Tables\Columns\ToggleColumn::make('is_active')->label('Activ'),
+                Tables\Columns\TextColumn::make('url')->label(__('Link'))->limit(40)->color('gray'),
+                Tables\Columns\TextColumn::make('position')->label(__('Poziție'))->sortable()->badge(),
+                Tables\Columns\TextColumn::make('starts_at')->label(__('De la'))->dateTime('d.m.Y H:i')->placeholder('—'),
+                Tables\Columns\TextColumn::make('ends_at')->label(__('Până la'))->dateTime('d.m.Y H:i')->placeholder('—'),
+                Tables\Columns\ToggleColumn::make('is_active')->label(__('Activ')),
             ])
             ->defaultSort('position')
             ->recordActions([EditAction::make(), DeleteAction::make()])

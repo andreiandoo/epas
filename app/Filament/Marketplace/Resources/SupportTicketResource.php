@@ -62,14 +62,14 @@ class SupportTicketResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->components([
-            Section::make('Detalii tichet')->schema([
+            Section::make(__('Detalii tichet'))->schema([
                 Forms\Components\TextInput::make('subject')
-                    ->label('Subiect')
+                    ->label(__('Subiect'))
                     ->required()
                     ->maxLength(255),
 
                 Forms\Components\Select::make('support_department_id')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->options(fn () => SupportDepartment::query()
                         ->where('is_active', true)
                         ->orderBy('sort_order')
@@ -79,7 +79,7 @@ class SupportTicketResource extends Resource
                     ->required(),
 
                 Forms\Components\Select::make('support_problem_type_id')
-                    ->label('Tip problemă')
+                    ->label(__('Tip problemă'))
                     ->options(fn () => SupportProblemType::query()
                         ->where('is_active', true)
                         ->orderBy('sort_order')
@@ -89,29 +89,29 @@ class SupportTicketResource extends Resource
                     ->nullable(),
 
                 Forms\Components\Select::make('priority')
-                    ->label('Prioritate')
+                    ->label(__('Prioritate'))
                     ->options([
-                        'low' => 'Scăzută',
-                        'normal' => 'Normală',
-                        'high' => 'Ridicată',
-                        'urgent' => 'Urgentă',
+                        'low' => __('Scăzută'),
+                        'normal' => __('Normală'),
+                        'high' => __('Ridicată'),
+                        'urgent' => __('Urgentă'),
                     ])
                     ->required()
                     ->default('normal'),
 
                 Forms\Components\Select::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->options([
-                        'open' => 'Deschis',
-                        'in_progress' => 'În lucru',
-                        'awaiting_organizer' => 'Așteaptă răspuns',
-                        'resolved' => 'Rezolvat',
-                        'closed' => 'Închis',
+                        'open' => __('Deschis'),
+                        'in_progress' => __('În lucru'),
+                        'awaiting_organizer' => __('Așteaptă răspuns'),
+                        'resolved' => __('Rezolvat'),
+                        'closed' => __('Închis'),
                     ])
                     ->required(),
 
                 Forms\Components\Select::make('assigned_to_marketplace_admin_id')
-                    ->label('Asignat')
+                    ->label(__('Asignat'))
                     ->options(fn () => MarketplaceAdmin::query()
                         ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                         ->orderBy('name')
@@ -129,36 +129,36 @@ class SupportTicketResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_number')
-                    ->label('Nr.')
+                    ->label(__('Nr.'))
                     ->fontFamily('mono')
                     ->size('xs')
                     ->copyable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('subject')
-                    ->label('Subiect')
+                    ->label(__('Subiect'))
                     ->searchable()
                     ->limit(60),
 
                 Tables\Columns\TextColumn::make('opener_summary')
-                    ->label('De la')
+                    ->label(__('De la'))
                     ->state(fn (SupportTicket $r) => static::openerLabel($r))
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('department_name')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->state(fn (SupportTicket $r) => $r->department?->getTranslation('name', 'ro') ?? '—')
                     ->badge()
                     ->color('gray'),
 
                 Tables\Columns\TextColumn::make('assignee_name')
-                    ->label('Asignat')
+                    ->label(__('Asignat'))
                     ->state(fn (SupportTicket $r) => $r->assignee?->name)
-                    ->placeholder('— nealocat —')
+                    ->placeholder(__('— nealocat —'))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('priority')
-                    ->label('Prioritate')
+                    ->label(__('Prioritate'))
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
                         'urgent' => 'danger',
@@ -176,7 +176,7 @@ class SupportTicketResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
                         'open' => 'info',
@@ -198,18 +198,18 @@ class SupportTicketResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('opened_at')
-                    ->label('Deschis')
+                    ->label(__('Deschis'))
                     ->dateTime('d M Y, H:i')
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('last_activity_at')
-                    ->label('Activitate')
+                    ->label(__('Activitate'))
                     ->since()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('closed_at')
-                    ->label('Închis')
+                    ->label(__('Închis'))
                     ->dateTime('d M Y, H:i')
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -217,7 +217,7 @@ class SupportTicketResource extends Resource
             ->defaultSort('last_activity_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('support_department_id')
-                    ->label('Departament')
+                    ->label(__('Departament'))
                     ->options(fn () => SupportDepartment::query()
                         ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                         ->orderBy('sort_order')
@@ -227,24 +227,24 @@ class SupportTicketResource extends Resource
 
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'open' => 'Deschis',
-                        'in_progress' => 'În lucru',
-                        'awaiting_organizer' => 'Așteaptă răspuns',
-                        'resolved' => 'Rezolvat',
-                        'closed' => 'Închis',
+                        'open' => __('Deschis'),
+                        'in_progress' => __('În lucru'),
+                        'awaiting_organizer' => __('Așteaptă răspuns'),
+                        'resolved' => __('Rezolvat'),
+                        'closed' => __('Închis'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('priority')
-                    ->label('Prioritate')
+                    ->label(__('Prioritate'))
                     ->options([
-                        'low' => 'Scăzută',
-                        'normal' => 'Normală',
-                        'high' => 'Ridicată',
-                        'urgent' => 'Urgentă',
+                        'low' => __('Scăzută'),
+                        'normal' => __('Normală'),
+                        'high' => __('Ridicată'),
+                        'urgent' => __('Urgentă'),
                     ]),
 
                 Tables\Filters\SelectFilter::make('assigned_to_marketplace_admin_id')
-                    ->label('Asignat')
+                    ->label(__('Asignat'))
                     ->options(fn () => MarketplaceAdmin::query()
                         ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
                         ->orderBy('name')
@@ -259,7 +259,7 @@ class SupportTicketResource extends Resource
             ->toolbarActions([
                 \Filament\Actions\BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('close')
-                        ->label('Închide selectate')
+                        ->label(__('Închide selectate'))
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()

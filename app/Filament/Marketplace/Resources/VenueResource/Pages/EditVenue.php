@@ -18,13 +18,13 @@ class EditVenue extends EditRecord
         // No delete action for marketplace users - they cannot delete venues
         return [
             Action::make('make_partner')
-                ->label('Setează ca partener')
+                ->label(__('Setează ca partener'))
                 ->icon('heroicon-o-check-badge')
                 ->color('success')
                 ->visible(fn () => ! $this->record->is_partner)
                 ->requiresConfirmation()
-                ->modalHeading('Setează locația ca partener')
-                ->modalDescription('Locația va fi marcată ca parteneră și va apărea la filtrul „Doar partenere”.')
+                ->modalHeading(__('Setează locația ca partener'))
+                ->modalDescription(__('Locația va fi marcată ca parteneră și va apărea la filtrul „Doar partenere”.'))
                 ->action(fn () => $this->makePartner()),
         ];
     }
@@ -42,7 +42,7 @@ class EditVenue extends EditRecord
         }
 
         Notification::make()
-            ->title('Locația este acum parteneră')
+            ->title(__('Locația este acum parteneră'))
             ->success()
             ->send();
     }

@@ -63,11 +63,11 @@ class TourResource extends Resource
                 SC\Group::make()->columnSpan(3)->schema([
 
                     // IDENTITATE
-                    SC\Section::make('Identitate')
+                    SC\Section::make(__('Identitate'))
                         ->icon('heroicon-o-identification')
                         ->schema([
                             Forms\Components\TextInput::make('name')
-                                ->label('Nume turneu')
+                                ->label(__('Nume turneu'))
                                 ->required()
                                 ->maxLength(255)
                                 ->live(onBlur: true)
@@ -77,23 +77,23 @@ class TourResource extends Resource
                                     }
                                 }),
                             Forms\Components\TextInput::make('slug')
-                                ->label('Slug')
+                                ->label(__('Slug'))
                                 ->required()
                                 ->maxLength(190)
                                 ->unique(ignoreRecord: true)
                                 ->rule('alpha_dash')
                                 ->placeholder('auto-generat-din-nume'),
                             Forms\Components\Radio::make('type')
-                                ->label('Tip grupare')
+                                ->label(__('Tip grupare'))
                                 ->options([
-                                    'serie_evenimente' => 'Serie evenimente',
-                                    'turneu' => 'Turneu',
+                                    'serie_evenimente' => __('Serie evenimente'),
+                                    'turneu' => __('Turneu'),
                                 ])
                                 ->default('turneu')
                                 ->inline()
                                 ->required(),
                             Forms\Components\Select::make('artist_id')
-                                ->label('Artist principal')
+                                ->label(__('Artist principal'))
                                 ->options(fn () => Artist::query()
                                     ->when($marketplace, fn ($q) => $q->whereHas(
                                         'marketplaceClients',
@@ -105,17 +105,17 @@ class TourResource extends Resource
                                     ->toArray())
                                 ->searchable()
                                 ->required()
-                                ->helperText('Acest artist va putea selecta turneul în EventResource → Tab "Turneu".'),
+                                ->helperText(__('Acest artist va putea selecta turneul în EventResource → Tab "Turneu".')),
                         ])
                         ->columns(2),
 
                     // IMAGINI
-                    SC\Section::make('Imagini')
+                    SC\Section::make(__('Imagini'))
                         ->icon('heroicon-o-photo')
                         ->schema([
                             Forms\Components\FileUpload::make('cover_url')
-                                ->label('Imagine principală (landscape)')
-                                ->helperText('Recomandat: 1600×900 px. Apare în hero pe pagina turneului.')
+                                ->label(__('Imagine principală (landscape)'))
+                                ->helperText(__('Recomandat: 1600×900 px. Apare în hero pe pagina turneului.'))
                                 ->image()
                                 ->disk('public')
                                 ->directory('tours')
@@ -124,8 +124,8 @@ class TourResource extends Resource
                                 ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
                                 ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                             Forms\Components\FileUpload::make('poster_url')
-                                ->label('Poster (portrait)')
-                                ->helperText('Recomandat: 1080×1620 px. Apare lângă hero pe mobile / în carduri.')
+                                ->label(__('Poster (portrait)'))
+                                ->helperText(__('Recomandat: 1080×1620 px. Apare lângă hero pe mobile / în carduri.'))
                                 ->image()
                                 ->disk('public')
                                 ->directory('tours')
@@ -137,7 +137,7 @@ class TourResource extends Resource
                         ->columns(2),
 
                     // DESCRIERI
-                    SC\Section::make('Descrieri')
+                    SC\Section::make(__('Descrieri'))
                         ->icon('heroicon-o-document-text')
                         ->schema([
                             SC\Tabs::make('descriptions')
@@ -145,24 +145,24 @@ class TourResource extends Resource
                                     SC\Tabs\Tab::make('Română')
                                         ->schema([
                                             Forms\Components\Textarea::make('short_description.ro')
-                                                ->label('Descriere scurtă (RO)')
+                                                ->label(__('Descriere scurtă (RO)'))
                                                 ->rows(3)
                                                 ->maxLength(500)
-                                                ->helperText('Apare în hero / metadate.')
+                                                ->helperText(__('Apare în hero / metadate.'))
                                                 ->columnSpanFull(),
                                             Forms\Components\RichEditor::make('description.ro')
-                                                ->label('Descriere detaliată (RO)')
+                                                ->label(__('Descriere detaliată (RO)'))
                                                 ->columnSpanFull(),
                                         ]),
                                     SC\Tabs\Tab::make('English')
                                         ->schema([
                                             Forms\Components\Textarea::make('short_description.en')
-                                                ->label('Short description (EN)')
+                                                ->label(__('Short description (EN)'))
                                                 ->rows(3)
                                                 ->maxLength(500)
                                                 ->columnSpanFull(),
                                             Forms\Components\RichEditor::make('description.en')
-                                                ->label('Description (EN)')
+                                                ->label(__('Description (EN)'))
                                                 ->columnSpanFull(),
                                         ]),
                                 ])
@@ -170,38 +170,38 @@ class TourResource extends Resource
                         ]),
 
                     // SETLIST
-                    SC\Section::make('Setlist')
+                    SC\Section::make(__('Setlist'))
                         ->icon('heroicon-o-musical-note')
-                        ->description('Lista pieselor cântate pe turneu, în ordine.')
+                        ->description(__('Lista pieselor cântate pe turneu, în ordine.'))
                         ->collapsible()->collapsed()->persistCollapsed()
                         ->schema([
                             Forms\Components\Repeater::make('setlist')
                                 ->hiddenLabel()
                                 ->schema([
                                     Forms\Components\TextInput::make('title')
-                                        ->label('Titlu piesă')
+                                        ->label(__('Titlu piesă'))
                                         ->required()
                                         ->maxLength(255),
                                 ])
                                 ->reorderable()
                                 ->orderColumn('sort_order')
                                 ->defaultItems(0)
-                                ->addActionLabel('Adaugă piesă')
+                                ->addActionLabel(__('Adaugă piesă'))
                                 ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                                 ->collapsible()
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('setlist_duration_minutes')
-                                ->label('Durată totală setlist')
+                                ->label(__('Durată totală setlist'))
                                 ->numeric()
                                 ->minValue(0)
                                 ->maxValue(600)
                                 ->suffix('minute')
-                                ->helperText('Durata generală a întregului setlist.'),
+                                ->helperText(__('Durata generală a întregului setlist.')),
                         ]),
 
                     // FAQ
-                    SC\Section::make('Întrebări frecvente (FAQ)')
+                    SC\Section::make(__('Întrebări frecvente (FAQ)'))
                         ->icon('heroicon-o-question-mark-circle')
                         ->collapsible()->collapsed()->persistCollapsed()
                         ->schema([
@@ -209,33 +209,33 @@ class TourResource extends Resource
                                 ->hiddenLabel()
                                 ->schema([
                                     Forms\Components\TextInput::make('question')
-                                        ->label('Întrebare')
+                                        ->label(__('Întrebare'))
                                         ->required()
                                         ->maxLength(255),
                                     Forms\Components\Textarea::make('answer')
-                                        ->label('Răspuns')
+                                        ->label(__('Răspuns'))
                                         ->required()
                                         ->rows(3)
                                         ->maxLength(2000),
                                 ])
                                 ->reorderable()
                                 ->defaultItems(0)
-                                ->addActionLabel('Adaugă întrebare')
+                                ->addActionLabel(__('Adaugă întrebare'))
                                 ->itemLabel(fn (array $state): ?string => $state['question'] ?? null)
                                 ->collapsible()
                                 ->columnSpanFull(),
                         ]),
 
                     // ALTE DETALII
-                    SC\Section::make('Alte detalii')
+                    SC\Section::make(__('Alte detalii'))
                         ->icon('heroicon-o-information-circle')
                         ->schema([
                             Forms\Components\TextInput::make('age_min')
-                                ->label('Vârstă minimă')
-                                ->placeholder('ex: 18+, 16+, fără restricție')
+                                ->label(__('Vârstă minimă'))
+                                ->placeholder(__('ex: 18+, 16+, fără restricție'))
                                 ->maxLength(20),
                             Forms\Components\Select::make('marketplace_organizer_id')
-                                ->label('Organizator')
+                                ->label(__('Organizator'))
                                 ->options(fn () => MarketplaceOrganizer::query()
                                     ->when($marketplace, fn ($q) => $q->where('marketplace_client_id', $marketplace->id))
                                     ->orderBy('name')
@@ -243,14 +243,14 @@ class TourResource extends Resource
                                     ->pluck('name', 'id')
                                     ->toArray())
                                 ->searchable()
-                                ->placeholder('Selectează organizator'),
+                                ->placeholder(__('Selectează organizator')),
                         ])
                         ->columns(2),
 
                     // EVENIMENTE ASOCIATE — read-only on edit
-                    SC\Section::make('Evenimente asociate')
+                    SC\Section::make(__('Evenimente asociate'))
                         ->icon('heroicon-o-calendar-days')
-                        ->description('Sumarizare a evenimentelor atașate acestui turneu. Pentru a atașa un eveniment, mergi la editarea evenimentului → tab Turneu.')
+                        ->description(__('Sumarizare a evenimentelor atașate acestui turneu. Pentru a atașa un eveniment, mergi la editarea evenimentului → tab Turneu.'))
                         ->visible(fn ($record) => $record !== null)
                         ->schema([
                             Forms\Components\Placeholder::make('linked_events_view')
@@ -266,34 +266,34 @@ class TourResource extends Resource
                 // Sidebar (1/4)
                 // ============================================
                 SC\Group::make()->columnSpan(1)->schema([
-                    SC\Section::make('Status')
+                    SC\Section::make(__('Status'))
                         ->icon('heroicon-o-flag')
                         ->schema([
                             Forms\Components\Select::make('status')
-                                ->label('Status')
+                                ->label(__('Status'))
                                 ->options([
-                                    'planning' => 'În planificare',
-                                    'on_sale' => 'În vânzare',
-                                    'completed' => 'Finalizat',
-                                    'cancelled' => 'Anulat',
+                                    'planning' => __('În planificare'),
+                                    'on_sale' => __('În vânzare'),
+                                    'completed' => __('Finalizat'),
+                                    'cancelled' => __('Anulat'),
                                 ])
                                 ->default('planning')
                                 ->required(),
                             Forms\Components\Textarea::make('routing_notes')
-                                ->label('Note interne (routing/logistică)')
+                                ->label(__('Note interne (routing/logistică)'))
                                 ->rows(4)
                                 ->maxLength(2000),
                         ]),
 
-                    SC\Section::make('Înregistrare')
+                    SC\Section::make(__('Înregistrare'))
                         ->icon('heroicon-o-clock')
                         ->visible(fn ($record) => $record !== null)
                         ->schema([
                             Forms\Components\Placeholder::make('created_at')
-                                ->label('Creat la')
+                                ->label(__('Creat la'))
                                 ->content(fn ($record) => $record?->created_at?->format('d.m.Y H:i') ?? '—'),
                             Forms\Components\Placeholder::make('updated_at')
-                                ->label('Actualizat la')
+                                ->label(__('Actualizat la'))
                                 ->content(fn ($record) => $record?->updated_at?->format('d.m.Y H:i') ?? '—'),
                         ]),
                 ]),
@@ -311,20 +311,20 @@ class TourResource extends Resource
                     ->square()
                     ->size(48),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->searchable(query: fn ($query, string $search) => SearchHelper::search($query, 'name', $search))
                     ->sortable()
                     ->wrap()
                     ->url(fn (Tour $record) => static::getUrl('edit', ['record' => $record->getKey()])),
                 Tables\Columns\TextColumn::make('artist.name')
-                    ->label('Artist')
+                    ->label(__('Artist'))
                     ->sortable()
                     ->searchable(query: fn ($query, string $search) => $query->whereHas(
                         'artist',
                         fn ($q) => SearchHelper::search($q, 'name', $search)
                     )),
                 Tables\Columns\TextColumn::make('type')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'serie_evenimente' => 'Serie evenimente',
@@ -333,7 +333,7 @@ class TourResource extends Resource
                     })
                     ->color(fn ($state) => $state === 'turneu' ? 'info' : 'gray'),
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'planning' => 'În planificare',
@@ -350,11 +350,11 @@ class TourResource extends Resource
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('event_count')
-                    ->label('Evenimente')
+                    ->label(__('Evenimente'))
                     ->getStateUsing(fn (Tour $r) => $r->events()->count())
                     ->alignCenter(),
                 Tables\Columns\TextColumn::make('period')
-                    ->label('Perioadă')
+                    ->label(__('Perioadă'))
                     ->getStateUsing(function (Tour $r) {
                         $p = $r->period;
                         if (!$p['start']) return '—';
@@ -364,7 +364,7 @@ class TourResource extends Resource
                         return $p['start']->format('d.m.Y') . ' → ' . $p['end']->format('d.m.Y');
                     }),
                 Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Ultima modificare')
+                    ->label(__('Ultima modificare'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -372,21 +372,21 @@ class TourResource extends Resource
             ->defaultSort('updated_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('type')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->options([
-                        'serie_evenimente' => 'Serie evenimente',
-                        'turneu' => 'Turneu',
+                        'serie_evenimente' => __('Serie evenimente'),
+                        'turneu' => __('Turneu'),
                     ]),
                 Tables\Filters\SelectFilter::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->options([
-                        'planning' => 'În planificare',
-                        'on_sale' => 'În vânzare',
-                        'completed' => 'Finalizat',
-                        'cancelled' => 'Anulat',
+                        'planning' => __('În planificare'),
+                        'on_sale' => __('În vânzare'),
+                        'completed' => __('Finalizat'),
+                        'cancelled' => __('Anulat'),
                     ]),
                 Tables\Filters\SelectFilter::make('artist_id')
-                    ->label('Artist')
+                    ->label(__('Artist'))
                     ->relationship('artist', 'name')
                     ->searchable()
                     ->preload(),

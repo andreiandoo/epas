@@ -26,7 +26,7 @@ class ListVaultEntries extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Adaugă intrare')
+                ->label(__('Adaugă intrare'))
                 ->icon('heroicon-o-plus'),
         ];
     }

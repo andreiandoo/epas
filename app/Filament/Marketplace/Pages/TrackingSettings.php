@@ -59,8 +59,8 @@ class TrackingSettings extends Page
         if (!$hasAccess) {
             Notification::make()
                 ->warning()
-                ->title('Microservice Not Active')
-                ->body('You need to activate the Tracking & Pixels microservice first.')
+                ->title(__('Microservice Not Active'))
+                ->body(__('You need to activate the Tracking & Pixels microservice first.'))
                 ->send();
 
             redirect()->route('filament.marketplace.pages.microservices');
@@ -117,44 +117,44 @@ class TrackingSettings extends Page
     {
         return $form
             ->schema([
-                SC\Section::make('Google Analytics 4 (GA4)')
-                    ->description('Track website analytics with Google Analytics 4')
+                SC\Section::make(__('Google Analytics 4 (GA4)'))
+                    ->description(__('Track website analytics with Google Analytics 4'))
                     ->icon('heroicon-o-chart-pie')
                     ->schema([
                         Forms\Components\Toggle::make('ga4_enabled')
-                            ->label('Enable GA4')
+                            ->label(__('Enable GA4'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable Google Analytics 4 tracking')
                             ->live(),
 
                         Forms\Components\TextInput::make('ga4_id')
-                            ->label('Measurement ID')
-                            ->placeholder('G-XXXXXXXXXX')
+                            ->label(__('Measurement ID'))
+                            ->placeholder(__('G-XXXXXXXXXX'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your GA4 Measurement ID from Google Analytics')
                             ->maxLength(20)
                             ->visible(fn ($get) => $get('ga4_enabled')),
 
                         Forms\Components\TextInput::make('ga4_linker_domains')
-                            ->label('Cross-Domain Linker (optional)')
-                            ->placeholder('ambilet.ro, tics.ro, partner-site.com')
-                            ->helperText('Comma-separated list of OTHER domains where this same GA4 session should follow the visitor. GA4 will append _gl=… to outbound links pointing at these domains so the client ID survives the navigation. Inbound _gl from another domain is consumed automatically — no config needed for that direction.')
+                            ->label(__('Cross-Domain Linker (optional)'))
+                            ->placeholder(__('ambilet.ro, tics.ro, partner-site.com'))
+                            ->helperText(__('Comma-separated list of OTHER domains where this same GA4 session should follow the visitor. GA4 will append _gl=… to outbound links pointing at these domains so the client ID survives the navigation. Inbound _gl from another domain is consumed automatically — no config needed for that direction.'))
                             ->maxLength(500)
                             ->visible(fn ($get) => $get('ga4_enabled')),
 
                         SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('ga4_inject_at')
-                                ->label('Inject Location')
+                                ->label(__('Inject Location'))
                                 ->options([
-                                    'head' => 'Head (recommended)',
-                                    'body' => 'Body End',
+                                    'head' => __('Head (recommended)'),
+                                    'body' => __('Body End'),
                                 ])
                                 ->default('head')
                                 ->visible(fn ($get) => $get('ga4_enabled')),
 
                             Forms\Components\Select::make('ga4_page_scope')
-                                ->label('Page Scope')
+                                ->label(__('Page Scope'))
                                 ->options([
-                                    'public' => 'Public pages only',
-                                    'all' => 'All pages',
+                                    'public' => __('Public pages only'),
+                                    'all' => __('All pages'),
                                 ])
                                 ->default('public')
                                 ->visible(fn ($get) => $get('ga4_enabled')),
@@ -162,37 +162,37 @@ class TrackingSettings extends Page
                     ])
                     ->collapsible(),
 
-                SC\Section::make('Google Tag Manager (GTM)')
-                    ->description('Manage all your tags with Google Tag Manager')
+                SC\Section::make(__('Google Tag Manager (GTM)'))
+                    ->description(__('Manage all your tags with Google Tag Manager'))
                     ->icon('heroicon-o-tag')
                     ->schema([
                         Forms\Components\Toggle::make('gtm_enabled')
-                            ->label('Enable GTM')
+                            ->label(__('Enable GTM'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable Google Tag Manager')
                             ->live(),
 
                         Forms\Components\TextInput::make('gtm_id')
-                            ->label('Container ID')
-                            ->placeholder('GTM-XXXXXX')
+                            ->label(__('Container ID'))
+                            ->placeholder(__('GTM-XXXXXX'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your GTM Container ID')
                             ->maxLength(15)
                             ->visible(fn ($get) => $get('gtm_enabled')),
 
                         SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('gtm_inject_at')
-                                ->label('Inject Location')
+                                ->label(__('Inject Location'))
                                 ->options([
-                                    'head' => 'Head (recommended)',
-                                    'body' => 'Body End',
+                                    'head' => __('Head (recommended)'),
+                                    'body' => __('Body End'),
                                 ])
                                 ->default('head')
                                 ->visible(fn ($get) => $get('gtm_enabled')),
 
                             Forms\Components\Select::make('gtm_page_scope')
-                                ->label('Page Scope')
+                                ->label(__('Page Scope'))
                                 ->options([
-                                    'public' => 'Public pages only',
-                                    'all' => 'All pages',
+                                    'public' => __('Public pages only'),
+                                    'all' => __('All pages'),
                                 ])
                                 ->default('public')
                                 ->visible(fn ($get) => $get('gtm_enabled')),
@@ -201,17 +201,17 @@ class TrackingSettings extends Page
                     ->collapsible()
                     ->collapsed(),
 
-                SC\Section::make('Meta Pixel (Facebook)')
-                    ->description('Track conversions for Facebook & Instagram ads')
+                SC\Section::make(__('Meta Pixel (Facebook)'))
+                    ->description(__('Track conversions for Facebook & Instagram ads'))
                     ->icon('heroicon-o-share')
                     ->schema([
                         Forms\Components\Toggle::make('meta_enabled')
-                            ->label('Enable Meta Pixel')
+                            ->label(__('Enable Meta Pixel'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable Facebook/Meta Pixel tracking')
                             ->live(),
 
                         Forms\Components\TextInput::make('meta_id')
-                            ->label('Pixel ID')
+                            ->label(__('Pixel ID'))
                             ->placeholder('1234567890123456')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Meta Pixel ID from Facebook Business Manager')
                             ->maxLength(20)
@@ -219,19 +219,19 @@ class TrackingSettings extends Page
 
                         SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('meta_inject_at')
-                                ->label('Inject Location')
+                                ->label(__('Inject Location'))
                                 ->options([
-                                    'head' => 'Head (recommended)',
-                                    'body' => 'Body End',
+                                    'head' => __('Head (recommended)'),
+                                    'body' => __('Body End'),
                                 ])
                                 ->default('head')
                                 ->visible(fn ($get) => $get('meta_enabled')),
 
                             Forms\Components\Select::make('meta_page_scope')
-                                ->label('Page Scope')
+                                ->label(__('Page Scope'))
                                 ->options([
-                                    'public' => 'Public pages only',
-                                    'all' => 'All pages',
+                                    'public' => __('Public pages only'),
+                                    'all' => __('All pages'),
                                 ])
                                 ->default('public')
                                 ->visible(fn ($get) => $get('meta_enabled')),
@@ -240,37 +240,37 @@ class TrackingSettings extends Page
                     ->collapsible()
                     ->collapsed(),
 
-                SC\Section::make('TikTok Pixel')
-                    ->description('Track conversions for TikTok ads')
+                SC\Section::make(__('TikTok Pixel'))
+                    ->description(__('Track conversions for TikTok ads'))
                     ->icon('heroicon-o-play')
                     ->schema([
                         Forms\Components\Toggle::make('tiktok_enabled')
-                            ->label('Enable TikTok Pixel')
+                            ->label(__('Enable TikTok Pixel'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable TikTok Pixel tracking')
                             ->live(),
 
                         Forms\Components\TextInput::make('tiktok_id')
-                            ->label('Pixel ID')
-                            ->placeholder('CXXXXXXXXXXXXXXXXX')
+                            ->label(__('Pixel ID'))
+                            ->placeholder(__('CXXXXXXXXXXXXXXXXX'))
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your TikTok Pixel ID from TikTok Ads Manager')
                             ->maxLength(25)
                             ->visible(fn ($get) => $get('tiktok_enabled')),
 
                         SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('tiktok_inject_at')
-                                ->label('Inject Location')
+                                ->label(__('Inject Location'))
                                 ->options([
-                                    'head' => 'Head (recommended)',
-                                    'body' => 'Body End',
+                                    'head' => __('Head (recommended)'),
+                                    'body' => __('Body End'),
                                 ])
                                 ->default('head')
                                 ->visible(fn ($get) => $get('tiktok_enabled')),
 
                             Forms\Components\Select::make('tiktok_page_scope')
-                                ->label('Page Scope')
+                                ->label(__('Page Scope'))
                                 ->options([
-                                    'public' => 'Public pages only',
-                                    'all' => 'All pages',
+                                    'public' => __('Public pages only'),
+                                    'all' => __('All pages'),
                                 ])
                                 ->default('public')
                                 ->visible(fn ($get) => $get('tiktok_enabled')),
@@ -279,7 +279,7 @@ class TrackingSettings extends Page
                     ->collapsible()
                     ->collapsed(),
 
-                SC\Section::make('GDPR Compliance')
+                SC\Section::make(__('GDPR Compliance'))
                     ->schema([
                         Forms\Components\Placeholder::make('gdpr_info')
                             ->label('')
@@ -311,8 +311,8 @@ class TrackingSettings extends Page
             // problem so users know the form actually didn't persist.
             Notification::make()
                 ->danger()
-                ->title('No marketplace context')
-                ->body('Could not determine which marketplace to save these settings for. Make sure you are logged in as a marketplace admin (not a super-admin) and try again.')
+                ->title(__('No marketplace context'))
+                ->body(__('Could not determine which marketplace to save these settings for. Make sure you are logged in as a marketplace admin (not a super-admin) and try again.'))
                 ->persistent()
                 ->send();
             return;
@@ -391,8 +391,8 @@ class TrackingSettings extends Page
 
         Notification::make()
             ->success()
-            ->title('Tracking settings saved')
-            ->body('Your tracking pixel configurations have been updated.')
+            ->title(__('Tracking settings saved'))
+            ->body(__('Your tracking pixel configurations have been updated.'))
             ->send();
     }
 

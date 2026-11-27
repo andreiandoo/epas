@@ -53,7 +53,7 @@ class OrganizerDocumentResource extends Resource
         return $schema
             ->components([
                 // ── Document Header ──
-                Section::make('Informații Document')
+                Section::make(__('Informații Document'))
                     ->icon('heroicon-o-document')
                     ->schema([
                         Forms\Components\Placeholder::make('doc_header')
@@ -108,7 +108,7 @@ class OrganizerDocumentResource extends Resource
                     ]),
 
                 // ── Filing with the city hall (fiscal documents only) ──
-                Section::make('Depunere la primărie')
+                Section::make(__('Depunere la primărie'))
                     ->icon('heroicon-o-paper-airplane')
                     ->visible(fn ($record) => $record?->event
                         && isset(EventDocumentFilingService::TYPE_LABELS[$record->document_type])
@@ -143,7 +143,7 @@ class OrganizerDocumentResource extends Resource
                     ]),
 
                 // ── Organizer + Event side by side ──
-                Section::make('Organizator & Eveniment')
+                Section::make(__('Organizator & Eveniment'))
                     ->icon('heroicon-o-building-office')
                     ->schema([
                         Forms\Components\Placeholder::make('org_event_info')
@@ -229,7 +229,7 @@ class OrganizerDocumentResource extends Resource
                     ]),
 
                 // ── Decont Details (only for decont type) ──
-                Section::make('Detalii Decont')
+                Section::make(__('Detalii Decont'))
                     ->icon('heroicon-o-banknotes')
                     ->visible(fn ($record) => $record?->document_type === 'decont')
                     ->schema([
@@ -385,7 +385,7 @@ class OrganizerDocumentResource extends Resource
                     ]),
 
                 // ── Document Preview ──
-                Section::make('Previzualizare Document')
+                Section::make(__('Previzualizare Document'))
                     ->icon('heroicon-o-eye')
                     ->schema([
                         Forms\Components\Placeholder::make('document_preview')
@@ -419,13 +419,13 @@ class OrganizerDocumentResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->label('Document')
+                    ->label(__('Document'))
                     ->searchable()
                     ->sortable()
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('document_type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->badge()
                     ->formatStateUsing(fn ($state) => OrganizerDocument::TYPES[$state] ?? $state)
                     ->color(fn ($state) => match ($state) {
@@ -438,12 +438,12 @@ class OrganizerDocumentResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('organizer.company_name')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('event.title')
-                    ->label('Event')
+                    ->label(__('Event'))
                     ->formatStateUsing(function ($state) {
                         if (is_array($state)) {
                             return $state['ro'] ?? $state['en'] ?? reset($state) ?: '-';
@@ -460,22 +460,22 @@ class OrganizerDocumentResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('issued_at')
-                    ->label('Issued')
+                    ->label(__('Issued'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('file_size')
-                    ->label('Size')
+                    ->label(__('Size'))
                     ->formatStateUsing(fn ($record) => $record->formatted_file_size),
             ])
             ->defaultSort('issued_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('document_type')
-                    ->label('Type')
+                    ->label(__('Type'))
                     ->options(OrganizerDocument::TYPES),
 
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
-                    ->label('Organizer')
+                    ->label(__('Organizer'))
                     ->relationship('organizer', 'company_name')
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->company_name ?? $record->name ?? 'Unknown')
                     ->searchable()
@@ -497,12 +497,12 @@ class OrganizerDocumentResource extends Resource
             ])
             ->bulkActions([
                 \Filament\Actions\BulkAction::make('delete_selected')
-                    ->label('Șterge selectate')
+                    ->label(__('Șterge selectate'))
                     ->icon('heroicon-o-trash')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading('Șterge documentele selectate')
-                    ->modalDescription('Ești sigur? Fișierele PDF vor fi șterse permanent.')
+                    ->modalHeading(__('Șterge documentele selectate'))
+                    ->modalDescription(__('Ești sigur? Fișierele PDF vor fi șterse permanent.'))
                     ->deselectRecordsAfterCompletion()
                     ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
                         foreach ($records as $doc) {

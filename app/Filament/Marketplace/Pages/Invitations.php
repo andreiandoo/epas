@@ -90,8 +90,8 @@ class Invitations extends Page
         if (!$hasAccess) {
             Notification::make()
                 ->warning()
-                ->title('Microservice Not Active')
-                ->body('You need to activate the Invitations microservice first.')
+                ->title(__('Microservice Not Active'))
+                ->body(__('You need to activate the Invitations microservice first.'))
                 ->send();
 
             redirect()->route('filament.marketplace.pages.microservices');
@@ -261,7 +261,7 @@ class Invitations extends Page
 
         Notification::make()
             ->success()
-            ->title('Batch Created')
+            ->title(__('Batch Created'))
             ->body("Created batch \"{$data['name']}\" with {$data['qty_planned']} invitations.")
             ->send();
 
@@ -288,7 +288,7 @@ class Invitations extends Page
         if (!$batch) {
             Notification::make()
                 ->danger()
-                ->title('Batch not found')
+                ->title(__('Batch not found'))
                 ->send();
             return;
         }
@@ -298,7 +298,7 @@ class Invitations extends Page
         if ($batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -306,8 +306,8 @@ class Invitations extends Page
         if (!$this->csvFile) {
             Notification::make()
                 ->danger()
-                ->title('No file selected')
-                ->body('Please select a CSV file to import.')
+                ->title(__('No file selected'))
+                ->body(__('Please select a CSV file to import.'))
                 ->send();
             return;
         }
@@ -362,14 +362,14 @@ class Invitations extends Page
 
             Notification::make()
                 ->success()
-                ->title('Import Complete')
+                ->title(__('Import Complete'))
                 ->body($message)
                 ->send();
 
         } catch (\Exception $e) {
             Notification::make()
                 ->danger()
-                ->title('Import Failed')
+                ->title(__('Import Failed'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -384,41 +384,41 @@ class Invitations extends Page
     {
         return [
             Forms\Components\FileUpload::make('csv_file')
-                ->label('CSV File')
+                ->label(__('CSV File'))
                 ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel'])
                 ->required()
                 ->hintIcon('heroicon-o-information-circle', tooltip: 'Upload a CSV with columns: name, email, phone, company'),
 
             Forms\Components\Grid::make(5)->schema([
                 Forms\Components\TextInput::make('col_name')
-                    ->label('Name Column')
+                    ->label(__('Name Column'))
                     ->numeric()
                     ->default(0)
                     ->hintIcon('heroicon-o-information-circle', tooltip: '0-indexed'),
 
                 Forms\Components\TextInput::make('col_email')
-                    ->label('Email Column')
+                    ->label(__('Email Column'))
                     ->numeric()
                     ->default(1),
 
                 Forms\Components\TextInput::make('col_phone')
-                    ->label('Phone Column')
+                    ->label(__('Phone Column'))
                     ->numeric()
                     ->default(2),
 
                 Forms\Components\TextInput::make('col_company')
-                    ->label('Company Column')
+                    ->label(__('Company Column'))
                     ->numeric()
                     ->default(3),
 
                 Forms\Components\TextInput::make('col_seat')
-                    ->label('Seat Column')
+                    ->label(__('Seat Column'))
                     ->numeric()
                     ->default(4),
             ]),
 
             Forms\Components\Toggle::make('skip_header')
-                ->label('Skip header row')
+                ->label(__('Skip header row'))
                 ->default(true),
         ];
     }
@@ -430,7 +430,7 @@ class Invitations extends Page
         if (!$batch) {
             Notification::make()
                 ->danger()
-                ->title('Batch not found')
+                ->title(__('Batch not found'))
                 ->send();
             return;
         }
@@ -440,7 +440,7 @@ class Invitations extends Page
         if ($batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -499,14 +499,14 @@ class Invitations extends Page
 
             Notification::make()
                 ->success()
-                ->title('Import Complete')
+                ->title(__('Import Complete'))
                 ->body($message)
                 ->send();
 
         } catch (\Exception $e) {
             Notification::make()
                 ->danger()
-                ->title('Import Failed')
+                ->title(__('Import Failed'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -611,7 +611,7 @@ class Invitations extends Page
         if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -621,8 +621,8 @@ class Invitations extends Page
         if ($batch->status !== 'draft') {
             Notification::make()
                 ->warning()
-                ->title('PDF-urile sunt deja generate')
-                ->body('Lotul a fost generat deja sau se generează acum.')
+                ->title(__('PDF-urile sunt deja generate'))
+                ->body(__('Lotul a fost generat deja sau se generează acum.'))
                 ->send();
             return;
         }
@@ -636,8 +636,8 @@ class Invitations extends Page
         if ($invitesWithRecipients->isEmpty()) {
             Notification::make()
                 ->warning()
-                ->title('No Recipients')
-                ->body('Add recipients before generating PDFs.')
+                ->title(__('No Recipients'))
+                ->body(__('Add recipients before generating PDFs.'))
                 ->send();
             $batch->updateStatus('draft');
             return;
@@ -865,7 +865,7 @@ class Invitations extends Page
 
         Notification::make()
             ->success()
-            ->title('PDFs Generated')
+            ->title(__('PDFs Generated'))
             ->body($message)
             ->send();
 
@@ -880,7 +880,7 @@ class Invitations extends Page
         if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -888,8 +888,8 @@ class Invitations extends Page
         if (!$batch->canSendEmails()) {
             Notification::make()
                 ->warning()
-                ->title('Cannot Send')
-                ->body('Batch must be rendered first and have invitations ready.')
+                ->title(__('Cannot Send'))
+                ->body(__('Batch must be rendered first and have invitations ready.'))
                 ->send();
             return;
         }
@@ -986,7 +986,7 @@ class Invitations extends Page
 
         Notification::make()
             ->success()
-            ->title('Emails Queued')
+            ->title(__('Emails Queued'))
             ->body("Queued {$sent} invitation emails for delivery.")
             ->send();
 
@@ -1001,7 +1001,7 @@ class Invitations extends Page
         if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -1017,8 +1017,8 @@ class Invitations extends Page
 
         Notification::make()
             ->success()
-            ->title('Batch Cancelled')
-            ->body('All invitations in this batch have been voided.')
+            ->title(__('Batch Cancelled'))
+            ->body(__('All invitations in this batch have been voided.'))
             ->send();
 
         $this->dispatch('$refresh');
@@ -1035,7 +1035,7 @@ class Invitations extends Page
         if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -1055,7 +1055,7 @@ class Invitations extends Page
 
         Notification::make()
             ->success()
-            ->title('Batch Deleted')
+            ->title(__('Batch Deleted'))
             ->body("Deleted batch \"{$batchName}\" with {$inviteCount} invitations.")
             ->send();
 
@@ -1087,7 +1087,7 @@ class Invitations extends Page
         if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -1096,8 +1096,8 @@ class Invitations extends Page
         if (!filter_var($this->manualEmail, FILTER_VALIDATE_EMAIL)) {
             Notification::make()
                 ->danger()
-                ->title('Invalid Email')
-                ->body('Please enter a valid email address.')
+                ->title(__('Invalid Email'))
+                ->body(__('Please enter a valid email address.'))
                 ->send();
             return;
         }
@@ -1106,8 +1106,8 @@ class Invitations extends Page
         if (empty(trim($this->manualName))) {
             Notification::make()
                 ->danger()
-                ->title('Name Required')
-                ->body('Please enter a name for the recipient.')
+                ->title(__('Name Required'))
+                ->body(__('Please enter a name for the recipient.'))
                 ->send();
             return;
         }
@@ -1142,7 +1142,7 @@ class Invitations extends Page
 
         Notification::make()
             ->success()
-            ->title('Recipient Added')
+            ->title(__('Recipient Added'))
             ->body("Added {$this->manualName} to the batch.")
             ->send();
 
@@ -1176,7 +1176,7 @@ class Invitations extends Page
         if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }
@@ -1184,8 +1184,8 @@ class Invitations extends Page
         if ($batch->qty_rendered === 0) {
             Notification::make()
                 ->warning()
-                ->title('No PDFs Available')
-                ->body('Generate PDFs first before downloading.')
+                ->title(__('No PDFs Available'))
+                ->body(__('Generate PDFs first before downloading.'))
                 ->send();
             return;
         }
@@ -1199,8 +1199,8 @@ class Invitations extends Page
         if ($invites->isEmpty()) {
             Notification::make()
                 ->warning()
-                ->title('No PDFs Available')
-                ->body('No rendered invitations found.')
+                ->title(__('No PDFs Available'))
+                ->body(__('No rendered invitations found.'))
                 ->send();
             return;
         }
@@ -1210,8 +1210,8 @@ class Invitations extends Page
         if (!Storage::disk('local')->exists($storagePath)) {
             Notification::make()
                 ->warning()
-                ->title('PDFs Not Found')
-                ->body('PDF files not found. Please regenerate them.')
+                ->title(__('PDFs Not Found'))
+                ->body(__('PDF files not found. Please regenerate them.'))
                 ->send();
             return;
         }
@@ -1231,8 +1231,8 @@ class Invitations extends Page
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             Notification::make()
                 ->danger()
-                ->title('ZIP Creation Failed')
-                ->body('Could not create ZIP archive.')
+                ->title(__('ZIP Creation Failed'))
+                ->body(__('Could not create ZIP archive.'))
                 ->send();
             return;
         }
@@ -1260,8 +1260,8 @@ class Invitations extends Page
         if ($addedFiles === 0) {
             Notification::make()
                 ->warning()
-                ->title('No PDFs Found')
-                ->body('No PDF files were found to download.')
+                ->title(__('No PDFs Found'))
+                ->body(__('No PDF files were found to download.'))
                 ->send();
 
             // Clean up empty zip
@@ -1288,7 +1288,7 @@ class Invitations extends Page
         if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
-                ->title('Access denied')
+                ->title(__('Access denied'))
                 ->send();
             return;
         }

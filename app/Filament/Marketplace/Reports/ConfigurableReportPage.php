@@ -197,8 +197,8 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
             ->paginated([25, 50, 100, 'all'])
             ->defaultPaginationPageOption(50)
             ->striped()
-            ->emptyStateHeading('Niciun rezultat')
-            ->emptyStateDescription('Schimbă filtrele sau alege alt raport.');
+            ->emptyStateHeading(__('Niciun rezultat'))
+            ->emptyStateDescription(__('Schimbă filtrele sau alege alt raport.'));
     }
 
     protected function reportQuery(): Builder
@@ -330,8 +330,8 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
             case 'bool':
                 return Tables\Filters\TernaryFilter::make($key)
                     ->label($label)
-                    ->trueLabel('Da')
-                    ->falseLabel('Nu')
+                    ->trueLabel(__('Da'))
+                    ->falseLabel(__('Nu'))
                     ->queries(
                         true: fn (Builder $query) => $raw ? $query->whereRaw($target, $bindings) : $query->where($target, true),
                         false: fn (Builder $query) => $raw
@@ -376,7 +376,7 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
                     ->schema([
                         Grid::make(2)->schema([
                             TextInput::make('min')->label($label.' — de la')->numeric(),
-                            TextInput::make('max')->label('până la')->numeric(),
+                            TextInput::make('max')->label(__('până la'))->numeric(),
                         ]),
                     ])
                     ->columnSpan(2)
@@ -411,7 +411,7 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
                     ->schema([
                         Grid::make(2)->schema([
                             DatePicker::make('from')->label($label.' — de la')->native(false)->displayFormat('d.m.Y'),
-                            DatePicker::make('until')->label('până la')->native(false)->displayFormat('d.m.Y'),
+                            DatePicker::make('until')->label(__('până la'))->native(false)->displayFormat('d.m.Y'),
                         ]),
                     ])
                     ->columnSpan(2)
@@ -492,20 +492,20 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
         return [
             BulkActionGroup::make([
                 BulkAction::make('applySetting')
-                    ->label('Aplică o setare')
+                    ->label(__('Aplică o setare'))
                     ->icon('heroicon-o-adjustments-horizontal')
-                    ->modalHeading('Aplică o setare pe rândurile selectate')
-                    ->modalDescription('Se aplică doar pe rândurile bifate. Setările disponibile sunt coloanele din raportul curent care se pot modifica.')
-                    ->modalSubmitActionLabel('Aplică')
+                    ->modalHeading(__('Aplică o setare pe rândurile selectate'))
+                    ->modalDescription(__('Se aplică doar pe rândurile bifate. Setările disponibile sunt coloanele din raportul curent care se pot modifica.'))
+                    ->modalSubmitActionLabel(__('Aplică'))
                     ->schema([
                         Select::make('field')
-                            ->label('Setare')
+                            ->label(__('Setare'))
                             ->options(collect($editable)->map(fn ($e) => $e['label'])->all())
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn ($set) => $set('value', null)),
                         Select::make('value')
-                            ->label('Valoare nouă')
+                            ->label(__('Valoare nouă'))
                             ->options(fn (Get $get) => $editable[$get('field')]['options'] ?? [])
                             ->required()
                             ->visible(fn (Get $get) => filled($get('field'))),
@@ -538,7 +538,7 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
                             ->send();
                     })
                     ->deselectRecordsAfterCompletion(),
-            ])->label('Acțiuni pe selecție'),
+            ])->label(__('Acțiuni pe selecție')),
         ];
     }
 
@@ -552,18 +552,18 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
     {
         return [
             Action::make('exportCsv')
-                ->label('Export CSV')
+                ->label(__('Export CSV'))
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
                 ->visible(fn () => $this->currentReport() !== null)
                 ->action(fn () => $this->exportCsv()),
 
             Action::make('editReport')
-                ->label('Modifică raportul')
+                ->label(__('Modifică raportul'))
                 ->icon('heroicon-o-adjustments-horizontal')
                 ->color('gray')
                 ->visible(fn () => $this->currentReport() !== null)
-                ->modalHeading('Modifică raportul')
+                ->modalHeading(__('Modifică raportul'))
                 ->modalWidth('5xl')
                 ->fillForm(fn () => $this->reportFormData($this->currentReport()))
                 ->schema(fn () => $this->reportFormSchema())
@@ -576,14 +576,14 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
                         'name' => trim($data['name']),
                         'columns' => $this->columnsFromFormData($data),
                     ]);
-                    Notification::make()->title('Raport salvat')->success()->send();
+                    Notification::make()->title(__('Raport salvat'))->success()->send();
                     $this->redirect($this->reportUrl($report->id));
                 }),
 
             Action::make('newReport')
-                ->label('Raport nou')
+                ->label(__('Raport nou'))
                 ->icon('heroicon-o-plus')
-                ->modalHeading('Raport nou')
+                ->modalHeading(__('Raport nou'))
                 ->modalWidth('5xl')
                 ->fillForm(fn () => $this->reportFormData(null))
                 ->schema(fn () => $this->reportFormSchema())
@@ -602,21 +602,21 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
                         'created_by' => $admin?->getAuthIdentifier(),
                         'created_by_name' => $admin?->name ?? $admin?->email,
                     ]);
-                    Notification::make()->title('Raport creat')->success()->send();
+                    Notification::make()->title(__('Raport creat'))->success()->send();
                     $this->redirect($this->reportUrl($report->id));
                 }),
 
             Action::make('deleteReport')
-                ->label('Șterge raportul')
+                ->label(__('Șterge raportul'))
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->visible(fn () => $this->currentReport() !== null)
                 ->requiresConfirmation()
                 ->modalHeading(fn () => 'Ștergi raportul „'.$this->currentReport()?->name.'”?')
-                ->modalDescription('Se șterge doar configurația raportului, datele nu sunt atinse. Raportul dispare pentru toți adminii.')
+                ->modalDescription(__('Se șterge doar configurația raportului, datele nu sunt atinse. Raportul dispare pentru toți adminii.'))
                 ->action(function () {
                     $this->currentReport()?->delete();
-                    Notification::make()->title('Raport șters')->success()->send();
+                    Notification::make()->title(__('Raport șters'))->success()->send();
                     $this->redirect(static::getUrl());
                 }),
         ];
@@ -634,7 +634,7 @@ abstract class ConfigurableReportPage extends Page implements HasForms, HasTable
 
         $schema = [
             TextInput::make('name')
-                ->label('Numele raportului')
+                ->label(__('Numele raportului'))
                 ->required()
                 ->maxLength(120),
         ];

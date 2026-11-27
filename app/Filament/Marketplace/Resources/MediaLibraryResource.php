@@ -64,7 +64,7 @@ class MediaLibraryResource extends Resource
             SC\Grid::make(3)->schema([
                 SC\Group::make()->columnSpan(2)->schema([
                     // Preview Section
-                    SC\Section::make('Preview')
+                    SC\Section::make(__('Preview'))
                         ->schema([
                             Forms\Components\Placeholder::make('media_preview')
                                 ->hiddenLabel()
@@ -116,30 +116,30 @@ class MediaLibraryResource extends Resource
                         ]),
 
                     // Edit metadata
-                    SC\Section::make('Metadate')
+                    SC\Section::make(__('Metadate'))
                         ->schema([
                             Forms\Components\TextInput::make('title')
-                                ->label('Titlu')
+                                ->label(__('Titlu'))
                                 ->maxLength(500)
-                                ->placeholder('Titlu opțional pentru media'),
+                                ->placeholder(__('Titlu opțional pentru media')),
 
                             Forms\Components\TextInput::make('alt_text')
-                                ->label('Text Alternativ')
+                                ->label(__('Text Alternativ'))
                                 ->maxLength(500)
-                                ->placeholder('Text alternativ pentru accesibilitate'),
+                                ->placeholder(__('Text alternativ pentru accesibilitate')),
 
                             Forms\Components\Select::make('collection')
-                                ->label('Colecție')
+                                ->label(__('Colecție'))
                                 ->options([
-                                    'artists' => 'Artiști',
-                                    'events' => 'Evenimente',
-                                    'products' => 'Produse',
-                                    'venues' => 'Locații',
-                                    'blog' => 'Blog',
-                                    'shop' => 'Magazin',
-                                    'gallery' => 'Galerie',
-                                    'documents' => 'Documente',
-                                    'other' => 'Altele',
+                                    'artists' => __('Artiști'),
+                                    'events' => __('Evenimente'),
+                                    'products' => __('Produse'),
+                                    'venues' => __('Locații'),
+                                    'blog' => __('Blog'),
+                                    'shop' => __('Magazin'),
+                                    'gallery' => __('Galerie'),
+                                    'documents' => __('Documente'),
+                                    'other' => __('Altele'),
                                 ])
                                 ->searchable(),
                         ])
@@ -148,7 +148,7 @@ class MediaLibraryResource extends Resource
 
                 SC\Group::make()->columnSpan(1)->schema([
                     // File Info
-                    SC\Section::make('Informații Fișier')
+                    SC\Section::make(__('Informații Fișier'))
                         ->compact()
                         ->schema([
                             Forms\Components\Placeholder::make('file_info')
@@ -217,7 +217,7 @@ class MediaLibraryResource extends Resource
                         ]),
 
                     // URL Section
-                    SC\Section::make('URL-uri')
+                    SC\Section::make(__('URL-uri'))
                         ->compact()
                         ->schema([
                             Forms\Components\Placeholder::make('url_info')
@@ -241,7 +241,7 @@ class MediaLibraryResource extends Resource
                         ]),
 
                     // Usage Tracking Section
-                    SC\Section::make('Utilizare')
+                    SC\Section::make(__('Utilizare'))
                         ->compact()
                         ->schema([
                             Forms\Components\Placeholder::make('usage_info')
@@ -282,7 +282,7 @@ class MediaLibraryResource extends Resource
                         ]),
 
                     // Compression Info Section
-                    SC\Section::make('Compresie')
+                    SC\Section::make(__('Compresie'))
                         ->compact()
                         ->schema([
                             Forms\Components\Placeholder::make('compression_info')
@@ -411,7 +411,7 @@ class MediaLibraryResource extends Resource
                     ->visible(fn (?MediaLibrary $record) => $record?->is_image ?? true),
 
                 Tables\Columns\TextColumn::make('filename')
-                    ->label('Nume Fișier')
+                    ->label(__('Nume Fișier'))
                     ->searchable()
                     ->sortable()
                     ->limit(40)
@@ -421,14 +421,14 @@ class MediaLibraryResource extends Resource
                         : $record?->directory),
 
                 Tables\Columns\TextColumn::make('original_filename')
-                    ->label('Nume Original')
+                    ->label(__('Nume Original'))
                     ->searchable()
                     ->sortable()
                     ->limit(40)
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('collection')
-                    ->label('Colecție')
+                    ->label(__('Colecție'))
                     ->badge()
                     ->color(fn ($state) => match ($state) {
                         'artists' => 'info',
@@ -451,7 +451,7 @@ class MediaLibraryResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('mime_type')
-                    ->label('Tip')
+                    ->label(__('Tip'))
                     ->badge()
                     ->color('gray')
                     ->formatStateUsing(fn ($state) => match (true) {
@@ -466,25 +466,25 @@ class MediaLibraryResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('human_readable_size')
-                    ->label('Mărime')
+                    ->label(__('Mărime'))
                     ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('size', $direction))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('dimensions')
-                    ->label('Dimensiuni')
+                    ->label(__('Dimensiuni'))
                     ->getStateUsing(fn (?MediaLibrary $record) => $record && $record->width && $record->height
                         ? "{$record->width}×{$record->height}"
                         : '-')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Încărcat')
+                    ->label(__('Încărcat'))
                     ->dateTime('d M Y H:i')
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('compressed')
-                    ->label('Comprimat')
+                    ->label(__('Comprimat'))
                     ->getStateUsing(fn (?MediaLibrary $record) => $record && isset($record->metadata['compressed_at']))
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
@@ -496,7 +496,7 @@ class MediaLibraryResource extends Resource
             ->filters([
                 // Year Filter
                 Tables\Filters\SelectFilter::make('year')
-                    ->label('An')
+                    ->label(__('An'))
                     ->options(function () {
                         $marketplace = static::getMarketplaceClient();
 
@@ -524,20 +524,20 @@ class MediaLibraryResource extends Resource
 
                 // Month Filter
                 Tables\Filters\SelectFilter::make('month')
-                    ->label('Lună')
+                    ->label(__('Lună'))
                     ->options([
-                        1 => 'Ianuarie',
-                        2 => 'Februarie',
-                        3 => 'Martie',
-                        4 => 'Aprilie',
-                        5 => 'Mai',
-                        6 => 'Iunie',
-                        7 => 'Iulie',
-                        8 => 'August',
-                        9 => 'Septembrie',
-                        10 => 'Octombrie',
-                        11 => 'Noiembrie',
-                        12 => 'Decembrie',
+                        1 => __('Ianuarie'),
+                        2 => __('Februarie'),
+                        3 => __('Martie'),
+                        4 => __('Aprilie'),
+                        5 => __('Mai'),
+                        6 => __('Iunie'),
+                        7 => __('Iulie'),
+                        8 => __('August'),
+                        9 => __('Septembrie'),
+                        10 => __('Octombrie'),
+                        11 => __('Noiembrie'),
+                        12 => __('Decembrie'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when(
@@ -548,26 +548,26 @@ class MediaLibraryResource extends Resource
 
                 // Collection Filter
                 Tables\Filters\SelectFilter::make('collection')
-                    ->label('Colecție')
+                    ->label(__('Colecție'))
                     ->options([
-                        'artists' => 'Artiști',
-                        'events' => 'Evenimente',
-                        'products' => 'Produse',
-                        'venues' => 'Locații',
-                        'blog' => 'Blog',
-                        'shop' => 'Magazin',
-                        'gallery' => 'Galerie',
-                        'documents' => 'Documente',
+                        'artists' => __('Artiști'),
+                        'events' => __('Evenimente'),
+                        'products' => __('Produse'),
+                        'venues' => __('Locații'),
+                        'blog' => __('Blog'),
+                        'shop' => __('Magazin'),
+                        'gallery' => __('Galerie'),
+                        'documents' => __('Documente'),
                     ]),
 
                 // File Type Filter
                 Tables\Filters\SelectFilter::make('file_type')
-                    ->label('Tip Fișier')
+                    ->label(__('Tip Fișier'))
                     ->options([
-                        'image' => 'Imagini',
-                        'video' => 'Video-uri',
-                        'pdf' => 'PDF-uri',
-                        'document' => 'Documente',
+                        'image' => __('Imagini'),
+                        'video' => __('Video-uri'),
+                        'pdf' => __('PDF-uri'),
+                        'document' => __('Documente'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when($data['value'], function (Builder $query, string $type) {
@@ -591,10 +591,10 @@ class MediaLibraryResource extends Resource
 
                 // Compression Filter
                 Tables\Filters\SelectFilter::make('compressed')
-                    ->label('Status Compresie')
+                    ->label(__('Status Compresie'))
                     ->options([
-                        'compressed' => 'Comprimat',
-                        'uncompressed' => 'Necomprimat',
+                        'compressed' => __('Comprimat'),
+                        'uncompressed' => __('Necomprimat'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query->when($data['value'], function (Builder $query, string $status) {
@@ -625,11 +625,11 @@ class MediaLibraryResource extends Resource
                     ->icon('heroicon-o-bolt')
                     ->iconButton()
                     ->color('warning')
-                    ->tooltip('Comprimă Imagine')
+                    ->tooltip(__('Comprimă Imagine'))
                     ->visible(fn (?MediaLibrary $record) => $record && $record->is_image && !isset($record->metadata['compressed_at']))
                     ->requiresConfirmation()
-                    ->modalHeading('Comprimă Imagine')
-                    ->modalDescription('Aceasta va comprima imaginea pentru a reduce mărimea fișierului. Acțiunea nu poate fi anulată.')
+                    ->modalHeading(__('Comprimă Imagine'))
+                    ->modalDescription(__('Aceasta va comprima imaginea pentru a reduce mărimea fișierului. Acțiunea nu poate fi anulată.'))
                     ->action(function (?MediaLibrary $record) {
                         if (!$record) return;
                         $service = new ImageCompressionService();
@@ -638,19 +638,19 @@ class MediaLibraryResource extends Resource
 
                         if ($result->success && !$result->skipped) {
                             Notification::make()
-                                ->title('Imagine Comprimată')
+                                ->title(__('Imagine Comprimată'))
                                 ->body("Salvat {$result->getSavedHuman()} ({$result->savedPercentage}% reducere)")
                                 ->success()
                                 ->send();
                         } elseif ($result->skipped) {
                             Notification::make()
-                                ->title('Compresie Omisă')
+                                ->title(__('Compresie Omisă'))
                                 ->body($result->skipReason)
                                 ->info()
                                 ->send();
                         } else {
                             Notification::make()
-                                ->title('Compresie Eșuată')
+                                ->title(__('Compresie Eșuată'))
                                 ->body($result->error)
                                 ->danger()
                                 ->send();
@@ -669,12 +669,12 @@ class MediaLibraryResource extends Resource
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                     BulkAction::make('compress')
-                        ->label('Comprimă Imagini')
+                        ->label(__('Comprimă Imagini'))
                         ->icon('heroicon-o-bolt')
                         ->color('warning')
                         ->requiresConfirmation()
-                        ->modalHeading('Comprimă Imaginile Selectate')
-                        ->modalDescription('Aceasta va comprima toate imaginile selectate. Celelalte fișiere vor fi ignorate.')
+                        ->modalHeading(__('Comprimă Imaginile Selectate'))
+                        ->modalDescription(__('Aceasta va comprima toate imaginile selectate. Celelalte fișiere vor fi ignorate.'))
                         ->action(function (Collection $records) {
                             $service = new ImageCompressionService();
                             $service->quality(80);
@@ -689,27 +689,27 @@ class MediaLibraryResource extends Resource
                             $stats = ImageCompressionService::getStatistics($results);
 
                             Notification::make()
-                                ->title('Compresie în Masă Completă')
+                                ->title(__('Compresie în Masă Completă'))
                                 ->body("Procesate: {$stats['successful']}/{$stats['total_processed']}. Salvat: {$stats['total_saved_human']}")
                                 ->success()
                                 ->send();
                         }),
                     BulkAction::make('change_collection')
-                        ->label('Schimbă Colecția')
+                        ->label(__('Schimbă Colecția'))
                         ->icon('heroicon-o-folder')
                         ->form([
                             Forms\Components\Select::make('collection')
-                                ->label('Colecție Nouă')
+                                ->label(__('Colecție Nouă'))
                                 ->options([
-                                    'artists' => 'Artiști',
-                                    'events' => 'Evenimente',
-                                    'products' => 'Produse',
-                                    'venues' => 'Locații',
-                                    'blog' => 'Blog',
-                                    'shop' => 'Magazin',
-                                    'gallery' => 'Galerie',
-                                    'documents' => 'Documente',
-                                    'other' => 'Altele',
+                                    'artists' => __('Artiști'),
+                                    'events' => __('Evenimente'),
+                                    'products' => __('Produse'),
+                                    'venues' => __('Locații'),
+                                    'blog' => __('Blog'),
+                                    'shop' => __('Magazin'),
+                                    'gallery' => __('Galerie'),
+                                    'documents' => __('Documente'),
+                                    'other' => __('Altele'),
                                 ])
                                 ->required(),
                         ])
@@ -719,25 +719,25 @@ class MediaLibraryResource extends Resource
                             });
 
                             Notification::make()
-                                ->title('Colecție Actualizată')
+                                ->title(__('Colecție Actualizată'))
                                 ->body("S-au actualizat {$records->count()} fișier(e)")
                                 ->success()
                                 ->send();
                         }),
                     BulkAction::make('export_urls')
-                        ->label('Exportă URL-uri')
+                        ->label(__('Exportă URL-uri'))
                         ->icon('heroicon-o-clipboard-document-list')
                         ->action(function (Collection $records) {
                             Notification::make()
-                                ->title('URL-uri Exportate')
+                                ->title(__('URL-uri Exportate'))
                                 ->body("S-au exportat {$records->count()} URL-uri")
                                 ->success()
                                 ->send();
                         }),
                 ]),
             ])
-            ->emptyStateHeading('Nicio fișier media')
-            ->emptyStateDescription('Încarcă fișiere prin aplicație sau scanează fișierele existente.')
+            ->emptyStateHeading(__('Nicio fișier media'))
+            ->emptyStateDescription(__('Încarcă fișiere prin aplicație sau scanează fișierele existente.'))
             ->emptyStateIcon('heroicon-o-photo');
     }
 

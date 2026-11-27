@@ -20,12 +20,12 @@ class ContactMessagesRelationManager extends RelationManager
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Data')
+                    ->label(__('Data'))
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('full_name')
-                    ->label('Nume')
+                    ->label(__('Nume'))
                     ->getStateUsing(fn ($record) => $record->first_name . ' ' . $record->last_name)
                     ->searchable(query: function ($query, string $search) {
                         $query->where('first_name', 'ilike', "%{$search}%")
@@ -33,22 +33,22 @@ class ContactMessagesRelationManager extends RelationManager
                     }),
 
                 Tables\Columns\TextColumn::make('email')
-                    ->label('Email')
+                    ->label(__('Email'))
                     ->copyable()
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('phone')
-                    ->label('Telefon')
+                    ->label(__('Telefon'))
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('message')
-                    ->label('Mesaj')
+                    ->label(__('Mesaj'))
                     ->limit(80)
                     ->tooltip(fn ($record) => $record->message)
                     ->wrap(),
 
                 Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
+                    ->label(__('Status'))
                     ->badge()
                     ->formatStateUsing(fn (string $state) => match ($state) {
                         'unread' => 'Necitit',
@@ -65,7 +65,7 @@ class ContactMessagesRelationManager extends RelationManager
             ])
             ->actions([
                 Actions\Action::make('view_message')
-                    ->label('Vezi')
+                    ->label(__('Vezi'))
                     ->icon('heroicon-o-eye')
                     ->modalHeading(fn ($record) => 'Mesaj de la ' . $record->first_name . ' ' . $record->last_name)
                     ->modalContent(fn ($record) => new \Illuminate\Support\HtmlString(
@@ -79,7 +79,7 @@ class ContactMessagesRelationManager extends RelationManager
                         . '</div>'
                     ))
                     ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Închide')
+                    ->modalCancelActionLabel(__('Închide'))
                     ->after(function ($record) {
                         if ($record->status === 'unread') {
                             $record->update(['status' => 'read']);
@@ -87,7 +87,7 @@ class ContactMessagesRelationManager extends RelationManager
                     }),
 
                 Actions\Action::make('mark_replied')
-                    ->label('Marcat răspuns')
+                    ->label(__('Marcat răspuns'))
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->visible(fn ($record) => $record->status !== 'replied')
@@ -96,7 +96,7 @@ class ContactMessagesRelationManager extends RelationManager
 
                 Actions\DeleteAction::make(),
             ])
-            ->emptyStateHeading('Niciun mesaj')
-            ->emptyStateDescription('Mesajele trimise prin formularul de contact de pe profilul public vor apărea aici.');
+            ->emptyStateHeading(__('Niciun mesaj'))
+            ->emptyStateDescription(__('Mesajele trimise prin formularul de contact de pe profilul public vor apărea aici.'));
     }
 }

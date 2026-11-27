@@ -52,7 +52,7 @@ class MicroserviceSettings extends Page
     {
         return [
             Actions\Action::make('back')
-                ->label('Back to Microservices')
+                ->label(__('Back to Microservices'))
                 ->url(route('filament.marketplace.pages.microservices'))
                 ->color('gray')
                 ->icon('heroicon-o-arrow-left'),

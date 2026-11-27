@@ -131,9 +131,9 @@ class ActivityLocationResource extends Resource
                     SC\Tabs::make('LocationTabs')->persistTabInQueryString()->tabs([
 
                         SC\Tabs\Tab::make('Detalii')->icon('heroicon-o-document-text')->schema([
-                            SC\Section::make('Identitate')->schema([
+                            SC\Section::make(__('Identitate'))->schema([
                                 Forms\Components\TextInput::make('name.ro')
-                                    ->label('Nume')
+                                    ->label(__('Nume'))
                                     ->required()->maxLength(190)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
@@ -142,184 +142,184 @@ class ActivityLocationResource extends Resource
                                         }
                                     }),
                                 Forms\Components\TextInput::make('slug')
-                                    ->label('Adresă pagină (/locatie/…)')
+                                    ->label(__('Adresă pagină (/locatie/…)'))
                                     ->required()->maxLength(191)
                                     ->regex('/^[a-z0-9]+(-[a-z0-9]+)*$/')
                                     ->rules(fn ($record) => [Rule::unique('activity_locations', 'slug')
                                         ->where('marketplace_client_id', $marketplace?->id)
                                         ->ignore($record?->id)]),
-                                Forms\Components\TextInput::make('subtitle.ro')->label('Subtitlu')->maxLength(190),
-                                Forms\Components\Textarea::make('short_description.ro')->label('Descriere scurtă')->rows(2)->maxLength(280),
-                                Forms\Components\RichEditor::make('description.ro')->label('Descriere')->columnSpanFull(),
-                                Forms\Components\RichEditor::make('rules.ro')->label('Reguli pentru vizitatori')->columnSpanFull(),
+                                Forms\Components\TextInput::make('subtitle.ro')->label(__('Subtitlu'))->maxLength(190),
+                                Forms\Components\Textarea::make('short_description.ro')->label(__('Descriere scurtă'))->rows(2)->maxLength(280),
+                                Forms\Components\RichEditor::make('description.ro')->label(__('Descriere'))->columnSpanFull(),
+                                Forms\Components\RichEditor::make('rules.ro')->label(__('Reguli pentru vizitatori'))->columnSpanFull(),
                             ])->columns(2),
-                            SC\Section::make('Operator și taxonomie')->schema([
+                            SC\Section::make(__('Operator și taxonomie'))->schema([
                                 Forms\Components\Select::make('marketplace_organizer_id')
-                                    ->label('Operator (proprietar)')
+                                    ->label(__('Operator (proprietar)'))
                                     ->options(fn () => MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)->orderBy('name')->pluck('name', 'id')->toArray())
                                     ->searchable()
-                                    ->helperText('Doar operatorul ales poate edita locația din contul lui.'),
+                                    ->helperText(__('Doar operatorul ales poate edita locația din contul lui.')),
                                 Forms\Components\Select::make('marketplace_city_id')
-                                    ->label('Oraș')
+                                    ->label(__('Oraș'))
                                     ->options(fn () => MarketplaceCity::where('marketplace_client_id', $marketplace?->id)->orderBy('sort_order')->get()
                                         ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['ro'] ?? $c->slug])->toArray())
                                     ->searchable(),
                                 Forms\Components\Select::make('marketplace_category_id')
-                                    ->label('Categorie')
+                                    ->label(__('Categorie'))
                                     ->options(fn () => MarketplaceCategory::where('marketplace_client_id', $marketplace?->id)->orderBy('sort_order')->get()
                                         ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['ro'] ?? $c->slug])->toArray())
                                     ->searchable(),
                             ])->columns(3),
-                            SC\Section::make('Adresă, hartă, contact')->schema([
-                                Forms\Components\TextInput::make('address')->label('Adresă')->maxLength(255)->columnSpan(2),
-                                Forms\Components\TextInput::make('google_maps_url')->label('Link Google Maps')->url()->maxLength(500)->columnSpan(2),
-                                Forms\Components\TextInput::make('latitude')->label('Latitudine')->numeric()->minValue(-90)->maxValue(90),
-                                Forms\Components\TextInput::make('longitude')->label('Longitudine')->numeric()->minValue(-180)->maxValue(180),
-                                Forms\Components\TextInput::make('phone')->label('Telefon')->tel()->maxLength(40),
-                                Forms\Components\TextInput::make('email')->label('E-mail')->email()->maxLength(255),
-                                Forms\Components\TextInput::make('website_url')->label('Site')->url()->maxLength(500)->columnSpan(2),
+                            SC\Section::make(__('Adresă, hartă, contact'))->schema([
+                                Forms\Components\TextInput::make('address')->label(__('Adresă'))->maxLength(255)->columnSpan(2),
+                                Forms\Components\TextInput::make('google_maps_url')->label(__('Link Google Maps'))->url()->maxLength(500)->columnSpan(2),
+                                Forms\Components\TextInput::make('latitude')->label(__('Latitudine'))->numeric()->minValue(-90)->maxValue(90),
+                                Forms\Components\TextInput::make('longitude')->label(__('Longitudine'))->numeric()->minValue(-180)->maxValue(180),
+                                Forms\Components\TextInput::make('phone')->label(__('Telefon'))->tel()->maxLength(40),
+                                Forms\Components\TextInput::make('email')->label(__('E-mail'))->email()->maxLength(255),
+                                Forms\Components\TextInput::make('website_url')->label(__('Site'))->url()->maxLength(500)->columnSpan(2),
                             ])->columns(4),
-                            SC\Section::make('Poze')->schema([
+                            SC\Section::make(__('Poze'))->schema([
                                 Forms\Components\FileUpload::make('cover_image_url')
-                                    ->label('Poză principală')->image()->disk('public')->directory('activity-locations/covers')->maxSize(10240),
+                                    ->label(__('Poză principală'))->image()->disk('public')->directory('activity-locations/covers')->maxSize(10240),
                                 Forms\Components\FileUpload::make('gallery')
-                                    ->label('Galerie')->image()->multiple()->reorderable()->maxFiles(20)->disk('public')->directory('activity-locations/gallery')->maxSize(10240),
+                                    ->label(__('Galerie'))->image()->multiple()->reorderable()->maxFiles(20)->disk('public')->directory('activity-locations/gallery')->maxSize(10240),
                             ])->columns(2),
-                            SC\Section::make('Facilități')->schema([
+                            SC\Section::make(__('Facilități'))->schema([
                                 Forms\Components\CheckboxList::make('facilities')->label(false)->options(self::FACILITIES)->columns(3),
                                 Forms\Components\Placeholder::make('custom_facilities')
-                                    ->label('Adăugate de operator')
+                                    ->label(__('Adăugate de operator'))
                                     ->content(fn ($record) => $record && self::customFacilities($record)
                                         ? implode(' · ', self::customFacilities($record))
                                         : '—')
-                                    ->helperText('Le scrie operatorul din contul lui. Rămân salvate și dacă modifici bifele de mai sus.')
+                                    ->helperText(__('Le scrie operatorul din contul lui. Rămân salvate și dacă modifici bifele de mai sus.'))
                                     ->visible(fn ($record) => $record && self::customFacilities($record)),
                             ]),
                         ]),
 
                         SC\Tabs\Tab::make('Program')->icon('heroicon-o-clock')->schema([
-                            SC\Section::make('Sezoane')
-                                ->description('Perioade care se repetă în fiecare an (pot trece peste Anul Nou, ex: 11-01 → 03-31). Zi fără ore = închis.')
+                            SC\Section::make(__('Sezoane'))
+                                ->description(__('Perioade care se repetă în fiecare an (pot trece peste Anul Nou, ex: 11-01 → 03-31). Zi fără ore = închis.'))
                                 ->schema([
                                     Forms\Components\Repeater::make('seasons')->label(false)->schema(array_merge([
-                                        Forms\Components\TextInput::make('name')->label('Nume')->required()->maxLength(60)->placeholder('Vara'),
-                                        Forms\Components\TextInput::make('start')->label('De la (LL-ZZ)')->required()->regex($monthDay)->placeholder('04-01'),
-                                        Forms\Components\TextInput::make('end')->label('Până la (LL-ZZ)')->required()->regex($monthDay)->placeholder('10-31'),
-                                        Forms\Components\TimePicker::make('last_entry')->label('Ultima intrare')->seconds(false),
+                                        Forms\Components\TextInput::make('name')->label(__('Nume'))->required()->maxLength(60)->placeholder(__('Vara')),
+                                        Forms\Components\TextInput::make('start')->label(__('De la (LL-ZZ)'))->required()->regex($monthDay)->placeholder('04-01'),
+                                        Forms\Components\TextInput::make('end')->label(__('Până la (LL-ZZ)'))->required()->regex($monthDay)->placeholder('10-31'),
+                                        Forms\Components\TimePicker::make('last_entry')->label(__('Ultima intrare'))->seconds(false),
                                     ], array_merge(...array_map(fn ($key, $label) => [
                                         Forms\Components\TimePicker::make("schedule.$key.open")->label("$label de la")->seconds(false),
-                                        Forms\Components\TimePicker::make("schedule.$key.close")->label('până la')->seconds(false),
+                                        Forms\Components\TimePicker::make("schedule.$key.close")->label(__('până la'))->seconds(false),
                                     ], array_keys($days), $days))))
                                         ->columns(4)
                                         ->collapsible()
                                         ->itemLabel(fn (array $state) => trim(($state['name'] ?? '') . ' · ' . ($state['start'] ?? '') . ' → ' . ($state['end'] ?? ''), ' ·'))
-                                        ->addActionLabel('Adaugă sezon'),
+                                        ->addActionLabel(__('Adaugă sezon')),
                                 ]),
-                            SC\Section::make('Zile închise și rezervări')->schema([
+                            SC\Section::make(__('Zile închise și rezervări'))->schema([
                                 Forms\Components\TagsInput::make('closed_dates')
-                                    ->label('Zile închise (AAAA-LL-ZZ)')
+                                    ->label(__('Zile închise (AAAA-LL-ZZ)'))
                                     ->placeholder('2026-12-25')
                                     ->nestedRecursiveRules(['regex:/^\d{4}-\d{2}-\d{2}$/']),
                                 Forms\Components\TextInput::make('max_advance_days')
-                                    ->label('Cu câte zile înainte se poate rezerva')
+                                    ->label(__('Cu câte zile înainte se poate rezerva'))
                                     ->numeric()->default(90)->minValue(1)->maxValue(365),
                             ])->columns(2),
-                            SC\Section::make('Categorii de afișare')
-                                ->description('Grupează produsele pe pagina locației (ex: Individuale, Familie, Grup, Pachete, Servicii).')
+                            SC\Section::make(__('Categorii de afișare'))
+                                ->description(__('Grupează produsele pe pagina locației (ex: Individuale, Familie, Grup, Pachete, Servicii).'))
                                 ->schema([
                                     Forms\Components\Repeater::make('display_categories')->label(false)->schema([
-                                        Forms\Components\TextInput::make('name')->label('Nume')->required()->maxLength(60)
+                                        Forms\Components\TextInput::make('name')->label(__('Nume'))->required()->maxLength(60)
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                                 if ($state && !$get('id')) {
                                                     $set('id', Str::slug($state));
                                                 }
                                             }),
-                                        Forms\Components\TextInput::make('id')->label('Cod')->required()->maxLength(64)->regex('/^[a-z0-9-]+$/'),
-                                        Forms\Components\TextInput::make('sort_order')->label('Ordine')->numeric()->default(0),
-                                    ])->columns(3)->addActionLabel('Adaugă categorie'),
+                                        Forms\Components\TextInput::make('id')->label(__('Cod'))->required()->maxLength(64)->regex('/^[a-z0-9-]+$/'),
+                                        Forms\Components\TextInput::make('sort_order')->label(__('Ordine'))->numeric()->default(0),
+                                    ])->columns(3)->addActionLabel(__('Adaugă categorie')),
                                 ]),
                         ]),
 
                         SC\Tabs\Tab::make('Cazare')->icon('heroicon-o-home-modern')->schema([
-                            SC\Section::make('Cazare la locație')
-                                ->description('Doar informații: rezervarea se face pe platforma pe care o folosește deja operatorul (Booking, Airbnb, site propriu).')
+                            SC\Section::make(__('Cazare la locație'))
+                                ->description(__('Doar informații: rezervarea se face pe platforma pe care o folosește deja operatorul (Booking, Airbnb, site propriu).'))
                                 ->schema([
-                                    Forms\Components\Toggle::make('lodging.enabled')->label('Locația oferă cazare')->live()->columnSpanFull(),
+                                    Forms\Components\Toggle::make('lodging.enabled')->label(__('Locația oferă cazare'))->live()->columnSpanFull(),
                                     SC\Group::make()->visible(fn (Get $get) => (bool) $get('lodging.enabled'))->columnSpanFull()->schema([
                                         SC\Grid::make(4)->schema([
-                                            Forms\Components\Select::make('lodging.type')->label('Tip')->options([
-                                                'pensiune' => 'Pensiune', 'hotel' => 'Hotel', 'cabana' => 'Cabană', 'vila' => 'Vilă',
-                                                'apartamente' => 'Apartamente', 'camping' => 'Camping', 'glamping' => 'Glamping', 'altele' => 'Altele',
+                                            Forms\Components\Select::make('lodging.type')->label(__('Tip'))->options([
+                                                'pensiune' => __('Pensiune'), 'hotel' => __('Hotel'), 'cabana' => __('Cabană'), 'vila' => __('Vilă'),
+                                                'apartamente' => __('Apartamente'), 'camping' => __('Camping'), 'glamping' => __('Glamping'), 'altele' => __('Altele'),
                                             ]),
-                                            Forms\Components\TextInput::make('lodging.classification')->label('Clasificare')->placeholder('3 stele / 3 flori')->maxLength(40),
-                                            Forms\Components\TimePicker::make('lodging.check_in')->label('Check-in de la')->seconds(false),
-                                            Forms\Components\TimePicker::make('lodging.check_out')->label('Check-out până la')->seconds(false),
-                                            Forms\Components\TextInput::make('lodging.price_from')->label('De la (lei / noapte)')->numeric()->minValue(0),
-                                            Forms\Components\TextInput::make('lodging.phone')->label('Telefon rezervări')->tel()->maxLength(40),
-                                            Forms\Components\TextInput::make('lodging.email')->label('E-mail rezervări')->email()->maxLength(255)->columnSpan(2),
+                                            Forms\Components\TextInput::make('lodging.classification')->label(__('Clasificare'))->placeholder(__('3 stele / 3 flori'))->maxLength(40),
+                                            Forms\Components\TimePicker::make('lodging.check_in')->label(__('Check-in de la'))->seconds(false),
+                                            Forms\Components\TimePicker::make('lodging.check_out')->label(__('Check-out până la'))->seconds(false),
+                                            Forms\Components\TextInput::make('lodging.price_from')->label(__('De la (lei / noapte)'))->numeric()->minValue(0),
+                                            Forms\Components\TextInput::make('lodging.phone')->label(__('Telefon rezervări'))->tel()->maxLength(40),
+                                            Forms\Components\TextInput::make('lodging.email')->label(__('E-mail rezervări'))->email()->maxLength(255)->columnSpan(2),
                                         ]),
-                                        Forms\Components\RichEditor::make('lodging.description.ro')->label('Descriere'),
-                                        Forms\Components\RichEditor::make('lodging.policies.ro')->label('Politici (anulare, copii, animale)'),
-                                        Forms\Components\CheckboxList::make('lodging.facilities')->label('Facilități')->options(self::LODGING_FACILITIES)->columns(4),
+                                        Forms\Components\RichEditor::make('lodging.description.ro')->label(__('Descriere')),
+                                        Forms\Components\RichEditor::make('lodging.policies.ro')->label(__('Politici (anulare, copii, animale)')),
+                                        Forms\Components\CheckboxList::make('lodging.facilities')->label(__('Facilități'))->options(self::LODGING_FACILITIES)->columns(4),
                                         Forms\Components\Placeholder::make('custom_lodging_facilities')
-                                            ->label('Adăugate de operator')
+                                            ->label(__('Adăugate de operator'))
                                             ->content(fn ($record) => $record && self::customFacilities($record, 'lodging')
                                                 ? implode(' · ', self::customFacilities($record, 'lodging'))
                                                 : '—')
                                             ->visible(fn ($record) => $record && self::customFacilities($record, 'lodging')),
-                                        Forms\Components\Repeater::make('lodging.rooms')->label('Tipuri de camere')->schema([
-                                            Forms\Components\TextInput::make('name.ro')->label('Nume')->required()->maxLength(80)->placeholder('Cameră dublă'),
-                                            Forms\Components\TextInput::make('capacity')->label('Persoane')->numeric()->minValue(1)->maxValue(50),
-                                            Forms\Components\TextInput::make('beds')->label('Paturi')->maxLength(80)->placeholder('1 pat dublu'),
-                                            Forms\Components\TextInput::make('count')->label('Câte camere')->numeric()->minValue(1),
-                                            Forms\Components\TextInput::make('price_from')->label('De la (lei / noapte)')->numeric()->minValue(0),
-                                            Forms\Components\Textarea::make('description.ro')->label('Descriere')->rows(2)->columnSpan(3),
-                                            Forms\Components\CheckboxList::make('facilities')->label('Facilități cameră')->options(self::LODGING_FACILITIES)->columns(4)->columnSpanFull(),
-                                            Forms\Components\FileUpload::make('images')->label('Poze')->image()->multiple()->maxFiles(8)->disk('public')->directory('activity-locations/rooms')->maxSize(10240)->columnSpanFull(),
-                                        ])->columns(4)->collapsible()->addActionLabel('Adaugă tip de cameră'),
-                                        Forms\Components\Repeater::make('lodging.links')->label('Unde se rezervă')->schema([
-                                            Forms\Components\Select::make('platform')->label('Platformă')->options([
-                                                'booking' => 'Booking.com', 'airbnb' => 'Airbnb', 'travelminit' => 'Travelminit', 'website' => 'Site propriu', 'other' => 'Altă platformă',
+                                        Forms\Components\Repeater::make('lodging.rooms')->label(__('Tipuri de camere'))->schema([
+                                            Forms\Components\TextInput::make('name.ro')->label(__('Nume'))->required()->maxLength(80)->placeholder(__('Cameră dublă')),
+                                            Forms\Components\TextInput::make('capacity')->label(__('Persoane'))->numeric()->minValue(1)->maxValue(50),
+                                            Forms\Components\TextInput::make('beds')->label(__('Paturi'))->maxLength(80)->placeholder(__('1 pat dublu')),
+                                            Forms\Components\TextInput::make('count')->label(__('Câte camere'))->numeric()->minValue(1),
+                                            Forms\Components\TextInput::make('price_from')->label(__('De la (lei / noapte)'))->numeric()->minValue(0),
+                                            Forms\Components\Textarea::make('description.ro')->label(__('Descriere'))->rows(2)->columnSpan(3),
+                                            Forms\Components\CheckboxList::make('facilities')->label(__('Facilități cameră'))->options(self::LODGING_FACILITIES)->columns(4)->columnSpanFull(),
+                                            Forms\Components\FileUpload::make('images')->label(__('Poze'))->image()->multiple()->maxFiles(8)->disk('public')->directory('activity-locations/rooms')->maxSize(10240)->columnSpanFull(),
+                                        ])->columns(4)->collapsible()->addActionLabel(__('Adaugă tip de cameră')),
+                                        Forms\Components\Repeater::make('lodging.links')->label(__('Unde se rezervă'))->schema([
+                                            Forms\Components\Select::make('platform')->label(__('Platformă'))->options([
+                                                'booking' => __('Booking.com'), 'airbnb' => __('Airbnb'), 'travelminit' => __('Travelminit'), 'website' => __('Site propriu'), 'other' => __('Altă platformă'),
                                             ])->required(),
-                                            Forms\Components\TextInput::make('url')->label('Link')->url()->required()->maxLength(1000)->columnSpan(2),
-                                            Forms\Components\TextInput::make('label')->label('Text buton (opțional)')->maxLength(60),
-                                        ])->columns(4)->addActionLabel('Adaugă link'),
-                                        Forms\Components\FileUpload::make('lodging.gallery')->label('Poze cazare')->image()->multiple()->reorderable()->maxFiles(20)->disk('public')->directory('activity-locations/lodging')->maxSize(10240),
+                                            Forms\Components\TextInput::make('url')->label(__('Link'))->url()->required()->maxLength(1000)->columnSpan(2),
+                                            Forms\Components\TextInput::make('label')->label(__('Text buton (opțional)'))->maxLength(60),
+                                        ])->columns(4)->addActionLabel(__('Adaugă link')),
+                                        Forms\Components\FileUpload::make('lodging.gallery')->label(__('Poze cazare'))->image()->multiple()->reorderable()->maxFiles(20)->disk('public')->directory('activity-locations/lodging')->maxSize(10240),
                                     ]),
                                 ]),
                         ]),
 
                         SC\Tabs\Tab::make('SEO & FAQ')->icon('heroicon-o-magnifying-glass')->schema([
-                            SC\Section::make('SEO')->schema([
-                                Forms\Components\TextInput::make('seo.title_ro')->label('Titlu SEO')->maxLength(70),
-                                Forms\Components\Textarea::make('seo.description_ro')->label('Descriere SEO')->rows(2)->maxLength(160),
+                            SC\Section::make(__('SEO'))->schema([
+                                Forms\Components\TextInput::make('seo.title_ro')->label(__('Titlu SEO'))->maxLength(70),
+                                Forms\Components\Textarea::make('seo.description_ro')->label(__('Descriere SEO'))->rows(2)->maxLength(160),
                             ]),
-                            SC\Section::make('Întrebări frecvente')->schema([
+                            SC\Section::make(__('Întrebări frecvente'))->schema([
                                 Forms\Components\Repeater::make('faqs')->label(false)->schema([
-                                    Forms\Components\TextInput::make('q')->label('Întrebare')->required()->maxLength(200),
-                                    Forms\Components\Textarea::make('a')->label('Răspuns')->required()->rows(3),
-                                ])->collapsible()->addActionLabel('Adaugă întrebare'),
+                                    Forms\Components\TextInput::make('q')->label(__('Întrebare'))->required()->maxLength(200),
+                                    Forms\Components\Textarea::make('a')->label(__('Răspuns'))->required()->rows(3),
+                                ])->collapsible()->addActionLabel(__('Adaugă întrebare')),
                             ]),
                         ]),
                     ]),
                 ]),
 
                 SC\Group::make()->columnSpan(1)->schema([
-                    SC\Section::make('Publicare')->schema([
+                    SC\Section::make(__('Publicare'))->schema([
                         Forms\Components\Select::make('review_status')
-                            ->label('Stare')
-                            ->options(['draft' => 'Ciornă', 'pending' => 'Trimisă spre aprobare', 'approved' => 'Aprobată', 'rejected' => 'Respinsă'])
+                            ->label(__('Stare'))
+                            ->options(['draft' => __('Ciornă'), 'pending' => __('Trimisă spre aprobare'), 'approved' => __('Aprobată'), 'rejected' => __('Respinsă')])
                             ->default('approved')
                             ->required()
                             ->live(),
                         Forms\Components\Textarea::make('rejection_reason')
-                            ->label('Motivul respingerii (îl vede operatorul)')
+                            ->label(__('Motivul respingerii (îl vede operatorul)'))
                             ->rows(3)
                             ->visible(fn (Get $get) => $get('review_status') === 'rejected'),
                         Forms\Components\Toggle::make('is_published')
-                            ->label('Publicată pe site')
-                            ->helperText('Apare pe site doar aprobată și publicată.'),
+                            ->label(__('Publicată pe site'))
+                            ->helperText(__('Apare pe site doar aprobată și publicată.')),
                     ]),
                 ]),
             ]),
@@ -331,20 +331,20 @@ class ActivityLocationResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Locație')
+                    ->label(__('Locație'))
                     ->formatStateUsing(fn ($state, $record) => $record->name['ro'] ?? $record->slug)
                     ->description(fn ($record) => '/locatie/' . $record->slug),
-                Tables\Columns\TextColumn::make('organizer.name')->label('Operator')->placeholder('—'),
-                Tables\Columns\TextColumn::make('products_count')->label('Produse')->counts('products'),
-                Tables\Columns\TextColumn::make('review_status')->label('Stare')->badge()
+                Tables\Columns\TextColumn::make('organizer.name')->label(__('Operator'))->placeholder('—'),
+                Tables\Columns\TextColumn::make('products_count')->label(__('Produse'))->counts('products'),
+                Tables\Columns\TextColumn::make('review_status')->label(__('Stare'))->badge()
                     ->formatStateUsing(fn ($state) => ['draft' => 'Ciornă', 'pending' => 'De aprobat', 'approved' => 'Aprobată', 'rejected' => 'Respinsă'][$state] ?? $state)
                     ->color(fn ($state) => ['pending' => 'warning', 'approved' => 'success', 'rejected' => 'danger'][$state] ?? 'gray'),
-                Tables\Columns\IconColumn::make('is_published')->label('Publicată')->boolean(),
-                Tables\Columns\TextColumn::make('updated_at')->label('Modificată')->since(),
+                Tables\Columns\IconColumn::make('is_published')->label(__('Publicată'))->boolean(),
+                Tables\Columns\TextColumn::make('updated_at')->label(__('Modificată'))->since(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('review_status')->label('Stare')
-                    ->options(['draft' => 'Ciornă', 'pending' => 'De aprobat', 'approved' => 'Aprobată', 'rejected' => 'Respinsă']),
+                Tables\Filters\SelectFilter::make('review_status')->label(__('Stare'))
+                    ->options(['draft' => __('Ciornă'), 'pending' => __('De aprobat'), 'approved' => __('Aprobată'), 'rejected' => __('Respinsă')]),
             ])
             ->recordActions([EditAction::make()])
             ->defaultSort('updated_at', 'desc');

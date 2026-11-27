@@ -57,14 +57,14 @@ class CountyResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('County Details')
+                SC\Section::make(__('County Details'))
                     ->schema([
                         SC\Tabs::make('Name Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.ro')
-                                            ->label('Nume județ (RO)')
+                                            ->label(__('Nume județ (RO)'))
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
@@ -77,26 +77,26 @@ class CountyResource extends Resource
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.en')
-                                            ->label('County name (EN)')
+                                            ->label(__('County name (EN)'))
                                             ->maxLength(190),
                                     ]),
                             ])->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
+                            ->label(__('Slug'))
                             ->required()
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
                         Forms\Components\TextInput::make('code')
-                            ->label('County Code')
+                            ->label(__('County Code'))
                             ->required()
                             ->maxLength(2)
-                            ->placeholder('CJ')
-                            ->helperText('2-letter county code (e.g., CJ for Cluj)'),
+                            ->placeholder(__('CJ'))
+                            ->helperText(__('2-letter county code (e.g., CJ for Cluj)')),
 
                         Forms\Components\Select::make('region_id')
-                            ->label('Region')
+                            ->label(__('Region'))
                             ->options(function () {
                                 $marketplace = static::getMarketplaceClient();
                                 $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
@@ -107,41 +107,41 @@ class CountyResource extends Resource
                             })
                             ->searchable()
                             ->required()
-                            ->placeholder('Select a region'),
+                            ->placeholder(__('Select a region')),
 
                         Forms\Components\TextInput::make('sort_order')
-                            ->label('Sort Order')
+                            ->label(__('Sort Order'))
                             ->numeric()
                             ->default(0),
                     ])->columns(2),
 
-                SC\Section::make('Appearance')
+                SC\Section::make(__('Appearance'))
                     ->collapsed()
                     ->schema([
                         Forms\Components\FileUpload::make('image_url')
-                            ->label('Image')
+                            ->label(__('Image'))
                             ->image()
                             ->disk('public')
                             ->directory('counties')
                             ->visibility('public'),
 
                         Forms\Components\TextInput::make('icon')
-                            ->label('Icon')
+                            ->label(__('Icon'))
                             ->placeholder('heroicon-o-map')
                             ->maxLength(100),
 
                         Forms\Components\ColorPicker::make('color')
-                            ->label('Color'),
+                            ->label(__('Color')),
 
                         Forms\Components\Toggle::make('is_visible')
-                            ->label('Visible')
+                            ->label(__('Visible'))
                             ->default(true),
 
                         Forms\Components\Toggle::make('is_featured')
-                            ->label('Featured'),
+                            ->label(__('Featured')),
                     ])->columns(3),
 
-                SC\Section::make('Description')
+                SC\Section::make(__('Description'))
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
@@ -149,13 +149,13 @@ class CountyResource extends Resource
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.ro')
-                                            ->label('Descriere (RO)')
+                                            ->label(__('Descriere (RO)'))
                                             ->rows(3),
                                     ]),
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\Textarea::make('description.en')
-                                            ->label('Description (EN)')
+                                            ->label(__('Description (EN)'))
                                             ->rows(3),
                                     ]),
                             ])->columnSpanFull(),
@@ -171,18 +171,18 @@ class CountyResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Code')
+                    ->label(__('Code'))
                     ->searchable()
                     ->sortable()
                     ->badge(),
 
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
-                    ->label('Name')
+                    ->label(__('Name'))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('region.name')
-                    ->label('Region')
+                    ->label(__('Region'))
                     ->getStateUsing(function ($record) use ($marketplaceLanguage) {
                         $name = $record->region?->name;
                         if (is_array($name)) {
@@ -195,30 +195,30 @@ class CountyResource extends Resource
                 // the persisted column gets stale whenever cities are
                 // added/removed outside the seed scripts.
                 Tables\Columns\TextColumn::make('city_count')
-                    ->label('Orașe')
+                    ->label(__('Orașe'))
                     ->getStateUsing(fn ($record) => \App\Models\MarketplaceCity::query()
                         ->where('county_id', $record->id)
                         ->count())
                     ->sortable(),
 
                 Tables\Columns\ColorColumn::make('color')
-                    ->label('Color'),
+                    ->label(__('Color')),
 
                 Tables\Columns\IconColumn::make('is_visible')
-                    ->label('Visible')
+                    ->label(__('Visible'))
                     ->boolean(),
 
                 Tables\Columns\IconColumn::make('is_featured')
-                    ->label('Featured')
+                    ->label(__('Featured'))
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('sort_order')
-                    ->label('Order')
+                    ->label(__('Order'))
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('region_id')
-                    ->label('Region')
+                    ->label(__('Region'))
                     ->options(function () {
                         $marketplace = static::getMarketplaceClient();
                         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
@@ -228,9 +228,9 @@ class CountyResource extends Resource
                             ->mapWithKeys(fn ($r) => [$r->id => $r->name[$lang] ?? $r->name['ro'] ?? 'Unnamed']);
                     }),
                 Tables\Filters\TernaryFilter::make('is_visible')
-                    ->label('Visible'),
+                    ->label(__('Visible')),
                 Tables\Filters\TernaryFilter::make('is_featured')
-                    ->label('Featured'),
+                    ->label(__('Featured')),
             ])
             ->recordActions([
                 EditAction::make(),
