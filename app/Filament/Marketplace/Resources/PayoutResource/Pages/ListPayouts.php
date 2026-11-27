@@ -25,13 +25,18 @@ use Illuminate\Support\HtmlString;
 class ListPayouts extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasListChrome;
 
     protected static string $resource = PayoutResource::class;
 
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     public function getHeading(): string|Htmlable
     {
-        $count = number_format(static::getResource()::getEloquentQuery()->count());
-        return new HtmlString("Deconturi <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+        return $this->listHeading(__('Deconturi'));
     }
 
     public function mount(): void
@@ -1849,40 +1854,25 @@ class ListPayouts extends ListRecords
         return $html;
     }
 
-    public function getTabsContentComponent(): Component
-    {
-        return parent::getTabsContentComponent()
-            ->extraAttributes([
-                'x-data' => '{}',
-                'x-init' => "\$nextTick(() => {
-                    const toolbar = document.querySelector('.fi-ta-header-toolbar');
-                    if (!toolbar) return;
-                    const nav = \$el.querySelector('.fi-tabs');
-                    if (!nav) return;
-                    nav.style.order = '-1';
-                    toolbar.prepend(nav);
-                })",
-            ]);
-    }
 
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('All')
+            'all' => Tab::make(__('Toate'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->count()),
-            'pending' => Tab::make('Pending')
+            'pending' => Tab::make(__('În așteptare'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'pending')->count())
                 ->badgeColor('warning'),
-            'approved' => Tab::make('Approved')
+            'approved' => Tab::make(__('Aprobate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'approved'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'approved')->count())
                 ->badgeColor('info'),
-            'processing' => Tab::make('Processing')
+            'processing' => Tab::make(__('În procesare'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'processing'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'processing')->count())
                 ->badgeColor('primary'),
-            'completed' => Tab::make('Completed')
+            'completed' => Tab::make(__('Finalizate'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'completed'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'completed')->count())
                 ->badgeColor('success'),

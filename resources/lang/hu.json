@@ -7744,5 +7744,16 @@
     "Hartă de locuri": "Ülésrend",
     "Modificări de aprobat": "Jóváhagyandó módosítások",
     "Organizatorul a trimis modificări care așteaptă aprobarea.": "A szervező jóváhagyásra váró módosításokat küldött.",
-    "Rezultate": "Találatok"
+    "Rezultate": "Találatok",
+    "Artist nou": "Új előadó",
+    "Hartă nouă": "Új térkép",
+    "Hartă eveniment nouă": "Új esemény térkép",
+    "Organizator nou": "Új szervező",
+    "Tip persoană": "Személy típusa",
+    "Import / Export": "Import / Export",
+    "Activi": "Aktív",
+    "Suspendați": "Felfüggesztett",
+    "Persoană fizică": "Magánszemély",
+    "Persoană juridică": "Jogi személy",
+    "Aprobate": "Jóváhagyott"
 }

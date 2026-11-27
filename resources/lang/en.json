@@ -4364,5 +4364,17 @@
     "Total": "Total",
     "Modificări de aprobat": "Changes to approve",
     "Organizatorul a trimis modificări care așteaptă aprobarea.": "The organizer sent changes that are waiting for approval.",
-    "Rezultate": "Results"
+    "Rezultate": "Results",
+    "Artist nou": "New artist",
+    "Hartă nouă": "New map",
+    "Hartă eveniment nouă": "New event map",
+    "Organizator nou": "New organizer",
+    "Tip persoană": "Person type",
+    "Import / Export": "Import / Export",
+    "Activi": "Active",
+    "Suspendați": "Suspended",
+    "Persoană fizică": "Individual",
+    "Persoană juridică": "Company",
+    "Aprobate": "Approved",
+    "Active": "Active"
 }

@@ -12,10 +12,21 @@ use Filament\Resources\Pages\ListRecords;
 class ListOrganizerInvoices extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasListChrome;
 
     use HasMarketplaceContext;
 
     protected static string $resource = OrganizerInvoiceResource::class;
+
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return $this->listHeading(__('Facturi'));
+    }
 
     protected function getHeaderActions(): array
     {

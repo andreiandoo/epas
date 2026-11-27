@@ -18,29 +18,29 @@ use Illuminate\Support\HtmlString;
 class ListOrganizers extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasListChrome;
 
     protected static string $resource = OrganizerResource::class;
 
-    public function getHeading(): string|Htmlable
+    public function getBreadcrumbs(): array
     {
-        $count = number_format(static::getResource()::getEloquentQuery()->count());
-        return new HtmlString("Organizatori <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+        return [];
     }
 
-    public function getTabsContentComponent(): Component
+    public function getHeading(): string|Htmlable
     {
-        return parent::getTabsContentComponent()
-            ->extraAttributes([
-                'x-data' => '{}',
-                'x-init' => "\$nextTick(() => {
-                    const toolbar = document.querySelector('.fi-ta-header-toolbar');
-                    if (!toolbar) return;
-                    const nav = \$el.querySelector('.fi-tabs');
-                    if (!nav) return;
-                    toolbar.prepend(nav);
-                    nav.style.order = '-1';
-                })",
-            ]);
+        return $this->listHeading(__('Organizatori'));
+    }
+
+    /** Person-type views are grouped in one dropdown next to the status views. */
+    protected function listTodoTabKeys(): array
+    {
+        return ['pf', 'pj', 'unset'];
+    }
+
+    protected function listTodoTabsLabel(): string
+    {
+        return __('Tip persoană');
     }
 
     protected function getHeaderActions(): array
@@ -52,8 +52,8 @@ class ListOrganizers extends ListRecords
                 ->color('gray')
                 ->url(\App\Filament\Marketplace\Pages\OrganizerReports::getUrl()),
 
-            Actions\CreateAction::make(),
-
+            // CSV template, import and export share one menu; create stays the main button.
+            Actions\ActionGroup::make([
             Actions\Action::make('download_template')
                 ->label(__('Model CSV'))
                 ->icon('heroicon-o-document-arrow-down')
@@ -226,6 +226,16 @@ class ListOrganizers extends ListRecords
                         fclose($out);
                     }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
                 }),
+            ])
+                ->label(__('Import / Export'))
+                ->icon('heroicon-m-chevron-down')
+                ->iconPosition(\Filament\Support\Enums\IconPosition::After)
+                ->color('gray')
+                ->button(),
+
+            Actions\CreateAction::make()
+                ->label(__('Organizator nou'))
+                ->icon('heroicon-m-plus'),
         ];
     }
 
@@ -319,30 +329,30 @@ class ListOrganizers extends ListRecords
         $base = fn () => $this->getResource()::getEloquentQuery();
 
         return [
-            'all' => Tab::make('All')
+            'all' => Tab::make(__('Toate'))
                 ->badge(fn () => $base()->count())
                 ->badgeColor('gray'),
-            'pending' => Tab::make('Pending')
+            'pending' => Tab::make(__('În așteptare'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
                 ->badge(fn () => $base()->where('status', 'pending')->count())
                 ->badgeColor('warning'),
-            'active' => Tab::make('Active')
+            'active' => Tab::make(__('Activi'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'active'))
                 ->badge(fn () => $base()->where('status', 'active')->count())
                 ->badgeColor('success'),
-            'suspended' => Tab::make('Suspended')
+            'suspended' => Tab::make(__('Suspendați'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'suspended'))
                 ->badge(fn () => $base()->where('status', 'suspended')->count())
                 ->badgeColor('danger'),
-            'pf' => Tab::make('Persoană Fizică')
+            'pf' => Tab::make(__('Persoană fizică'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('person_type', 'pf'))
                 ->badge(fn () => $base()->where('person_type', 'pf')->count())
                 ->badgeColor('info'),
-            'pj' => Tab::make('Persoană Juridică')
+            'pj' => Tab::make(__('Persoană juridică'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('person_type', 'pj'))
                 ->badge(fn () => $base()->where('person_type', 'pj')->count())
                 ->badgeColor('success'),
-            'unset' => Tab::make('Nesetat')
+            'unset' => Tab::make(__('Nesetat'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('person_type'))
                 ->badge(fn () => $base()->whereNull('person_type')->count())
                 ->badgeColor('gray'),

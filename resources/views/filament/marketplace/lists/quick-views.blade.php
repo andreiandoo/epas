@@ -28,7 +28,7 @@
         <div class="ep-todo" x-data="{ open: false }" x-on:keydown.escape.window="open = false" x-on:click.outside="open = false">
             <button type="button" class="ep-view{{ $todoActive ? ' on' : '' }}" aria-haspopup="menu"
                     x-bind:aria-expanded="open" x-on:click="open = ! open">
-                {{ __('De completat') }}<span class="n">▾</span>
+                {{ $todoLabel ?? __('De completat') }}<span class="n">▾</span>
             </button>
             <div class="ep-menu" role="menu" x-show="open" x-cloak>
                 @foreach ($todo as $key => $tab)

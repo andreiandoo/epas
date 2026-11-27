@@ -14,13 +14,18 @@ use Illuminate\Support\HtmlString;
 class ListServiceOrders extends ListRecords
 {
     use \App\Filament\Marketplace\Concerns\TranslatesPageLabels;
+    use \App\Filament\Marketplace\Concerns\HasListChrome;
 
     protected static string $resource = ServiceOrderResource::class;
 
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     public function getHeading(): string|Htmlable
     {
-        $count = number_format(static::getResource()::getEloquentQuery()->count());
-        return new HtmlString("Comenzi servicii <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+        return $this->listHeading(__('Comenzi servicii'));
     }
 
     protected function getHeaderActions(): array
@@ -28,38 +33,25 @@ class ListServiceOrders extends ListRecords
         return [];
     }
 
-    public function getTabsContentComponent(): Component
-    {
-        return parent::getTabsContentComponent()
-            ->extraAttributes([
-                'x-data' => '{}',
-                'x-init' => "\$nextTick(() => {
-                    const toolbar = document.querySelector('.fi-ta-header-toolbar');
-                    if (!toolbar) return;
-                    const nav = \$el.querySelector('.fi-tabs');
-                    if (!nav) return;
-                    nav.style.order = '-1';
-                    toolbar.prepend(nav);
-                })",
-            ]);
-    }
-
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('All'),
-            'pending_payment' => Tab::make('Pending Payment')
+            'all' => Tab::make(__('Toate'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->count()),
+            'pending_payment' => Tab::make(__('Așteaptă plata'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', ServiceOrder::STATUS_PENDING_PAYMENT))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', ServiceOrder::STATUS_PENDING_PAYMENT)->count())
                 ->badgeColor('warning'),
-            'processing' => Tab::make('Processing')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', ServiceOrder::STATUS_PROCESSING)),
-            'active' => Tab::make('Active')
+            'processing' => Tab::make(__('În procesare'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', ServiceOrder::STATUS_PROCESSING))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', ServiceOrder::STATUS_PROCESSING)->count()),
+            'active' => Tab::make(__('Active'))
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', ServiceOrder::STATUS_ACTIVE))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', ServiceOrder::STATUS_ACTIVE)->count())
                 ->badgeColor('success'),
-            'completed' => Tab::make('Completed')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', ServiceOrder::STATUS_COMPLETED)),
+            'completed' => Tab::make(__('Finalizate'))
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', ServiceOrder::STATUS_COMPLETED))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', ServiceOrder::STATUS_COMPLETED)->count()),
         ];
     }
 }

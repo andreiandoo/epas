@@ -30,6 +30,20 @@ trait HasListChrome
         return [];
     }
 
+    /** Label of the dropdown that groups listTodoTabKeys() (e.g. "De completat", "Tip persoană"). */
+    protected function listTodoTabsLabel(): string
+    {
+        return __('De completat');
+    }
+
+    /** Page title + record count, the same on every redesigned list. */
+    protected function listHeading(string $label): \Illuminate\Support\HtmlString
+    {
+        $count = number_format(static::getResource()::getEloquentQuery()->count(), 0, ',', '.');
+
+        return new \Illuminate\Support\HtmlString(e($label) . ' <span class="ep-lst-count">' . $count . '</span>');
+    }
+
     /**
      * Livewire apeleaza metoda la fiecare cerere: pastilele sunt randate de server in
      * bara tabelului, deci raman la locul lor dupa fiecare actualizare.
@@ -42,6 +56,7 @@ trait HasListChrome
                 'tabs' => $this->getCachedTabs(),
                 'activeTab' => $this->activeTab ?? $this->getDefaultActiveTab(),
                 'todoKeys' => $this->listTodoTabKeys(),
+                'todoLabel' => $this->listTodoTabsLabel(),
             ])->render(),
             scopes: static::class,
         );
