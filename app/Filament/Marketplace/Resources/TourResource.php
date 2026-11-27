@@ -291,10 +291,10 @@ class TourResource extends Resource
                         ->schema([
                             Forms\Components\Placeholder::make('created_at')
                                 ->label(__('Creat la'))
-                                ->content(fn ($record) => $record?->created_at?->format('d.m.Y H:i') ?? '—'),
+                                ->content(fn ($record) => \App\Support\MarketplaceTz::fmt($record?->created_at, 'd.m.Y H:i', fallback: '—')),
                             Forms\Components\Placeholder::make('updated_at')
                                 ->label(__('Actualizat la'))
-                                ->content(fn ($record) => $record?->updated_at?->format('d.m.Y H:i') ?? '—'),
+                                ->content(fn ($record) => \App\Support\MarketplaceTz::fmt($record?->updated_at, 'd.m.Y H:i', fallback: '—')),
                         ]),
                 ]),
             ]),

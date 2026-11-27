@@ -735,7 +735,7 @@ class ArtistResource extends Resource
                                 ->content(function (?Artist $record) {
                                     if (!$record) return '';
 
-                                    $createdAt = $record->created_at->format('d M Y');
+                                    $createdAt = \App\Support\MarketplaceTz::fmt($record->created_at, 'd M Y', fallback: '');
                                     $updatedAt = $record->updated_at->diffForHumans();
 
                                     return new \Illuminate\Support\HtmlString("

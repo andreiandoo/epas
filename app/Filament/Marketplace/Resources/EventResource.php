@@ -5994,7 +5994,7 @@ class EventResource extends Resource
                                                     </div>
                                                     <div>
                                                         <div class='text-gray-300'>{$createdLabel}</div>
-                                                        <div class='text-xs text-gray-500'>" . $record->created_at->format('d M Y, H:i') . "</div>
+                                                        <div class='text-xs text-gray-500'>" . \App\Support\MarketplaceTz::fmt($record->created_at, 'd M Y, H:i', fallback: '') . "</div>
                                                     </div>
                                                 </div>
                                             ";

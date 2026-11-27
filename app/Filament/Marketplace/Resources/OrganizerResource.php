@@ -2333,7 +2333,7 @@ class OrganizerResource extends Resource
     {
         if (!$record) return new HtmlString('');
 
-        $createdAt = $record->created_at->format('M d, Y');
+        $createdAt = \App\Support\MarketplaceTz::fmt($record->created_at, 'M d, Y', fallback: '');
         $updatedAt = $record->updated_at->diffForHumans();
 
         return new HtmlString("

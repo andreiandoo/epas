@@ -223,11 +223,11 @@ class ShopOrderResource extends Resource
                     ->schema([
                         Forms\Components\Placeholder::make('created_at')
                             ->label(__('Created'))
-                            ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
+                            ->content(fn ($record) => \App\Support\MarketplaceTz::fmt($record->created_at, 'd M Y H:i', fallback: '')),
 
                         Forms\Components\Placeholder::make('paid_at')
                             ->label(__('Paid'))
-                            ->content(fn ($record) => $record->paid_at?->format('d M Y H:i') ?? '-'),
+                            ->content(fn ($record) => \App\Support\MarketplaceTz::fmt($record->paid_at, 'd M Y H:i', fallback: '-')),
 
                         Forms\Components\Placeholder::make('shipped_at')
                             ->label(__('Shipped'))

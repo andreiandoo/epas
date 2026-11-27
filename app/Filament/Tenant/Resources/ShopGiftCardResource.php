@@ -146,7 +146,7 @@ class ShopGiftCardResource extends Resource
                         Forms\Components\Placeholder::make('sent_status')
                             ->label(__('Email Sent'))
                             ->content(fn ($record) => $record->is_sent
-                                ? 'Yes (' . $record->sent_at?->format('d M Y H:i') . ')'
+                                ? 'Yes (' . \App\Support\TenantTz::fmt($record->sent_at, 'd M Y H:i', fallback: '') . ')'
                                 : 'No'),
                     ]),
 
@@ -163,7 +163,7 @@ class ShopGiftCardResource extends Resource
 
                         Forms\Components\Placeholder::make('created_at')
                             ->label('Created')
-                            ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
+                            ->content(fn ($record) => \App\Support\TenantTz::fmt($record->created_at, 'd M Y H:i', fallback: '')),
                     ]),
 
                 SC\Section::make(__('Transaction History'))
@@ -185,7 +185,7 @@ class ShopGiftCardResource extends Resource
                                     $html .= '<div class="flex justify-between items-center p-2 bg-gray-50 rounded">';
                                     $html .= '<div>';
                                     $html .= '<span class="font-medium">' . ucfirst($tx->type) . '</span>';
-                                    $html .= '<span class="text-gray-500 text-sm ml-2">' . $tx->created_at->format('d M Y H:i') . '</span>';
+                                    $html .= '<span class="text-gray-500 text-sm ml-2">' . \App\Support\TenantTz::fmt($tx->created_at, 'd M Y H:i', fallback: '') . '</span>';
                                     if ($tx->description) {
                                         $html .= '<br><span class="text-sm text-gray-600">' . $tx->description . '</span>';
                                     }

@@ -287,7 +287,7 @@ class GiftCardResource extends Resource
                                     $html .= '<div class="flex justify-between items-center p-3 bg-gray-50 rounded">';
                                     $html .= '<div>';
                                     $html .= '<span class="font-medium">' . $tx->type_label . '</span>';
-                                    $html .= '<span class="text-gray-500 text-sm ml-2">' . $tx->created_at->format('d M Y H:i') . '</span>';
+                                    $html .= '<span class="text-gray-500 text-sm ml-2">' . \App\Support\MarketplaceTz::fmt($tx->created_at, 'd M Y H:i', fallback: '') . '</span>';
                                     if ($tx->description) {
                                         $html .= '<br><span class="text-sm text-gray-600">' . e($tx->description) . '</span>';
                                     }

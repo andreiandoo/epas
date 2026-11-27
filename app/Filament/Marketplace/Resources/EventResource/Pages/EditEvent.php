@@ -1149,7 +1149,7 @@ class EditEvent extends EditRecord
                 ->where('event_id', $event->id)
                 ->whereIn('status', ['valid', 'pending'])
                 ->count();
-            $when = $o->created_at?->format('d M Y H:i') ?? '—';
+            $when = \App\Support\MarketplaceTz::fmt($o->created_at, 'd M Y H:i', fallback: '—');
             $total = number_format((float) $o->total, 2) . ' ' . ($o->currency ?? 'RON');
             $orderNumber = $o->order_number ?: ('#' . $o->id);
             return [
@@ -1655,7 +1655,7 @@ class EditEvent extends EditRecord
 
             return [
                 'id' => (int) $a->id,
-                'when' => $a->created_at?->format('d M Y H:i'),
+                'when' => \App\Support\MarketplaceTz::fmt($a->created_at, 'd M Y H:i', fallback: ''),
                 'causer_name' => $causerName,
                 'causer_email' => $causerEmail,
                 'action_label' => ($props['action_type'] ?? 'allocated') === 'reassigned' ? 'Reasignare' : 'Alocare nouă',

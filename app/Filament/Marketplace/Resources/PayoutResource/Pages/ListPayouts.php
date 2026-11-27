@@ -1824,7 +1824,7 @@ class ListPayouts extends ListRecords
                 };
                 $html .= '<div class="flex items-center justify-between text-xs py-0.5">';
                 $refLabel = $pp->reference ? '<span class="font-mono text-gray-400">' . e($pp->reference) . '</span> · ' : '';
-                $html .= '<span class="text-gray-500">' . $refLabel . $pp->created_at->format('d.m.Y') . ' ' . $statusBadge . '</span>';
+                $html .= '<span class="text-gray-500">' . $refLabel . \App\Support\MarketplaceTz::fmt($pp->created_at, 'd.m.Y', fallback: '') . ' ' . $statusBadge . '</span>';
                 $html .= '<span class="font-mono font-medium text-gray-700 dark:text-gray-300">' . number_format($pp->amount, 2) . ' RON</span>';
                 $html .= '</div>';
             }

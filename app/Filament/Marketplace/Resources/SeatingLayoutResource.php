@@ -412,7 +412,7 @@ class SeatingLayoutResource extends Resource
                             Forms\Components\Placeholder::make('created_info')
                                 ->label(__('Creat'))
                                 ->content(function ($record) {
-                                    $date = $record?->created_at?->format('d.m.Y H:i') ?? '-';
+                                    $date = \App\Support\MarketplaceTz::fmt($record?->created_at, 'd.m.Y H:i', fallback: '-');
                                     $user = $record?->creator?->name ?? '-';
                                     return "{$date} de {$user}";
                                 }),
@@ -420,7 +420,7 @@ class SeatingLayoutResource extends Resource
                             Forms\Components\Placeholder::make('updated_info')
                                 ->label(__('Actualizat'))
                                 ->content(function ($record) {
-                                    $date = $record?->updated_at?->format('d.m.Y H:i') ?? '-';
+                                    $date = \App\Support\MarketplaceTz::fmt($record?->updated_at, 'd.m.Y H:i', fallback: '-');
                                     $user = $record?->updater?->name ?? ($record?->creator?->name ?? '-');
                                     return "{$date} de {$user}";
                                 }),

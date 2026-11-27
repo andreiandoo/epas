@@ -73,7 +73,7 @@ class ContactMessagesRelationManager extends RelationManager
                         . '<p><strong>Nume:</strong> ' . e($record->first_name . ' ' . $record->last_name) . '</p>'
                         . '<p><strong>Email:</strong> ' . e($record->email) . '</p>'
                         . ($record->phone ? '<p><strong>Telefon:</strong> ' . e($record->phone) . '</p>' : '')
-                        . '<p><strong>Data:</strong> ' . $record->created_at->format('d.m.Y H:i') . '</p>'
+                        . '<p><strong>Data:</strong> ' . \App\Support\MarketplaceTz::fmt($record->created_at, 'd.m.Y H:i', fallback: '') . '</p>'
                         . '<hr style="margin:12px 0;border:none;border-top:1px solid #e5e7eb;">'
                         . '<div style="white-space:pre-wrap;background:#f9fafb;padding:12px;border-radius:8px;border:1px solid #e5e7eb;">' . e($record->message) . '</div>'
                         . '</div>'

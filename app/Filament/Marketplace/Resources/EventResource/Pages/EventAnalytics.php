@@ -309,7 +309,7 @@ class EventAnalytics extends Page implements HasForms
                 'include_comparison' => $schedule->include_comparison,
                 'is_active' => $schedule->is_active,
                 'next_send_at' => $schedule->next_send_at?->format('M d, Y H:i'),
-                'last_sent_at' => $schedule->last_sent_at?->format('M d, Y H:i'),
+                'last_sent_at' => \App\Support\MarketplaceTz::fmt($schedule->last_sent_at, 'M d, Y H:i', fallback: ''),
             ])
             ->toArray();
     }

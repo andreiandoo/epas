@@ -75,13 +75,13 @@ class OrderResource extends Resource
                             ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->total_cents / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON') . '</span>')),
                         Forms\Components\Placeholder::make('created_at')
                             ->label('Data comenzii')
-                            ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
+                            ->content(fn ($record) => \App\Support\TenantTz::fmt($record->created_at, 'd M Y H:i', fallback: '')),
                         Forms\Components\Placeholder::make('payment_method')
                             ->label('Metodă plată')
                             ->content(fn ($record) => $record->meta['payment_method'] ?? 'Card'),
                         Forms\Components\Placeholder::make('updated_at')
                             ->label('Ultima actualizare')
-                            ->content(fn ($record) => $record->updated_at?->format('d M Y H:i')),
+                            ->content(fn ($record) => \App\Support\TenantTz::fmt($record->updated_at, 'd M Y H:i', fallback: '')),
                     ]),
 
                 SC\Section::make('Detalii plată')

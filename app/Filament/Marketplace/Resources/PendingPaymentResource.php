@@ -523,7 +523,7 @@ class PendingPaymentResource extends Resource
         $html = '<div style="font-family:system-ui;background:#0f172a;color:#e2e8f0;font-size:14px;padding:16px;border-radius:10px;border:1px solid #1e293b;">';
 
         $payoutUrl = PayoutResource::getUrl('view', ['record' => $record->id]);
-        $payoutDate = $record->created_at?->format('d.m.Y');
+        $payoutDate = \App\Support\MarketplaceTz::fmt($record->created_at, 'd.m.Y', fallback: '');
         $html .= '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#172554;border:1px solid #1d4ed8;border-radius:8px;margin-bottom:12px;">'
             . '<div>'
             . '<div style="font-size:11px;color:#93c5fd;text-transform:uppercase;font-weight:600;letter-spacing:.04em;">Decont net</div>'
@@ -640,7 +640,7 @@ class PendingPaymentResource extends Resource
                 'rejected' => '#991b1b',
                 default => '#64748b',
             };
-            $date = $p->created_at?->format('d.m.Y');
+            $date = \App\Support\MarketplaceTz::fmt($p->created_at, 'd.m.Y', fallback: '');
             $html .= '<div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f1f5f9;">'
                 . '<div>'
                 . '<a href="' . e($url) . '" style="color:#0f766e;text-decoration:underline;font-weight:500;">' . e($p->reference) . '</a>'

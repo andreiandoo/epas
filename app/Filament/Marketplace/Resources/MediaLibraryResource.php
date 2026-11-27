@@ -209,7 +209,7 @@ class MediaLibraryResource extends Resource
                                             </div>
                                             <div style='display: flex; justify-content: space-between; padding: 8px 0;'>
                                                 <span style='color: #64748b;'>Încărcat</span>
-                                                <span style='color: #e2e8f0;'>" . ($record->created_at ? $record->created_at->format('d M Y H:i') : '-') . "</span>
+                                                <span style='color: #e2e8f0;'>" . ($record->created_at ? \App\Support\MarketplaceTz::fmt($record->created_at, 'd M Y H:i', fallback: '') : '-') . "</span>
                                             </div>
                                         </div>
                                     ");

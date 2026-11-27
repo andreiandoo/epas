@@ -844,8 +844,8 @@ class VenueResource extends Resource
                                 ->content(function (?Venue $record) {
                                     if (!$record) return '';
 
-                                    $createdAt = $record->created_at?->format('d.m.Y H:i') ?? '-';
-                                    $updatedAt = $record->updated_at?->format('d.m.Y H:i') ?? '-';
+                                    $createdAt = \App\Support\MarketplaceTz::fmt($record->created_at, 'd.m.Y H:i', fallback: '-');
+                                    $updatedAt = \App\Support\MarketplaceTz::fmt($record->updated_at, 'd.m.Y H:i', fallback: '-');
                                     $id = $record->id;
 
                                     return new HtmlString("

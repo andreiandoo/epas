@@ -109,7 +109,7 @@ class CustomerResource extends Resource
                                     $ok = in_array($o->status, ['paid', 'confirmed', 'completed'], true);
                                     $html .= '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;padding:8px 0;border-top:1px solid rgba(128,128,128,.25);">'
                                         . '<a href="' . e(url('/tenant/orders/' . $o->id)) . '" style="font-weight:600;color:#6366f1;">#' . str_pad((string) $o->id, 6, '0', STR_PAD_LEFT) . '</a>'
-                                        . '<span>' . e($o->created_at?->format('d.m.Y H:i')) . '</span>'
+                                        . '<span>' . e(\App\Support\TenantTz::fmt($o->created_at, 'd.m.Y H:i', fallback: '')) . '</span>'
                                         . '<span>' . (int) $o->tickets_count . ' bilete</span>'
                                         . '<span style="padding:2px 9px;border-radius:9999px;font-size:12px;font-weight:600;' . ($ok ? 'background:#dcfce7;color:#166534;' : 'background:#e5e7eb;color:#374151;') . '">' . e($labels[$o->status] ?? $o->status) . '</span>'
                                         . '<span style="font-weight:600;">' . number_format(($o->total_cents ?? 0) / 100, 2, ',', '.') . ' RON</span>'

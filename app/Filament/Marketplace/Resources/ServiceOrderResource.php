@@ -173,7 +173,7 @@ class ServiceOrderResource extends Resource
                         Forms\Components\Placeholder::make('created_display')
                             ->label(__('Created At'))
                             ->content(fn (?ServiceOrder $record): string =>
-                                $record?->created_at?->format('Y-m-d H:i') ?? '-'),
+                                \App\Support\MarketplaceTz::fmt($record?->created_at, 'Y-m-d H:i', fallback: '-')),
                     ])
                     ->columns(4),
 

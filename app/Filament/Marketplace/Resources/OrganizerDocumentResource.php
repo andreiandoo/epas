@@ -70,7 +70,7 @@ class OrganizerDocumentResource extends Resource
                                     default => '#6b7280',
                                 };
                                 $issuedAt = $record->issued_at?->format('d.m.Y H:i') ?? '-';
-                                $createdAt = $record->created_at?->format('d.m.Y H:i') ?? '-';
+                                $createdAt = \App\Support\MarketplaceTz::fmt($record->created_at, 'd.m.Y H:i', fallback: '-');
                                 $fileSize = $record->formatted_file_size ?? '-';
                                 $templateName = e($record->taxTemplate?->name ?? '-');
                                 $title = e($record->title ?? '-');
