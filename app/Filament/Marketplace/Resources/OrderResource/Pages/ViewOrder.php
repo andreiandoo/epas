@@ -20,7 +20,50 @@ class ViewOrder extends ViewRecord
 
     protected static string $resource = OrderResource::class;
 
+    /**
+     * Header layout: the next-step refund actions (only when needed), resend,
+     * download and refund stay visible; everything else sits under "Mai multe".
+     */
     protected function getHeaderActions(): array
+    {
+        $visibleNames = ['retry_refund', 'complete_manual_refund', 'dismiss_external_refund_notice', 'refund_order'];
+        $visible = [];
+        $more = [];
+        foreach ($this->allHeaderActions() as $action) {
+            if ($action instanceof Actions\Action && in_array($action->getName(), $visibleNames, true)) {
+                $visible[] = $action;
+            } elseif ($action instanceof Actions\ActionGroup) {
+                // "Factură pe firmă" stays a labelled section inside the menu.
+                $more[] = $action->dropdown(false);
+            } else {
+                $more[] = $action;
+            }
+        }
+
+        return [
+            ...$visible,
+            Actions\Action::make('resend_confirmation')
+                ->label(__('Retrimite confirmarea'))
+                ->icon('heroicon-o-envelope')
+                ->color('gray')
+                ->visible(fn () => $this->record->source !== 'external_import' && $this->record->status !== 'expired')
+                ->action(fn () => OrderResource::resendConfirmation($this->record)),
+            Actions\Action::make('download_tickets')
+                ->label(__('Descarcă biletele'))
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->visible(fn () => $this->record->status !== 'expired')
+                ->action(fn () => OrderResource::downloadAllTicketsPdf($this->record)),
+            Actions\ActionGroup::make($more)
+                ->label(__('Mai multe'))
+                ->icon('heroicon-m-chevron-down')
+                ->iconPosition(\Filament\Support\Enums\IconPosition::After)
+                ->color('gray')
+                ->button(),
+        ];
+    }
+
+    protected function allHeaderActions(): array
     {
         return [
             Actions\Action::make('dispute_evidence_pdf')
@@ -959,7 +1002,73 @@ class ViewOrder extends ViewRecord
         return is_array($notice) ? $notice : null;
     }
 
+    public function getPageClasses(): array
+    {
+        return [...parent::getPageClasses(), 'ep-ord-page'];
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        return [OrderResource::getUrl('index') => __('Comenzi'), '#' . $this->record->id];
+    }
+
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        return __('Comanda') . ' #' . $this->record->id;
+    }
+
+    /** "Comanda #id" + order number + status pill. */
+    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        $o = $this->record;
+        [$label, $tone] = match ($o->status) {
+            'paid', 'confirmed', 'completed' => [__('Finalizată'), 'ok'],
+            'pending' => [__('În așteptare'), 'warn'],
+            'cancelled' => [__('Anulată'), 'bad'],
+            'refunded' => [__('Rambursată'), 'bad'],
+            'partially_refunded' => [__('Rambursată parțial'), 'warn'],
+            'expired' => [__('Expirată'), 'mute'],
+            'failed' => [__('Eșuată'), 'bad'],
+            default => [ucfirst((string) $o->status), 'mute'],
+        };
+
+        return new HtmlString(
+            e(__('Comanda')) . ' #' . e((string) $o->id)
+            . ($o->order_number ? ' <span class="ep-ord-no">' . e($o->order_number) . '</span>' : '')
+            . ' <span class="ep-ord-pill ep-ord-pill--' . $tone . '"><i></i>' . e($label) . '</span>'
+        );
+    }
+
+    /** date | customer | tickets | total | payment | updated */
+    protected function metaLine(): string
+    {
+        $o = $this->record;
+        $client = $o->marketplaceClient;
+        $parts = [e(\App\Support\MarketplaceTz::fmt($o->created_at, 'd.m.Y, H:i', $client))];
+        $name = $o->customer_name ?? ($o->meta['customer_name'] ?? null) ?? $o->marketplaceCustomer?->name;
+        if ($name) {
+            $parts[] = $o->marketplace_customer_id
+                ? '<a href="' . e(\App\Filament\Marketplace\Resources\MarketplaceCustomerResource::getUrl('edit', ['record' => $o->marketplace_customer_id])) . '">' . e($name) . '</a>'
+                : e($name);
+        }
+        $count = $o->tickets->count();
+        $parts[] = e($count . ' ' . ($count === 1 ? __('bilet') : __('bilete')));
+        $parts[] = e(number_format((float) $o->total, 2, ',', '.') . ' ' . ($o->currency ?? 'RON'));
+        if ($o->payment_processor) {
+            $parts[] = e(ucfirst((string) $o->payment_processor));
+        }
+        $parts[] = e(__('actualizată') . ' ' . \App\Support\MarketplaceTz::fmt($o->updated_at, 'd.m.Y H:i', $client));
+
+        return '<div class="ep-ord-meta">' . implode(' <span class="ep-ord-sep">|</span> ', $parts) . '</div>';
+    }
+
     public function getSubheading(): string|\Illuminate\Contracts\Support\Htmlable|null
+    {
+        return new HtmlString($this->metaLine() . (string) ($this->refundCallout() ?? ''));
+    }
+
+    /** The pending-refund / external-refund notices (unchanged content). */
+    protected function refundCallout(): string|\Illuminate\Contracts\Support\Htmlable|null
     {
         $refund = $this->pendingRefund();
         $notice = $this->externalRefundNotice();
@@ -981,7 +1090,7 @@ class ViewOrder extends ViewRecord
         }
 
         if (!$refund) {
-            return parent::getSubheading();
+            return null;
         }
 
         $amount = number_format((float) $refund->approved_amount, 2) . ' ' . ($refund->currency ?? 'RON');

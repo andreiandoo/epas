@@ -62,14 +62,14 @@ class OrderResource extends Resource
 
     public static function infolist(Schema $schema): Schema
     {
+        // Layout: tickets / event / customer on the left, money, payment and
+        // history on the right. The renderers are the same as before (timeline
+        // colours, every payment detail, per-ticket link + download). The old
+        // stats hero is folded into the page header; the "Acțiuni rapide" card
+        // moved to the header actions (ViewOrder).
         return $schema->components([
-            SC\Grid::make(4)->schema([
-                SC\Group::make()->columnSpan(3)->schema([
-                    // Hero Stats Card
-                    Forms\Components\Placeholder::make('order_hero')
-                        ->hiddenLabel()
-                        ->content(fn ($record) => self::renderOrderHero($record)),
-
+            SC\Grid::make(3)->schema([
+                SC\Group::make()->columnSpan(2)->schema([
                     // Refund Details (visible only if refunded)
                     SC\Section::make(__('Detalii rambursare'))
                         ->icon('heroicon-o-arrow-uturn-left')
@@ -80,53 +80,22 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderRefundDetails($record)),
                         ]),
 
-                    // Customer Section
-                    SC\Section::make(__('Client'))
-                        ->icon('heroicon-o-user')
+                    // Tickets: each row links to the ticket and has its own download button
+                    SC\Section::make(__('Bilete'))
+                        ->icon('heroicon-o-ticket')
+                        ->headerActions([
+                            Action::make('download_all')
+                                ->label(__('Descarcă toate'))
+                                ->icon('heroicon-o-arrow-down-tray')
+                                ->color('gray')
+                                ->size('sm')
+                                ->action(fn ($record) => static::downloadAllTicketsPdf($record)),
+                        ])
                         ->schema([
-                            Forms\Components\Placeholder::make('customer_card')
+                            Forms\Components\Placeholder::make('tickets_list')
                                 ->hiddenLabel()
-                                ->content(fn ($record) => self::renderCustomerCard($record)),
+                                ->content(fn ($record) => self::renderTicketsList($record)),
                         ]),
-
-                    // Beneficiaries (right after Customer)
-                    SC\Section::make(__('Beneficiari'))
-                        ->icon('heroicon-o-users')
-                        ->compact()
-                        ->collapsible()
-                        ->collapsed()
-                        ->visible(fn ($record) => !empty($record->meta['beneficiaries']) || $record->tickets->whereNotNull('beneficiary_name')->isNotEmpty())
-                        ->schema([
-                            Forms\Components\Placeholder::make('beneficiaries_top')
-                                ->hiddenLabel()
-                                ->content(fn ($record) => self::renderBeneficiaries($record)),
-                        ]),
-
-                    // Ticket transfer history (per-order roll-up of every
-                    // tickets.meta.transfers[] entry on the order's tickets,
-                    // sorted newest first). Visible only when at least one
-                    // ticket in the order has been transferred at least once.
-                    SC\Section::make(__('Istoric transferuri bilete'))
-                        ->icon('heroicon-o-arrow-path-rounded-square')
-                        ->compact()
-                        ->collapsible()
-                        ->collapsed()
-                        ->visible(fn ($record) => $record->tickets->contains(
-                            fn ($t) => !empty(($t->meta ?? [])['transfers'] ?? [])
-                        ))
-                        ->schema([
-                            Forms\Components\Placeholder::make('ticket_transfers_top')
-                                ->hiddenLabel()
-                                ->content(fn ($record) => self::renderTicketTransferHistory($record)),
-                        ]),
-
-                    // Event / Activity Section. Activity orders (created by
-                    // bilete.online's CheckoutController::processActivityCheckout)
-                    // have meta.order_type === 'activity' and no event_id /
-                    // marketplace_event_id — for those, the section's label
-                    // shifts to "Activitate" and the card body renders an
-                    // activity summary. For everything else the existing
-                    // event card is used.
                     SC\Section::make(fn ($record) => ($record?->meta['order_type'] ?? null) === 'activity'
                         ? 'Activitate'
                         : 'Eveniment')
@@ -145,27 +114,42 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderEventOrActivityCard($record)),
                         ]),
 
-                    // Tickets Section
-                    SC\Section::make(__('Bilete comandate'))
-                        ->icon('heroicon-o-ticket')
-                        ->headerActions([
-                            Action::make('download_all')
-                                ->label(__('Download toate'))
-                                ->icon('heroicon-o-arrow-down-tray')
-                                ->color('gray')
-                                ->size('sm')
-                                ->action(fn ($record) => static::downloadAllTicketsPdf($record)),
-                        ])
+                    SC\Section::make(__('Client'))
+                        ->icon('heroicon-o-user')
                         ->schema([
-                            Forms\Components\Placeholder::make('tickets_list')
+                            Forms\Components\Placeholder::make('customer_card')
                                 ->hiddenLabel()
-                                ->content(fn ($record) => self::renderTicketsList($record)),
+                                ->content(fn ($record) => self::renderCustomerCard($record)),
                         ]),
 
+                    SC\Section::make(__('Beneficiari'))
+                        ->icon('heroicon-o-users')
+                        ->compact()
+                        ->collapsible()
+                        ->collapsed()
+                        ->visible(fn ($record) => !empty($record->meta['beneficiaries']) || $record->tickets->whereNotNull('beneficiary_name')->isNotEmpty())
+                        ->schema([
+                            Forms\Components\Placeholder::make('beneficiaries_top')
+                                ->hiddenLabel()
+                                ->content(fn ($record) => self::renderBeneficiaries($record)),
+                        ]),
+
+                    SC\Section::make(__('Istoric transferuri bilete'))
+                        ->icon('heroicon-o-arrow-path-rounded-square')
+                        ->compact()
+                        ->collapsible()
+                        ->collapsed()
+                        ->visible(fn ($record) => $record->tickets->contains(
+                            fn ($t) => !empty(($t->meta ?? [])['transfers'] ?? [])
+                        ))
+                        ->schema([
+                            Forms\Components\Placeholder::make('ticket_transfers_top')
+                                ->hiddenLabel()
+                                ->content(fn ($record) => self::renderTicketTransferHistory($record)),
+                        ]),
                 ]),
                 SC\Group::make()->columnSpan(1)->schema([
-                    // Combined Order Details
-                    SC\Section::make(__('Detalii comandă'))
+                    SC\Section::make(__('Bani'))
                         ->icon('heroicon-o-calculator')
                         ->compact()
                         ->schema([
@@ -174,58 +158,19 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderCombinedOrderDetails($record)),
                         ]),
 
-                    // Quick Actions - stacked vertically with fullWidth
-                    SC\Section::make(__('Acțiuni rapide'))
-                        ->icon('heroicon-o-bolt')
+                    // Every payment detail, open by default
+                    SC\Section::make(__('Plată'))
+                        ->icon('heroicon-o-credit-card')
                         ->compact()
+                        ->collapsible()
                         ->schema([
-                            SC\Actions::make([
-                                Action::make('resend_confirmation')
-                                    ->label(__('Retrimite confirmare'))
-                                    ->icon('heroicon-o-envelope')
-                                    ->color('gray')
-                                    ->visible(fn ($record) => $record->source !== 'external_import' && $record->status !== 'expired')
-                                    ->action(fn ($record) => self::resendConfirmation($record)),
-                            ])->fullWidth(),
-                            SC\Actions::make([
-                                Action::make('download_tickets')
-                                    ->label(__('Download bilete'))
-                                    ->icon('heroicon-o-arrow-down-tray')
-                                    ->color('gray')
-                                    ->visible(fn ($record) => $record->status !== 'expired')
-                                    ->action(fn ($record) => static::downloadAllTicketsPdf($record)),
-                            ])->fullWidth(),
-                            SC\Actions::make([
-                                Action::make('change_status')
-                                    ->label(__('Schimbă status'))
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->color('warning')
-                                    ->visible(fn ($record) => !in_array($record->status, ['refunded', 'partially_refunded']) && $record->source !== 'external_import')
-                                    ->form([
-                                        Forms\Components\Select::make('status')
-                                            ->options([
-                                                'pending' => __('În așteptare'),
-                                                'confirmed' => __('Confirmată'),
-                                                'completed' => __('Finalizată'),
-                                                'cancelled' => __('Anulată'),
-                                            ])
-                                            ->helperText(__('Pentru rambursări folosește butonul „Rambursare”: aici se schimbă doar statusul, banii nu pleacă.'))
-                                            ->required(),
-                                    ])
-                                    ->action(fn ($record, array $data) => $record->update(['status' => $data['status']])),
-                            ])->fullWidth(),
-                            SC\Actions::make([
-                                Action::make('request_refund')
-                                    ->label(__('Solicită rambursare'))
-                                    ->icon('heroicon-o-arrow-uturn-left')
-                                    ->color('danger')
-                                    ->requiresConfirmation()
-                                    ->visible(fn ($record) => in_array($record->status, ['confirmed', 'paid'])),
-                            ])->fullWidth(),
+                            Forms\Components\Placeholder::make('payment_details')
+                                ->hiddenLabel()
+                                ->content(fn ($record) => self::renderPaymentDetails($record)),
                         ]),
 
-                    // Order Timeline
-                    SC\Section::make(__('Istoric comandă'))
+                    // Same timeline, same colours
+                    SC\Section::make(__('Istoric'))
                         ->icon('heroicon-o-clock')
                         ->compact()
                         ->collapsible()
@@ -234,20 +179,10 @@ class OrderResource extends Resource
                                 ->hiddenLabel()
                                 ->content(fn ($record) => self::renderTimeline($record)),
                         ]),
-
-                    // Payment Details
-                    SC\Section::make(__('Detalii plată'))
-                        ->icon('heroicon-o-credit-card')
-                        ->compact()
-                        ->collapsible()
-                        ->collapsed()
-                        ->schema([
-                            Forms\Components\Placeholder::make('payment_details')
-                                ->hiddenLabel()
-                                ->content(fn ($record) => self::renderPaymentDetails($record)),
-                        ]),
                 ]),
             ]),
+            // Header pill / meta-line styles for the order page.
+            SC\View::make('filament.marketplace.orders.view-order-styles'),
         ])->columns(1);
     }
 
@@ -2716,7 +2651,7 @@ class OrderResource extends Resource
         return new HtmlString($html);
     }
 
-    protected static function resendConfirmation(Order $record): void
+    public static function resendConfirmation(Order $record): void
     {
         try {
             // Use the same email logic as PaymentController
@@ -2751,7 +2686,7 @@ class OrderResource extends Resource
         return static::downloadAllTicketsPdf($record);
     }
 
-    protected static function downloadAllTicketsPdf(Order $record)
+    public static function downloadAllTicketsPdf(Order $record)
     {
         $tickets = $record->tickets()->with(['order.marketplaceClient', 'marketplaceEvent', 'marketplaceTicketType'])->get();
         if ($tickets->isEmpty()) return null;
