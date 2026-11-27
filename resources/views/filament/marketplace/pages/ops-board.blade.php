@@ -108,17 +108,17 @@
                 <button type="button" wire:click="setPeriod('week')" @class(['is-on' => $this->period === 'week'])>Săptămână</button>
                 <button type="button" wire:click="setPeriod('month')" @class(['is-on' => $this->period === 'month'])>Lună</button>
             </div>
-            <button type="button" class="opsb-btn" wire:click="previous" aria-label="Perioada anterioară">←</button>
+            <button type="button" class="opsb-btn" wire:click="previous" aria-label="{{ __('Perioada anterioară') }}">←</button>
             <div class="opsb-period">{{ $periodLabel }}</div>
-            <button type="button" class="opsb-btn" wire:click="next" aria-label="Perioada următoare">→</button>
-            <button type="button" class="opsb-btn" wire:click="goToday">Azi</button>
+            <button type="button" class="opsb-btn" wire:click="next" aria-label="{{ __('Perioada următoare') }}">→</button>
+            <button type="button" class="opsb-btn" wire:click="goToday">{{ __('Azi') }}</button>
 
             <div class="opsb-stats">
                 @foreach($pills as $pillKey => [$pillLabel, $pillClass])
                     <button type="button" wire:click="toggleStatus('{{ $pillKey }}')"
                         @class(['opsb-stat', $pillClass, 'is-on' => in_array($pillKey, $this->status, true)])
                         aria-pressed="{{ in_array($pillKey, $this->status, true) ? 'true' : 'false' }}"
-                        title="Arată doar evenimentele care au ceva în această stare">
+                        title="{{ __('Arată doar evenimentele care au ceva în această stare') }}">
                         {{ $board['counts'][$pillKey] }} {{ $pillLabel }}
                     </button>
                 @endforeach
@@ -127,33 +127,33 @@
 
         @if(!empty($this->status))
             <div class="opsb-active">
-                <strong>Filtru activ:</strong>
+                <strong>{{ __('Filtru activ:') }}</strong>
                 @foreach($this->status as $active)
                     @if(isset($pills[$active]))
                         <button type="button" wire:click="toggleStatus('{{ $active }}')" class="opsb-stat {{ $pills[$active][1] }} is-on" style="text-decoration:none;">{{ $pills[$active][0] }} ✕</button>
                     @endif
                 @endforeach
                 <span>— se văd doar evenimentele care au cel puțin un task în {{ count($this->status) > 1 ? 'una dintre aceste stări' : 'această stare' }}.</span>
-                <button type="button" wire:click="clearStatus">Șterge filtrul</button>
+                <button type="button" wire:click="clearStatus">{{ __('Șterge filtrul') }}</button>
             </div>
         @endif
 
         <div class="opsb-filters">
-            <input type="search" class="opsb-search" x-model="q" placeholder="Caută eveniment sau organizator..." aria-label="Caută eveniment sau organizator">
-            <select wire:model.live="organizer" aria-label="Organizator">
-                <option value="">Toți organizatorii</option>
+            <input type="search" class="opsb-search" x-model="q" placeholder="{{ __('Caută eveniment sau organizator...') }}" aria-label="{{ __('Caută eveniment sau organizator') }}">
+            <select wire:model.live="organizer" aria-label="{{ __('Organizator') }}">
+                <option value="">{{ __('Toți organizatorii') }}</option>
                 @foreach($board['options']['organizers'] as $id => $name)
                     <option value="{{ $id }}">{{ $name }}</option>
                 @endforeach
             </select>
-            <select wire:model.live="registry" aria-label="Primărie">
-                <option value="">Toate primăriile</option>
+            <select wire:model.live="registry" aria-label="{{ __('Primărie') }}">
+                <option value="">{{ __('Toate primăriile') }}</option>
                 @foreach($board['options']['registries'] as $id => $name)
                     <option value="{{ $id }}">{{ $name }}</option>
                 @endforeach
             </select>
-            <label><input type="checkbox" wire:model.live="onlyOpen"> Doar cu ceva de făcut</label>
-            <label><input type="checkbox" wire:model.live="byRegistry"> Grupează pe primărie</label>
+            <label><input type="checkbox" wire:model.live="onlyOpen"> {{ __('Doar cu ceva de făcut') }}</label>
+            <label><input type="checkbox" wire:model.live="byRegistry"> {{ __('Grupează pe primărie') }}</label>
         </div>
 
         @foreach($zones as $key => $zone)
@@ -178,7 +178,7 @@
                         <table class="opsb-table">
                             <thead>
                                 <tr>
-                                    <th>Eveniment</th>
+                                    <th>{{ __('Eveniment') }}</th>
                                     @foreach($tasks as $taskLabel)
                                         <th>{{ $taskLabel }}</th>
                                     @endforeach
@@ -196,8 +196,8 @@
                                     <tr wire:key="opsb-{{ $key }}-{{ $row['id'] }}" data-s="{{ mb_strtolower($row['title'] . ' ' . $row['organizer']) }}" x-show="hit($el)">
                                         <td class="opsb-event">
                                             <a href="{{ $row['url'] }}" target="_blank" rel="noopener">{{ $row['title'] }}</a>
-                                            @if($row['cancelled'])<span class="opsb-tag">Anulat</span>@endif
-                                            @if($row['postponed'])<span class="opsb-tag is-postponed">Amânat</span>@endif
+                                            @if($row['cancelled'])<span class="opsb-tag">{{ __('Anulat') }}</span>@endif
+                                            @if($row['postponed'])<span class="opsb-tag is-postponed">{{ __('Amânat') }}</span>@endif
                                             <div class="opsb-meta">
                                                 {{ $row['date_label'] }}@if($row['place']) · {{ $row['place'] }}@endif
                                             </div>
@@ -234,8 +234,8 @@
                                                 @if($cell['file'] ?? null)
                                                     <button type="button" class="opsb-mark"
                                                         wire:click="mountAction('markFiled', { event: {{ $row['id'] }}, type: '{{ $cell['file'] }}' })"
-                                                        title="Marchează documentul ca depus: data depunerii și nr. de înregistrare">
-                                                        ✓ Am depus
+                                                        title="{{ __('Marchează documentul ca depus: data depunerii și nr. de înregistrare') }}">
+                                                        {{ __('✓ Am depus') }}
                                                     </button>
                                                 @endif
                                             </td>

@@ -24,26 +24,26 @@
 
     <div class="ep-ls__cards">
         <div class="ep-ls__card">
-            <div class="ep-ls__label">Sold acum</div>
+            <div class="ep-ls__label">{{ __('Sold acum') }}</div>
             <div class="ep-ls__value">{{ $fmt($a['balance']['available']) }} lei</div>
             <div class="ep-ls__muted ep-ls__small">în procesare {{ $fmt($a['balance']['pending']) }} · plătit {{ $fmt($a['balance']['paid']) }}</div>
         </div>
         <div class="ep-ls__card">
-            <div class="ep-ls__label">Ciorne de aprobat</div>
+            <div class="ep-ls__label">{{ __('Ciorne de aprobat') }}</div>
             <div class="ep-ls__value">{{ $a['totals']['payouts'] }}</div>
             <div class="ep-ls__muted ep-ls__small">
                 {{ $a['totals']['moved'] }} mutate de pe alt organizator · {{ $a['totals']['skipped'] }} dubluri sărite
             </div>
         </div>
         <div class="ep-ls__card">
-            <div class="ep-ls__label">Intră „în procesare”</div>
+            <div class="ep-ls__label">{{ __('Intră „în procesare”') }}</div>
             <div class="ep-ls__value">{{ $fmt($a['totals']['settle_amount']) }} lei</div>
             <div class="ep-ls__muted ep-ls__small">ciorne {{ $fmt($a['totals']['draft_amount']) }} · ajustare {{ $fmt($a['totals']['settle_amount'] - $a['totals']['draft_amount']) }}</div>
         </div>
         <div class="ep-ls__card">
-            <div class="ep-ls__label">Sold disponibil pe aceste evenimente</div>
+            <div class="ep-ls__label">{{ __('Sold disponibil pe aceste evenimente') }}</div>
             <div class="ep-ls__value">{{ $fmt($a['totals']['balance_before']) }} → {{ $fmt($a['totals']['balance_after']) }}</div>
-            <div class="ep-ls__muted ep-ls__small">acum → după aprobare</div>
+            <div class="ep-ls__muted ep-ls__small">{{ __('acum → după aprobare') }}</div>
         </div>
     </div>
 
@@ -59,18 +59,18 @@
     @endif
 
     @if (! empty($a['events']))
-        <div class="ep-ls__section">Evenimente vizate</div>
+        <div class="ep-ls__section">{{ __('Evenimente vizate') }}</div>
         <div class="ep-ls__table-wrap">
             <table class="ep-ls__table">
                 <thead>
                     <tr>
-                        <th>Eveniment</th>
-                        <th>Ciornă</th>
-                        <th class="num">Net</th>
-                        <th class="num">Plătit / în procesare</th>
-                        <th class="num">Ciornă</th>
-                        <th class="num">Se aprobă</th>
-                        <th class="num">Disponibil acum → după</th>
+                        <th>{{ __('Eveniment') }}</th>
+                        <th>{{ __('Ciornă') }}</th>
+                        <th class="num">{{ __('Net') }}</th>
+                        <th class="num">{{ __('Plătit / în procesare') }}</th>
+                        <th class="num">{{ __('Ciornă') }}</th>
+                        <th class="num">{{ __('Se aprobă') }}</th>
+                        <th class="num">{{ __('Disponibil acum → după') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -119,16 +119,16 @@
                                         <div class="ep-ls__why-grid">
                                             <table class="ep-ls__mini">
                                                 <thead>
-                                                    <tr><th></th><th class="num">Ciorna ({{ $c['draft']['created_at'] }})</th><th class="num">Acum</th><th class="num">Diferență</th></tr>
+                                                    <tr><th></th><th class="num">Ciorna ({{ $c['draft']['created_at'] }})</th><th class="num">{{ __('Acum') }}</th><th class="num">{{ __('Diferență') }}</th></tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr><td>Bilete (fără POS)</td><td class="num">{{ $c['draft']['qty'] ?: '—' }}</td><td class="num">{{ $c['now']['qty'] }}</td><td class="num">{{ $c['draft']['qty'] ? $c['now']['qty'] - $c['draft']['qty'] : '—' }}</td></tr>
-                                                    <tr><td>Vânzări brute</td><td class="num">{{ $fmt($c['draft']['gross']) }}</td><td class="num">{{ $fmt($c['now']['gross']) }}</td><td class="num">{{ $fmt($c['now']['gross'] - $c['draft']['gross']) }}</td></tr>
-                                                    <tr><td>Comision Ambilet</td><td class="num">−{{ $fmt($c['draft']['commission']) }}<div class="ep-ls__muted ep-ls__small">{{ $c['draft']['rate'] !== null ? rtrim(rtrim(number_format($c['draft']['rate'], 2, ',', ''), '0'), ',') . '%' : '' }}</div></td><td class="num">−{{ $fmt($c['now']['commission']) }}<div class="ep-ls__muted ep-ls__small">{{ implode(', ', $c['now']['rates']) }}</div></td><td class="num">{{ $fmt($c['draft']['commission'] - $c['now']['commission']) }}</td></tr>
-                                                    <tr><td>Reduceri</td><td class="num">—</td><td class="num">−{{ $fmt($c['now']['discount']) }}</td><td class="num">{{ $fmt(-$c['now']['discount']) }}</td></tr>
-                                                    <tr class="is-total"><td>Net</td><td class="num">{{ $fmt($c['draft']['net']) }}</td><td class="num">{{ $fmt($c['now']['net']) }}</td><td class="num">{{ $fmt($c['now']['net'] - $c['draft']['net']) }}</td></tr>
-                                                    <tr><td>Deja plătit / în procesare</td><td class="num"></td><td class="num">−{{ $fmt($c['paid']) }}</td><td class="num"></td></tr>
-                                                    <tr class="is-total"><td>Se aprobă</td><td class="num">{{ $fmt($c['draft']['net']) }}</td><td class="num">{{ $fmt($c['target']) }}</td><td class="num">{{ $fmt($ap['adjustment']) }}</td></tr>
+                                                    <tr><td>{{ __('Bilete (fără POS)') }}</td><td class="num">{{ $c['draft']['qty'] ?: '—' }}</td><td class="num">{{ $c['now']['qty'] }}</td><td class="num">{{ $c['draft']['qty'] ? $c['now']['qty'] - $c['draft']['qty'] : '—' }}</td></tr>
+                                                    <tr><td>{{ __('Vânzări brute') }}</td><td class="num">{{ $fmt($c['draft']['gross']) }}</td><td class="num">{{ $fmt($c['now']['gross']) }}</td><td class="num">{{ $fmt($c['now']['gross'] - $c['draft']['gross']) }}</td></tr>
+                                                    <tr><td>{{ __('Comision Ambilet') }}</td><td class="num">−{{ $fmt($c['draft']['commission']) }}<div class="ep-ls__muted ep-ls__small">{{ $c['draft']['rate'] !== null ? rtrim(rtrim(number_format($c['draft']['rate'], 2, ',', ''), '0'), ',') . '%' : '' }}</div></td><td class="num">−{{ $fmt($c['now']['commission']) }}<div class="ep-ls__muted ep-ls__small">{{ implode(', ', $c['now']['rates']) }}</div></td><td class="num">{{ $fmt($c['draft']['commission'] - $c['now']['commission']) }}</td></tr>
+                                                    <tr><td>{{ __('Reduceri') }}</td><td class="num">—</td><td class="num">−{{ $fmt($c['now']['discount']) }}</td><td class="num">{{ $fmt(-$c['now']['discount']) }}</td></tr>
+                                                    <tr class="is-total"><td>{{ __('Net') }}</td><td class="num">{{ $fmt($c['draft']['net']) }}</td><td class="num">{{ $fmt($c['now']['net']) }}</td><td class="num">{{ $fmt($c['now']['net'] - $c['draft']['net']) }}</td></tr>
+                                                    <tr><td>{{ __('Deja plătit / în procesare') }}</td><td class="num"></td><td class="num">−{{ $fmt($c['paid']) }}</td><td class="num"></td></tr>
+                                                    <tr class="is-total"><td>{{ __('Se aprobă') }}</td><td class="num">{{ $fmt($c['draft']['net']) }}</td><td class="num">{{ $fmt($c['target']) }}</td><td class="num">{{ $fmt($ap['adjustment']) }}</td></tr>
                                                 </tbody>
                                             </table>
                                             <div>
@@ -144,7 +144,7 @@
                                                         @endforeach
                                                     </ul>
                                                 @else
-                                                    <div class="ep-ls__muted ep-ls__small">Diferență de rotunjire între calculul pe comenzi (ciorna) și cel pe bilete (acum).</div>
+                                                    <div class="ep-ls__muted ep-ls__small">{{ __('Diferență de rotunjire între calculul pe comenzi (ciorna) și cel pe bilete (acum).') }}</div>
                                                 @endif
                                             </div>
                                         </div>

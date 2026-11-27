@@ -11,7 +11,7 @@
     <div class="grid gap-6 lg:grid-cols-2">
         {{-- Revenue by Day --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Revenue pe zi a saptamanii</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Revenue pe zi a saptamanii') }}</h3>
             <div class="h-64" wire:ignore x-data="{
                 init() {
                     const ctx = this.$refs.canvas.getContext('2d');
@@ -46,7 +46,7 @@
 
         {{-- Tickets by Day --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Bilete vandute pe zi a saptamanii</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Bilete vandute pe zi a saptamanii') }}</h3>
             <div class="h-64" wire:ignore x-data="{
                 init() {
                     const ctx = this.$refs.canvas.getContext('2d');
@@ -81,12 +81,12 @@
     {{-- Category x Day of Week Heatmap --}}
     @if(!empty($categoryDay['categories']))
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Performance categorii pe zile</h3>
+        <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Performance categorii pe zile') }}</h3>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr>
-                        <th class="px-3 py-2 text-left text-gray-500 dark:text-gray-400">Categorie</th>
+                        <th class="px-3 py-2 text-left text-gray-500 dark:text-gray-400">{{ __('Categorie') }}</th>
                         @foreach($categoryDay['days'] as $day)
                             <th class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ $day }}</th>
                         @endforeach
@@ -127,7 +127,7 @@
 
     {{-- Hourly Heatmap --}}
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Heatmap: Ore x Zile (Revenue)</h3>
+        <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Heatmap: Ore x Zile (Revenue)') }}</h3>
         <div class="overflow-x-auto">
             @php
                 $allHourly = [];
@@ -141,7 +141,7 @@
             <table class="w-full text-xs">
                 <thead>
                     <tr>
-                        <th class="px-2 py-1 text-left text-gray-500 dark:text-gray-400">Zi / Ora</th>
+                        <th class="px-2 py-1 text-left text-gray-500 dark:text-gray-400">{{ __('Zi / Ora') }}</th>
                         @foreach(range(6, 23) as $h)
                             <th class="px-1 py-1 text-center text-gray-500 dark:text-gray-400">{{ sprintf('%02d', $h) }}</th>
                         @endforeach
@@ -180,16 +180,16 @@
     {{-- Peak Sales Windows --}}
     @if(!empty($peakWindows))
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Top 10 ferestre de vanzari</h3>
+        <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Top 10 ferestre de vanzari') }}</h3>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-left text-gray-500 dark:text-gray-400">
                         <th class="px-3 py-2">#</th>
-                        <th class="px-3 py-2">Zi</th>
-                        <th class="px-3 py-2">Interval</th>
-                        <th class="px-3 py-2 text-right">Revenue</th>
-                        <th class="px-3 py-2 text-right">Comenzi</th>
+                        <th class="px-3 py-2">{{ __('Zi') }}</th>
+                        <th class="px-3 py-2">{{ __('Interval') }}</th>
+                        <th class="px-3 py-2 text-right">{{ __('Revenue') }}</th>
+                        <th class="px-3 py-2 text-right">{{ __('Comenzi') }}</th>
                     </tr>
                 </thead>
                 <tbody>

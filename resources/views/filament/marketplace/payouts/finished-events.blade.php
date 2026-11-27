@@ -1,17 +1,17 @@
 <div class="space-y-1">
     @if(count($rows) === 0)
         <div class="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-            Nu există evenimente încheiate.
+            {{ __('Nu există evenimente încheiate.') }}
         </div>
     @else
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-white/10 text-left">
-                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Eveniment</th>
-                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Sold</th>
-                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Retururi</th>
-                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Acțiuni</th>
+                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">{{ __('Eveniment') }}</th>
+                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">{{ __('Sold') }}</th>
+                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">{{ __('Retururi') }}</th>
+                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">{{ __('Acțiuni') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-white/5">
@@ -39,7 +39,7 @@
                                 @if($row['balance'] > 0)
                                     <span class="text-emerald-600 dark:text-emerald-400 font-medium">{{ number_format($row['balance'], 2) }} RON</span>
                                 @else
-                                    <span class="text-gray-400">0.00 RON</span>
+                                    <span class="text-gray-400">{{ __('0.00 RON') }}</span>
                                 @endif
                             </td>
                             <td class="px-3 py-2 text-right font-mono">

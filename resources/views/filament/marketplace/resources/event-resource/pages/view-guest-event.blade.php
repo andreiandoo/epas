@@ -33,22 +33,22 @@
                     <div class="flex flex-wrap gap-2 mt-3">
                         @if($eventData['is_cancelled'])
                             <span class="px-3 py-1 text-sm font-medium text-red-200 rounded-full bg-red-500/30">
-                                Cancelled
+                                {{ __('Cancelled') }}
                             </span>
                         @endif
                         @if($eventData['is_postponed'])
                             <span class="px-3 py-1 text-sm font-medium text-yellow-200 rounded-full bg-yellow-500/30">
-                                Postponed
+                                {{ __('Postponed') }}
                             </span>
                         @endif
                         @if($eventData['is_sold_out'])
                             <span class="px-3 py-1 text-sm font-medium text-purple-200 rounded-full bg-purple-500/30">
-                                Sold Out
+                                {{ __('Sold Out') }}
                             </span>
                         @endif
                         @if($eventData['is_promoted'])
                             <span class="px-3 py-1 text-sm font-medium text-green-200 rounded-full bg-green-500/30">
-                                Promoted
+                                {{ __('Promoted') }}
                             </span>
                         @endif
                     </div>
@@ -60,19 +60,19 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-primary-600">{{ number_format($salesStats['tickets_sold']) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Tickets Sold</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Tickets Sold') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-green-600">{{ number_format($salesStats['revenue'], 2) }} RON</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Total Revenue</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total Revenue') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-blue-600">{{ $salesStats['occupancy'] }}%</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Occupancy</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Occupancy') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-purple-600">{{ number_format($salesStats['unique_customers']) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Unique Customers</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Unique Customers') }}</div>
             </div>
         </div>
 
@@ -81,11 +81,11 @@
             <div class="space-y-6 lg:col-span-2">
                 {{-- Event Details --}}
                 <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Event Details</h2>
+                    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Event Details') }}</h2>
 
                     <dl class="grid grid-cols-2 gap-4">
                         <div>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Date</dt>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Date') }}</dt>
                             <dd class="text-gray-900 dark:text-white">
                                 @if($eventData['duration_mode'] === 'single_day')
                                     {{ $eventData['event_date'] ? \Carbon\Carbon::parse($eventData['event_date'])->format('d M Y') : 'TBD' }}
@@ -99,7 +99,7 @@
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Time</dt>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Time') }}</dt>
                             <dd class="text-gray-900 dark:text-white">
                                 {{ $eventData['start_time'] ?? 'TBD' }}
                                 @if($eventData['end_time'])
@@ -109,7 +109,7 @@
                         </div>
                         @if($eventData['door_time'])
                             <div>
-                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Door Time</dt>
+                                <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('Door Time') }}</dt>
                                 <dd class="text-gray-900 dark:text-white">{{ $eventData['door_time'] }}</dd>
                             </div>
                         @endif
@@ -132,7 +132,7 @@
 
                 {{-- Ticket Types --}}
                 <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Ticket Types</h2>
+                    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Ticket Types') }}</h2>
 
                     @if(count($ticketTypesData) > 0)
                         <div class="space-y-3">
@@ -157,23 +157,23 @@
                             @endforeach
                         </div>
                     @else
-                        <p class="text-gray-500 dark:text-gray-400">No ticket types configured.</p>
+                        <p class="text-gray-500 dark:text-gray-400">{{ __('No ticket types configured.') }}</p>
                     @endif
                 </div>
 
                 {{-- Recent Orders --}}
                 @if(count($recentOrders) > 0)
                     <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Recent Orders</h2>
+                        <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Recent Orders') }}</h2>
 
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead class="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
                                     <tr>
-                                        <th class="pb-3 text-left">Customer</th>
-                                        <th class="pb-3 text-left">Tickets</th>
-                                        <th class="pb-3 text-right">Total</th>
-                                        <th class="pb-3 text-right">Date</th>
+                                        <th class="pb-3 text-left">{{ __('Customer') }}</th>
+                                        <th class="pb-3 text-left">{{ __('Tickets') }}</th>
+                                        <th class="pb-3 text-right">{{ __('Total') }}</th>
+                                        <th class="pb-3 text-right">{{ __('Date') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -199,7 +199,7 @@
             <div class="space-y-6">
                 {{-- Organizer Info --}}
                 <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Organizer</h3>
+                    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Organizer') }}</h3>
 
                     <div class="space-y-3">
                         <div>
@@ -226,7 +226,7 @@
                         @if($organizerData['website'])
                             <a href="{{ $organizerData['website'] }}" target="_blank" class="flex items-center gap-2 text-sm text-primary-600 hover:underline">
                                 <x-heroicon-o-globe-alt class="w-4 h-4" />
-                                Visit Website
+                                {{ __('Visit Website') }}
                             </a>
                         @endif
                     </div>
@@ -235,7 +235,7 @@
                 {{-- Venue Info --}}
                 @if($venueData['name'])
                     <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Venue</h3>
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Venue') }}</h3>
 
                         @if($venueData['image_url'])
                             <img src="{{ $venueData['image_url'] }}" alt="{{ $venueData['name'] }}" class="object-cover w-full h-32 mb-4 rounded-lg">
@@ -263,7 +263,7 @@
                 {{-- Artists --}}
                 @if(count($artists) > 0)
                     <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Artists</h3>
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Artists') }}</h3>
 
                         <div class="space-y-3">
                             @foreach($artists as $artist)
@@ -285,12 +285,12 @@
                 {{-- Taxonomies --}}
                 @if(count($taxonomies['event_types']) > 0 || count($taxonomies['event_genres']) > 0 || count($taxonomies['tags']) > 0)
                     <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Categories</h3>
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Categories') }}</h3>
 
                         <div class="space-y-3">
                             @if(count($taxonomies['event_types']) > 0)
                                 <div>
-                                    <div class="mb-1 text-xs font-medium text-gray-500 uppercase dark:text-gray-400">Types</div>
+                                    <div class="mb-1 text-xs font-medium text-gray-500 uppercase dark:text-gray-400">{{ __('Types') }}</div>
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($taxonomies['event_types'] as $type)
                                             <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -303,7 +303,7 @@
 
                             @if(count($taxonomies['event_genres']) > 0)
                                 <div>
-                                    <div class="mb-1 text-xs font-medium text-gray-500 uppercase dark:text-gray-400">Genres</div>
+                                    <div class="mb-1 text-xs font-medium text-gray-500 uppercase dark:text-gray-400">{{ __('Genres') }}</div>
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($taxonomies['event_genres'] as $genre)
                                             <span class="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
@@ -316,7 +316,7 @@
 
                             @if(count($taxonomies['tags']) > 0)
                                 <div>
-                                    <div class="mb-1 text-xs font-medium text-gray-500 uppercase dark:text-gray-400">Tags</div>
+                                    <div class="mb-1 text-xs font-medium text-gray-500 uppercase dark:text-gray-400">{{ __('Tags') }}</div>
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($taxonomies['tags'] as $tag)
                                             <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
@@ -333,25 +333,25 @@
                 {{-- Links --}}
                 @if($eventData['website_url'] || $eventData['facebook_url'] || $eventData['event_website_url'])
                     <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Links</h3>
+                        <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Links') }}</h3>
 
                         <div class="space-y-2">
                             @if($eventData['event_website_url'])
                                 <a href="{{ $eventData['event_website_url'] }}" target="_blank" class="flex items-center gap-2 text-sm text-primary-600 hover:underline">
                                     <x-heroicon-o-globe-alt class="w-4 h-4" />
-                                    Event Website
+                                    {{ __('Event Website') }}
                                 </a>
                             @endif
                             @if($eventData['facebook_url'])
                                 <a href="{{ $eventData['facebook_url'] }}" target="_blank" class="flex items-center gap-2 text-sm text-primary-600 hover:underline">
                                     <x-heroicon-o-link class="w-4 h-4" />
-                                    Facebook Event
+                                    {{ __('Facebook Event') }}
                                 </a>
                             @endif
                             @if($eventData['website_url'])
                                 <a href="{{ $eventData['website_url'] }}" target="_blank" class="flex items-center gap-2 text-sm text-primary-600 hover:underline">
                                     <x-heroicon-o-link class="w-4 h-4" />
-                                    Website
+                                    {{ __('Website') }}
                                 </a>
                             @endif
                         </div>

@@ -21,10 +21,10 @@
             ];
             $barBase = collect($parts)->sum(fn ($p) => max(0, (float) $p['value']));
         @endphp
-        <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5" aria-label="Rezumat sold">
+        <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5" aria-label="{{ __('Rezumat sold') }}">
             <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                 <div>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Total vânzări (net)</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total vânzări (net)') }}</p>
                     <p class="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{{ $fmt($total) }} RON</p>
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Calculat la {{ $summary['computed_at'] }} · se actualizează la 5 minute sau din „Reîmprospătează".</p>
@@ -55,7 +55,7 @@
             </dl>
 
             <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
-                Plătit {{ $fmt($summary['paid']) }} + POS {{ $fmt($summary['pos']) }} + în procesare {{ $fmt($summary['pending']) }} + sold {{ $fmt($summary['available']) }} = <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $fmt($summary['paid'] + $summary['pos'] + $summary['pending'] + $summary['available']) }} RON</span> (total vânzări)
+                Plătit {{ $fmt($summary['paid']) }} + POS {{ $fmt($summary['pos']) }} + în procesare {{ $fmt($summary['pending']) }} + sold {{ $fmt($summary['available']) }} = <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $fmt($summary['paid'] + $summary['pos'] + $summary['pending'] + $summary['available']) }} RON</span> {{ __('(total vânzări)') }}
             </p>
         </section>
 
@@ -65,7 +65,7 @@
                 <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="w-full px-6 py-4 flex flex-wrap items-center justify-between gap-2 text-left" x-bind:class="open ? 'border-b border-gray-200 dark:border-gray-700' : ''">
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <x-heroicon-o-arrow-trending-up class="w-5 h-5 text-gray-400" />
-                        Avansuri
+                        {{ __('Avansuri') }}
                         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $advances->count() }})</span>
                     </h3>
                     <span class="flex items-center gap-3">
@@ -82,12 +82,12 @@
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 mt-3">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avans</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plătit la</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumă</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compensat</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rămas</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compensat în deconturile</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Avans') }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Plătit la') }}</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Sumă') }}</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Compensat') }}</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Rămas') }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Compensat în deconturile') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -115,7 +115,7 @@
                                             · {{ number_format((float) $alloc->amount, 2, ',', '.') }} RON
                                         </div>
                                     @empty
-                                        <span class="text-gray-400">Încă necompensat</span>
+                                        <span class="text-gray-400">{{ __('Încă necompensat') }}</span>
                                     @endforelse
                                 </td>
                             </tr>
@@ -134,13 +134,13 @@
                     <div class="flex gap-6 text-sm">
                         @if($organizer->bank_name)
                             <div>
-                                <span class="text-gray-500 dark:text-gray-400">Bancă:</span>
+                                <span class="text-gray-500 dark:text-gray-400">{{ __('Bancă:') }}</span>
                                 <span class="font-medium text-gray-900 dark:text-white">{{ $organizer->bank_name }}</span>
                             </div>
                         @endif
                         @if($organizer->iban)
                             <div>
-                                <span class="text-gray-500 dark:text-gray-400">IBAN:</span>
+                                <span class="text-gray-500 dark:text-gray-400">{{ __('IBAN:') }}</span>
                                 <span class="font-mono font-medium text-gray-900 dark:text-white">{{ $organizer->iban }}</span>
                             </div>
                         @endif
@@ -160,7 +160,7 @@
                 <div>
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <x-heroicon-o-calendar class="w-5 h-5 text-gray-400" />
-                        Sold pe eveniment
+                        {{ __('Sold pe eveniment') }}
                         <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $eventRows->count() }})</span>
                     </h3>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Brut − comision − reduceri − taxe peste preț (asigurare, card cultural) = net. Net − plătit − în procesare = sold. Comisionul inclus facturat separat nu se scade: organizatorul îl primește în transfer și îl plătește pe factură.@if($hasPos) Vânzările POS le-a încasat organizatorul la ușă: nu intră în net și nici în sold.@endif</p>
@@ -171,24 +171,24 @@
             @if($eventRows->isEmpty())
                 <div class="text-center py-8">
                     <x-heroicon-o-chart-bar class="mx-auto h-10 w-10 text-gray-400" />
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Nu există încă vânzări.</p>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Nu există încă vânzări.') }}</p>
                 </div>
             @else
                 <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
-                            <th class="{{ $th }} text-left">Eveniment</th>
-                            <th class="{{ $th }} text-right">Brut</th>
-                            <th class="{{ $th }} text-right">Comision</th>
-                            <th class="{{ $th }} text-right">Reduceri</th>
-                            <th class="{{ $th }} text-right">Taxe peste preț</th>
-                            <th class="{{ $th }} text-right">Net</th>
-                            <th class="{{ $th }} text-right">Plătit</th>
-                            <th class="{{ $th }} text-right">În procesare</th>
-                            <th class="{{ $th }} text-right">Sold</th>
+                            <th class="{{ $th }} text-left">{{ __('Eveniment') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Brut') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Comision') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Reduceri') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Taxe peste preț') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Net') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Plătit') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('În procesare') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Sold') }}</th>
                             @if($hasPos)
-                                <th class="{{ $th }} text-right" title="Net din vânzări POS, încasat direct de organizator. Informativ, nu intră în sold.">POS (la organizator)</th>
+                                <th class="{{ $th }} text-right" title="{{ __('Net din vânzări POS, încasat direct de organizator. Informativ, nu intră în sold.') }}">{{ __('POS (la organizator)') }}</th>
                             @endif
                         </tr>
                     </thead>
@@ -198,7 +198,7 @@
                                 <td class="px-4 py-3 text-sm">
                                     <a href="{{ url('/marketplace/events/' . $row['id'] . '/edit') }}" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 hover:underline">{{ $row['title'] }}</a>
                                     @if($row['is_past'])
-                                        <span class="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Încheiat</span>
+                                        <span class="ml-1 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ __('Încheiat') }}</span>
                                     @endif
                                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ implode(' - ', array_filter([$row['date'], $row['venue'], $row['city']])) }}</div>
                                 </td>
@@ -217,7 +217,7 @@
                                 <td class="{{ $td }} font-semibold {{ $row['balance'] < -0.004 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
                                     {{ number_format((float) $row['balance'], 2, ',', '.') }}
                                     @if($row['balance'] < -0.004)
-                                        <div class="text-[11px] font-normal">de regularizat</div>
+                                        <div class="text-[11px] font-normal">{{ __('de regularizat') }}</div>
                                     @endif
                                 </td>
                                 @if($hasPos)
@@ -228,7 +228,7 @@
                     </tbody>
                     <tfoot class="bg-gray-50 dark:bg-gray-700/50 text-sm">
                         <tr>
-                            <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white">Total evenimente</td>
+                            <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white">{{ __('Total evenimente') }}</td>
                             <td class="{{ $td }} font-semibold text-gray-900 dark:text-white">{{ number_format((float) $eventRows->sum('revenue'), 2, ',', '.') }}</td>
                             <td class="{{ $td }} font-semibold text-red-600 dark:text-red-400">−{{ number_format((float) $eventRows->sum('commission'), 2, ',', '.') }}</td>
                             <td class="{{ $td }} font-semibold text-red-600 dark:text-red-400">−{{ number_format((float) $eventRows->sum('discount'), 2, ',', '.') }}</td>
@@ -243,7 +243,7 @@
                         </tr>
                         @if($orgWidePaid > 0 || $orgWidePending > 0)
                             <tr>
-                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300" colspan="6">Plăți fără eveniment (avansuri, deconturi multi-eveniment)</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300" colspan="6">{{ __('Plăți fără eveniment (avansuri, deconturi multi-eveniment)') }}</td>
                                 <td class="{{ $td }} text-blue-600 dark:text-blue-400">{{ number_format((float) $orgWidePaid, 2, ',', '.') }}</td>
                                 <td class="{{ $td }} text-yellow-600 dark:text-yellow-400">{{ number_format((float) $orgWidePending, 2, ',', '.') }}</td>
                                 <td class="{{ $td }} text-gray-600 dark:text-gray-300">−{{ number_format((float) $orgWidePaid + $orgWidePending, 2, ',', '.') }}</td>
@@ -252,14 +252,14 @@
                         @endif
                         @if($advanceOffset > 0.004)
                             <tr>
-                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300" colspan="8">Deconturi acoperite din avans (avansul e numărat o singură dată)</td>
+                                <td class="px-4 py-2 text-gray-600 dark:text-gray-300" colspan="8">{{ __('Deconturi acoperite din avans (avansul e numărat o singură dată)') }}</td>
                                 <td class="{{ $td }} text-gray-600 dark:text-gray-300">+{{ number_format((float) $advanceOffset, 2, ',', '.') }}</td>
                                 @if($hasPos)<td></td>@endif
                             </tr>
                         @endif
                         @if($orgWidePaid > 0 || $orgWidePending > 0 || $advanceOffset > 0.004)
                             <tr>
-                                <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white" colspan="8">Sold disponibil</td>
+                                <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white" colspan="8">{{ __('Sold disponibil') }}</td>
                                 <td class="{{ $td }} font-semibold text-gray-900 dark:text-white">{{ number_format((float) $summary['available'], 2, ',', '.') }}</td>
                                 @if($hasPos)<td></td>@endif
                             </tr>
@@ -281,7 +281,7 @@
             <button type="button" x-on:click="open = !open" x-bind:aria-expanded="open" class="w-full px-6 py-4 flex items-center justify-between gap-4 text-left" x-bind:class="open ? 'border-b border-gray-200 dark:border-gray-700' : ''">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <x-heroicon-o-banknotes class="w-5 h-5 text-gray-400" />
-                    Lista deconturi
+                    {{ __('Lista deconturi') }}
                     <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ $payouts->count() }})</span>
                 </h3>
                 <x-heroicon-o-chevron-down class="w-5 h-5 text-gray-400 flex-shrink-0 transition-transform" x-bind:class="open ? 'rotate-180' : ''" />
@@ -290,20 +290,20 @@
             @if($payouts->isEmpty())
                 <div class="text-center py-8">
                     <x-heroicon-o-banknotes class="mx-auto h-10 w-10 text-gray-400" />
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Nu există încă deconturi.</p>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('Nu există încă deconturi.') }}</p>
                 </div>
             @else
                 <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:16rem">Eveniment</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sumă</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referință plată</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Creat</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Finalizat</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acțiuni</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" style="min-width:16rem">{{ __('Eveniment') }}</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Referință') }}</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Sumă') }}</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Referință plată') }}</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Creat') }}</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Finalizat') }}</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ __('Acțiuni') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -338,7 +338,7 @@
                                             <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $evMeta }}</div>
                                         @endif
                                     @elseif($payout->isAdvance())
-                                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">Avans</span>
+                                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">{{ __('Avans') }}</span>
                                     @else
                                         <span class="text-gray-400">—</span>
                                     @endif
@@ -397,14 +397,14 @@
                                                    wire:model="payRefs.{{ $payout->id }}"
                                                    wire:keydown.enter.prevent="quickComplete({{ $payout->id }})"
                                                    data-quick-ref="{{ $payout->id }}"
-                                                   placeholder="Referință plată (opțional)"
+                                                   placeholder="{{ __('Referință plată (opțional)') }}"
                                                    maxlength="255"
                                                    class="ep-quick-ref">
                                             <button type="button"
                                                     wire:click="quickComplete({{ $payout->id }})"
                                                     wire:loading.attr="disabled"
                                                     wire:target="quickComplete({{ $payout->id }})"
-                                                    title="Marchează plătit"
+                                                    title="{{ __('Marchează plătit') }}"
                                                     class="ep-quick-btn">
                                                 <span wire:loading.remove wire:target="quickComplete({{ $payout->id }})">Finalizează</span>
                                                 <span wire:loading wire:target="quickComplete({{ $payout->id }})">…</span>
@@ -413,7 +413,7 @@
                                     @elseif($payout->isCompleted())
                                         {{ ($this->editPaymentReferenceAction)(['payout' => $payout->id]) }}
                                     @elseif($payout->isPending())
-                                        <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-xs text-gray-500 hover:underline dark:text-gray-400" title="Decontul trebuie aprobat înainte de a fi finalizat">Aprobă întâi</a>
+                                        <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-xs text-gray-500 hover:underline dark:text-gray-400" title="{{ __('Decontul trebuie aprobat înainte de a fi finalizat') }}">Aprobă întâi</a>
                                     @endif
                                 </td>
                             </tr>

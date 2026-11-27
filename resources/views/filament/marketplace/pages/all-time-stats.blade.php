@@ -1,14 +1,14 @@
 <x-filament-panels::page>
     @if(!$marketplace)
         <div class="p-6 text-center border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
-            <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found. Please contact support.</p>
+            <p class="text-yellow-800 dark:text-yellow-200">{{ __('No marketplace account found. Please contact support.') }}</p>
         </div>
     @else
         <div class="mb-4">
             <a href="{{ route('filament.marketplace.pages.dashboard') }}"
                class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">
                 <x-heroicon-o-arrow-left class="w-4 h-4" />
-                Înapoi la Dashboard
+                {{ __('Înapoi la Dashboard') }}
             </a>
         </div>
 
@@ -16,7 +16,7 @@
         <div class="mb-5">
         <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
             <x-heroicon-o-chart-bar-square class="w-4 h-4" />
-            All Time
+            {{ __('All Time') }}
         </h3>
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {{-- 1. Evenimente --}}
@@ -27,7 +27,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_events']) }}</p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Evenimente</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Evenimente') }}</p>
                         <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">{{ $stats['active_events'] }} active</p>
                     </div>
                 </div>
@@ -41,7 +41,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_customers']) }}</p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Clienți</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Clienți') }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {{ number_format($stats['registered_customers']) }} înregistrați · {{ number_format($stats['guest_customers']) }} oaspeți
                         </p>
@@ -57,7 +57,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_orders']) }}</p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Comenzi</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Comenzi') }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             <span class="text-green-600 dark:text-green-400">{{ number_format($stats['paid_orders']) }} valide</span>
                             @if($stats['other_orders'] > 0)
@@ -82,7 +82,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_incasari'], 2) }} <span class="text-sm font-medium text-gray-400">{{ $currency }}</span></p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Încasări</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Încasări') }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             Comenzi: {{ number_format($stats['order_revenue'], 2) }}
                             @if($stats['service_revenue'] > 0)
@@ -101,7 +101,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['all_time_commissions'] + $stats['service_orders_total'], 2) }} <span class="text-sm font-medium text-gray-400">{{ $currency }}</span></p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Venituri Marketplace</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Venituri Marketplace') }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             Comisioane: {{ number_format($stats['all_time_commissions'], 2) }}
                             @if($stats['service_orders_total'] > 0)
@@ -120,7 +120,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_tickets_db']) }}</p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Bilete Total</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Bilete Total') }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                             {{ number_format($stats['total_tickets']) }} valide
                             @if($stats['today_tickets'] > 0)
@@ -142,7 +142,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_organizers']) }}</p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Organizatori</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Organizatori') }}</p>
                         <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">{{ $stats['active_organizers'] }} activi</p>
                     </div>
                 </div>
@@ -156,7 +156,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['completed_payouts_value'], 2) }} <span class="text-sm font-medium text-gray-400">{{ $currency }}</span></p>
-                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Deconturi Achitate</p>
+                        <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Deconturi Achitate') }}</p>
                         <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{{ number_format($stats['pending_payouts_value'], 2) }} in asteptare</p>
                     </div>
                 </div>
@@ -179,10 +179,10 @@
         <div class="mb-5">
             <h3 class="flex items-center gap-2 mb-1 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                 <x-heroicon-o-scale class="w-4 h-4" />
-                Importat (legacy) vs Procesat prin Tixello
+                {{ __('Importat (legacy) vs Procesat prin Tixello') }}
             </h3>
             <p class="mb-3 text-xs text-gray-400 dark:text-gray-500">
-                Coloana <strong>Total</strong> = exact cifrele din cardurile de mai sus (Importat + Tixello = Total).
+                {{ __('Coloana') }} <strong>{{ __('Total') }}</strong> = exact cifrele din cardurile de mai sus (Importat + Tixello = Total).
                 „Importat” = partea provenită din migrare (surse <code>external_import</code> / <code>legacy_import</code>);
                 „Procesat prin Tixello” = restul (Total − Importat). Notă: la Încasări, importul e doar cel legacy — importurile externe nu sunt contorizate în încasări (nici în carduri).
             </p>
@@ -190,14 +190,14 @@
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="text-xs tracking-wide text-left text-gray-500 uppercase border-b border-gray-200 dark:border-gray-700 dark:text-gray-400">
-                            <th class="px-4 py-3 font-semibold">Metrică</th>
+                            <th class="px-4 py-3 font-semibold">{{ __('Metrică') }}</th>
                             <th class="px-4 py-3 font-semibold text-right">
-                                <span class="inline-flex items-center gap-1"><span class="text-indigo-400">🌐</span> Importat (legacy)</span>
+                                <span class="inline-flex items-center gap-1"><span class="text-indigo-400">🌐</span> {{ __('Importat (legacy)') }}</span>
                             </th>
                             <th class="px-4 py-3 font-semibold text-right">
-                                <span class="inline-flex items-center gap-1"><span class="text-emerald-500">⚡</span> Procesat prin Tixello</span>
+                                <span class="inline-flex items-center gap-1"><span class="text-emerald-500">⚡</span> {{ __('Procesat prin Tixello') }}</span>
                             </th>
-                            <th class="px-4 py-3 font-semibold text-right">Total</th>
+                            <th class="px-4 py-3 font-semibold text-right">{{ __('Total') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700/60">

@@ -23,7 +23,7 @@
         </div>
     @empty
         <div class="text-gray-500 dark:text-gray-400 text-center py-4">
-            Nu exista beneficiari pentru aceasta comanda.
+            {{ __('Nu exista beneficiari pentru aceasta comanda.') }}
         </div>
     @endforelse
 </div>

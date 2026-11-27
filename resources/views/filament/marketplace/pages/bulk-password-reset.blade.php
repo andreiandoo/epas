@@ -39,7 +39,7 @@
             @if($seg['campaign'])
                 <div class="space-y-3">
                     <div class="flex items-center justify-between text-sm">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">Status:</span>
+                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ __('Status:') }}</span>
                         <span @class([
                             'px-2 py-0.5 rounded-full text-xs font-semibold',
                             'bg-blue-100 text-blue-700' => $seg['campaign']->status === 'sending',
@@ -59,13 +59,13 @@
                     </div>
 
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-500">Trimise:</span>
+                        <span class="text-gray-500">{{ __('Trimise:') }}</span>
                         <span class="font-mono font-semibold">{{ number_format($seg['campaign']->sent_count) }} / {{ number_format($seg['campaign']->total_recipients) }}</span>
                     </div>
 
                     @if($seg['campaign']->failed_count > 0)
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-red-500">Eșuate:</span>
+                        <span class="text-red-500">{{ __('Eșuate:') }}</span>
                         <span class="font-mono font-semibold text-red-600">{{ number_format($seg['campaign']->failed_count) }}</span>
                     </div>
                     @endif
@@ -93,7 +93,7 @@
                     @endif
                 </div>
             @else
-                <p class="text-sm text-gray-500">Nicio campanie pornită încă.</p>
+                <p class="text-sm text-gray-500">{{ __('Nicio campanie pornită încă.') }}</p>
             @endif
         </div>
         @endforeach
@@ -101,10 +101,10 @@
 
     {{-- Template links --}}
     <div class="p-4 mt-6 text-sm bg-gray-50 rounded-xl dark:bg-gray-800">
-        <p class="font-medium text-gray-700 dark:text-gray-300">Template-uri email:</p>
+        <p class="font-medium text-gray-700 dark:text-gray-300">{{ __('Template-uri email:') }}</p>
         <div class="flex gap-4 mt-2">
-            <a href="/marketplace/email-templates" class="text-primary-600 hover:underline">Editează template-urile de email →</a>
+            <a href="/marketplace/email-templates" class="text-primary-600 hover:underline">{{ __('Editează template-urile de email →') }}</a>
         </div>
-        <p class="mt-2 text-xs text-gray-400">Toate segmentele de clienți folosesc template-ul <code>bulk_password_reset_customer</code>. Organizatorii: <code>bulk_password_reset_organizer</code>.</p>
+        <p class="mt-2 text-xs text-gray-400">{{ __('Toate segmentele de clienți folosesc template-ul') }} <code>bulk_password_reset_customer</code>{{ __('. Organizatorii:') }} <code>bulk_password_reset_organizer</code>.</p>
     </div>
 </x-filament-panels::page>

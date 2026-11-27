@@ -8,7 +8,7 @@
                         <x-heroicon-o-bell class="w-6 h-6 text-primary-600 dark:text-primary-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Ultimele 3 zile</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Ultimele 3 zile') }}</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($totalCount) }}</p>
                     </div>
                 </div>
@@ -20,7 +20,7 @@
                         <x-heroicon-o-bell-alert class="w-6 h-6 text-warning-600 dark:text-warning-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">De văzut (cer acțiune)</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('De văzut (cer acțiune)') }}</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($unreadCount) }}</p>
                     </div>
                 </div>
@@ -32,7 +32,7 @@
                         <x-heroicon-o-calendar class="w-6 h-6 text-success-600 dark:text-success-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Astazi</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Astazi') }}</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayCount) }}</p>
                     </div>
                 </div>
@@ -43,20 +43,20 @@
         <x-filament::section>
             <div class="flex flex-wrap items-center gap-4">
                 <div class="w-48">
-                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Tip notificare</label>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Tip notificare') }}</label>
                     <select wire:model.live="filterType" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-primary-500 focus:ring-primary-500">
-                        <option value="">Toate tipurile</option>
+                        <option value="">{{ __('Toate tipurile') }}</option>
                         @foreach($typeLabels as $type => $label)
                             <option value="{{ $type }}">{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="w-48">
-                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Status') }}</label>
                     <select wire:model.live="filterStatus" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-primary-500 focus:ring-primary-500">
-                        <option value="">Toate</option>
-                        <option value="unread">Necitite</option>
-                        <option value="action">Cer acțiune</option>
+                        <option value="">{{ __('Toate') }}</option>
+                        <option value="unread">{{ __('Necitite') }}</option>
+                        <option value="action">{{ __('Cer acțiune') }}</option>
                     </select>
                 </div>
             </div>
@@ -113,18 +113,18 @@
                                 {{-- Actions --}}
                                 <div class="flex items-center gap-2">
                                     @if($notification->action_url)
-                                        <a href="{{ $notification->action_url }}" target="_blank" class="p-2 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400" title="Vezi">
+                                        <a href="{{ $notification->action_url }}" target="_blank" class="p-2 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400" title="{{ __('Vezi') }}">
                                             <x-heroicon-o-eye class="w-5 h-5" />
                                         </a>
                                     @endif
 
                                     @if(\App\Services\Marketplace\OperatorNotificationJournal::isActionType($notification->type))
                                         @if($notification->read_by_me)
-                                            <button wire:click="markAsUnread({{ $notification->id }})" class="p-2 text-gray-500 hover:text-warning-600 dark:hover:text-warning-400" title="Marcheaza necitit">
+                                            <button wire:click="markAsUnread({{ $notification->id }})" class="p-2 text-gray-500 hover:text-warning-600 dark:hover:text-warning-400" title="{{ __('Marcheaza necitit') }}">
                                                 <x-heroicon-o-envelope class="w-5 h-5" />
                                             </button>
                                         @else
-                                            <button wire:click="markAsRead({{ $notification->id }})" class="p-2 text-gray-500 hover:text-success-600 dark:hover:text-success-400" title="Marcheaza citit">
+                                            <button wire:click="markAsRead({{ $notification->id }})" class="p-2 text-gray-500 hover:text-success-600 dark:hover:text-success-400" title="{{ __('Marcheaza citit') }}">
                                                 <x-heroicon-o-check class="w-5 h-5" />
                                             </button>
                                         @endif
@@ -136,7 +136,7 @@
                 @empty
                     <div class="flex flex-col items-center justify-center py-12">
                         <x-heroicon-o-bell-slash class="w-12 h-12 text-gray-300 dark:text-gray-600" />
-                        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">Nu exista notificari</p>
+                        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">{{ __('Nu exista notificari') }}</p>
                     </div>
                 @endforelse
             </div>

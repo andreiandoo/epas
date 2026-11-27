@@ -3,20 +3,20 @@
         {{-- Month navigation --}}
         <div class="flex items-center justify-between">
             <x-filament::button wire:click="previousMonth" color="gray" icon="heroicon-o-chevron-left" size="sm">
-                Luna anterioară
+                {{ __('Luna anterioară') }}
             </x-filament::button>
             <h2 class="text-lg font-bold">{{ $monthLabel }}</h2>
             <x-filament::button wire:click="nextMonth" color="gray" icon="heroicon-o-chevron-right" icon-position="after" size="sm">
-                Luna următoare
+                {{ __('Luna următoare') }}
             </x-filament::button>
         </div>
 
         {{-- Legend --}}
         <div class="flex items-center gap-4 text-xs">
-            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-100 border border-green-300"></span> Disponibil</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-100 border border-green-300"></span> {{ __('Disponibil') }}</span>
             <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-300"></span> Limitat (&lt;30%)</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-100 border border-red-300"></span> Sold out</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-200 border border-gray-300"></span> Închis</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-100 border border-red-300"></span> {{ __('Sold out') }}</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-200 border border-gray-300"></span> {{ __('Închis') }}</span>
         </div>
 
         {{-- Capacity grid --}}
@@ -24,7 +24,7 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-gray-50 dark:bg-gray-800">
-                        <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 min-w-[120px]">Tip bilet</th>
+                        <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 min-w-[120px]">{{ __('Tip bilet') }}</th>
                         @foreach($days as $day)
                             <th class="px-2 py-2 text-center font-medium text-gray-500 dark:text-gray-400 min-w-[70px] {{ $day['is_past'] ? 'opacity-50' : '' }}">
                                 <div class="text-xs text-gray-400">{{ $day['weekday'] }}</div>
@@ -65,7 +65,7 @@
                                     @if(!$day['is_open'] || $isClosed)
                                         <div class="text-xs text-gray-400">
                                             @if($isClosed)
-                                                <button wire:click="toggleClosed('{{ $day['date'] }}', {{ $tt->id }})" class="hover:text-blue-500" title="Click pentru a deschide">
+                                                <button wire:click="toggleClosed('{{ $day['date'] }}', {{ $tt->id }})" class="hover:text-blue-500" title="{{ __('Click pentru a deschide') }}">
                                                     Închis
                                                 </button>
                                             @else
@@ -81,7 +81,7 @@
                                         @endif
                                         @if(!$day['is_past'])
                                             <div class="flex gap-0.5 justify-center mt-0.5">
-                                                <button wire:click="toggleClosed('{{ $day['date'] }}', {{ $tt->id }})" class="text-[10px] text-gray-400 hover:text-red-500" title="Închide">✕</button>
+                                                <button wire:click="toggleClosed('{{ $day['date'] }}', {{ $tt->id }})" class="text-[10px] text-gray-400 hover:text-red-500" title="{{ __('Închide') }}">✕</button>
                                             </div>
                                         @endif
                                     @endif
@@ -95,7 +95,7 @@
 
         {{-- Totals row --}}
         <div class="text-sm text-gray-500">
-            <strong>Total bilete vândute luna aceasta:</strong>
+            <strong>{{ __('Total bilete vândute luna aceasta:') }}</strong>
             {{ collect($days)->flatMap(fn($d) => collect($d['ticket_types'])->pluck('sold'))->sum() }}
         </div>
     </div>

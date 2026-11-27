@@ -56,7 +56,7 @@
 <div class="space-y-6">
     {{-- Created by card --}}
     <div class="p-4 border border-gray-200 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5">
-        <h3 class="mb-3 text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400">Creat de</h3>
+        <h3 class="mb-3 text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400">{{ __('Creat de') }}</h3>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div class="flex items-start gap-3">
                 <div class="flex items-center justify-center w-10 h-10 text-sm font-bold text-white rounded-full bg-primary-500">
@@ -75,19 +75,19 @@
             <div class="text-sm">
                 <dl class="space-y-1.5">
                     <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500 dark:text-gray-400">La</dt>
+                        <dt class="text-gray-500 dark:text-gray-400">{{ __('La') }}</dt>
                         <dd class="font-medium text-gray-900 dark:text-white text-right">
                             {{ $record->created_at?->translatedFormat('d M Y, H:i:s') ?? '—' }}
                         </dd>
                     </div>
                     @if ($createdIp)
                         <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500 dark:text-gray-400">IP</dt>
+                            <dt class="text-gray-500 dark:text-gray-400">{{ __('IP') }}</dt>
                             <dd class="font-mono text-xs text-gray-900 dark:text-white">{{ $createdIp }}</dd>
                         </div>
                     @endif
                     <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500 dark:text-gray-400">Device</dt>
+                        <dt class="text-gray-500 dark:text-gray-400">{{ __('Device') }}</dt>
                         <dd class="font-medium text-gray-900 dark:text-white text-right">{{ $createdUa['device'] }}</dd>
                     </div>
                 </dl>
@@ -139,9 +139,9 @@
 
                         <div class="flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
                             @if ($ip)
-                                <span><strong class="font-semibold text-gray-700 dark:text-gray-300">IP:</strong> <span class="font-mono">{{ $ip }}</span></span>
+                                <span><strong class="font-semibold text-gray-700 dark:text-gray-300">{{ __('IP:') }}</strong> <span class="font-mono">{{ $ip }}</span></span>
                             @endif
-                            <span><strong class="font-semibold text-gray-700 dark:text-gray-300">Device:</strong> {{ $ua['device'] }}</span>
+                            <span><strong class="font-semibold text-gray-700 dark:text-gray-300">{{ __('Device:') }}</strong> {{ $ua['device'] }}</span>
                         </div>
 
                         @if (is_array($changes) && count($changes) && $activity->event === 'updated')
@@ -153,9 +153,9 @@
                                     <table class="w-full text-xs">
                                         <thead>
                                             <tr class="text-left border-b border-gray-200 dark:border-white/10">
-                                                <th class="py-1 pr-3 text-gray-500 dark:text-gray-400">Câmp</th>
-                                                <th class="py-1 pr-3 text-gray-500 dark:text-gray-400">Înainte</th>
-                                                <th class="py-1 text-gray-500 dark:text-gray-400">După</th>
+                                                <th class="py-1 pr-3 text-gray-500 dark:text-gray-400">{{ __('Câmp') }}</th>
+                                                <th class="py-1 pr-3 text-gray-500 dark:text-gray-400">{{ __('Înainte') }}</th>
+                                                <th class="py-1 text-gray-500 dark:text-gray-400">{{ __('După') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -186,7 +186,7 @@
         </div>
     @else
         <div class="p-4 text-sm text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5">
-            Nu există încă entries în log. Codul a fost creat înainte ca audit-ul să fie activat.
+            {{ __('Nu există încă entries în log. Codul a fost creat înainte ca audit-ul să fie activat.') }}
         </div>
     @endif
 </div>

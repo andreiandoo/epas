@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     @if(!$marketplace)
         <div class="p-6 text-center border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
-            <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found.</p>
+            <p class="text-yellow-800 dark:text-yellow-200">{{ __('No marketplace account found.') }}</p>
         </div>
     @else
         @php $d = $data; @endphp
@@ -13,12 +13,12 @@
                  throw "already declared", aborting the navigation. --}}
             <a href="{{ $d['prev_url'] }}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 <x-heroicon-o-chevron-left class="w-4 h-4" />
-                Luna anterioară
+                {{ __('Luna anterioară') }}
             </a>
             <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ $d['month_label'] }}</h2>
             @if(!$d['is_current_month'] && $d['next_url'])
             <a href="{{ $d['next_url'] }}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                Luna următoare
+                {{ __('Luna următoare') }}
                 <x-heroicon-o-chevron-right class="w-4 h-4" />
             </a>
             @else
@@ -29,7 +29,7 @@
         <!-- Summary Card -->
         <div class="grid grid-cols-1 gap-3 mb-5 lg:grid-cols-4">
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Total de plată</p>
+                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Total de plată') }}</p>
                 <p class="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($d['grand_total'], 2) }} {{ $d['currency'] }}</p>
             </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
@@ -37,11 +37,11 @@
                 <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($d['ticketing_total'], 2) }} {{ $d['currency'] }}</p>
             </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Servicii extra</p>
+                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Servicii extra') }}</p>
                 <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($d['services_total'], 2) }} {{ $d['currency'] }}</p>
             </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Încasări totale</p>
+                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">{{ __('Încasări totale') }}</p>
                 <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($d['revenue_total'], 2) }} {{ $d['currency'] }}</p>
             </div>
         </div>
@@ -53,7 +53,7 @@
                 <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Breakdown încasări &amp; bilete</h3>
             </div>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
-                Split pe modul de comisionare al biletelor: <strong>comision inclus în preț</strong> vs <strong>comision peste preț</strong>. Baza pentru cei {{ $d['commission_rate'] }}% Tixello se ia din valoarea biletelor (regula: inclus → preț integral cu tot cu comision; peste → doar valoarea nominală a biletului, fără comisionul de deasupra).
+                {{ __('Split pe modul de comisionare al biletelor:') }} <strong>{{ __('comision inclus în preț') }}</strong> vs <strong>{{ __('comision peste preț') }}</strong>. Baza pentru cei {{ $d['commission_rate'] }}% Tixello se ia din valoarea biletelor (regula: inclus → preț integral cu tot cu comision; peste → doar valoarea nominală a biletului, fără comisionul de deasupra).
             </p>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -62,7 +62,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-globe-alt class="w-4 h-4 text-emerald-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări online <span class="text-[10px] normal-case text-gray-400">(doar canal online)</span></p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Vânzări online') }} <span class="text-[10px] normal-case text-gray-400">{{ __('(doar canal online)') }}</span></p>
                     </div>
                     <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                         {{ number_format($d['online_revenue'], 2) }} {{ $d['currency'] }}
@@ -72,11 +72,11 @@
                     </p>
                     <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span>Bilete cu comision <em>inclus</em></span>
+                            <span>{{ __('Bilete cu comision') }} <em>inclus</em></span>
                             <span class="font-medium">{{ number_format($d['online_sold']['included_value'], 2) }}</span>
                         </div>
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span>Bilete cu comision <em>peste</em></span>
+                            <span>{{ __('Bilete cu comision') }} <em>peste</em></span>
                             <span class="font-medium">{{ number_format($d['online_sold']['on_top_value'], 2) }}</span>
                         </div>
                     </div>
@@ -89,7 +89,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-device-phone-mobile class="w-4 h-4 text-sky-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Vânzări POS <span class="text-[10px] normal-case text-gray-400">(doar canal POS)</span></p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Vânzări POS') }} <span class="text-[10px] normal-case text-gray-400">{{ __('(doar canal POS)') }}</span></p>
                     </div>
                     <p class="text-xl font-bold text-sky-600 dark:text-sky-400">
                         {{ number_format($d['pos_revenue'], 2) }} {{ $d['currency'] }}
@@ -99,11 +99,11 @@
                     </p>
                     <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span>Bilete cu comision <em>inclus</em></span>
+                            <span>{{ __('Bilete cu comision') }} <em>inclus</em></span>
                             <span class="font-medium">{{ number_format($d['pos_sold']['included_value'], 2) }}</span>
                         </div>
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span>Bilete cu comision <em>peste</em></span>
+                            <span>{{ __('Bilete cu comision') }} <em>peste</em></span>
                             <span class="font-medium">{{ number_format($d['pos_sold']['on_top_value'], 2) }}</span>
                         </div>
                     </div>
@@ -116,7 +116,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-ticket class="w-4 h-4 text-indigo-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete vândute <span class="text-[10px] normal-case text-gray-400">(online + POS)</span></p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Bilete vândute') }} <span class="text-[10px] normal-case text-gray-400">{{ __('(online + POS)') }}</span></p>
                     </div>
                     <p class="text-xl font-bold text-gray-900 dark:text-white">
                         {{ number_format($d['sold_ticket_count']) }}
@@ -126,11 +126,11 @@
                     </p>
                     <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span><em>Inclus</em></span>
+                            <span><em>{{ __('Inclus') }}</em></span>
                             <span class="font-medium">{{ number_format($d['online_sold']['included_count'] + $d['pos_sold']['included_count']) }} · {{ number_format($d['online_sold']['included_value'] + $d['pos_sold']['included_value'], 2) }}</span>
                         </div>
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span><em>Peste</em></span>
+                            <span><em>{{ __('Peste') }}</em></span>
                             <span class="font-medium">{{ number_format($d['online_sold']['on_top_count'] + $d['pos_sold']['on_top_count']) }} · {{ number_format($d['online_sold']['on_top_value'] + $d['pos_sold']['on_top_value'], 2) }}</span>
                         </div>
                     </div>
@@ -140,7 +140,7 @@
                 <div class="p-4 border border-gray-200 rounded-lg dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30">
                     <div class="flex items-center gap-2 mb-1">
                         <x-heroicon-o-arrow-uturn-left class="w-4 h-4 text-rose-500" />
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Bilete returnate <span class="text-[10px] normal-case text-gray-400">(online + POS)</span></p>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ __('Bilete returnate') }} <span class="text-[10px] normal-case text-gray-400">{{ __('(online + POS)') }}</span></p>
                     </div>
                     <p class="text-xl font-bold text-rose-600 dark:text-rose-400">
                         {{ number_format($d['refunded_ticket_count']) }}
@@ -150,11 +150,11 @@
                     </p>
                     <div class="pt-2 mt-2 space-y-0.5 border-t border-gray-200 dark:border-gray-700 text-xs">
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span><em>Inclus</em></span>
+                            <span><em>{{ __('Inclus') }}</em></span>
                             <span class="font-medium">{{ number_format($d['online_refunded']['included_count'] + $d['pos_refunded']['included_count']) }} · {{ number_format($d['online_refunded']['included_value'] + $d['pos_refunded']['included_value'], 2) }}</span>
                         </div>
                         <div class="flex justify-between text-gray-600 dark:text-gray-300">
-                            <span><em>Peste</em></span>
+                            <span><em>{{ __('Peste') }}</em></span>
                             <span class="font-medium">{{ number_format($d['online_refunded']['on_top_count'] + $d['pos_refunded']['on_top_count']) }} · {{ number_format($d['online_refunded']['on_top_value'] + $d['pos_refunded']['on_top_value'], 2) }}</span>
                         </div>
                     </div>
@@ -179,7 +179,7 @@
                         class="flex items-center w-full gap-3 p-3 text-left transition rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/40 cursor-pointer {{ $d['active_detail'] === 'invitations' ? 'ring-2 ring-violet-400 dark:ring-violet-500' : '' }}">
                     <x-heroicon-o-envelope-open class="w-5 h-5 text-violet-500 shrink-0" />
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs text-violet-700 dark:text-violet-300">Invitații emise în lună <span class="opacity-60">· click pt detalii</span></p>
+                        <p class="text-xs text-violet-700 dark:text-violet-300">{{ __('Invitații emise în lună') }} <span class="opacity-60">{{ __('· click pt detalii') }}</span></p>
                         <p class="text-lg font-bold text-violet-900 dark:text-violet-100">
                             {{ number_format($invitations) }}
                             <span class="text-xs font-normal text-violet-600 dark:text-violet-400">({{ number_format($invitationPct, 2) }}%)</span>
@@ -193,7 +193,7 @@
                         class="flex items-center w-full gap-3 p-3 text-left transition rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer {{ $d['active_detail'] === 'free' ? 'ring-2 ring-amber-400 dark:ring-amber-500' : '' }}">
                     <x-heroicon-o-gift class="w-5 h-5 text-amber-500 shrink-0" />
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs text-amber-700 dark:text-amber-300">Bilete cu valoare 0 vândute <span class="opacity-60">· click pt detalii</span></p>
+                        <p class="text-xs text-amber-700 dark:text-amber-300">{{ __('Bilete cu valoare 0 vândute') }} <span class="opacity-60">{{ __('· click pt detalii') }}</span></p>
                         <p class="text-lg font-bold text-amber-900 dark:text-amber-100">
                             {{ number_format($freeSold) }}
                             <span class="text-xs font-normal text-amber-600 dark:text-amber-400">({{ number_format($freePct, 2) }}%)</span>
@@ -205,7 +205,7 @@
                 <div class="flex items-center gap-3 p-3 rounded-lg bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800">
                     <x-heroicon-o-scale class="w-5 h-5 text-rose-500 shrink-0" />
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs text-rose-700 dark:text-rose-300">Gratis din total (invitații + bilete 0)</p>
+                        <p class="text-xs text-rose-700 dark:text-rose-300">{{ __('Gratis din total (invitații + bilete 0)') }}</p>
                         <p class="text-lg font-bold text-rose-900 dark:text-rose-100">
                             {{ number_format($invitations + $freeSold) }} / {{ number_format($ticketTotalForRatio) }}
                             <span class="text-xs font-normal text-rose-600 dark:text-rose-400">({{ number_format($gratisPct, 2) }}%)</span>
@@ -228,23 +228,23 @@
                 <div class="mt-3 p-4 rounded-lg border {{ $panelBg }}">
                     <div class="flex items-center justify-between mb-3">
                         <h4 class="text-xs font-semibold tracking-wide uppercase {{ $panelAccent }}">{{ $panelTitle }}</h4>
-                        <span class="text-xs {{ $panelAccent }}">Total: <span class="font-bold {{ $panelValueColor }}">{{ number_format($panelTotal) }}</span></span>
+                        <span class="text-xs {{ $panelAccent }}">{{ __('Total:') }} <span class="font-bold {{ $panelValueColor }}">{{ number_format($panelTotal) }}</span></span>
                     </div>
 
                     @if (count($panelRows) === 0)
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Niciun eveniment în această lună.</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Niciun eveniment în această lună.') }}</p>
                     @else
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead>
                                     <tr class="border-b border-gray-200 dark:border-gray-700">
-                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Eveniment</th>
-                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Data</th>
-                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Locație</th>
+                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Eveniment') }}</th>
+                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Data') }}</th>
+                                        <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Locație') }}</th>
                                         <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">
                                             {{ $panelIsInvitations ? 'Invitații' : 'Bilete 0 RON' }}
                                         </th>
-                                        <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">% din total</th>
+                                        <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('% din total') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -308,7 +308,7 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Bucket</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Bucket') }}</th>
                             <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Bază ({{ $d['currency'] }})</th>
                             <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">× {{ $d['commission_rate'] }}%</th>
                         </tr>
@@ -324,7 +324,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-rose-300 dark:border-rose-700 bg-rose-50/50 dark:bg-rose-900/20">
-                            <td class="px-3 py-3 font-semibold text-gray-900 dark:text-white">TOTAL</td>
+                            <td class="px-3 py-3 font-semibold text-gray-900 dark:text-white">{{ __('TOTAL') }}</td>
                             <td class="px-3 py-3 text-right font-semibold text-gray-900 dark:text-white tabular-nums">{{ number_format($d['ticket_base_total'], 2) }} {{ $d['currency'] }}</td>
                             <td class="px-3 py-3 text-right font-bold text-rose-600 dark:text-rose-400 tabular-nums">{{ number_format($d['ticketing_total'], 2) }} {{ $d['currency'] }}</td>
                         </tr>
@@ -347,14 +347,14 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Eveniment</th>
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Data</th>
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Locație</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Comenzi</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Bilete</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Încasări</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Comision marketplace</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Comision Tixello</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Eveniment') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Data') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Locație') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Comenzi') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Bilete') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Încasări') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Comision marketplace') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Comision Tixello') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -387,7 +387,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-gray-300 dark:border-gray-600">
-                            <td colspan="3" class="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">Total</td>
+                            <td colspan="3" class="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">{{ __('Total') }}</td>
                             <td class="px-3 py-2.5 text-right font-medium text-gray-700 dark:text-gray-300">{{ number_format(collect($d['events'])->sum('order_count')) }}</td>
                             <td class="px-3 py-2.5 text-right font-medium text-gray-700 dark:text-gray-300">{{ number_format(collect($d['events'])->sum('ticket_count')) }}</td>
                             <td class="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-white whitespace-nowrap">{{ number_format($d['revenue_total'], 2) }} {{ $d['currency'] }}</td>
@@ -398,7 +398,7 @@
                 </table>
             </div>
             @else
-            <p class="px-5 pb-5 text-sm text-gray-400 dark:text-gray-500">Nicio comandă în această lună.</p>
+            <p class="px-5 pb-5 text-sm text-gray-400 dark:text-gray-500">{{ __('Nicio comandă în această lună.') }}</p>
             @endif
         </div>
 
@@ -433,17 +433,17 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Comandă</th>
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Eveniment</th>
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Organizator</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Comandă') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Eveniment') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Organizator') }}</th>
                             @if($type !== 'tracking')
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Pachet</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Pachet') }}</th>
                             @else
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Plan</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Plan') }}</th>
                             @endif
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Data</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Valoare totală</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-rose-600 dark:text-rose-400">Cotă Tixello (50%)</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Data') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Valoare totală') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-rose-600 dark:text-rose-400">{{ __('Cotă Tixello (50%)') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -462,7 +462,7 @@
                 </table>
             </div>
             @else
-            <p class="text-sm text-gray-400 dark:text-gray-500">Nicio comandă pentru acest serviciu în luna selectată.</p>
+            <p class="text-sm text-gray-400 dark:text-gray-500">{{ __('Nicio comandă pentru acest serviciu în luna selectată.') }}</p>
             @endif
         </div>
         @endforeach

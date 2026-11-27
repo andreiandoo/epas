@@ -12,7 +12,7 @@
             x-on:click="$wire.toggleFilters()"
             class="inline-flex items-center gap-2 px-3 py-2 mb-2 rounded-lg ring-1 ring-gray-200 dark:ring-white/10 bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
         <x-heroicon-o-funnel class="w-4 h-4" />
-        Modifică filtrele
+        {{ __('Modifică filtrele') }}
     </button>
 
     <div class="mt-6 space-y-6 pb-16">
@@ -42,7 +42,7 @@
             <div class="rounded-xl bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-white/10 overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-100 dark:border-white/10 flex items-center gap-2">
                     <x-heroicon-o-banknotes class="w-5 h-5 text-primary-500" />
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Deconturi existente pentru aceste evenimente</h3>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Deconturi existente pentru aceste evenimente') }}</h3>
                     <span class="ml-auto text-xs text-gray-500">{{ count($relatedPayouts) }} {{ count($relatedPayouts) === 1 ? 'decont' : 'deconturi' }}</span>
                 </div>
                 <div class="overflow-x-auto">
@@ -50,20 +50,20 @@
                         <thead>
                             <tr class="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
                                 <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">#</th>
-                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">Eveniment</th>
-                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">Status</th>
-                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">Perioadă</th>
-                                <th colspan="4" class="text-center py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">Online (bilete)</th>
-                                <th colspan="3" class="text-center py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">POS (aplicație)</th>
+                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">{{ __('Eveniment') }}</th>
+                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">{{ __('Status') }}</th>
+                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">{{ __('Perioadă') }}</th>
+                                <th colspan="4" class="text-center py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">{{ __('Online (bilete)') }}</th>
+                                <th colspan="3" class="text-center py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">{{ __('POS (aplicație)') }}</th>
                             </tr>
                             <tr class="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
-                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">Brut</th>
-                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
-                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Discount</th>
-                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
-                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">Brut</th>
-                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
-                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">{{ __('Brut') }}</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">{{ __('Comision') }}</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">{{ __('Discount') }}</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">{{ __('Net') }}</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">{{ __('Brut') }}</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">{{ __('Comision') }}</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">{{ __('Net') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -113,16 +113,16 @@
                     <table class="w-full text-sm">
                         <thead class="sticky top-0 z-10">
                             <tr class="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Eveniment</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Tip bilet</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Qty</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Preț</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Brut</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Comision</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Discount</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Extras</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Net</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Mod</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Eveniment') }}</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Tip bilet') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Qty') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Preț') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Brut') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Comision') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Discount') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Extras') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Net') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Mod') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -131,7 +131,7 @@
                                     <td class="py-2 px-3 text-gray-900 dark:text-white">{{ $r['event_title'] }}</td>
                                     <td class="py-2 px-3 text-gray-700 dark:text-gray-300">
                                         @if($r['is_pos'])
-                                            <span title="POS — exclus din totaluri" class="inline-flex items-center gap-1">
+                                            <span title="{{ __('POS — exclus din totaluri') }}" class="inline-flex items-center gap-1">
                                                 <x-heroicon-o-device-phone-mobile class="w-3.5 h-3.5 text-gray-500" />
                                                 {{ $r['ticket_type_name'] }}
                                             </span>
@@ -165,13 +165,13 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="10" class="py-6 text-center text-sm text-gray-500">Nicio vânzare în perioada selectată.</td></tr>
+                                <tr><td colspan="10" class="py-6 text-center text-sm text-gray-500">{{ __('Nicio vânzare în perioada selectată.') }}</td></tr>
                             @endforelse
                         </tbody>
                         @if(!empty($compactData['rows']))
                             <tfoot>
                                 <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-semibold bg-gray-50 dark:bg-gray-800/50">
-                                    <td class="py-2 px-3 text-gray-900 dark:text-white" colspan="2">Total (excl. POS)</td>
+                                    <td class="py-2 px-3 text-gray-900 dark:text-white" colspan="2">{{ __('Total (excl. POS)') }}</td>
                                     <td class="py-2 px-3 text-right text-gray-900 dark:text-white">{{ $compactData['totals']['qty'] }}</td>
                                     <td class="py-2 px-3"></td>
                                     <td class="py-2 px-3 text-right font-mono text-gray-900 dark:text-white">{{ number_format($compactData['totals']['gross'], 2) }}</td>
@@ -197,17 +197,17 @@
                         <thead class="sticky top-0 z-10">
                             <tr class="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
                                 <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">#</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Data</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Eveniment</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Client</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Tip bilet</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Bilete</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Brut</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Comision</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Mod</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Discount</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Refund</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">Net</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Data') }}</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Eveniment') }}</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Client') }}</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Tip bilet') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Bilete') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Brut') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Comision') }}</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Mod') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Discount') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Refund') }}</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">{{ __('Net') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -232,7 +232,7 @@
                                     </td>
                                     <td class="py-2 px-3 text-gray-700 dark:text-gray-300 text-xs">
                                         @if(($r['source'] ?? null) === 'pos_app')
-                                            <span class="inline-flex items-center gap-1" title="Vândut prin aplicație POS">
+                                            <span class="inline-flex items-center gap-1" title="{{ __('Vândut prin aplicație POS') }}">
                                                 <x-heroicon-o-device-phone-mobile class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                                                 {{ $r['ticket_types'] ?: '—' }}
                                             </span>
@@ -262,8 +262,8 @@
                 @if($totalPages > 1)
                     <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-white/10">
                         <div class="text-xs text-gray-500">
-                            Pagina <span class="font-medium text-gray-900 dark:text-white">{{ $extendedPage }}</span> din <span class="font-medium text-gray-900 dark:text-white">{{ $totalPages }}</span>
-                            · Total comenzi: <span class="font-medium text-gray-900 dark:text-white">{{ $extendedTotal }}</span>
+                            {{ __('Pagina') }} <span class="font-medium text-gray-900 dark:text-white">{{ $extendedPage }}</span> din <span class="font-medium text-gray-900 dark:text-white">{{ $totalPages }}</span>
+                            {{ __('· Total comenzi:') }} <span class="font-medium text-gray-900 dark:text-white">{{ $extendedTotal }}</span>
                         </div>
                         <div class="flex gap-2">
                             <button wire:click="changeExtendedPage({{ max(1, $extendedPage - 1) }})" @disabled($extendedPage <= 1) class="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-sm disabled:opacity-50">←</button>
@@ -276,7 +276,7 @@
 
         @if($viewMode === 'extended' && empty($extendedRows) && $summary !== null)
             <div class="rounded-xl bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-white/10 p-6 text-center text-sm text-gray-500">
-                Nicio comandă găsită cu filtrele alese.
+                {{ __('Nicio comandă găsită cu filtrele alese.') }}
             </div>
         @endif
     </div>

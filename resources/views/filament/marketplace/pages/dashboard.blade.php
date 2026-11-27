@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     @if(!$marketplace)
         <div class="p-6 text-center border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
-            <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found. Please contact support.</p>
+            <p class="text-yellow-800 dark:text-yellow-200">{{ __('No marketplace account found. Please contact support.') }}</p>
         </div>
     @else
         {{-- Live chat stats — visible only when the live-chat microservice is
@@ -24,10 +24,10 @@
                 <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button" :aria-expanded="open">
                     <x-heroicon-o-chevron-right class="w-4 h-4 text-red-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-key class="w-5 h-5 text-red-500" />
-                    <h3 class="font-semibold text-red-800 dark:text-red-200">Tokenuri Facebook expirate</h3>
+                    <h3 class="font-semibold text-red-800 dark:text-red-200">{{ __('Tokenuri Facebook expirate') }}</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full">{{ count($expiredCapiTokens) }}</span>
                 </div>
-                <span class="hidden text-xs text-red-600 sm:inline dark:text-red-400">Conversiile nu ajung în Meta până la schimbarea tokenului</span>
+                <span class="hidden text-xs text-red-600 sm:inline dark:text-red-400">{{ __('Conversiile nu ajung în Meta până la schimbarea tokenului') }}</span>
             </div>
             <div class="divide-y divide-gray-100 dark:divide-gray-700" x-show="open" x-collapse>
                 @foreach($expiredCapiTokens as $capi)
@@ -47,7 +47,7 @@
                         </div>
                         <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500 dark:text-gray-400">
                             @if($capi['expired_at'])
-                                <span>Expirat pe <strong class="font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $capi['expired_at']->format('d.m.Y H:i') }}</strong></span>
+                                <span>{{ __('Expirat pe') }} <strong class="font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ $capi['expired_at']->format('d.m.Y H:i') }}</strong></span>
                                 <span>·</span>
                             @endif
                             @if($capi['first_failed_at'])
@@ -64,12 +64,12 @@
                     </div>
                     <a href="{{ $capiEditUrl }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/40 dark:hover:bg-red-900/60 rounded-lg transition-colors">
                         <x-heroicon-o-pencil-square class="w-3.5 h-3.5" />
-                        Schimbă tokenul
+                        {{ __('Schimbă tokenul') }}
                     </a>
                 </div>
                 @endforeach
                 <p class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50 dark:bg-gray-900/30">
-                    Tokenul se schimbă în tab-ul „Bilete & Termeni”, secțiunea Facebook Conversions API. Rândul dispare după primul eveniment trimis cu succes (lista se actualizează la 10 minute).
+                    {{ __('Tokenul se schimbă în tab-ul „Bilete & Termeni”, secțiunea Facebook Conversions API. Rândul dispare după primul eveniment trimis cu succes (lista se actualizează la 10 minute).') }}
                 </p>
             </div>
         </div>
@@ -85,11 +85,11 @@
                 <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
                     <x-heroicon-o-chevron-right class="w-4 h-4 text-orange-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-lifebuoy class="w-5 h-5 text-orange-500" />
-                    <h3 class="font-semibold text-orange-800 dark:text-orange-200">Tichete suport active</h3>
+                    <h3 class="font-semibold text-orange-800 dark:text-orange-200">{{ __('Tichete suport active') }}</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-orange-500 rounded-full">{{ $pendingSupportTicketsCount }}</span>
                 </div>
                 <a href="{{ route('filament.marketplace.resources.support-tickets.index') }}" class="text-xs text-orange-600 dark:text-orange-400 hover:underline">
-                    Vezi toate
+                    {{ __('Vezi toate') }}
                 </a>
             </div>
             <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96" x-show="open" x-collapse x-cloak>
@@ -131,7 +131,7 @@
                     </div>
                     <a href="{{ route('filament.marketplace.resources.support-tickets.view', $supportTicket->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 dark:text-orange-300 dark:bg-orange-900/40 dark:hover:bg-orange-900/60 rounded-lg transition-colors">
                         <x-heroicon-o-eye class="w-3.5 h-3.5" />
-                        Deschide
+                        {{ __('Deschide') }}
                     </a>
                 </div>
                 @endforeach
@@ -156,13 +156,13 @@
                 <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
                     <x-heroicon-o-chevron-right class="w-4 h-4 text-blue-100 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-blue-100" />
-                    <h3 class="font-semibold text-white">Comisioane pierdute</h3>
+                    <h3 class="font-semibold text-white">{{ __('Comisioane pierdute') }}</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-900 bg-amber-300 rounded-full">{{ number_format($iaAllSum['events_count']) }} evenimente</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <a href="{{ route('filament.marketplace.pages.invitation-abuse-report') }}" class="inline-flex items-center gap-1 text-xs font-medium text-white hover:underline">
                         <x-heroicon-o-arrow-top-right-on-square class="w-3.5 h-3.5" />
-                        Vezi raport complet
+                        {{ __('Vezi raport complet') }}
                     </a>
                     <a href="{{ request()->fullUrlWithQuery(['refresh_invite_abuse' => 1]) }}" class="text-xs font-medium text-blue-100 hover:text-white hover:underline">
                         Actualizează
@@ -173,25 +173,25 @@
             <div class="overflow-y-auto" style="max-height:32rem" x-show="open" x-collapse x-cloak>
             {{-- All-time aggregate KPIs --}}
             <div class="p-4 border-b border-blue-100 dark:border-blue-900/40">
-                <p class="mb-2 text-[11px] font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">Total istoric</p>
+                <p class="mb-2 text-[11px] font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">{{ __('Total istoric') }}</p>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Comision pierdut (estimat)</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision pierdut (estimat)') }}</p>
                         <p class="text-xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($iaAllSum['total_lost'], 2) }} {{ $currency }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Comision efectiv câștigat</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision efectiv câștigat') }}</p>
                         <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($iaAllSum['total_earned'], 2) }} {{ $currency }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Invitații / total bilete</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Invitații / total bilete') }}</p>
                         <p class="text-xl font-bold text-gray-900 dark:text-white">
                             {{ number_format($iaAllSum['total_invitations']) }} <span class="text-sm font-normal text-gray-500">/ {{ number_format($iaAllSum['total_invitations'] + $iaAllSum['total_paid_tickets']) }}</span>
                             <span class="text-xs font-normal text-rose-600 dark:text-rose-400 block">{{ number_format($iaAllSum['invitation_ratio_pct'], 1) }}%</span>
                         </p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Organizatori afectați</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Organizatori afectați') }}</p>
                         <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($iaAllSum['unique_organizers']) }}</p>
                     </div>
                 </div>
@@ -199,7 +199,7 @@
 
             {{-- Explanatory note --}}
             <div class="px-4 py-2 text-xs italic text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 border-b border-blue-100 dark:border-blue-900/40">
-                Pentru fiecare eveniment se calculează media comisionului pe bilet vândut, apoi se proiectează pe numărul de invitații emise. Sunt afișate DOAR evenimentele unde proiecția de comision pierdut depășește comisionul efectiv câștigat. Include: invitații standalone (fără comandă) + bilete cu valoare 0 emise prin comandă (promo 100%, bulk admin, etc).
+                {{ __('Pentru fiecare eveniment se calculează media comisionului pe bilet vândut, apoi se proiectează pe numărul de invitații emise. Sunt afișate DOAR evenimentele unde proiecția de comision pierdut depășește comisionul efectiv câștigat. Include: invitații standalone (fără comandă) + bilete cu valoare 0 emise prin comandă (promo 100%, bulk admin, etc).') }}
             </div>
 
             {{-- Current month aggregate KPIs --}}
@@ -208,27 +208,27 @@
                 @if($iaMonthSum['events_count'] > 0)
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Comision pierdut (estimat)</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision pierdut (estimat)') }}</p>
                         <p class="text-lg font-bold text-rose-600 dark:text-rose-400">{{ number_format($iaMonthSum['total_lost'], 2) }} {{ $currency }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Comision efectiv câștigat</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision efectiv câștigat') }}</p>
                         <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($iaMonthSum['total_earned'], 2) }} {{ $currency }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Invitații / total bilete</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Invitații / total bilete') }}</p>
                         <p class="text-lg font-bold text-gray-900 dark:text-white">
                             {{ number_format($iaMonthSum['total_invitations']) }} <span class="text-sm font-normal text-gray-500">/ {{ number_format($iaMonthSum['total_invitations'] + $iaMonthSum['total_paid_tickets']) }}</span>
                             <span class="text-xs font-normal text-rose-600 dark:text-rose-400 block">{{ number_format($iaMonthSum['invitation_ratio_pct'], 1) }}%</span>
                         </p>
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente / organizatori</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente / organizatori') }}</p>
                         <p class="text-lg font-bold text-gray-900 dark:text-white">{{ number_format($iaMonthSum['events_count']) }} <span class="text-sm font-normal text-gray-500">/ {{ number_format($iaMonthSum['unique_organizers']) }}</span></p>
                     </div>
                 </div>
                 @else
-                <p class="text-sm text-gray-500 dark:text-gray-400">Nicio alertă pe luna în curs.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Nicio alertă pe luna în curs.') }}</p>
                 @endif
             </div>
 
@@ -238,14 +238,14 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Eveniment</th>
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Organizator</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Vândute</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Invitații</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">% inv</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Câștigat</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Pierdut (estimat)</th>
-                            <th class="px-3 py-2 text-xs font-medium text-center text-gray-500 dark:text-gray-400">Impact</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Eveniment') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Organizator') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Vândute') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Invitații') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('% inv') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Câștigat') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Pierdut (estimat)') }}</th>
+                            <th class="px-3 py-2 text-xs font-medium text-center text-gray-500 dark:text-gray-400">{{ __('Impact') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -304,11 +304,11 @@
                 <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
                     <x-heroicon-o-chevron-right class="w-4 h-4 text-amber-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-amber-500" />
-                    <h3 class="font-semibold text-amber-800 dark:text-amber-200">Evenimente de revizuit</h3>
+                    <h3 class="font-semibold text-amber-800 dark:text-amber-200">{{ __('Evenimente de revizuit') }}</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full">{{ $pendingReviewEvents->count() }}</span>
                 </div>
                 <a href="{{ route('filament.marketplace.resources.events.index') }}?tableFilters[is_published][value]=0" class="text-xs text-amber-600 dark:text-amber-400 hover:underline">
-                    Vezi toate
+                    {{ __('Vezi toate') }}
                 </a>
             </div>
             <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96" x-show="open" x-collapse x-cloak>
@@ -340,7 +340,7 @@
                     </div>
                     <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 dark:text-amber-300 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 rounded-lg transition-colors">
                         <x-heroicon-o-eye class="w-3.5 h-3.5" />
-                        Revizuieste
+                        {{ __('Revizuieste') }}
                     </a>
                 </div>
                 @endforeach
@@ -355,17 +355,17 @@
                 <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
                     <x-heroicon-o-chevron-right class="w-4 h-4 transition-transform text-emerald-500" ::class="open ? 'rotate-90' : ''" />
                     <x-heroicon-o-rocket-launch class="w-5 h-5 text-emerald-500" />
-                    <h3 class="font-semibold text-emerald-900 dark:text-emerald-200">Evenimente publicate recent</h3>
+                    <h3 class="font-semibold text-emerald-900 dark:text-emerald-200">{{ __('Evenimente publicate recent') }}</h3>
                     <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-emerald-500 rounded-full">{{ $recentlyPublishedEvents->count() }}</span>
-                    <span class="text-xs text-emerald-600 dark:text-emerald-400">ultimele 7 zile</span>
+                    <span class="text-xs text-emerald-600 dark:text-emerald-400">{{ __('ultimele 7 zile') }}</span>
                 </div>
                 <a href="{{ route('filament.marketplace.resources.events.index') }}" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">
-                    Vezi toate
+                    {{ __('Vezi toate') }}
                 </a>
             </div>
             <div x-show="open" x-collapse x-cloak>
                 @if($recentlyPublishedEvents->isEmpty())
-                    <p class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Niciun eveniment publicat în ultimele 7 zile.</p>
+                    <p class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ __('Niciun eveniment publicat în ultimele 7 zile.') }}</p>
                 @else
                 <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96">
                     @foreach($recentlyPublishedEvents as $event)
@@ -390,7 +390,7 @@
                         </div>
                         <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/40 rounded-lg transition-colors">
                             <x-heroicon-o-pencil-square class="w-3.5 h-3.5" />
-                            Deschide
+                            {{ __('Deschide') }}
                         </a>
                     </div>
                     @endforeach
@@ -412,34 +412,34 @@
             </h3>
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Încasări azi</p>
-                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 2) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Încasări azi') }}</p>
+                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 2) }} <span class="text-sm font-normal text-gray-400">{{ __('RON') }}</span></p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Comisioane azi</p>
-                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['commission'] ?? 0, 2) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comisioane azi') }}</p>
+                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['commission'] ?? 0, 2) }} <span class="text-sm font-normal text-gray-400">{{ __('RON') }}</span></p>
                     @if(($todayVatRate ?? 0) > 0)
                     <p class="mt-0.5 text-[10px] text-gray-400">net · +TVA {{ number_format(($todayStats['commission'] ?? 0) * $todayVatRate / 100, 2) }} RON</p>
                     @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Bilete vândute') }}</p>
                     <p class="mt-1 text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($todayStats['tickets_sold']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi azi</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comenzi azi') }}</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayStats['total_orders']) }}</p>
                     @if(($todayStats['total_orders'] ?? 0) > 0)
                     <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['paid_orders'] ?? 0 }} plătite · {{ $todayStats['pending_orders'] ?? 0 }} pending · {{ $todayStats['failed_orders'] ?? 0 }} eșuate · {{ $todayStats['cancelled_orders'] ?? 0 }} anulate · {{ $todayStats['expired_orders'] ?? 0 }} expirate · {{ $todayStats['refunded_orders'] ?? 0 }} rambursate</p>
                     @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Clienți noi</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Clienți noi') }}</p>
                     <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($todayStats['new_customers']) }}</p>
                     <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['registered_customers'] ?? 0 }} registered · {{ $todayStats['guest_customers'] ?? 0 }} guest</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente publicate azi</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente publicate azi') }}</p>
                     <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($todayStats['events_published'] ?? 0) }}</p>
                 </div>
             </div>
@@ -462,35 +462,35 @@
             </div>
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Organizatori noi</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Organizatori noi') }}</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['new_organizers']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente live acum</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente live acum') }}</p>
                     <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($monthStats['live_events']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente încheiate</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente încheiate') }}</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['ended_events']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Total vânzări</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Total vânzări') }}</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['total_sales'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Venituri brute</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Venituri brute') }}</p>
                     <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($monthStats['total_commission'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Bilete vândute') }}</p>
                     <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($monthStats['tickets_sold']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Clienți noi</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Clienți noi') }}</p>
                     <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($monthStats['new_customers']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comenzi') }}</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['month_orders']) }}</p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
@@ -502,7 +502,7 @@
                     @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Media vânzări zilnice</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Media vânzări zilnice') }}</p>
                     <p class="mt-1 text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($monthStats['avg_daily_sales'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
                 </div>
             </div>
@@ -551,7 +551,7 @@
                 @endphp
                 <div>
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400">Vânzări · ultimele 30 zile</span>
+                        <span class="text-[10px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400">{{ __('Vânzări · ultimele 30 zile') }}</span>
                         <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ $money($sum30) }}</span>
                     </div>
                     @if($hasTrend)
@@ -589,7 +589,7 @@
                         </div>
                     @else
                         <div class="flex items-center justify-center text-[11px] text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-700 rounded-md" style="height: 64px;">
-                            Nicio vânzare în ultimele 30 zile
+                            {{ __('Nicio vânzare în ultimele 30 zile') }}
                         </div>
                     @endif
                 </div>
@@ -661,7 +661,7 @@
                         <div class="flex items-center gap-2">
                             <span class="text-base">⚖️</span>
                             <div>
-                                <p class="text-[11px] uppercase tracking-wide font-bold {{ $cls['headLabel'] }}">Decontare (compensare) · perioada în derulare</p>
+                                <p class="text-[11px] uppercase tracking-wide font-bold {{ $cls['headLabel'] }}">{{ __('Decontare (compensare) · perioada în derulare') }}</p>
                                 <p class="text-xs {{ $cls['headSub'] }}">{{ $pFrom }} – {{ $pTo }} · online încasat de AmBilet, POS încasat în locație · se compensează comisioanele</p>
                             </div>
                         </div>
@@ -669,31 +669,31 @@
                     <div class="grid grid-cols-1 gap-3 p-3 lg:grid-cols-3">
                         {{-- Online (AmBilet incaseaza) --}}
                         <div class="p-3 border rounded-md bg-sky-50/50 dark:bg-sky-900/10 border-sky-200 dark:border-sky-800/40">
-                            <p class="text-[10px] uppercase font-bold text-sky-800 dark:text-sky-300 mb-1">🌐 Online · încasat de AmBilet</p>
+                            <p class="text-[10px] uppercase font-bold text-sky-800 dark:text-sky-300 mb-1">{{ __('🌐 Online · încasat de AmBilet') }}</p>
                             <div class="space-y-1 text-xs">
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Brut</span><span class="font-semibold tabular-nums">{{ $money($on['gross']) }}</span></div>
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Comision AmBilet</span><span class="font-semibold tabular-nums text-amber-700 dark:text-amber-400">−{{ $money($on['commission']) }}</span></div>
-                                <div class="flex justify-between pt-1 border-t border-sky-200/60"><span class="font-bold text-sky-800 dark:text-sky-200">Net (către locație)</span><span class="font-bold tabular-nums text-sky-900 dark:text-sky-100">{{ $money($on['net']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('Brut') }}</span><span class="font-semibold tabular-nums">{{ $money($on['gross']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('Comision AmBilet') }}</span><span class="font-semibold tabular-nums text-amber-700 dark:text-amber-400">−{{ $money($on['commission']) }}</span></div>
+                                <div class="flex justify-between pt-1 border-t border-sky-200/60"><span class="font-bold text-sky-800 dark:text-sky-200">{{ __('Net (către locație)') }}</span><span class="font-bold tabular-nums text-sky-900 dark:text-sky-100">{{ $money($on['net']) }}</span></div>
                             </div>
                         </div>
                         {{-- POS (locatia incaseaza fizic) --}}
                         <div class="p-3 border rounded-md bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40">
-                            <p class="text-[10px] uppercase font-bold text-amber-800 dark:text-amber-300 mb-1">🏪 POS · încasat în locație</p>
+                            <p class="text-[10px] uppercase font-bold text-amber-800 dark:text-amber-300 mb-1">{{ __('🏪 POS · încasat în locație') }}</p>
                             <div class="space-y-1 text-xs">
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Brut</span><span class="font-semibold tabular-nums">{{ $money($po['gross']) }}</span></div>
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">💵 Cash</span><span class="font-semibold tabular-nums">{{ $money($po['cash']) }}</span></div>
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">💳 Card</span><span class="font-semibold tabular-nums">{{ $money($po['card']) }}</span></div>
-                                <div class="flex justify-between pt-1 border-t border-amber-200/60"><span class="font-bold text-amber-800 dark:text-amber-200">Comision datorat</span><span class="font-bold tabular-nums text-amber-900 dark:text-amber-100">{{ $money($po['commission']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('Brut') }}</span><span class="font-semibold tabular-nums">{{ $money($po['gross']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('💵 Cash') }}</span><span class="font-semibold tabular-nums">{{ $money($po['cash']) }}</span></div>
+                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('💳 Card') }}</span><span class="font-semibold tabular-nums">{{ $money($po['card']) }}</span></div>
+                                <div class="flex justify-between pt-1 border-t border-amber-200/60"><span class="font-bold text-amber-800 dark:text-amber-200">{{ __('Comision datorat') }}</span><span class="font-bold tabular-nums text-amber-900 dark:text-amber-100">{{ $money($po['commission']) }}</span></div>
                             </div>
                         </div>
                         {{-- Balanta compensare --}}
                         <div class="p-3 border-2 rounded-md {{ $cls['balBox'] }} flex flex-col justify-center">
-                            <p class="text-[10px] uppercase font-bold {{ $cls['balLbl'] }}">De achitat, prin compensare</p>
+                            <p class="text-[10px] uppercase font-bold {{ $cls['balLbl'] }}">{{ __('De achitat, prin compensare') }}</p>
                             <p class="mt-1 text-sm font-bold {{ $cls['balMain'] }}">{{ $dirIcon }} {{ $dirLabel }}</p>
                             <p class="text-2xl font-extrabold {{ $cls['balMain'] }} tabular-nums">{{ $money($bal['amount']) }}</p>
                             <p class="text-[10px] {{ $cls['balSub'] }} mt-1">
-                                AmBilet → Locație: <span class="tabular-nums font-semibold">{{ $money($bal['ambilet_owes_venue']) }}</span><br>
-                                Locație → AmBilet: <span class="tabular-nums font-semibold">{{ $money($bal['venue_owes_ambilet']) }}</span>
+                                {{ __('AmBilet → Locație:') }} <span class="tabular-nums font-semibold">{{ $money($bal['ambilet_owes_venue']) }}</span><br>
+                                {{ __('Locație → AmBilet:') }} <span class="tabular-nums font-semibold">{{ $money($bal['venue_owes_ambilet']) }}</span>
                             </p>
                         </div>
                     </div>
@@ -712,36 +712,36 @@
         <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="charts-{{ $chartPeriod }}-{{ $chartMonth }}">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div class="flex items-center gap-4">
-                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Vânzări & Bilete</h3>
+                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">{{ __('Vânzări & Bilete') }}</h3>
                     @if($chartPeriod === 'month' && $chartMonthMeta)
                         <div class="flex items-center gap-1">
                             <button type="button"
                                     wire:click="shiftChartMonth(-1)"
                                     @disabled(!($chartMonthMeta['canGoPrev'] ?? false))
                                     class="inline-flex items-center justify-center w-7 h-7 text-gray-500 transition-colors rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    title="Luna anterioară">
+                                    title="{{ __('Luna anterioară') }}">
                                 <x-heroicon-o-chevron-left class="w-4 h-4" />
                             </button>
                             <span class="px-1 text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums whitespace-nowrap">
                                 {{ ucfirst($chartMonthMeta['monthLabel']) }}
                                 @if($chartMonthMeta['mode'] === 'past')
-                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-gray-500 bg-gray-100 dark:text-gray-400 dark:bg-gray-700 rounded">Trecut</span>
+                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-gray-500 bg-gray-100 dark:text-gray-400 dark:bg-gray-700 rounded">{{ __('Trecut') }}</span>
                                 @elseif($chartMonthMeta['mode'] === 'future')
-                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40 rounded">Predicție</span>
+                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40 rounded">{{ __('Predicție') }}</span>
                                 @endif
                             </span>
                             <button type="button"
                                     wire:click="shiftChartMonth(1)"
                                     @disabled(!($chartMonthMeta['canGoNext'] ?? false))
                                     class="inline-flex items-center justify-center w-7 h-7 text-gray-500 transition-colors rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    title="Luna următoare">
+                                    title="{{ __('Luna următoare') }}">
                                 <x-heroicon-o-chevron-right class="w-4 h-4" />
                             </button>
                             @if($chartMonthMeta['mode'] !== 'current')
                                 <button type="button"
                                         wire:click="$set('chartMonth', '{{ \Carbon\Carbon::now('Europe/Bucharest')->format('Y-m') }}')"
                                         class="ml-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-900/30 rounded transition-colors"
-                                        title="Revino la luna în curs">
+                                        title="{{ __('Revino la luna în curs') }}">
                                     Azi
                                 </button>
                             @endif
@@ -749,18 +749,18 @@
                     @endif
                     <div class="flex items-center gap-3 text-xs text-gray-500">
                         @if($chartPeriod === 'month' && $chartMonthMeta && $chartMonthMeta['mode'] !== 'future')
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> {{ __('Vânzări (RON)') }}</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> {{ __('Bilete') }}</span>
                         @elseif($chartPeriod !== 'month')
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> {{ __('Vânzări (RON)') }}</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> {{ __('Bilete') }}</span>
                         @endif
-                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(99,102,241,0.6);"></span> Medie</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(99,102,241,0.6);"></span> {{ __('Medie') }}</span>
                         @if($chartPeriod === 'month')
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> Anul trecut</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(234,179,8,0.5);"></span> Medie an trecut</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> {{ __('Anul trecut') }}</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(234,179,8,0.5);"></span> {{ __('Medie an trecut') }}</span>
                             @if($chartMonthMeta && $chartMonthMeta['mode'] !== 'past')
-                                <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(16,185,129,0.7);"></span> Predicție</span>
+                                <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(16,185,129,0.7);"></span> {{ __('Predicție') }}</span>
                             @endif
                         @endif
                     </div>
@@ -769,12 +769,12 @@
                     wire:model.live="chartPeriod"
                     class="py-1 text-xs border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-primary-500 focus:border-primary-500"
                 >
-                    <option value="month">Avansat</option>
-                    <option value="7">7 zile</option>
-                    <option value="15">15 zile</option>
-                    <option value="30">30 zile</option>
-                    <option value="60">60 zile</option>
-                    <option value="90">90 zile</option>
+                    <option value="month">{{ __('Avansat') }}</option>
+                    <option value="7">{{ __('7 zile') }}</option>
+                    <option value="15">{{ __('15 zile') }}</option>
+                    <option value="30">{{ __('30 zile') }}</option>
+                    <option value="60">{{ __('60 zile') }}</option>
+                    <option value="90">{{ __('90 zile') }}</option>
                 </select>
             </div>
             <div class="h-64">
@@ -825,7 +825,7 @@
                         @if(!$isFuture)
                         <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">{{ $salesLabel }}</p>
-                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['sales_so_far'], 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">RON</span>{!! $pctBadge($pct($chartSummary['sales_so_far'], $chartSummary['prev_year_sales'] ?? 0)) !!}</p>
+                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['sales_so_far'], 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['sales_so_far'], $chartSummary['prev_year_sales'] ?? 0)) !!}</p>
                             <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
@@ -835,43 +835,43 @@
                         </div>
                         <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">{{ $commLabel }}</p>
-                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['commission_so_far'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">RON</span>{!! $pctBadge($pct($chartSummary['commission_so_far'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</p>
+                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['commission_so_far'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['commission_so_far'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</p>
                             <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
                         </div>
                         @endif
 
                         {{-- ── Anul trecut (purple) ── --}}
                         <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">Vânzări - anul trecut</p>
-                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-purple-600 dark:text-purple-300 ml-1">RON</span></p>
+                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ __('Vânzări - anul trecut') }}</p>
+                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-purple-600 dark:text-purple-300 ml-1">{{ __('RON') }}</span></p>
                             <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">{{ $prevLabel }}</p>
                         </div>
                         <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">Bilete - anul trecut</p>
+                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ __('Bilete - anul trecut') }}</p>
                             <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_tickets'], 0, ',', '.') }}</p>
                             <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">{{ $prevLabel }}</p>
                         </div>
                         <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">Comisioane - anul trecut</p>
-                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_commission'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-purple-600 dark:text-purple-300 ml-1">RON</span></p>
+                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ __('Comisioane - anul trecut') }}</p>
+                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_commission'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-purple-600 dark:text-purple-300 ml-1">{{ __('RON') }}</span></p>
                             <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">estimat · {{ $prevLabel }}</p>
                         </div>
 
                         {{-- ── Predicție (emerald; hide for past — actuals already known) ── --}}
                         @if(!$isPast)
                         <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">Vânzări - Predicție</p>
-                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">RON</span>{!! $pctBadge($pct($chartSummary['predicted_sales'] ?? 0, $chartSummary['prev_year_sales'] ?? 0)) !!}</p>
+                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">{{ __('Vânzări - Predicție') }}</p>
+                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['predicted_sales'] ?? 0, $chartSummary['prev_year_sales'] ?? 0)) !!}</p>
                             <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">Bilete - Predicție</p>
+                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">{{ __('Bilete - Predicție') }}</p>
                             <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_tickets'], 0, ',', '.') }}{!! $pctBadge($pct($chartSummary['predicted_tickets'] ?? 0, $chartSummary['prev_year_tickets'] ?? 0)) !!}</p>
                             <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
                         <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">Comisioane - Predicție</p>
-                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_commission'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">RON</span>{!! $pctBadge($pct($chartSummary['predicted_commission'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</p>
+                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">{{ __('Comisioane - Predicție') }}</p>
+                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_commission'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['predicted_commission'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</p>
                             <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
                         @endif
@@ -889,8 +889,8 @@
                         <x-heroicon-o-chart-pie class="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">Breakdown vânzări & bilete</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Încasări online, refund-uri prin procesator, split POS cash / card, per eveniment</p>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Breakdown vânzări & bilete') }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Încasări online, refund-uri prin procesator, split POS cash / card, per eveniment') }}</p>
                     </div>
                 </div>
                 <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400 transition-colors shrink-0 group-hover:text-indigo-500" />
@@ -903,8 +903,8 @@
                         <x-heroicon-o-chart-bar-square class="w-6 h-6 text-primary-600 dark:text-primary-400" />
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">Statistici All Time</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Totaluri cumulate + breakdown importat (legacy) vs procesat prin Tixello</p>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Statistici All Time') }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Totaluri cumulate + breakdown importat (legacy) vs procesat prin Tixello') }}</p>
                     </div>
                 </div>
                 <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400 shrink-0" />
@@ -920,7 +920,7 @@
                         <x-heroicon-o-document-currency-dollar class="w-5 h-5 text-rose-600 dark:text-rose-400" />
                     </div>
                     <div>
-                        <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">De plată către Tixello</h3>
+                        <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">{{ __('De plată către Tixello') }}</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400">{{ $billing['month_label'] }}</p>
                     </div>
                 </div>
@@ -969,7 +969,7 @@
                 @endforeach
 
                 <div class="flex items-center justify-between px-3 py-2 mt-1 border-t border-gray-200 dark:border-gray-600">
-                    <span class="text-xs text-gray-500 uppercase dark:text-gray-400">Subtotal servicii</span>
+                    <span class="text-xs text-gray-500 uppercase dark:text-gray-400">{{ __('Subtotal servicii') }}</span>
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ number_format($billing['services_total'], 2) }} {{ $billing['currency'] }}</span>
                 </div>
             </div>

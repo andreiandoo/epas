@@ -9,14 +9,14 @@
 
         {{-- Settings --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Setări notificări SMS</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Setări notificări SMS') }}</h3>
 
             <div class="space-y-4">
                 {{-- Transactional --}}
                 <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div>
-                        <p class="font-medium text-gray-900 dark:text-white">SMS Tranzacționale</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Confirmări automate la achiziția de bilet cu link de acces</p>
+                        <p class="font-medium text-gray-900 dark:text-white">{{ __('SMS Tranzacționale') }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Confirmări automate la achiziția de bilet cu link de acces') }}</p>
                     </div>
                     <button wire:click="toggleTransactional" type="button"
                             class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 {{ $this->transactionalEnabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600' }}"
@@ -28,8 +28,8 @@
                 {{-- Promotional --}}
                 <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div>
-                        <p class="font-medium text-gray-900 dark:text-white">SMS Promoționale</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Campanii promoționale către clienți</p>
+                        <p class="font-medium text-gray-900 dark:text-white">{{ __('SMS Promoționale') }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Campanii promoționale către clienți') }}</p>
                     </div>
                     <button wire:click="togglePromotional" type="button"
                             class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 {{ $this->promotionalEnabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600' }}"
@@ -44,7 +44,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Credite SMS Tranzacționale</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Credite SMS Tranzacționale') }}</p>
                     <x-heroicon-o-chat-bubble-bottom-center-text class="h-5 w-5 text-primary-500" />
                 </div>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($transactionalCredits) }}</p>
@@ -57,7 +57,7 @@
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center justify-between mb-2">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Credite SMS Promoționale</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Credite SMS Promoționale') }}</p>
                     <x-heroicon-o-megaphone class="h-5 w-5 text-yellow-500" />
                 </div>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($promotionalCredits) }}</p>
@@ -73,21 +73,21 @@
         {{-- Purchase Credits --}}
         @if($this->transactionalEnabled || $this->promotionalEnabled)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Achiziționează credite SMS</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Achiziționează credite SMS') }}</h3>
 
                 <div class="space-y-6">
                     @if($this->transactionalEnabled)
                         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                              x-data="{ qty: @entangle('transactionalQuantity'), price: {{ $pricing['transactional']['price'] ?? 0.40 }}, eurToRon: {{ $eurToRon ?? 'null' }} }">
-                            <p class="font-medium text-gray-900 dark:text-white mb-3">SMS Tranzacționale</p>
+                            <p class="font-medium text-gray-900 dark:text-white mb-3">{{ __('SMS Tranzacționale') }}</p>
                             <div class="flex items-end gap-4">
                                 <div class="flex-1">
-                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Număr SMS-uri</label>
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ __('Număr SMS-uri') }}</label>
                                     <input type="number" x-model.number="qty" min="1" step="10"
                                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm" />
                                 </div>
                                 <div class="flex-1">
-                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Preț/SMS</label>
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ __('Preț/SMS') }}</label>
                                     <p class="text-sm font-medium py-2">
                                         <span x-text="price.toFixed(2) + ' EUR'"></span>
                                         <template x-if="eurToRon">
@@ -96,7 +96,7 @@
                                     </p>
                                 </div>
                                 <div class="flex-1">
-                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Total</label>
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ __('Total') }}</label>
                                     <p class="text-lg font-bold text-primary-600">
                                         <span x-text="(qty * price).toFixed(2) + ' EUR'"></span>
                                         <template x-if="eurToRon">
@@ -106,8 +106,8 @@
                                 </div>
                                 <button wire:click="purchaseCredits('transactional')" wire:loading.attr="disabled"
                                         class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-                                    <span wire:loading.remove wire:target="purchaseCredits('transactional')">Cumpără credite</span>
-                                    <span wire:loading wire:target="purchaseCredits('transactional')">Se procesează...</span>
+                                    <span wire:loading.remove wire:target="purchaseCredits('transactional')">{{ __('Cumpără credite') }}</span>
+                                    <span wire:loading wire:target="purchaseCredits('transactional')">{{ __('Se procesează...') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -116,15 +116,15 @@
                     @if($this->promotionalEnabled)
                         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                              x-data="{ qty: @entangle('promotionalQuantity'), price: {{ $pricing['promotional']['price'] ?? 0.50 }}, eurToRon: {{ $eurToRon ?? 'null' }} }">
-                            <p class="font-medium text-gray-900 dark:text-white mb-3">SMS Promoționale</p>
+                            <p class="font-medium text-gray-900 dark:text-white mb-3">{{ __('SMS Promoționale') }}</p>
                             <div class="flex items-end gap-4">
                                 <div class="flex-1">
-                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Număr SMS-uri</label>
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ __('Număr SMS-uri') }}</label>
                                     <input type="number" x-model.number="qty" min="1" step="10"
                                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm" />
                                 </div>
                                 <div class="flex-1">
-                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Preț/SMS</label>
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ __('Preț/SMS') }}</label>
                                     <p class="text-sm font-medium py-2">
                                         <span x-text="price.toFixed(2) + ' EUR'"></span>
                                         <template x-if="eurToRon">
@@ -133,7 +133,7 @@
                                     </p>
                                 </div>
                                 <div class="flex-1">
-                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Total</label>
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ __('Total') }}</label>
                                     <p class="text-lg font-bold text-yellow-600">
                                         <span x-text="(qty * price).toFixed(2) + ' EUR'"></span>
                                         <template x-if="eurToRon">
@@ -143,8 +143,8 @@
                                 </div>
                                 <button wire:click="purchaseCredits('promotional')" wire:loading.attr="disabled"
                                         class="px-6 py-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-                                    <span wire:loading.remove wire:target="purchaseCredits('promotional')">Cumpără credite</span>
-                                    <span wire:loading wire:target="purchaseCredits('promotional')">Se procesează...</span>
+                                    <span wire:loading.remove wire:target="purchaseCredits('promotional')">{{ __('Cumpără credite') }}</span>
+                                    <span wire:loading wire:target="purchaseCredits('promotional')">{{ __('Se procesează...') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -157,18 +157,18 @@
         @if(count($recentLogs) > 0)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Ultimele SMS-uri trimise</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Ultimele SMS-uri trimise') }}</h3>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
                             <tr>
-                                <th class="px-6 py-3">Data</th>
-                                <th class="px-6 py-3">Telefon</th>
-                                <th class="px-6 py-3">Tip</th>
-                                <th class="px-6 py-3">Eveniment</th>
-                                <th class="px-6 py-3">Status</th>
-                                <th class="px-6 py-3">Cost</th>
+                                <th class="px-6 py-3">{{ __('Data') }}</th>
+                                <th class="px-6 py-3">{{ __('Telefon') }}</th>
+                                <th class="px-6 py-3">{{ __('Tip') }}</th>
+                                <th class="px-6 py-3">{{ __('Eveniment') }}</th>
+                                <th class="px-6 py-3">{{ __('Status') }}</th>
+                                <th class="px-6 py-3">{{ __('Cost') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">

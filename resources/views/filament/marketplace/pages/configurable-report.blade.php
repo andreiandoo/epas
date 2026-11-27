@@ -9,7 +9,7 @@
     @endif
 
     <div class="flex flex-wrap items-center gap-2">
-        <span class="text-sm text-gray-500 dark:text-gray-400 mr-1">Rapoarte:</span>
+        <span class="text-sm text-gray-500 dark:text-gray-400 mr-1">{{ __('Rapoarte:') }}</span>
         @forelse($reports as $r)
             <a href="{{ $this->reportUrl($r->id) }}"
                @class([
@@ -21,7 +21,7 @@
                 {{ $r->name }}
             </a>
         @empty
-            <span class="text-sm text-gray-500 dark:text-gray-400">Niciun raport. Creează unul cu „Raport nou”.</span>
+            <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('Niciun raport. Creează unul cu „Raport nou”.') }}</span>
         @endforelse
     </div>
 

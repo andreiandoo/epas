@@ -75,23 +75,23 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-green-600">{{ number_format($customerPaymentTotal, 2) }} RON</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Încasări clienți</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Încasări clienți') }}</div>
                 @if($commissionMode === 'added_on_top')
                     <div class="mt-1 text-xs text-gray-400">include comision {{ number_format($commissionRate, 1) }}%</div>
                 @endif
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-amber-600">{{ number_format($totalCommissions, 2) }} RON</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Comisioane</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Comisioane') }}</div>
                 <div class="mt-1 text-xs text-gray-400">{{ number_format($commissionRate, 1) }}% ({{ $commissionModeLabel }})</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-emerald-600">{{ number_format($netOrganizerRevenue, 2) }} RON</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Net organizator</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Net organizator') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-cyan-600">{{ number_format($totalViews) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Vizualizări</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Vizualizări') }}</div>
             </div>
         </div>
 
@@ -99,57 +99,57 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-primary-600">{{ number_format($totalTicketsSold) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Bilete vândute</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Bilete vândute') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-blue-600">{{ $occupancy }}%</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Grad ocupare</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Grad ocupare') }}</div>
                 <div class="mt-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
                     <div class="h-full {{ $occupancy >= 80 ? 'bg-green-500' : ($occupancy >= 50 ? 'bg-yellow-500' : 'bg-blue-500') }}" style="width: {{ min($occupancy, 100) }}%"></div>
                 </div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-purple-600">{{ number_format($orderStats['total']) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Comenzi totale</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Comenzi totale') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-green-600">{{ number_format($orderStats['paid']) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Comenzi finalizate</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Comenzi finalizate') }}</div>
             </div>
         </div>
 
         {{-- Order Status Breakdown --}}
         <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Status comenzi</h2>
+            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Status comenzi') }}</h2>
 
             <div class="grid grid-cols-3 gap-4 md:grid-cols-7">
                 <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                     <div class="text-xl font-bold text-gray-900 dark:text-white">{{ $orderStats['total'] }}</div>
-                    <div class="text-xs text-gray-500">Total</div>
+                    <div class="text-xs text-gray-500">{{ __('Total') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
                     <div class="text-xl font-bold text-green-600">{{ $orderStats['paid'] }}</div>
-                    <div class="text-xs text-gray-500">Finalizate</div>
+                    <div class="text-xs text-gray-500">{{ __('Finalizate') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
                     <div class="text-xl font-bold text-yellow-600">{{ $orderStats['pending'] }}</div>
-                    <div class="text-xs text-gray-500">În așteptare</div>
+                    <div class="text-xs text-gray-500">{{ __('În așteptare') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
                     <div class="text-xl font-bold text-red-600">{{ $orderStats['cancelled'] }}</div>
-                    <div class="text-xs text-gray-500">Anulate</div>
+                    <div class="text-xs text-gray-500">{{ __('Anulate') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
                     <div class="text-xl font-bold text-orange-600">{{ $orderStats['refunded'] }}</div>
-                    <div class="text-xs text-gray-500">Returnate</div>
+                    <div class="text-xs text-gray-500">{{ __('Returnate') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-rose-50 dark:bg-rose-900/20">
                     <div class="text-xl font-bold text-rose-600">{{ $orderStats['failed'] ?? 0 }}</div>
-                    <div class="text-xs text-gray-500">Eșuate</div>
+                    <div class="text-xs text-gray-500">{{ __('Eșuate') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
                     <div class="text-xl font-bold text-slate-600">{{ $orderStats['expired'] ?? 0 }}</div>
-                    <div class="text-xs text-gray-500">Expirate</div>
+                    <div class="text-xs text-gray-500">{{ __('Expirate') }}</div>
                 </div>
             </div>
 
@@ -160,7 +160,7 @@
                 @endphp
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-600 dark:text-gray-400">Rată de finalizare</span>
+                        <span class="text-gray-600 dark:text-gray-400">{{ __('Rată de finalizare') }}</span>
                         <span class="font-semibold {{ $completedRate >= 70 ? 'text-green-600' : ($completedRate >= 40 ? 'text-yellow-600' : 'text-red-600') }}">
                             {{ $completedRate }}% ({{ $orderStats['paid'] }} din {{ $orderStats['total'] }})
                         </span>
@@ -174,35 +174,35 @@
 
         {{-- Ticket Status Metrics --}}
         <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Status bilete</h2>
+            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Status bilete') }}</h2>
 
             <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
                 <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                     <div class="text-xl font-bold text-gray-900 dark:text-white">{{ $ticketMetrics['total_issued'] }}</div>
-                    <div class="text-xs text-gray-500">Total emise</div>
+                    <div class="text-xs text-gray-500">{{ __('Total emise') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
                     <div class="text-xl font-bold text-green-600">{{ $ticketMetrics['valid'] }}</div>
-                    <div class="text-xs text-gray-500">Valide</div>
+                    <div class="text-xs text-gray-500">{{ __('Valide') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                     <div class="text-xl font-bold text-blue-600">{{ $ticketMetrics['used'] }}</div>
-                    <div class="text-xs text-gray-500">Check-in</div>
+                    <div class="text-xs text-gray-500">{{ __('Check-in') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
                     <div class="text-xl font-bold text-red-600">{{ $ticketMetrics['cancelled'] }}</div>
-                    <div class="text-xs text-gray-500">Anulate</div>
+                    <div class="text-xs text-gray-500">{{ __('Anulate') }}</div>
                 </div>
                 <div class="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
                     <div class="text-xl font-bold text-slate-600">{{ $ticketMetrics['void'] }}</div>
-                    <div class="text-xs text-gray-500">Void</div>
+                    <div class="text-xs text-gray-500">{{ __('Void') }}</div>
                 </div>
             </div>
 
             @if($ticketMetrics['total_issued'] > 0)
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-gray-600 dark:text-gray-400">Rată check-in</span>
+                        <span class="text-gray-600 dark:text-gray-400">{{ __('Rată check-in') }}</span>
                         <span class="font-semibold {{ $ticketMetrics['checkin_rate'] >= 70 ? 'text-green-600' : ($ticketMetrics['checkin_rate'] >= 40 ? 'text-yellow-600' : 'text-blue-600') }}">
                             {{ $ticketMetrics['checkin_rate'] }}% ({{ $ticketMetrics['used'] }} din {{ $ticketMetrics['valid'] + $ticketMetrics['used'] }})
                         </span>
@@ -216,7 +216,7 @@
 
         {{-- Ticket Types Performance --}}
         <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Ticket Types Performance</h2>
+            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Ticket Types Performance') }}</h2>
 
             @if(count($ticketTypesData) > 0)
                 <div class="space-y-4">
@@ -249,13 +249,13 @@
                     @endforeach
                 </div>
             @else
-                <p class="text-gray-500 dark:text-gray-400">No ticket types configured.</p>
+                <p class="text-gray-500 dark:text-gray-400">{{ __('No ticket types configured.') }}</p>
             @endif
         </div>
 
         {{-- Sales Chart --}}
         <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Daily Sales (Last 30 Days)</h2>
+            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Daily Sales (Last 30 Days)') }}</h2>
 
             <div style="height: 300px;">
                 <canvas id="salesChart"></canvas>
@@ -265,22 +265,22 @@
         {{-- Page Analytics --}}
         @if($pageAnalytics['available'] ?? false)
             <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Page Analytics</h2>
+                <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ __('Page Analytics') }}</h2>
 
                 <div class="grid grid-cols-2 gap-4 md:grid-cols-4 mb-6">
                     <div class="text-center">
                         <div class="text-xl font-bold text-primary-600">{{ number_format($pageAnalytics['total_views'] ?? 0) }}</div>
-                        <div class="text-sm text-gray-500">Total Views</div>
+                        <div class="text-sm text-gray-500">{{ __('Total Views') }}</div>
                     </div>
                     <div class="text-center">
                         <div class="text-xl font-bold text-blue-600">{{ number_format($pageAnalytics['unique_sessions'] ?? 0) }}</div>
-                        <div class="text-sm text-gray-500">Unique Sessions</div>
+                        <div class="text-sm text-gray-500">{{ __('Unique Sessions') }}</div>
                     </div>
                 </div>
 
                 @if(!empty($pageAnalytics['top_sources']))
                     <div class="mt-4">
-                        <h3 class="mb-2 text-sm font-medium text-gray-500 uppercase">Traffic Sources</h3>
+                        <h3 class="mb-2 text-sm font-medium text-gray-500 uppercase">{{ __('Traffic Sources') }}</h3>
                         <div class="space-y-2">
                             @foreach($pageAnalytics['top_sources'] as $source => $count)
                                 <div class="flex justify-between text-sm">

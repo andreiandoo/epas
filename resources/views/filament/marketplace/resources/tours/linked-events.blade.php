@@ -41,31 +41,31 @@
 @if($events->isEmpty())
     <div class="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center">
         <p class="text-sm text-gray-500 dark:text-gray-400">
-            Niciun eveniment atașat momentan. Atașează un eveniment din editarea acelui eveniment → tab <strong>Turneu</strong>.
+            {{ __('Niciun eveniment atașat momentan. Atașează un eveniment din editarea acelui eveniment → tab') }} <strong>{{ __('Turneu') }}</strong>.
         </p>
     </div>
 @else
     {{-- Summary cards --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Evenimente</div>
+            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Evenimente') }}</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $events->count() }}</div>
         </div>
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Perioadă</div>
+            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Perioadă') }}</div>
             <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $fmtPeriod($period) }}</div>
         </div>
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Capacitate totală</div>
+            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Capacitate totală') }}</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $fmtCapacity($totalCapacity) }}</div>
         </div>
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Bilete vândute</div>
+            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Bilete vândute') }}</div>
             <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($totalSold) }}</div>
         </div>
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Încasări nete</div>
-            <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($totalNet, 2, ',', '.') }} <span class="text-xs font-normal text-gray-500">RON</span></div>
+            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Încasări nete') }}</div>
+            <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($totalNet, 2, ',', '.') }} <span class="text-xs font-normal text-gray-500">{{ __('RON') }}</span></div>
         </div>
     </div>
 
@@ -109,14 +109,14 @@
         <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-800">
                 <tr class="text-left text-xs uppercase text-gray-500 dark:text-gray-400">
-                    <th class="py-2 px-3">Data</th>
-                    <th class="py-2 px-3">Eveniment</th>
-                    <th class="py-2 px-3">Venue · Oraș</th>
-                    <th class="py-2 px-3">Status</th>
-                    <th class="py-2 px-3 text-right">Capacitate</th>
-                    <th class="py-2 px-3 text-right">Vândute</th>
-                    <th class="py-2 px-3 text-right">Net (RON)</th>
-                    <th class="py-2 px-3">Tipuri bilete</th>
+                    <th class="py-2 px-3">{{ __('Data') }}</th>
+                    <th class="py-2 px-3">{{ __('Eveniment') }}</th>
+                    <th class="py-2 px-3">{{ __('Venue · Oraș') }}</th>
+                    <th class="py-2 px-3">{{ __('Status') }}</th>
+                    <th class="py-2 px-3 text-right">{{ __('Capacitate') }}</th>
+                    <th class="py-2 px-3 text-right">{{ __('Vândute') }}</th>
+                    <th class="py-2 px-3 text-right">{{ __('Net (RON)') }}</th>
+                    <th class="py-2 px-3">{{ __('Tipuri bilete') }}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">

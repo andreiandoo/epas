@@ -37,12 +37,12 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/>
                 </svg>
             </span>
-            <span id="ep-secondary-sidebar-title" class="text-sm font-semibold text-gray-700 dark:text-gray-200">Microservices</span>
+            <span id="ep-secondary-sidebar-title" class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ __('Microservices') }}</span>
         </div>
         <button
             @click="$store.secondarySidebar.close()"
             class="ep-secondary-sidebar-close"
-            title="Închide"
+            title="{{ __('Închide') }}"
         >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -57,14 +57,14 @@
         <div class="ep-secondary-sidebar-panel" data-ep-panel="microservices">
             {{-- Cloned Services items --}}
             <div class="ep-secondary-sidebar-section" id="ep-secondary-sidebar-services-section" style="display: none;">
-                <div class="ep-secondary-sidebar-section-label">Servicii</div>
+                <div class="ep-secondary-sidebar-section-label">{{ __('Servicii') }}</div>
                 <ul id="ep-secondary-sidebar-services-clone"></ul>
             </div>
 
             {{-- Active microservices --}}
             @if($microservices->isNotEmpty())
                 <div class="ep-secondary-sidebar-section">
-                    <div class="ep-secondary-sidebar-section-label">Active</div>
+                    <div class="ep-secondary-sidebar-section-label">{{ __('Active') }}</div>
                     <ul>
                         @foreach($microservices as $ms)
                             <li>
@@ -98,7 +98,7 @@
                             <svg class="w-5 h-5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
                             </svg>
-                            <span class="truncate">Toate microserviciile</span>
+                            <span class="truncate">{{ __('Toate microserviciile') }}</span>
                         </a>
                     </li>
                 </ul>

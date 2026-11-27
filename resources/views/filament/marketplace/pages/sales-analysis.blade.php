@@ -1,11 +1,11 @@
 <x-filament-panels::page>
 @if(!$marketplace)
     <div class="p-6 text-center border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
-        <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found.</p>
+        <p class="text-yellow-800 dark:text-yellow-200">{{ __('No marketplace account found.') }}</p>
     </div>
 @elseif(!empty($error))
     <div class="p-6 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-        <p class="font-bold text-red-800 dark:text-red-200">Eroare la încărcarea analizei:</p>
+        <p class="font-bold text-red-800 dark:text-red-200">{{ __('Eroare la încărcarea analizei:') }}</p>
         <pre class="mt-2 text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">{{ $error }}</pre>
     </div>
 @else
@@ -14,21 +14,21 @@
     <div class="p-5 text-white shadow-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 rounded-2xl">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <h2 class="text-2xl font-bold">Sales Analysis</h2>
-                <p class="mt-1 text-sm text-indigo-200">In-depth marketplace performance intelligence</p>
+                <h2 class="text-2xl font-bold">{{ __('Sales Analysis') }}</h2>
+                <p class="mt-1 text-sm text-indigo-200">{{ __('In-depth marketplace performance intelligence') }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 {{-- Date Range --}}
                 <select wire:model.live="dateRange" class="px-3 py-1.5 text-sm bg-white/20 backdrop-blur border-0 rounded-lg text-white focus:ring-2 focus:ring-white/50 [&>option]:text-gray-900">
-                    <option value="30d">30 zile</option>
-                    <option value="90d">90 zile</option>
-                    <option value="6m">6 luni</option>
-                    <option value="1y">1 an</option>
-                    <option value="all">Tot</option>
+                    <option value="30d">{{ __('30 zile') }}</option>
+                    <option value="90d">{{ __('90 zile') }}</option>
+                    <option value="6m">{{ __('6 luni') }}</option>
+                    <option value="1y">{{ __('1 an') }}</option>
+                    <option value="all">{{ __('Tot') }}</option>
                 </select>
                 {{-- Category --}}
                 <select wire:model.live="categoryFilter" class="px-3 py-1.5 text-sm bg-white/20 backdrop-blur border-0 rounded-lg text-white focus:ring-2 focus:ring-white/50 [&>option]:text-gray-900">
-                    <option value="">Toate categoriile</option>
+                    <option value="">{{ __('Toate categoriile') }}</option>
                     @foreach($categories as $id => $name)
                         <option value="{{ $id }}">{{ $name }}</option>
                     @endforeach
@@ -36,7 +36,7 @@
                 {{-- Export CSV --}}
                 <button wire:click="exportCsv" class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white/20 backdrop-blur rounded-lg text-white hover:bg-white/30 transition-colors">
                     <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
-                    Export
+                    {{ __('Export') }}
                 </button>
             </div>
         </div>
@@ -46,7 +46,7 @@
     @php $revPerTicket = $kpis['total_tickets'] > 0 ? $kpis['total_revenue'] / $kpis['total_tickets'] : 0; @endphp
     <div class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Revenue</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Revenue') }}</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $currencySymbol }}{{ number_format($kpis['total_revenue'], 0) }}</div>
             @if($kpis['revenue_change'] != 0)
                 <div class="flex items-center gap-1 mt-1 text-xs {{ $kpis['revenue_change'] > 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -56,7 +56,7 @@
             @endif
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Comenzi</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Comenzi') }}</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ number_format($kpis['total_orders']) }}</div>
             @if($kpis['orders_change'] != 0)
                 <div class="flex items-center gap-1 mt-1 text-xs {{ $kpis['orders_change'] > 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -66,7 +66,7 @@
             @endif
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Bilete</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Bilete') }}</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ number_format($kpis['total_tickets']) }}</div>
             @if(($kpis['tickets_change'] ?? 0) != 0)
                 <div class="flex items-center gap-1 mt-1 text-xs {{ $kpis['tickets_change'] > 0 ? 'text-green-600' : 'text-red-600' }}">
@@ -76,24 +76,24 @@
             @endif
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">AOV</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('AOV') }}</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $currencySymbol }}{{ number_format($kpis['avg_order_value'], 0) }}</div>
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Rev / Bilet</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Rev / Bilet') }}</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $currencySymbol }}{{ number_format($revPerTicket, 0) }}</div>
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Repeat Rate</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Repeat Rate') }}</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $kpis['repeat_rate'] }}%</div>
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Cea mai buna zi</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Cea mai buna zi') }}</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $kpis['best_day'] }}</div>
         </div>
         {{-- Revenue Trend Sparkline --}}
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:ignore>
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Trend</div>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">{{ __('Trend') }}</div>
             <div class="h-10 mt-1" x-data="{
                 init() {
                     const d = {{ Js::from($kpis['trend'] ?? []) }};
@@ -141,7 +141,7 @@
         <div class="flex items-start gap-3">
             <x-heroicon-o-light-bulb class="w-5 h-5 mt-0.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
             <div class="text-sm text-indigo-800 dark:text-indigo-200">
-                <span class="font-semibold">Insights:</span>
+                <span class="font-semibold">{{ __('Insights:') }}</span>
                 <ul class="mt-1 space-y-1">
                     @foreach($insights as $insight)
                         <li>{{ $insight }}</li>
@@ -156,7 +156,7 @@
     <div wire:loading wire:target="setTab,dateRange,categoryFilter,currencyFilter,exportCsv" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
         <div class="flex items-center gap-3 px-5 py-3 bg-white shadow-lg dark:bg-gray-800 rounded-xl">
             <svg class="w-5 h-5 text-indigo-600 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Se incarca...</span>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Se incarca...') }}</span>
         </div>
     </div>
 

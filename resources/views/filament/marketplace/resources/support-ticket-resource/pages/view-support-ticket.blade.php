@@ -62,7 +62,7 @@
                 </div>
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $ticket->subject }}</h2>
                 <p class="mt-1 text-xs text-gray-500">
-                    Deschis pe <strong>{{ $ticket->opened_at?->format('d M Y, H:i') }}</strong>
+                    {{ __('Deschis pe') }} <strong>{{ $ticket->opened_at?->format('d M Y, H:i') }}</strong>
                     @if ($ticket->first_response_at)
                         · Primul răspuns: {{ $ticket->first_response_at->diffForHumans($ticket->opened_at, ['parts' => 2, 'short' => true]) }}
                     @endif
@@ -111,9 +111,9 @@
 
             {{-- Conversation thread --}}
             <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-5">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Conversație</h3>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">{{ __('Conversație') }}</h3>
                 @if ($messages->isEmpty())
-                    <p class="text-sm text-gray-500 py-4 text-center">Nu există mesaje încă.</p>
+                    <p class="text-sm text-gray-500 py-4 text-center">{{ __('Nu există mesaje încă.') }}</p>
                 @else
                     <div class="space-y-4">
                         @foreach ($messages as $message)
@@ -153,7 +153,7 @@
                                         @if ($isInternal)
                                             <div class="flex items-center gap-1.5 mb-1 text-xs font-semibold uppercase tracking-wider">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                                Notă internă
+                                                {{ __('Notă internă') }}
                                             </div>
                                         @endif
                                         <div class="mb-1 text-xs font-semibold" style="opacity:.75">{{ $authorName }}</div>
@@ -189,7 +189,7 @@
         <div class="space-y-4">
 
             <div class="p-5 bg-white border border-gray-200 rounded-xl dark:border-white/10 dark:bg-gray-900">
-                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-500 uppercase">Asignare</h3>
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-500 uppercase">{{ __('Asignare') }}</h3>
                 @if ($ticket->assignee)
                     <div class="flex items-center gap-3">
                         <div class="flex items-center justify-center w-10 h-10 text-sm font-bold rounded-full" style="background:#dbeafe;color:#1e3a8a">{{ strtoupper(mb_substr($ticket->assignee->name ?? '?', 0, 1)) }}</div>
@@ -199,7 +199,7 @@
                         </div>
                     </div>
                 @else
-                    <p class="text-sm text-gray-500">— nealocat —</p>
+                    <p class="text-sm text-gray-500">{{ __('— nealocat —') }}</p>
                 @endif
             </div>
 
@@ -207,12 +207,12 @@
                 <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-500 uppercase">{{ $opener['type'] === 'organizer' ? 'Organizator' : ucfirst($opener['type']) }}</h3>
                 <dl class="space-y-2 text-sm">
                     <div>
-                        <dt class="text-xs text-gray-500">Nume</dt>
+                        <dt class="text-xs text-gray-500">{{ __('Nume') }}</dt>
                         <dd class="text-gray-900 dark:text-gray-100 font-medium">{{ $opener['name'] ?? '—' }}</dd>
                     </div>
                     @if (!empty($opener['company']))
                         <div>
-                            <dt class="text-xs text-gray-500">Societate</dt>
+                            <dt class="text-xs text-gray-500">{{ __('Societate') }}</dt>
                             <dd>
                                 @if (!empty($opener['company_url']))
                                     <a href="{{ $opener['company_url'] }}" class="text-primary-600 hover:underline">{{ $opener['company'] }}</a>
@@ -224,18 +224,18 @@
                     @endif
                     @if (!empty($opener['email']))
                         <div>
-                            <dt class="text-xs text-gray-500">Email</dt>
+                            <dt class="text-xs text-gray-500">{{ __('Email') }}</dt>
                             <dd><a href="mailto:{{ $opener['email'] }}" class="text-primary-600 hover:underline break-all">{{ $opener['email'] }}</a></dd>
                         </div>
                     @endif
                     @if (!empty($opener['phone']))
                         <div>
-                            <dt class="text-xs text-gray-500">Telefon</dt>
+                            <dt class="text-xs text-gray-500">{{ __('Telefon') }}</dt>
                             <dd><a href="tel:{{ $opener['phone'] }}" class="text-gray-700 dark:text-gray-300">{{ $opener['phone'] }}</a></dd>
                         </div>
                     @endif
                     <div>
-                        <dt class="text-xs text-gray-500">Tichete anterioare</dt>
+                        <dt class="text-xs text-gray-500">{{ __('Tichete anterioare') }}</dt>
                         <dd class="text-gray-700 dark:text-gray-300">{{ $opener['past_tickets_count'] }}</dd>
                     </div>
                 </dl>
@@ -268,37 +268,37 @@
 
             @if (!empty($context))
                 <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-5">
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Context cerere</h3>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">{{ __('Context cerere') }}</h3>
                     <dl class="space-y-2 text-xs">
                         @if (!empty($context['ip']))
-                            <div><dt class="text-gray-500">IP</dt><dd class="font-mono text-gray-700 dark:text-gray-300">{{ $context['ip'] }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('IP') }}</dt><dd class="font-mono text-gray-700 dark:text-gray-300">{{ $context['ip'] }}</dd></div>
                         @endif
                         @if (!empty($context['browser']))
-                            <div><dt class="text-gray-500">Browser</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['browser'] }} {{ $context['browser_version'] ?? '' }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Browser') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['browser'] }} {{ $context['browser_version'] ?? '' }}</dd></div>
                         @endif
                         @if (!empty($context['os']))
-                            <div><dt class="text-gray-500">Sistem</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['os'] }} {{ $context['os_version'] ?? '' }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Sistem') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['os'] }} {{ $context['os_version'] ?? '' }}</dd></div>
                         @endif
                         @if (!empty($context['device_type']))
-                            <div><dt class="text-gray-500">Tip device</dt><dd class="text-gray-700 dark:text-gray-300 capitalize">{{ $context['device_type'] }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Tip device') }}</dt><dd class="text-gray-700 dark:text-gray-300 capitalize">{{ $context['device_type'] }}</dd></div>
                         @endif
                         @if (!empty($context['source_url']))
                             <div>
-                                <dt class="text-gray-500">Pagina de unde a deschis</dt>
+                                <dt class="text-gray-500">{{ __('Pagina de unde a deschis') }}</dt>
                                 <dd><a href="{{ $context['source_url'] }}" target="_blank" rel="noopener" class="text-primary-600 hover:underline break-all">{{ $context['source_url'] }}</a></dd>
                             </div>
                         @endif
                         @if (!empty($context['referer']) && (empty($context['source_url']) || $context['referer'] !== $context['source_url']))
-                            <div><dt class="text-gray-500">Referrer</dt><dd class="text-gray-700 dark:text-gray-300 break-all">{{ $context['referer'] }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Referrer') }}</dt><dd class="text-gray-700 dark:text-gray-300 break-all">{{ $context['referer'] }}</dd></div>
                         @endif
                         @if (!empty($context['screen_resolution']))
-                            <div><dt class="text-gray-500">Ecran</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['screen_resolution'] }}@if (!empty($context['viewport'])) (viewport {{ $context['viewport'] }})@endif</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Ecran') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['screen_resolution'] }}@if (!empty($context['viewport'])) (viewport {{ $context['viewport'] }})@endif</dd></div>
                         @endif
                         @if (!empty($context['language']))
-                            <div><dt class="text-gray-500">Limbă</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['language'] }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Limbă') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ $context['language'] }}</dd></div>
                         @endif
                         @if (!empty($context['captured_at']))
-                            <div><dt class="text-gray-500">Capturat la</dt><dd class="text-gray-700 dark:text-gray-300">{{ \Carbon\Carbon::parse($context['captured_at'])->format('d M Y, H:i:s') }}</dd></div>
+                            <div><dt class="text-gray-500">{{ __('Capturat la') }}</dt><dd class="text-gray-700 dark:text-gray-300">{{ \Carbon\Carbon::parse($context['captured_at'])->format('d M Y, H:i:s') }}</dd></div>
                         @endif
                     </dl>
                 </div>

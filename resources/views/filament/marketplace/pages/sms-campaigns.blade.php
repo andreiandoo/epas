@@ -3,9 +3,9 @@
         {{-- Campaign List --}}
         <div class="space-y-4">
             <div class="flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-white">Campaniile tale SMS</h2>
+                <h2 class="text-lg font-semibold text-white">{{ __('Campaniile tale SMS') }}</h2>
                 <x-filament::button wire:click="switchToCreate" icon="heroicon-o-plus">
-                    Campanie nouă
+                    {{ __('Campanie nouă') }}
                 </x-filament::button>
             </div>
 
@@ -14,22 +14,22 @@
                     <div class="text-gray-400 mb-2">
                         <x-heroicon-o-megaphone class="w-12 h-12 mx-auto" />
                     </div>
-                    <p class="text-gray-500 dark:text-gray-400">Nu ai nicio campanie SMS încă.</p>
-                    <p class="text-sm text-gray-400 mt-1">Creează prima campanie pentru a trimite SMS-uri promoționale.</p>
+                    <p class="text-gray-500 dark:text-gray-400">{{ __('Nu ai nicio campanie SMS încă.') }}</p>
+                    <p class="text-sm text-gray-400 mt-1">{{ __('Creează prima campanie pentru a trimite SMS-uri promoționale.') }}</p>
                 </div>
             @else
                 <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 overflow-hidden">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                             <tr>
-                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Nume</th>
-                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Status</th>
-                                <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Audiență</th>
-                                <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Trimise</th>
-                                <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">Cost</th>
-                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Programat</th>
-                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">Creat</th>
-                                <th class="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-300">Acțiuni</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">{{ __('Nume') }}</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">{{ __('Status') }}</th>
+                                <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">{{ __('Audiență') }}</th>
+                                <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">{{ __('Trimise') }}</th>
+                                <th class="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">{{ __('Cost') }}</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">{{ __('Programat') }}</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">{{ __('Creat') }}</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-300">{{ __('Acțiuni') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -135,17 +135,17 @@
 
             {{-- Campaign Name --}}
             <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-6">
-                <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Detalii campanie</h3>
+                <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">{{ __('Detalii campanie') }}</h3>
 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Nume campanie *</label>
-                        <input type="text" wire:model="campaignName" class="block w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="ex: Promo festival vara 2026">
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Nume campanie *') }}</label>
+                        <input type="text" wire:model="campaignName" class="block w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="{{ __('ex: Promo festival vara 2026') }}">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Mesaj SMS *</label>
-                        <textarea x-model="msg" rows="4" class="block w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="Scrie mesajul SMS..."></textarea>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Mesaj SMS *') }}</label>
+                        <textarea x-model="msg" rows="4" class="block w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="{{ __('Scrie mesajul SMS...') }}"></textarea>
 
                         <div class="mt-2 flex items-center justify-between text-xs">
                             <div class="flex items-center gap-4">
@@ -153,12 +153,12 @@
                                     <span x-text="charCount" :class="isOverSingle ? 'text-yellow-400 font-semibold' : ''">0</span> caractere
                                 </span>
                                 <span class="text-gray-400">
-                                    <span x-text="smsCount" :class="smsCount > 1 ? 'text-yellow-400 font-semibold' : ''">0</span> SMS / destinatar
+                                    <span x-text="smsCount" :class="smsCount > 1 ? 'text-yellow-400 font-semibold' : ''">0</span> {{ __('SMS / destinatar') }}
                                 </span>
                             </div>
                             <div x-show="isOverSingle" x-cloak class="text-yellow-400 flex items-center gap-1">
                                 <x-heroicon-o-exclamation-triangle class="w-3.5 h-3.5" />
-                                <span>Mesaj lung → mai multe SMS-uri per destinatar (153 car/SMS)</span>
+                                <span>{{ __('Mesaj lung → mai multe SMS-uri per destinatar (153 car/SMS)') }}</span>
                             </div>
                         </div>
                     </div>
@@ -167,8 +167,8 @@
 
             {{-- Audience Filters --}}
             <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-6">
-                <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Filtre audiență</h3>
-                <p class="text-xs text-gray-500 mb-4">Filtrele se aplică cumulativ (intersecție). Lasă gol pentru toți clienții activi.</p>
+                <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">{{ __('Filtre audiență') }}</h3>
+                <p class="text-xs text-gray-500 mb-4">{{ __('Filtrele se aplică cumulativ (intersecție). Lasă gol pentru toți clienții activi.') }}</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -184,7 +184,7 @@
                         pick(id) { this.selected = id; this.open = false; this.search = ''; },
                         clear() { this.selected = ''; this.open = false; this.search = ''; },
                     }" @click.outside="open = false" class="relative">
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Organizator</label>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Organizator') }}</label>
                         <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left">
                             <span x-text="selectedLabel || '— Toți organizatorii —'" :class="!selected && 'text-gray-400'"></span>
                             <div class="flex items-center gap-1">
@@ -196,7 +196,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="{{ __('Caută...') }}" class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -204,7 +204,7 @@
                                         <span x-text="opt.name"></span>
                                     </button>
                                 </template>
-                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">{{ __('Niciun rezultat') }}</div>
                             </div>
                         </div>
                     </div>
@@ -222,14 +222,14 @@
                         remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Evenimente</label>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Evenimente') }}</label>
                         <button @click="if (options.length > 0) open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]" :class="options.length === 0 && 'opacity-60 cursor-not-allowed'">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0 && options.length === 0">
-                                    <span class="text-gray-400 italic">— Selectează mai întâi un organizator —</span>
+                                    <span class="text-gray-400 italic">{{ __('— Selectează mai întâi un organizator —') }}</span>
                                 </template>
                                 <template x-if="selected.length === 0 && options.length > 0">
-                                    <span class="text-gray-400">— Selectează evenimente —</span>
+                                    <span class="text-gray-400">{{ __('— Selectează evenimente —') }}</span>
                                 </template>
                                 <template x-for="id in selected" :key="id">
                                     <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
@@ -247,7 +247,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="{{ __('Caută...') }}" class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -256,7 +256,7 @@
                                         <span x-text="opt.name"></span>
                                     </label>
                                 </template>
-                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">{{ __('Niciun rezultat') }}</div>
                             </div>
                         </div>
                     </div>
@@ -275,11 +275,11 @@
                         remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Orașe</label>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Orașe') }}</label>
                         <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
-                                    <span class="text-gray-400">— Selectează orașe —</span>
+                                    <span class="text-gray-400">{{ __('— Selectează orașe —') }}</span>
                                 </template>
                                 <template x-for="id in selected" :key="id">
                                     <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
@@ -297,7 +297,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="{{ __('Caută...') }}" class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -306,7 +306,7 @@
                                         <span x-text="opt.name"></span>
                                     </label>
                                 </template>
-                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">{{ __('Niciun rezultat') }}</div>
                             </div>
                         </div>
                     </div>
@@ -325,11 +325,11 @@
                         remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Artiști</label>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Artiști') }}</label>
                         <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
-                                    <span class="text-gray-400">— Selectează artiști —</span>
+                                    <span class="text-gray-400">{{ __('— Selectează artiști —') }}</span>
                                 </template>
                                 <template x-for="id in selected" :key="id">
                                     <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
@@ -347,7 +347,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="{{ __('Caută...') }}" class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -356,7 +356,7 @@
                                         <span x-text="opt.name"></span>
                                     </label>
                                 </template>
-                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">{{ __('Niciun rezultat') }}</div>
                             </div>
                         </div>
                     </div>
@@ -374,11 +374,11 @@
                         remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Genuri muzicale</label>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Genuri muzicale') }}</label>
                         <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
-                                    <span class="text-gray-400">— Selectează genuri —</span>
+                                    <span class="text-gray-400">{{ __('— Selectează genuri —') }}</span>
                                 </template>
                                 <template x-for="id in selected" :key="id">
                                     <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
@@ -396,7 +396,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="{{ __('Caută...') }}" class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -405,7 +405,7 @@
                                         <span x-text="opt.name"></span>
                                     </label>
                                 </template>
-                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">{{ __('Niciun rezultat') }}</div>
                             </div>
                         </div>
                     </div>
@@ -423,11 +423,11 @@
                         remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Locații</label>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Locații') }}</label>
                         <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
-                                    <span class="text-gray-400">— Selectează locații —</span>
+                                    <span class="text-gray-400">{{ __('— Selectează locații —') }}</span>
                                 </template>
                                 <template x-for="id in selected" :key="id">
                                     <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
@@ -445,7 +445,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="{{ __('Caută...') }}" class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -454,7 +454,7 @@
                                         <span x-text="opt.name"></span>
                                     </label>
                                 </template>
-                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">{{ __('Niciun rezultat') }}</div>
                             </div>
                         </div>
                     </div>
@@ -463,7 +463,7 @@
                 {{-- Calculate Audience Button --}}
                 <div class="mt-4">
                     <x-filament::button wire:click="calculateAudience" color="gray" icon="heroicon-o-calculator" size="sm">
-                        Calculează audiența
+                        {{ __('Calculează audiența') }}
                     </x-filament::button>
                 </div>
             </div>
@@ -480,23 +480,23 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {{-- Audience Stats --}}
                 <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-6">
-                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Audiență estimată</h3>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">{{ __('Audiență estimată') }}</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between">
-                            <span class="text-gray-400">Total clienți potriviți:</span>
+                            <span class="text-gray-400">{{ __('Total clienți potriviți:') }}</span>
                             <span class="font-semibold text-white">{{ number_format($totalAudience) }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-400">Cu nr. de telefon:</span>
+                            <span class="text-gray-400">{{ __('Cu nr. de telefon:') }}</span>
                             <span class="font-semibold text-white">{{ number_format($audienceWithPhone) }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-400">SMS / destinatar:</span>
+                            <span class="text-gray-400">{{ __('SMS / destinatar:') }}</span>
                             <span class="font-semibold text-white" x-text="smsCount">{{ $smsPerRecipient }}</span>
                         </div>
                         <hr class="border-gray-700">
                         <div class="flex justify-between">
-                            <span class="text-gray-400">Total SMS necesare:</span>
+                            <span class="text-gray-400">{{ __('Total SMS necesare:') }}</span>
                             <span class="font-bold text-lg {{ $hasEnoughCredits ? 'text-green-400' : 'text-red-400' }}">
                                 <span x-text="{{ $audienceWithPhone }} * smsCount">{{ $totalSmsNeeded }}</span>
                             </span>
@@ -506,20 +506,20 @@
 
                 {{-- Credits Check --}}
                 <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-6">
-                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Credite promoționale</h3>
+                    <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">{{ __('Credite promoționale') }}</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between">
-                            <span class="text-gray-400">Credite disponibile:</span>
+                            <span class="text-gray-400">{{ __('Credite disponibile:') }}</span>
                             <span class="font-semibold text-white">{{ number_format($promotionalCredits) }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-400">Credite necesare:</span>
+                            <span class="text-gray-400">{{ __('Credite necesare:') }}</span>
                             <span class="font-semibold {{ $hasEnoughCredits ? 'text-white' : 'text-red-400' }}">
                                 <span x-text="{{ $audienceWithPhone }} * smsCount">{{ $totalSmsNeeded }}</span>
                             </span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-400">Preț / SMS:</span>
+                            <span class="text-gray-400">{{ __('Preț / SMS:') }}</span>
                             <span class="text-white">
                                 {{ number_format($promotionalPrice, 5) }} EUR
                                 @if ($clientCurrency === 'RON' && $eurToRon)
@@ -529,12 +529,12 @@
                         </div>
                         <hr class="border-gray-700">
                         <div class="flex justify-between">
-                            <span class="text-gray-400">Cost estimat:</span>
+                            <span class="text-gray-400">{{ __('Cost estimat:') }}</span>
                             <span class="font-bold text-white">
                                 <span x-text="({{ $audienceWithPhone }} * smsCount * {{ $promotionalPrice }}).toFixed(2)">{{ number_format($costEur, 2) }}</span> EUR
                                 @if ($clientCurrency === 'RON' && $eurToRon)
                                     <span class="text-gray-500">
-                                        (<span x-text="({{ $audienceWithPhone }} * smsCount * {{ $promotionalPrice }} * {{ $eurToRon }}).toFixed(2)">{{ number_format($costEur * $eurToRon, 2) }}</span> RON)
+                                        (<span x-text="({{ $audienceWithPhone }} * smsCount * {{ $promotionalPrice }} * {{ $eurToRon }}).toFixed(2)">{{ number_format($costEur * $eurToRon, 2) }}</span> {{ __('RON)') }}
                                     </span>
                                 @endif
                             </span>
@@ -545,14 +545,13 @@
                                 <div class="flex items-start gap-2">
                                     <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                                     <div class="text-sm">
-                                        <p class="text-red-300 font-medium">Credite insuficiente!</p>
+                                        <p class="text-red-300 font-medium">{{ __('Credite insuficiente!') }}</p>
                                         <p class="text-red-400 mt-1">
-                                            Îți lipsesc <strong>{{ number_format($deficit) }}</strong> credite.
-                                            Poți trimite maxim <strong>{{ number_format(floor($promotionalCredits / max($smsPerRecipient, 1))) }}</strong> destinatari cu creditele actuale.
+                                            {{ __('Îți lipsesc') }} <strong>{{ number_format($deficit) }}</strong> {{ __('credite. Poți trimite maxim') }} <strong>{{ number_format(floor($promotionalCredits / max($smsPerRecipient, 1))) }}</strong> {{ __('destinatari cu creditele actuale.') }}
                                         </p>
                                         <a href="{{ url('/marketplace/sms-notifications') }}" class="inline-flex items-center gap-1 mt-2 text-primary-400 hover:text-primary-300 font-medium">
                                             <x-heroicon-o-shopping-cart class="w-4 h-4" />
-                                            Cumpără credite
+                                            {{ __('Cumpără credite') }}
                                         </a>
                                     </div>
                                 </div>
@@ -564,11 +563,11 @@
 
             {{-- Schedule --}}
             <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-6">
-                <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Programare</h3>
+                <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">{{ __('Programare') }}</h3>
                 <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Data și ora trimiterii (opțional)</label>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">{{ __('Data și ora trimiterii (opțional)') }}</label>
                     <input type="datetime-local" wire:model="scheduledAt" class="block w-full max-w-xs rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2">
-                    <p class="text-xs text-gray-500 mt-1">Lasă gol dacă vrei să trimiți manual sau să salvezi ca ciornă.</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ __('Lasă gol dacă vrei să trimiți manual sau să salvezi ca ciornă.') }}</p>
                 </div>
             </div>
 
@@ -578,12 +577,12 @@
             @endphp
             <div class="flex flex-wrap items-center gap-3">
                 <x-filament::button wire:click="saveDraft" color="gray" icon="heroicon-o-document">
-                    Salvează ciornă
+                    {{ __('Salvează ciornă') }}
                 </x-filament::button>
 
                 @if ($scheduledAt)
                     <x-filament::button wire:click="saveAndSchedule" color="warning" icon="heroicon-o-clock">
-                        Programează trimiterea
+                        {{ __('Programează trimiterea') }}
                     </x-filament::button>
                 @endif
 
@@ -594,11 +593,11 @@
                     {{ $sendDisabled ? 'disabled' : '' }}
                 >
                     <x-heroicon-o-paper-airplane class="w-5 h-5" />
-                    Trimite acum
+                    {{ __('Trimite acum') }}
                 </button>
 
                 <x-filament::button wire:click="switchToList" color="gray" outlined icon="heroicon-o-x-mark">
-                    Anulează
+                    {{ __('Anulează') }}
                 </x-filament::button>
             </div>
         </div>

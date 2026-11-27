@@ -27,4 +27,4 @@
         <div class="epm-prose">{!! $chapter['html'] !!}</div>
     </article>
 @endforeach
-<p class="epm-empty" data-epm-empty hidden>Nicio potrivire. Încearcă alt cuvânt, de exemplu „reducere”, „sold out” sau „comision”.</p>
+<p class="epm-empty" data-epm-empty hidden>{{ __('Nicio potrivire. Încearcă alt cuvânt, de exemplu „reducere”, „sold out” sau „comision”.') }}</p>

@@ -50,7 +50,7 @@
                 </div>
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ $todo->title }}</h2>
                 <p class="mt-1 text-xs text-gray-500">
-                    Deschis pe <strong>{{ $todo->opened_at?->format('d M Y, H:i') }}</strong>
+                    {{ __('Deschis pe') }} <strong>{{ $todo->opened_at?->format('d M Y, H:i') }}</strong>
                     @if ($todo->creator)
                         de <strong>{{ $todo->creator->name }}</strong>
                     @endif
@@ -66,7 +66,7 @@
                 {{-- Attachments thumbnails --}}
                 @if (!empty($todo->attachments))
                     <div class="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-                        <p class="text-xs text-gray-500 mb-2">Imagini atașate</p>
+                        <p class="text-xs text-gray-500 mb-2">{{ __('Imagini atașate') }}</p>
                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                             @foreach ($todo->attachments as $att)
                                 @php
@@ -93,7 +93,7 @@
                 </div>
 
                 @if ($comments->isEmpty())
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Nu există încă răspunsuri. Apasă "Răspunde / Comentează" pentru a adăuga unul.</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Nu există încă răspunsuri. Apasă "Răspunde / Comentează" pentru a adăuga unul.') }}</p>
                 @else
                     <div class="space-y-4">
                         @foreach ($comments as $comment)
@@ -158,49 +158,49 @@
         <div class="space-y-4">
 
             <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-5">
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Detalii</h3>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{{ __('Detalii') }}</h3>
                 <dl class="space-y-2 text-sm">
                     <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Status</dt>
+                        <dt class="text-gray-500">{{ __('Status') }}</dt>
                         <dd><x-filament::badge :color="$statusBadge['color']">{{ $statusBadge['label'] }}</x-filament::badge></dd>
                     </div>
                     <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Prioritate</dt>
+                        <dt class="text-gray-500">{{ __('Prioritate') }}</dt>
                         <dd><x-filament::badge :color="$priorityBadge['color']">{{ $priorityBadge['label'] }}</x-filament::badge></dd>
                     </div>
                     @if ($todo->category)
                         <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500">Categorie</dt>
+                            <dt class="text-gray-500">{{ __('Categorie') }}</dt>
                             <dd class="text-gray-800 dark:text-gray-200">{{ $todo->category->name }}</dd>
                         </div>
                     @endif
                     <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Creat de</dt>
+                        <dt class="text-gray-500">{{ __('Creat de') }}</dt>
                         <dd class="text-gray-800 dark:text-gray-200">{{ $todo->creator?->name ?? '—' }}</dd>
                     </div>
                     <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Asignat la</dt>
+                        <dt class="text-gray-500">{{ __('Asignat la') }}</dt>
                         <dd class="text-gray-800 dark:text-gray-200">{{ $todo->assignee?->name ?? '— nealocat —' }}</dd>
                     </div>
                     <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Deschis</dt>
+                        <dt class="text-gray-500">{{ __('Deschis') }}</dt>
                         <dd class="text-gray-800 dark:text-gray-200">{{ $todo->opened_at?->format('d M Y, H:i') }}</dd>
                     </div>
                     @if ($todo->first_response_at)
                         <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500">Primul răspuns</dt>
+                            <dt class="text-gray-500">{{ __('Primul răspuns') }}</dt>
                             <dd class="text-gray-800 dark:text-gray-200">{{ $todo->first_response_at->diffForHumans($todo->opened_at, ['parts' => 2, 'short' => true]) }}</dd>
                         </div>
                     @endif
                     @if ($todo->resolved_at)
                         <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500">Rezolvat</dt>
+                            <dt class="text-gray-500">{{ __('Rezolvat') }}</dt>
                             <dd class="text-gray-800 dark:text-gray-200">{{ $todo->resolved_at->format('d M Y, H:i') }}</dd>
                         </div>
                     @endif
                     @if ($todo->closed_at)
                         <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500">Închis</dt>
+                            <dt class="text-gray-500">{{ __('Închis') }}</dt>
                             <dd class="text-gray-800 dark:text-gray-200">{{ $todo->closed_at->format('d M Y, H:i') }}</dd>
                         </div>
                     @endif

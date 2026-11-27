@@ -8,8 +8,8 @@
 <div class="space-y-6">
     {{-- Monthly Forecast --}}
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Predictie lunara</h3>
-        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Revenue actual vs predictie (Holt-Winters)</p>
+        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Predictie lunara') }}</h3>
+        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Revenue actual vs predictie (Holt-Winters)') }}</p>
         <div class="h-72" wire:ignore x-data="{
             init() {
                 const ctx = this.$refs.canvas.getContext('2d');
@@ -58,7 +58,7 @@
     {{-- Yearly Forecast --}}
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
         <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Predictie anuala {{ $yearlyForecast['current_year'] }}</h3>
-        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Anul curent vs anul trecut + predictie lunile ramase</p>
+        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Anul curent vs anul trecut + predictie lunile ramase') }}</p>
         <div class="h-72" wire:ignore x-data="{
             init() {
                 const ctx = this.$refs.canvas.getContext('2d');
@@ -106,7 +106,7 @@
     <div class="grid gap-6 lg:grid-cols-2">
         {{-- Seasonality Index --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Index de sezonalitate</h3>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Index de sezonalitate') }}</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">100 = medie. Peste 100 = luna peste medie</p>
             <div class="h-64" wire:ignore x-data="{
                 init() {
@@ -145,16 +145,16 @@
 
         {{-- Sales Velocity --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Viteza de vanzare</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Bilete/zi - cat de repede se vand evenimentele</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Viteza de vanzare') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Bilete/zi - cat de repede se vand evenimentele') }}</p>
             @if(!empty($salesVelocity))
             <div class="overflow-y-auto max-h-64">
                 <table class="w-full text-xs">
                     <thead class="sticky top-0 bg-white dark:bg-gray-800">
                         <tr class="text-left text-gray-500 dark:text-gray-400">
-                            <th class="px-2 py-1">Eveniment</th>
-                            <th class="px-2 py-1 text-right">Bilete/zi</th>
-                            <th class="px-2 py-1 text-right">Sold %</th>
+                            <th class="px-2 py-1">{{ __('Eveniment') }}</th>
+                            <th class="px-2 py-1 text-right">{{ __('Bilete/zi') }}</th>
+                            <th class="px-2 py-1 text-right">{{ __('Sold %') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -175,7 +175,7 @@
                 </table>
             </div>
             @else
-                <p class="text-sm text-gray-500 dark:text-gray-400">Nu sunt suficiente date.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Nu sunt suficiente date.') }}</p>
             @endif
         </div>
     </div>

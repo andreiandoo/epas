@@ -4,7 +4,7 @@
         @php $featured = $this->getFeaturedDocs(); @endphp
         @if($featured->isNotEmpty())
             <div>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Featured</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Featured') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     @foreach($featured as $doc)
                         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition">
@@ -78,8 +78,8 @@
         @if($categories->isEmpty() || $categories->every(fn ($c) => $c->docs->isEmpty()))
             <div class="text-center py-12">
                 <x-heroicon-o-book-open class="mx-auto h-12 w-12 text-gray-400" />
-                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No documentation yet</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Documentation will appear here when published.</p>
+                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ __('No documentation yet') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Documentation will appear here when published.') }}</p>
             </div>
         @endif
     </div>

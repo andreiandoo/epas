@@ -7,11 +7,10 @@
                 </div>
                 <div>
                     <h3 class="text-lg font-semibold text-primary-900 dark:text-primary-100">
-                        Artiști Parteneri
+                        {{ __('Artiști Parteneri') }}
                     </h3>
                     <p class="mt-1 text-sm text-primary-700 dark:text-primary-300">
-                        Aici poți selecta artiști existenți din baza de date și îi poți adăuga ca parteneri pentru marketplace-ul tău.
-                        Artiștii parteneri vor fi disponibili pentru evenimentele tale.
+                        {{ __('Aici poți selecta artiști existenți din baza de date și îi poți adăuga ca parteneri pentru marketplace-ul tău. Artiștii parteneri vor fi disponibili pentru evenimentele tale.') }}
                     </p>
                     <div class="flex flex-wrap gap-2 mt-3">
                         <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full dark:bg-green-900/50 dark:text-green-300">
@@ -20,7 +19,7 @@
                         </span>
                         <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full dark:bg-blue-900/50 dark:text-blue-300">
                             <x-heroicon-s-plus-circle class="w-4 h-4" />
-                            Pentru artiști noi, folosește "Adaugă artist nou"
+                            {{ __('Pentru artiști noi, folosește "Adaugă artist nou"') }}
                         </span>
                     </div>
                 </div>

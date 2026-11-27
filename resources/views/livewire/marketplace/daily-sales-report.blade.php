@@ -2,10 +2,10 @@
     <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
         <h3 class="flex items-center gap-2 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
             <x-heroicon-o-calendar-days class="w-4 h-4" />
-            Raport vânzări pe zi
+            {{ __('Raport vânzări pe zi') }}
         </h3>
         <div class="flex items-center gap-2">
-            <label for="dailyReportDate" class="text-xs text-gray-500 dark:text-gray-400">Ziua:</label>
+            <label for="dailyReportDate" class="text-xs text-gray-500 dark:text-gray-400">{{ __('Ziua:') }}</label>
             <input
                 type="date"
                 id="dailyReportDate"
@@ -44,21 +44,21 @@
             <thead class="text-gray-700 dark:text-gray-200">
                 {{-- Group row — sticky to top of scroll container --}}
                 <tr>
-                    <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Eveniment</th>
-                    <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Locație</th>
-                    <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #4f46e5;" class="px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Azi</th>
-                    <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #059669;" class="dr-total-cell px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Total</th>
+                    <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">{{ __('Eveniment') }}</th>
+                    <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">{{ __('Locație') }}</th>
+                    <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #4f46e5;" class="px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">{{ __('Azi') }}</th>
+                    <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #059669;" class="dr-total-cell px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">{{ __('Total') }}</th>
                 </tr>
                 {{-- Sub-header row — sticky just under the group row --}}
                 <tr>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700" title="Comision net, fără TVA">Comision net</th>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
-                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700" title="Comision net, fără TVA">Comision net</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">{{ __('Cmd.') }}</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">{{ __('Bilete') }}</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">{{ __('Vânzări') }}</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700" title="{{ __('Comision net, fără TVA') }}">{{ __('Comision net') }}</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">{{ __('Cmd.') }}</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">{{ __('Bilete') }}</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">{{ __('Vânzări') }}</th>
+                    <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="dr-total-cell px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700" title="{{ __('Comision net, fără TVA') }}">{{ __('Comision net') }}</th>
                 </tr>
             </thead>
             <tbody x-data="{ showAll: false }">
@@ -102,7 +102,7 @@
                 @empty
                     <tr>
                         <td colspan="10" class="px-3 py-6 text-center text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
-                            Nicio vânzare în ziua selectată.
+                            {{ __('Nicio vânzare în ziua selectată.') }}
                         </td>
                     </tr>
                 @endforelse

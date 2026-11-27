@@ -57,19 +57,19 @@
 
         {{-- Per-operator statistics --}}
         <div>
-            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Statistici per operator</h2>
+            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{{ __('Statistici per operator') }}</h2>
             <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800/60">
                         <tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            <th class="px-3 py-2">Operator</th>
-                            <th class="px-3 py-2 text-right">Preluate</th>
-                            <th class="px-3 py-2 text-right">Rezolvate</th>
-                            <th class="px-3 py-2 text-right">Închise (inactivitate)</th>
-                            <th class="px-3 py-2 text-right">Active</th>
-                            <th class="px-3 py-2 text-right">Rată rezolvare</th>
-                            <th class="px-3 py-2 text-right">Rating</th>
-                            <th class="px-3 py-2 text-right">Timp mediu răspuns</th>
+                            <th class="px-3 py-2">{{ __('Operator') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Preluate') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Rezolvate') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Închise (inactivitate)') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Active') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Rată rezolvare') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Rating') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Timp mediu răspuns') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -94,7 +94,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-3 py-6 text-center text-xs text-gray-400">Niciun operator nu a preluat conversații încă.</td>
+                                <td colspan="8" class="px-3 py-6 text-center text-xs text-gray-400">{{ __('Niciun operator nu a preluat conversații încă.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -104,18 +104,18 @@
 
         {{-- All conversations --}}
         <div>
-            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Toate conversațiile</h2>
+            <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">{{ __('Toate conversațiile') }}</h2>
             <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-800/60">
                         <tr class="text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            <th class="px-3 py-2">Client</th>
-                            <th class="px-3 py-2">Status</th>
-                            <th class="px-3 py-2">Operator</th>
-                            <th class="px-3 py-2 text-right">Rating</th>
-                            <th class="px-3 py-2 text-right">Timp răspuns</th>
-                            <th class="px-3 py-2">Începută</th>
-                            <th class="px-3 py-2">Încheiată</th>
+                            <th class="px-3 py-2">{{ __('Client') }}</th>
+                            <th class="px-3 py-2">{{ __('Status') }}</th>
+                            <th class="px-3 py-2">{{ __('Operator') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Rating') }}</th>
+                            <th class="px-3 py-2 text-right">{{ __('Timp răspuns') }}</th>
+                            <th class="px-3 py-2">{{ __('Începută') }}</th>
+                            <th class="px-3 py-2">{{ __('Încheiată') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -147,7 +147,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-3 py-6 text-center text-xs text-gray-400">Nicio conversație.</td>
+                                <td colspan="7" class="px-3 py-6 text-center text-xs text-gray-400">{{ __('Nicio conversație.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -11,11 +11,11 @@
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <strong style="font-size:14px;">{{ $row['label'] }}</strong>
         @if($row['filed'])
-            <span style="{{ $badge }}background:#dcfce7;color:#14532d;">Depus</span>
+            <span style="{{ $badge }}background:#dcfce7;color:#14532d;">{{ __('Depus') }}</span>
         @elseif($filing)
-            <span style="{{ $badge }}background:#fef3c7;color:#92400e;">De redepus</span>
+            <span style="{{ $badge }}background:#fef3c7;color:#92400e;">{{ __('De redepus') }}</span>
         @else
-            <span style="{{ $badge }}background:#fef3c7;color:#92400e;">De depus</span>
+            <span style="{{ $badge }}background:#fef3c7;color:#92400e;">{{ __('De depus') }}</span>
         @endif
     </div>
 
@@ -35,7 +35,7 @@
 
     @if(!$isLatest)
         <div style="margin-top:4px;font-size:12px;color:#b45309;">
-            Există o versiune mai nouă a acestui document. Depunerea se marchează pe ultima versiune.
+            {{ __('Există o versiune mai nouă a acestui document. Depunerea se marchează pe ultima versiune.') }}
         </div>
     @endif
 

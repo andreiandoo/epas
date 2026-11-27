@@ -26,12 +26,12 @@
                     <x-heroicon-o-information-circle class="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                    <h3 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Settings Managed by Platform</h3>
+                    <h3 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">{{ __('Settings Managed by Platform') }}</h3>
                     <p class="text-blue-700 dark:text-blue-300 text-sm">
                         {{ $message }}
                     </p>
                     <p class="text-blue-600 dark:text-blue-400 text-sm mt-2">
-                        This microservice is active for your marketplace. Core configuration is managed at the platform level to ensure consistency and security.
+                        {{ __('This microservice is active for your marketplace. Core configuration is managed at the platform level to ensure consistency and security.') }}
                     </p>
                 </div>
             </div>
@@ -39,14 +39,14 @@
 
         {{-- Status Card --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Status</h3>
+            <h3 class="font-semibold text-gray-900 dark:text-white mb-4">{{ __('Status') }}</h3>
             <div class="flex items-center gap-3">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
                     <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
-                    Active
+                    {{ __('Active') }}
                 </span>
                 <span class="text-sm text-gray-500 dark:text-gray-400">
-                    This microservice is enabled for your marketplace
+                    {{ __('This microservice is enabled for your marketplace') }}
                 </span>
             </div>
         </div>
@@ -81,7 +81,7 @@
 
         @if(count($quickLinks) > 0)
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">{{ __('Quick Actions') }}</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     @foreach($quickLinks as $link)
                         <a href="{{ $link['url'] }}"

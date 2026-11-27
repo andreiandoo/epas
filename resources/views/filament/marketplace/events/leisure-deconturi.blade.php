@@ -24,7 +24,7 @@
                     <svg class="w-4 h-4 text-gray-400 transition-transform ep-chev" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="font-semibold text-gray-900 dark:text-white">{{ $roDate($p['from']) }} – {{ $roDate($p['to']) }}</span>
                     @if (!empty($p['is_current']))
-                        <span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">în derulare</span>
+                        <span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ __('în derulare') }}</span>
                     @endif
                     @if ($p['generated_at'])
                         <span class="px-2 py-0.5 text-[11px] font-medium rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">generat</span>
@@ -34,8 +34,8 @@
                     @endif
                 </div>
                 <div class="flex flex-wrap items-center text-xs gap-x-4 gap-y-1">
-                    <span class="text-gray-600 dark:text-gray-300">Vânzări: <b class="text-emerald-600 dark:text-emerald-400">{{ $fmt($p['online_revenue']) }}</b> online / <b class="text-sky-600 dark:text-sky-400">{{ $fmt($p['pos_revenue']) }}</b> POS {{ $cur }}</span>
-                    <span class="text-gray-600 dark:text-gray-300">Comisioane: <b>{{ $fmt($p['online_commission']) }}</b> online / <b>{{ $fmt($p['pos_commission']) }}</b> POS</span>
+                    <span class="text-gray-600 dark:text-gray-300">{{ __('Vânzări:') }} <b class="text-emerald-600 dark:text-emerald-400">{{ $fmt($p['online_revenue']) }}</b> {{ __('online /') }} <b class="text-sky-600 dark:text-sky-400">{{ $fmt($p['pos_revenue']) }}</b> POS {{ $cur }}</span>
+                    <span class="text-gray-600 dark:text-gray-300">{{ __('Comisioane:') }} <b>{{ $fmt($p['online_commission']) }}</b> {{ __('online /') }} <b>{{ $fmt($p['pos_commission']) }}</b> {{ __('POS') }}</span>
                 </div>
             </summary>
 
@@ -54,19 +54,19 @@
                 @if ($hasSecondary && ($primaryHasData || $secondaryHasData))
                     <div class="p-4 mb-4 border border-gray-200 rounded-lg bg-gray-50/60 dark:bg-gray-900/30 dark:border-gray-700">
                         <div class="mb-3 text-xs font-semibold tracking-wide text-gray-600 uppercase dark:text-gray-300">
-                            Split pe societăți emiterente
+                            {{ __('Split pe societăți emiterente') }}
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead>
                                     <tr class="text-xs text-left text-gray-500 border-b dark:border-gray-700 dark:text-gray-400">
-                                        <th class="py-2 pr-3">Societate</th>
-                                        <th class="px-3 py-2 text-right">Bilete</th>
-                                        <th class="px-3 py-2 text-right">Vânzări online</th>
-                                        <th class="px-3 py-2 text-right">Comision online</th>
-                                        <th class="px-3 py-2 text-right">Vânzări POS</th>
-                                        <th class="px-3 py-2 text-right">Comision POS</th>
-                                        <th class="py-2 pl-3 text-right">Compensare (netă)</th>
+                                        <th class="py-2 pr-3">{{ __('Societate') }}</th>
+                                        <th class="px-3 py-2 text-right">{{ __('Bilete') }}</th>
+                                        <th class="px-3 py-2 text-right">{{ __('Vânzări online') }}</th>
+                                        <th class="px-3 py-2 text-right">{{ __('Comision online') }}</th>
+                                        <th class="px-3 py-2 text-right">{{ __('Vânzări POS') }}</th>
+                                        <th class="px-3 py-2 text-right">{{ __('Comision POS') }}</th>
+                                        <th class="py-2 pl-3 text-right">{{ __('Compensare (netă)') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -160,7 +160,7 @@
                             </button>
                         @endif
                     @empty
-                        <span class="text-xs text-gray-400">Nu există vânzări de decontat în această perioadă.</span>
+                        <span class="text-xs text-gray-400">{{ __('Nu există vânzări de decontat în această perioadă.') }}</span>
                     @endforelse
                 </div>
 
@@ -176,20 +176,20 @@
                     }
                 @endphp
                 @if ($allSocietiesDecontat)
-                    <p class="text-sm text-center text-gray-400">Perioadă decontată integral — deconturile sunt generate pe fiecare societate (vezi linkurile de mai sus).</p>
+                    <p class="text-sm text-center text-gray-400">{{ __('Perioadă decontată integral — deconturile sunt generate pe fiecare societate (vezi linkurile de mai sus).') }}</p>
                 @elseif (empty($p['days']))
-                    <p class="text-sm text-gray-400">Nu există vânzări în această perioadă.</p>
+                    <p class="text-sm text-gray-400">{{ __('Nu există vânzări în această perioadă.') }}</p>
                 @else
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="text-xs text-left text-gray-500 border-b dark:border-gray-700 dark:text-gray-400">
-                                    <th class="py-2 pr-3">Zi</th>
-                                    <th class="px-3 py-2 text-right">Vânzări online</th>
-                                    <th class="px-3 py-2 text-right">Comision online</th>
-                                    <th class="px-3 py-2 text-right">Vânzări POS</th>
-                                    <th class="px-3 py-2 text-right">Comision POS</th>
-                                    <th class="py-2 pl-3 text-right">Bilete</th>
+                                    <th class="py-2 pr-3">{{ __('Zi') }}</th>
+                                    <th class="px-3 py-2 text-right">{{ __('Vânzări online') }}</th>
+                                    <th class="px-3 py-2 text-right">{{ __('Comision online') }}</th>
+                                    <th class="px-3 py-2 text-right">{{ __('Vânzări POS') }}</th>
+                                    <th class="px-3 py-2 text-right">{{ __('Comision POS') }}</th>
+                                    <th class="py-2 pl-3 text-right">{{ __('Bilete') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -206,7 +206,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="font-semibold border-t-2 border-gray-200 dark:border-gray-700">
-                                    <td class="py-2 pr-3 text-gray-900 dark:text-white">Total perioadă</td>
+                                    <td class="py-2 pr-3 text-gray-900 dark:text-white">{{ __('Total perioadă') }}</td>
                                     <td class="px-3 py-2 text-right text-emerald-600 dark:text-emerald-400">{{ $fmt($p['online_revenue']) }}</td>
                                     <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-300">{{ $fmt($p['online_commission']) }}</td>
                                     <td class="px-3 py-2 text-right text-sky-600 dark:text-sky-400">{{ $fmt($p['pos_revenue']) }}</td>
@@ -220,6 +220,6 @@
             </div>
         </details>
     @empty
-        <p class="p-4 text-sm text-center text-gray-500">Nu există perioade de decont încă (proiectul începe 15.07.2026).</p>
+        <p class="p-4 text-sm text-center text-gray-500">{{ __('Nu există perioade de decont încă (proiectul începe 15.07.2026).') }}</p>
     @endforelse
 </div>

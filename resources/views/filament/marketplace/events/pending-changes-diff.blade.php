@@ -49,22 +49,21 @@
 
 <div class="epd">
     <div class="epd-meta">
-        <span>Eveniment: <strong>{{ $event->getTranslation('title', 'ro') }}</strong></span>
+        <span>{{ __('Eveniment:') }} <strong>{{ $event->getTranslation('title', 'ro') }}</strong></span>
         @if ($submitted)
-            <span>Trimis de organizator: <strong>{{ $submitted->timezone('Europe/Bucharest')->format('d.m.Y H:i') }}</strong></span>
+            <span>{{ __('Trimis de organizator:') }} <strong>{{ $submitted->timezone('Europe/Bucharest')->format('d.m.Y H:i') }}</strong></span>
         @endif
         <span>{{ count($rows) }} {{ count($rows) === 1 ? 'modificare' : 'modificări' }}</span>
     </div>
 
     @unless ($diff['has_base'] ?? false)
         <div class="epd-note">
-            Modificările au fost trimise înainte să se rețină starea evenimentului la trimitere, așa că sunt comparate cu varianta live de acum.
-            Dacă evenimentul a fost editat din admin între timp, pot apărea și câmpuri pe care organizatorul nu le-a atins.
+            {{ __('Modificările au fost trimise înainte să se rețină starea evenimentului la trimitere, așa că sunt comparate cu varianta live de acum. Dacă evenimentul a fost editat din admin între timp, pot apărea și câmpuri pe care organizatorul nu le-a atins.') }}
         </div>
     @endunless
 
     @if (empty($rows))
-        <div class="epd-scroll"><div class="epd-none">Organizatorul nu a modificat nimic față de varianta live. La aprobare doar se închide cererea.</div></div>
+        <div class="epd-scroll"><div class="epd-none">{{ __('Organizatorul nu a modificat nimic față de varianta live. La aprobare doar se închide cererea.') }}</div></div>
     @else
         <div class="epd-scroll">
             <table>
@@ -75,9 +74,9 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>Câmp</th>
-                        <th>Acum (live)</th>
-                        <th>După aprobare</th>
+                        <th>{{ __('Câmp') }}</th>
+                        <th>{{ __('Acum (live)') }}</th>
+                        <th>{{ __('După aprobare') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -86,10 +85,10 @@
                             <td>
                                 <span class="epd-label">{{ $row['label'] }}</span>
                                 @if (!empty($row['conflict']))
-                                    <span class="epd-flag">Modificat și din admin după trimitere — se va suprascrie</span>
+                                    <span class="epd-flag">{{ __('Modificat și din admin după trimitere — se va suprascrie') }}</span>
                                 @endif
                                 @if (!empty($row['format_only']))
-                                    <span class="epd-hint">Doar formatarea textului diferă</span>
+                                    <span class="epd-hint">{{ __('Doar formatarea textului diferă') }}</span>
                                 @endif
                             </td>
 
@@ -103,7 +102,7 @@
                                 </td>
                                 <td>
                                     @if ($row['after'] === '')
-                                        <span class="epd-empty">gol (se șterge)</span>
+                                        <span class="epd-empty">{{ __('gol (se șterge)') }}</span>
                                     @else
                                         <div class="epd-text">{!! $row['after_html'] !!}</div>
                                     @endif
@@ -148,7 +147,7 @@
                                 </td>
                                 <td>
                                     @if ($row['after'] === '')
-                                        <span class="epd-empty">gol (se șterge)</span>
+                                        <span class="epd-empty">{{ __('gol (se șterge)') }}</span>
                                     @else
                                         <span class="epd-new">{{ $row['after'] }}</span>
                                     @endif

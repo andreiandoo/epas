@@ -36,14 +36,11 @@
 <x-filament::section class="mt-6">
     <x-slot name="heading">Activitate ({{ $events->count() }})</x-slot>
     <x-slot name="description">
-        Toate evenimentele înregistrate pentru acest lead: vizite pe paginile publice,
-        schimbări de status, note, apeluri, emailuri. Vizitele anonime de pe
-        /devino-partener și /inregistrare-locatie sunt legate la lead prin cookie-ul
-        de sesiune când se trimite formularul.
+        {{ __('Toate evenimentele înregistrate pentru acest lead: vizite pe paginile publice, schimbări de status, note, apeluri, emailuri. Vizitele anonime de pe /devino-partener și /inregistrare-locatie sunt legate la lead prin cookie-ul de sesiune când se trimite formularul.') }}
     </x-slot>
 
     @if ($events->isEmpty())
-        <p class="text-gray-500 italic text-sm">Niciun eveniment înregistrat încă.</p>
+        <p class="text-gray-500 italic text-sm">{{ __('Niciun eveniment înregistrat încă.') }}</p>
     @else
         <ol class="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-5">
             @foreach ($events as $event)
@@ -68,11 +65,11 @@
                     @if (!empty($event->page_url) || !empty($event->payload))
                         <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
                             @if ($event->page_url)
-                                <p><span class="font-semibold">URL:</span> <code class="text-xs">{{ $event->page_url }}</code></p>
+                                <p><span class="font-semibold">{{ __('URL:') }}</span> <code class="text-xs">{{ $event->page_url }}</code></p>
                             @endif
                             @if (!empty($event->payload['cta_id']))
                                 <p>
-                                    <span class="font-semibold">CTA:</span>
+                                    <span class="font-semibold">{{ __('CTA:') }}</span>
                                     <code class="text-xs">{{ $event->payload['cta_id'] }}</code>
                                     @if (!empty($event->payload['cta_label']))
                                         <span class="ml-1">— „{{ $event->payload['cta_label'] }}"</span>
@@ -80,17 +77,17 @@
                                 </p>
                             @endif
                             @if (!empty($event->payload['utm']) && array_filter($event->payload['utm']))
-                                <p><span class="font-semibold">UTM:</span>
+                                <p><span class="font-semibold">{{ __('UTM:') }}</span>
                                     @foreach (array_filter($event->payload['utm']) as $k => $v)
                                         <code class="text-xs ml-1">{{ $k }}={{ $v }}</code>
                                     @endforeach
                                 </p>
                             @endif
                             @if (!empty($event->payload['referrer']))
-                                <p><span class="font-semibold">Referrer:</span> <span class="break-all">{{ $event->payload['referrer'] }}</span></p>
+                                <p><span class="font-semibold">{{ __('Referrer:') }}</span> <span class="break-all">{{ $event->payload['referrer'] }}</span></p>
                             @endif
                             @if (!empty($event->ip_address))
-                                <p><span class="font-semibold">IP:</span> {{ $event->ip_address }}</p>
+                                <p><span class="font-semibold">{{ __('IP:') }}</span> {{ $event->ip_address }}</p>
                             @endif
                         </div>
                     @endif

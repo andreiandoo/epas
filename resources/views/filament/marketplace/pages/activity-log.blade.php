@@ -3,8 +3,8 @@
         @if($activities->isEmpty())
             <div class="text-center py-12">
                 <x-heroicon-o-clock class="mx-auto h-12 w-12 text-gray-400" />
-                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No activity yet</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Activity will appear here as you use the platform.</p>
+                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ __('No activity yet') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Activity will appear here as you use the platform.') }}</p>
             </div>
         @else
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">

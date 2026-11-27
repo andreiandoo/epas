@@ -1,13 +1,13 @@
 <x-filament-panels::page>
     <p class="text-xs text-gray-500 dark:text-gray-400 -mt-4">
-        Cifrele din listă se actualizează la fiecare plată și se recalculează complet în fiecare noapte. Pagina fiecărui organizator arată valorile live (inclusiv vânzările de azi), deci pot diferi ușor.
+        {{ __('Cifrele din listă se actualizează la fiecare plată și se recalculează complet în fiecare noapte. Pagina fiecărui organizator arată valorile live (inclusiv vânzările de azi), deci pot diferi ușor.') }}
     </p>
 
     @if ($this->legacyEnabled())
         @php($legacyQueue = $this->legacyQueueCount())
         <div class="ep-legacy-bar" @if ($legacyQueue > 0) wire:poll.10s @endif>
             <div class="ep-legacy-bar__text">
-                <strong>Ciornele vechi</strong> — deconturile rămase „În așteptare” pe evenimentele încheiate până pe
+                <strong>{{ __('Ciornele vechi') }}</strong> — deconturile rămase „În așteptare” pe evenimentele încheiate până pe
                 {{ \Carbon\Carbon::parse(\App\Services\Marketplace\LegacySettlementService::CUTOFF_DATE)->format('d.m.Y') }}.
                 Analizează, apoi aprobă din coloana „Trecut”; plățile se finalizează din pagina de sold a fiecărui organizator.
                 @if ($legacyQueue > 0)

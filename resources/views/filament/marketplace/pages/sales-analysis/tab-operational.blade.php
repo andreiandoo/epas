@@ -10,7 +10,7 @@
     <div class="grid gap-6 lg:grid-cols-2">
         {{-- Organizer Leaderboard --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Top organizatori</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Top organizatori') }}</h3>
             @if(!empty($organizers))
             <div class="space-y-2 overflow-y-auto max-h-80">
                 @foreach($organizers as $i => $org)
@@ -29,13 +29,13 @@
                 @endforeach
             </div>
             @else
-                <p class="text-sm text-gray-500">Nu sunt date.</p>
+                <p class="text-sm text-gray-500">{{ __('Nu sunt date.') }}</p>
             @endif
         </div>
 
         {{-- Capacity Utilization --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Utilizare capacitate pe categorii</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Utilizare capacitate pe categorii') }}</h3>
             @if(!empty($capacity))
             <div class="space-y-3">
                 @foreach($capacity as $cap)
@@ -58,7 +58,7 @@
                 @endforeach
             </div>
             @else
-                <p class="text-sm text-gray-500">Nu sunt date.</p>
+                <p class="text-sm text-gray-500">{{ __('Nu sunt date.') }}</p>
             @endif
         </div>
     </div>
@@ -66,7 +66,7 @@
     <div class="grid gap-6 lg:grid-cols-3">
         {{-- Discount Impact --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Impact discount/cupoane</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Impact discount/cupoane') }}</h3>
             @php
                 $wd = $discount['with_discount'] ?? [];
                 $wod = $discount['without_discount'] ?? [];
@@ -76,19 +76,19 @@
             <div class="space-y-4">
                 <div class="flex items-center gap-3">
                     <div class="flex-1">
-                        <div class="text-xs text-gray-500">Cu discount</div>
+                        <div class="text-xs text-gray-500">{{ __('Cu discount') }}</div>
                         <div class="text-lg font-bold text-orange-600">{{ $wd['orders'] ?? 0 }} comenzi</div>
                         <div class="text-xs text-gray-400">AOV: {{ $currencySymbol }}{{ number_format($wd['avg_order'] ?? 0, 0) }}</div>
                     </div>
                     <div class="flex-1">
-                        <div class="text-xs text-gray-500">Fara discount</div>
+                        <div class="text-xs text-gray-500">{{ __('Fara discount') }}</div>
                         <div class="text-lg font-bold text-indigo-600">{{ $wod['orders'] ?? 0 }} comenzi</div>
                         <div class="text-xs text-gray-400">AOV: {{ $currencySymbol }}{{ number_format($wod['avg_order'] ?? 0, 0) }}</div>
                     </div>
                 </div>
                 <div>
                     <div class="flex justify-between mb-1 text-xs text-gray-500">
-                        <span>Discount</span>
+                        <span>{{ __('Discount') }}</span>
                         <span>{{ $discountPct }}%</span>
                     </div>
                     <div class="w-full h-3 bg-indigo-200 rounded-full dark:bg-indigo-900">
@@ -105,7 +105,7 @@
 
         {{-- Payment Methods --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Metode de plata</h3>
+            <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Metode de plata') }}</h3>
             @if(!empty($payments))
             <div class="h-44" wire:ignore x-data="{
                 init() {
@@ -124,14 +124,14 @@
                 <canvas x-ref="canvas"></canvas>
             </div>
             @else
-                <p class="text-sm text-gray-500">Nu sunt date.</p>
+                <p class="text-sm text-gray-500">{{ __('Nu sunt date.') }}</p>
             @endif
         </div>
 
         {{-- Refund Timeline --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Cand se cer refund-uri</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Raportat la data evenimentului</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Cand se cer refund-uri') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Raportat la data evenimentului') }}</p>
             @if(!empty($refundTimeline['data']) && array_sum($refundTimeline['data']) > 0)
             <div class="h-44" wire:ignore x-data="{
                 init() {
@@ -148,7 +148,7 @@
                 <canvas x-ref="canvas"></canvas>
             </div>
             @else
-                <p class="text-sm text-gray-500">Nu sunt date de refund.</p>
+                <p class="text-sm text-gray-500">{{ __('Nu sunt date de refund.') }}</p>
             @endif
         </div>
     </div>

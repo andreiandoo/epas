@@ -8,17 +8,17 @@
                 </div>
                 <div class="flex-1">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        Invitations Manager
+                        {{ __('Invitations Manager') }}
                     </h2>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Create and manage invitation batches for VIP guests, press passes, and complimentary tickets.
+                        {{ __('Create and manage invitation batches for VIP guests, press passes, and complimentary tickets.') }}
                     </p>
                 </div>
                 <button wire:click="openCreateModal"
                         class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg shadow-sm transition-colors"
                         style="background-color: #4f46e5; color: white;">
                     <x-heroicon-o-plus class="w-4 h-4" />
-                    Create Batch
+                    {{ __('Create Batch') }}
                 </button>
             </div>
 
@@ -38,7 +38,7 @@
                 if ($hasEmailed || $batchStatus === 'completed') $step = 4;
             @endphp
             <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Workflow</p>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{{ __('Workflow') }}</p>
                 <div class="flex flex-wrap items-center gap-2 text-sm">
                     @php
                         $steps = [
@@ -88,8 +88,8 @@
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center">
                 <x-heroicon-o-envelope-open class="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No invitation batches yet</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6">Click "Create Batch" above to start sending invitations.</p>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ __('No invitation batches yet') }}</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-6">{{ __('Click "Create Batch" above to start sending invitations.') }}</p>
         </div>
     @else
         {{-- Statistics Overview --}}
@@ -107,7 +107,7 @@
                         <x-heroicon-o-rectangle-stack class="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Total Batches</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Total Batches') }}</p>
                         <p class="text-xl font-bold text-gray-900 dark:text-white">{{ $totalBatches }}</p>
                     </div>
                 </div>
@@ -119,7 +119,7 @@
                         <x-heroicon-o-ticket class="w-5 h-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Total Invitations</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Total Invitations') }}</p>
                         <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($totalInvites) }}</p>
                     </div>
                 </div>
@@ -131,7 +131,7 @@
                         <x-heroicon-o-paper-airplane class="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Emails Sent</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Emails Sent') }}</p>
                         <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($totalEmailed) }}</p>
                     </div>
                 </div>
@@ -143,7 +143,7 @@
                         <x-heroicon-o-check-badge class="w-5 h-5 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Checked In</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Checked In') }}</p>
                         <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($totalCheckedIn) }}</p>
                     </div>
                 </div>
@@ -193,10 +193,10 @@
                                 <div class="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                                     <div class="flex items-center gap-2 text-amber-800 dark:text-amber-300">
                                         <x-heroicon-o-exclamation-triangle class="w-5 h-5" />
-                                        <span class="text-sm font-medium">Step 2: Add recipients before generating PDFs</span>
+                                        <span class="text-sm font-medium">{{ __('Step 2: Add recipients before generating PDFs') }}</span>
                                     </div>
                                     <p class="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-7">
-                                        Click "Add Recipient" to enter details manually, or "Import CSV" to bulk import
+                                        {{ __('Click "Add Recipient" to enter details manually, or "Import CSV" to bulk import') }}
                                     </p>
                                 </div>
                             @else
@@ -220,27 +220,27 @@
                         <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
                             <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                                 <p class="text-xl font-bold text-gray-900 dark:text-white">{{ $batch->qty_planned }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Planned</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Planned') }}</p>
                             </div>
                             <div class="text-center p-3 rounded-lg {{ $recipientCount > 0 ? 'bg-purple-50 dark:bg-purple-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
                                 <p class="text-xl font-bold {{ $recipientCount > 0 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-900 dark:text-white' }}">{{ $recipientCount }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Recipients</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Recipients') }}</p>
                             </div>
                             <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                                 <p class="text-xl font-bold text-gray-900 dark:text-white">{{ $batch->qty_generated }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Generated</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Generated') }}</p>
                             </div>
                             <div class="text-center p-3 rounded-lg {{ $batch->qty_rendered > 0 ? 'bg-orange-50 dark:bg-orange-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
                                 <p class="text-xl font-bold {{ $batch->qty_rendered > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white' }}">{{ $batch->qty_rendered }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Rendered</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Rendered') }}</p>
                             </div>
                             <div class="text-center p-3 rounded-lg {{ $batch->qty_emailed > 0 ? 'bg-green-50 dark:bg-green-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
                                 <p class="text-xl font-bold {{ $batch->qty_emailed > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white' }}">{{ $batch->qty_emailed }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Emailed</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Emailed') }}</p>
                             </div>
                             <div class="text-center p-3 rounded-lg {{ $batch->qty_checked_in > 0 ? 'bg-amber-50 dark:bg-amber-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
                                 <p class="text-xl font-bold {{ $batch->qty_checked_in > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white' }}">{{ $batch->qty_checked_in }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Checked In</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Checked In') }}</p>
                             </div>
                         </div>
 
@@ -248,7 +248,7 @@
                         @if($batch->qty_planned > 0)
                             <div class="mb-4">
                                 <div class="flex justify-between text-xs text-gray-500 mb-1">
-                                    <span>Progress</span>
+                                    <span>{{ __('Progress') }}</span>
                                     <span>{{ $batch->getEmailedPercentage() }}% emailed</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
@@ -264,13 +264,13 @@
                                 <button wire:click="openManualModal('{{ $batch->id }}')"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700">
                                     <x-heroicon-o-user-plus class="w-4 h-4" />
-                                    Add Recipient
+                                    {{ __('Add Recipient') }}
                                 </button>
 
                                 <button wire:click="openImportModal('{{ $batch->id }}')"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg shadow-sm hover:bg-purple-700">
                                     <x-heroicon-o-arrow-up-tray class="w-4 h-4" />
-                                    Import CSV
+                                    {{ __('Import CSV') }}
                                 </button>
 
                                 @if($canRender)
@@ -288,7 +288,7 @@
                                     <button disabled
                                             class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-400 bg-gray-200 rounded-lg cursor-not-allowed">
                                         <x-heroicon-o-document class="w-4 h-4" />
-                                        Generate PDFs
+                                        {{ __('Generate PDFs') }}
                                     </button>
                                 @endif
                             @endif
@@ -304,7 +304,7 @@
                                         wire:confirm="This will regenerate all PDFs. Continue?"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-amber-500 rounded-lg shadow-sm hover:bg-amber-600">
                                     <x-heroicon-o-arrow-path class="w-4 h-4" />
-                                    Regenerate
+                                    {{ __('Regenerate') }}
                                 </button>
 
                                 @if($batch->status === 'ready')
@@ -319,7 +319,7 @@
                             <button wire:click="downloadExport('{{ $batch->id }}')"
                                     class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
                                 <x-heroicon-o-table-cells class="w-4 h-4" />
-                                Export CSV
+                                {{ __('Export CSV') }}
                             </button>
 
                             <div class="flex-1"></div>
@@ -329,7 +329,7 @@
                                         wire:confirm="Are you sure you want to cancel this batch? All invitations will be voided."
                                         class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-amber-600 rounded-lg hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20">
                                     <x-heroicon-o-x-circle class="w-4 h-4" />
-                                    Cancel
+                                    {{ __('Cancel') }}
                                 </button>
                             @endif
 
@@ -337,7 +337,7 @@
                                     wire:confirm="Are you sure you want to permanently delete this batch? This will remove all invitations and cannot be undone."
                                     class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
                                 <x-heroicon-o-trash class="w-4 h-4" />
-                                Delete
+                                {{ __('Delete') }}
                             </button>
                         </div>
                     </div>
@@ -351,14 +351,14 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click.self="$set('showCreateModal', false)">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-semibold text-white">Create Invitation Batch</h3>
-                    <p class="text-sm text-indigo-100 mt-1">Create a new batch for your event invitations</p>
+                    <h3 class="text-lg font-semibold text-white">{{ __('Create Invitation Batch') }}</h3>
+                    <p class="text-sm text-indigo-100 mt-1">{{ __('Create a new batch for your event invitations') }}</p>
                 </div>
 
                 <form wire:submit="submitCreateBatch" class="p-6 space-y-4">
                     <div x-data="{ open: false, search: '', selected: @entangle('batchData.event_ref'), events: {{ json_encode(collect($this->getEvents())->map(fn($title, $id) => ['id' => $id, 'title' => $title])->values()) }} }" class="relative">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Eveniment <span class="text-red-500">*</span>
+                            {{ __('Eveniment') }} <span class="text-red-500">*</span>
                         </label>
                         <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-left bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 flex items-center justify-between">
                             <span x-text="selected ? events.find(e => e.id == selected)?.title || 'Selectează...' : 'Selectează un eveniment...'" class="truncate text-gray-900 dark:text-white"></span>
@@ -366,7 +366,7 @@
                         </button>
                         <div x-show="open" @click.away="open = false" x-transition class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-200 dark:border-gray-600">
-                                <input type="text" x-model="search" placeholder="Caută eveniment..." class="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" @keydown.escape="open = false">
+                                <input type="text" x-model="search" placeholder="{{ __('Caută eveniment...') }}" class="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" @keydown.escape="open = false">
                             </div>
                             <div class="overflow-y-auto max-h-48">
                                 <template x-for="ev in events.filter(e => !search || e.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')))" :key="ev.id">
@@ -378,27 +378,27 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Batch Name <span class="text-red-500">*</span>
+                            {{ __('Batch Name') }} <span class="text-red-500">*</span>
                         </label>
                         <input type="text" wire:model="batchData.name" required
-                               placeholder="e.g., VIP Guests - Opening Night"
+                               placeholder="{{ __('e.g., VIP Guests - Opening Night') }}"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500" />
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Planned Quantity <span class="text-red-500">*</span>
+                                {{ __('Planned Quantity') }} <span class="text-red-500">*</span>
                             </label>
                             <input type="number" wire:model="batchData.qty_planned" required min="1" max="10000"
                                    placeholder="50"
                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ticket Template</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Ticket Template') }}</label>
                             <select wire:model="batchData.template_id"
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500">
-                                <option value="">None</option>
+                                <option value="">{{ __('None') }}</option>
                                 @foreach($this->getTemplates() as $id => $name)
                                     <option value="{{ $id }}">{{ $name }}</option>
                                 @endforeach
@@ -408,37 +408,37 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Watermark Text</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Watermark Text') }}</label>
                             <input type="text" wire:model="batchData.watermark"
-                                   placeholder="e.g., VIP INVITATION"
+                                   placeholder="{{ __('e.g., VIP INVITATION') }}"
                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seat Assignment</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Seat Assignment') }}</label>
                             <select wire:model="batchData.seat_mode"
                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500">
-                                <option value="none">No seat assignment</option>
-                                <option value="manual">Manual assignment</option>
-                                <option value="auto">Auto-assign</option>
+                                <option value="none">{{ __('No seat assignment') }}</option>
+                                <option value="manual">{{ __('Manual assignment') }}</option>
+                                <option value="auto">{{ __('Auto-assign') }}</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Notes') }}</label>
                         <textarea wire:model="batchData.notes" rows="2"
-                                  placeholder="Internal notes about this batch"
+                                  placeholder="{{ __('Internal notes about this batch') }}"
                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500"></textarea>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <button type="button" wire:click="$set('showCreateModal', false)"
                                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                            Cancel
+                            {{ __('Cancel') }}
                         </button>
                         <button type="submit"
                                 class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg shadow-sm hover:bg-indigo-700">
-                            Create Batch
+                            {{ __('Create Batch') }}
                         </button>
                     </div>
                 </form>
@@ -451,46 +451,46 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click.self="$set('showImportModal', false)">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div class="px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-semibold text-white">Import Recipients</h3>
-                    <p class="text-sm text-purple-100 mt-1">Upload a CSV file with recipient data</p>
+                    <h3 class="text-lg font-semibold text-white">{{ __('Import Recipients') }}</h3>
+                    <p class="text-sm text-purple-100 mt-1">{{ __('Upload a CSV file with recipient data') }}</p>
                 </div>
 
                 <form wire:submit="processImport" class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CSV File</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('CSV File') }}</label>
                         <input type="file" wire:model="csvFile" accept=".csv"
                                class="w-full text-sm text-gray-500 dark:text-gray-400" />
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                            <strong>Required columns:</strong> name, email<br>
-                            <strong>Optional:</strong> phone, company, seat
+                            <strong>{{ __('Required columns:') }}</strong> {{ __('name, email') }}<br>
+                            <strong>{{ __('Optional:') }}</strong> {{ __('phone, company, seat') }}
                         </p>
                     </div>
 
                     <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                        <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-3">Column Mapping (0-indexed)</p>
+                        <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-3">{{ __('Column Mapping (0-indexed)') }}</p>
                         <div class="grid grid-cols-5 gap-2">
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name</label>
+                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Name') }}</label>
                                 <input type="number" wire:model="colName" min="0"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Email') }}</label>
                                 <input type="number" wire:model="colEmail" min="0"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Phone</label>
+                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Phone') }}</label>
                                 <input type="number" wire:model="colPhone" min="0"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Company</label>
+                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Company') }}</label>
                                 <input type="number" wire:model="colCompany" min="0"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Seat</label>
+                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">{{ __('Seat') }}</label>
                                 <input type="number" wire:model="colSeat" min="0"
                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                             </div>
@@ -500,17 +500,17 @@
                     <div class="flex items-center">
                         <input type="checkbox" wire:model="skipHeader" id="skipHeader"
                                class="rounded border-gray-300 dark:border-gray-600" checked />
-                        <label for="skipHeader" class="ml-2 text-sm text-gray-600 dark:text-gray-400">Skip header row</label>
+                        <label for="skipHeader" class="ml-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Skip header row') }}</label>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <button type="button" wire:click="$set('showImportModal', false)"
                                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                            Cancel
+                            {{ __('Cancel') }}
                         </button>
                         <button type="submit"
                                 class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg shadow-sm hover:bg-purple-700">
-                            Import Recipients
+                            {{ __('Import Recipients') }}
                         </button>
                     </div>
                 </form>
@@ -523,23 +523,23 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click.self="closeManualModal">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-lg font-semibold text-white">Add Recipient</h3>
-                    <p class="text-sm text-blue-100 mt-1">Enter recipient details manually</p>
+                    <h3 class="text-lg font-semibold text-white">{{ __('Add Recipient') }}</h3>
+                    <p class="text-sm text-blue-100 mt-1">{{ __('Enter recipient details manually') }}</p>
                 </div>
 
                 <form wire:submit="addManualRecipient" class="p-6 space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Name <span class="text-red-500">*</span>
+                            {{ __('Name') }} <span class="text-red-500">*</span>
                         </label>
                         <input type="text" wire:model="manualName" required
-                               placeholder="John Doe"
+                               placeholder="{{ __('John Doe') }}"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500" />
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Email <span class="text-red-500">*</span>
+                            {{ __('Email') }} <span class="text-red-500">*</span>
                         </label>
                         <input type="email" wire:model="manualEmail" required
                                placeholder="john@example.com"
@@ -548,35 +548,35 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Phone') }}</label>
                             <input type="text" wire:model="manualPhone"
                                    placeholder="+40 700 000 000"
                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Company') }}</label>
                             <input type="text" wire:model="manualCompany"
-                                   placeholder="ACME Inc."
+                                   placeholder="{{ __('ACME Inc.') }}"
                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500" />
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seat Reference</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Seat Reference') }}</label>
                         <input type="text" wire:model="manualSeat"
                                placeholder="A-12"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500" />
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional: Assigned seat or table reference</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ __('Optional: Assigned seat or table reference') }}</p>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                         <button type="button" wire:click="closeManualModal"
                                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                            Done
+                            {{ __('Done') }}
                         </button>
                         <button type="submit"
                                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg shadow-sm hover:bg-blue-700">
-                            Add & Continue
+                            {{ __('Add & Continue') }}
                         </button>
                     </div>
                 </form>

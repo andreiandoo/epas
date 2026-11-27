@@ -18,7 +18,7 @@
         <div class="flex items-start gap-3 p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700"
              style="border-left: 4px solid {{ $approvalColor }}">
             <div class="min-w-0">
-                <div class="text-xs text-gray-500 dark:text-gray-400">Stare aprobare</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{ __('Stare aprobare') }}</div>
                 <div class="text-sm font-semibold" style="color: {{ $approvalColor }}">{{ $approval['label'] }}</div>
                 <div class="text-sm text-gray-600 dark:text-gray-300 break-words">{{ $approval['detail'] }}</div>
             </div>
@@ -28,19 +28,19 @@
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-primary-600">{{ $logs->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Total modificări</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total modificări') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-green-600">{{ $logs->where('event', 'created')->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Create</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Create') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-blue-600">{{ $logs->where('event', 'updated')->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Actualizări</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Actualizări') }}</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-purple-600">{{ $logs->pluck('causer_email')->filter()->unique()->count() }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Contribuitori</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ __('Contribuitori') }}</div>
             </div>
         </div>
 
@@ -48,13 +48,13 @@
         @if($logs->isEmpty())
             <div class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                 <x-heroicon-o-clock class="mx-auto h-12 w-12 text-gray-400" />
-                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Nicio activitate înregistrată</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Istoricul modificărilor va apărea aici pe măsură ce evenimentul este editat.</p>
+                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ __('Nicio activitate înregistrată') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Istoricul modificărilor va apărea aici pe măsură ce evenimentul este editat.') }}</p>
             </div>
         @else
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-8">
                 <div class="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Cronologie activitate</h2>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Cronologie activitate') }}</h2>
                 </div>
 
                 <ul role="list" class="divide-y divide-gray-100 dark:divide-gray-700/70">

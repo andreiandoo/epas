@@ -8,10 +8,9 @@
                         <x-heroicon-o-credit-card class="w-8 h-8 text-gray-400" />
                     </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">No Payment Methods Available</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('No Payment Methods Available') }}</h3>
                         <p class="mt-2 text-gray-600 dark:text-gray-400">
-                            No payment methods have been assigned to your marketplace yet.
-                            Please contact the platform administrator to enable payment processing.
+                            {{ __('No payment methods have been assigned to your marketplace yet. Please contact the platform administrator to enable payment processing.') }}
                         </p>
                     </div>
                 </div>
@@ -35,21 +34,21 @@
                                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $pm['name'] }}</h3>
                                         @if($pm['is_default'])
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
-                                                Default
+                                                {{ __('Default') }}
                                             </span>
                                         @endif
                                         @if($pm['is_active'])
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                                                Active
+                                                {{ __('Active') }}
                                             </span>
                                         @else
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                                Inactive
+                                                {{ __('Inactive') }}
                                             </span>
                                         @endif
                                         @if(!$pm['is_configured'])
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100">
-                                                Not Configured
+                                                {{ __('Not Configured') }}
                                             </span>
                                         @endif
                                     </div>
@@ -62,7 +61,7 @@
                                     class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg text-primary-600 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/50 dark:text-primary-400 dark:hover:bg-primary-900"
                                 >
                                     <x-heroicon-o-cog-6-tooth class="w-4 h-4 mr-1.5" />
-                                    Configure
+                                    {{ __('Configure') }}
                                 </button>
                             </div>
                         </div>
@@ -80,11 +79,11 @@
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <label class="flex items-center gap-3">
                                                 <input type="checkbox" wire:model="formData.is_active" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Enable this payment method</span>
+                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Enable this payment method') }}</span>
                                             </label>
                                             <label class="flex items-center gap-3">
                                                 <input type="checkbox" wire:model="formData.is_default" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Set as default payment method</span>
+                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Set as default payment method') }}</span>
                                             </label>
                                         </div>
 
@@ -113,7 +112,7 @@
                                                             @endif
                                                         </div>
                                                     @elseif($sectionKey === 'default')
-                                                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Configuration Settings</h4>
+                                                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ __('Configuration Settings') }}</h4>
                                                     @endif
 
                                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 {{ $sectionKey !== 'mode' ? 'p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg' : '' }}">
@@ -166,7 +165,7 @@
                                                                         class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
                                                                         @if($field['required'] ?? false) required @endif
                                                                     >
-                                                                        <option value="">Select...</option>
+                                                                        <option value="">{{ __('Select...') }}</option>
                                                                         @foreach($field['options'] ?? [] as $option)
                                                                             <option value="{{ $option }}">{{ ucfirst($option) }}</option>
                                                                         @endforeach
@@ -216,13 +215,13 @@
                                                 wire:click="cancelEdit"
                                                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
                                             >
-                                                Cancel
+                                                {{ __('Cancel') }}
                                             </button>
                                             <button
                                                 type="submit"
                                                 class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                                             >
-                                                Save Configuration
+                                                {{ __('Save Configuration') }}
                                             </button>
                                         </div>
                                     </div>

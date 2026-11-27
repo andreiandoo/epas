@@ -20,13 +20,13 @@
                     wire:click="switchLocale('ro')"
                     class="px-3 py-1.5 text-xs font-medium rounded-md transition {{ $locale === 'ro' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300' }}"
                 >
-                    RO
+                    {{ __('RO') }}
                 </button>
                 <button
                     wire:click="switchLocale('en')"
                     class="px-3 py-1.5 text-xs font-medium rounded-md transition {{ $locale === 'en' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300' }}"
                 >
-                    EN
+                    {{ __('EN') }}
                 </button>
             </div>
         </div>

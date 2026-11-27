@@ -2,11 +2,11 @@
     {{-- Summary --}}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="p-5 bg-white border rounded-xl border-gray-200 dark:bg-gray-900 dark:border-white/10">
-            <p class="text-xs font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">Total dezabonări</p>
+            <p class="text-xs font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">{{ __('Total dezabonări') }}</p>
             <p class="mt-1 text-3xl font-bold text-gray-950 dark:text-white">{{ number_format($total, 0, ',', '.') }}</p>
         </div>
         <div class="p-5 bg-white border rounded-xl border-gray-200 dark:bg-gray-900 dark:border-white/10">
-            <p class="text-xs font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">Cu motiv completat</p>
+            <p class="text-xs font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">{{ __('Cu motiv completat') }}</p>
             <p class="mt-1 text-3xl font-bold text-gray-950 dark:text-white">
                 {{ number_format($withReason, 0, ',', '.') }}
                 <span class="text-base font-medium text-gray-400">/ {{ number_format($total, 0, ',', '.') }}</span>
@@ -16,7 +16,7 @@
 
     {{-- Breakdown by reason --}}
     <div class="p-5 bg-white border rounded-xl border-gray-200 dark:bg-gray-900 dark:border-white/10">
-        <h2 class="text-sm font-semibold text-gray-950 dark:text-white">De ce se dezabonează</h2>
+        <h2 class="text-sm font-semibold text-gray-950 dark:text-white">{{ __('De ce se dezabonează') }}</h2>
         <div class="mt-4 space-y-3">
             @forelse ($breakdown as $row)
                 <div>
@@ -32,7 +32,7 @@
                     </div>
                 </div>
             @empty
-                <p class="text-sm text-gray-500 dark:text-gray-400">Nicio dezabonare încă.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Nicio dezabonare încă.') }}</p>
             @endforelse
         </div>
     </div>
@@ -40,16 +40,16 @@
     {{-- Recent unsubscribes --}}
     <div class="bg-white border rounded-xl border-gray-200 dark:bg-gray-900 dark:border-white/10">
         <h2 class="px-5 py-4 text-sm font-semibold border-b text-gray-950 dark:text-white border-gray-200 dark:border-white/10">
-            Ultimele dezabonări
+            {{ __('Ultimele dezabonări') }}
         </h2>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="text-xs uppercase text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5">
                     <tr>
-                        <th class="px-5 py-3 font-medium text-left">Email</th>
-                        <th class="px-5 py-3 font-medium text-left">Motiv</th>
-                        <th class="px-5 py-3 font-medium text-left">Detalii</th>
-                        <th class="px-5 py-3 font-medium text-left whitespace-nowrap">Data</th>
+                        <th class="px-5 py-3 font-medium text-left">{{ __('Email') }}</th>
+                        <th class="px-5 py-3 font-medium text-left">{{ __('Motiv') }}</th>
+                        <th class="px-5 py-3 font-medium text-left">{{ __('Detalii') }}</th>
+                        <th class="px-5 py-3 font-medium text-left whitespace-nowrap">{{ __('Data') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-white/5">
@@ -62,7 +62,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-5 py-8 text-center text-gray-500 dark:text-gray-400">Nicio dezabonare încă.</td>
+                            <td colspan="4" class="px-5 py-8 text-center text-gray-500 dark:text-gray-400">{{ __('Nicio dezabonare încă.') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

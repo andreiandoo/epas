@@ -27,22 +27,22 @@
     {{-- Bucket KPIs --}}
     <div class="grid grid-cols-2 gap-2 p-3 border-b border-gray-100 dark:border-gray-700/50">
         <div>
-            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Pierdut</p>
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Pierdut') }}</p>
             <p class="text-base font-bold text-rose-600 dark:text-rose-400">{{ number_format($summary['total_lost'], 2) }} {{ $currency }}</p>
         </div>
         <div>
-            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Câștigat</p>
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Câștigat') }}</p>
             <p class="text-base font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($summary['total_earned'], 2) }} {{ $currency }}</p>
         </div>
         <div>
-            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Invitații / bilete</p>
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Invitații / bilete') }}</p>
             <p class="text-sm font-semibold text-gray-900 dark:text-white">
                 {{ number_format($summary['total_invitations']) }} / {{ number_format($summary['total_paid_tickets']) }}
                 <span class="text-[10px] text-rose-600 dark:text-rose-400">({{ number_format($summary['invitation_ratio_pct'], 1) }}%)</span>
             </p>
         </div>
         <div>
-            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Organizatori</p>
+            <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ __('Organizatori') }}</p>
             <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($summary['unique_organizers']) }}</p>
         </div>
     </div>
@@ -53,12 +53,12 @@
         <table class="w-full text-xs">
             <thead class="sticky top-0 bg-gray-50 dark:bg-gray-900/80">
                 <tr class="border-b border-gray-200 dark:border-gray-700">
-                    <th class="px-2 py-2 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Eveniment</th>
-                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Vând.</th>
-                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Inv.</th>
-                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Câștig</th>
-                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Pierd.</th>
-                    <th class="px-2 py-2 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">Imp.</th>
+                    <th class="px-2 py-2 text-left text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Eveniment') }}</th>
+                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Vând.') }}</th>
+                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Inv.') }}</th>
+                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Câștig') }}</th>
+                    <th class="px-2 py-2 text-right text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Pierd.') }}</th>
+                    <th class="px-2 py-2 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase">{{ __('Imp.') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -89,7 +89,7 @@
     </div>
     @else
     <div class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
-        Niciun eveniment în acest bucket.
+        {{ __('Niciun eveniment în acest bucket.') }}
     </div>
     @endif
 </div>

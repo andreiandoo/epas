@@ -19,8 +19,8 @@
     <div class="grid gap-6 lg:grid-cols-2">
         {{-- RFM Segmentation --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Segmentare RFM</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Recency-Frequency-Monetary: cine sunt clientii tai</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Segmentare RFM') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Recency-Frequency-Monetary: cine sunt clientii tai') }}</p>
             @if($rfm['total'] > 0)
             <div class="h-56" wire:ignore x-data="{
                 init() {
@@ -47,14 +47,14 @@
                 @endforeach
             </div>
             @else
-                <p class="text-sm text-gray-500">Nu sunt suficiente date.</p>
+                <p class="text-sm text-gray-500">{{ __('Nu sunt suficiente date.') }}</p>
             @endif
         </div>
 
         {{-- Geographic Revenue --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Revenue pe orase</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Cele mai profitabile orase</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Revenue pe orase') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Cele mai profitabile orase') }}</p>
             @if(!empty($geographic))
             <div class="h-72" wire:ignore x-data="{
                 init() {
@@ -78,7 +78,7 @@
                 <canvas x-ref="canvas"></canvas>
             </div>
             @else
-                <p class="text-sm text-gray-500">Nu sunt suficiente date.</p>
+                <p class="text-sm text-gray-500">{{ __('Nu sunt suficiente date.') }}</p>
             @endif
         </div>
     </div>
@@ -86,14 +86,14 @@
     {{-- Cohort Retention Analysis --}}
     @if(!empty($cohort))
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Analiza cohorte - retentie clienti</h3>
-        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">% clienti care revin in lunile urmatoare primei achizitii</p>
+        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Analiza cohorte - retentie clienti') }}</h3>
+        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('% clienti care revin in lunile urmatoare primei achizitii') }}</p>
         <div class="overflow-x-auto">
             <table class="w-full text-xs">
                 <thead>
                     <tr>
-                        <th class="px-3 py-2 text-left text-gray-500 dark:text-gray-400">Cohorta</th>
-                        <th class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">Clienti</th>
+                        <th class="px-3 py-2 text-left text-gray-500 dark:text-gray-400">{{ __('Cohorta') }}</th>
+                        <th class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">{{ __('Clienti') }}</th>
                         @for($i = 0; $i <= 6; $i++)
                             <th class="px-2 py-2 text-center text-gray-500 dark:text-gray-400">Luna {{ $i }}</th>
                         @endfor
@@ -142,8 +142,8 @@
     {{-- Cross-Category Affinity --}}
     @if(!empty($affinity))
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Afinitate intre categorii</h3>
-        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Clienti care cumpara din categorii multiple - oportunitati de cross-sell</p>
+        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Afinitate intre categorii') }}</h3>
+        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Clienti care cumpara din categorii multiple - oportunitati de cross-sell') }}</p>
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($affinity as $pair)
                 <div class="flex items-center gap-3 p-3 border border-gray-100 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
@@ -156,7 +156,7 @@
                     </div>
                     <div class="text-right shrink-0">
                         <div class="text-sm font-bold text-gray-900 dark:text-white">{{ $pair['shared_customers'] }}</div>
-                        <div class="text-[10px] text-gray-500">clienti comuni</div>
+                        <div class="text-[10px] text-gray-500">{{ __('clienti comuni') }}</div>
                     </div>
                 </div>
             @endforeach

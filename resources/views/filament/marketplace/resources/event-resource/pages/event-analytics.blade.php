@@ -61,11 +61,11 @@
                                     <span class="pulse-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                                 </span>
-                                <span>Live</span>
+                                <span>{{ __('Live') }}</span>
                             </button>
                             <button @click="eventMode = 'past'" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all" :class="eventMode === 'past' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700'">
                                 <x-heroicon-o-document-chart-bar class="w-4 h-4" />
-                                <span>Report</span>
+                                <span>{{ __('Report') }}</span>
                             </button>
                         </div>
 
@@ -73,7 +73,7 @@
                         <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
                             <button @click="changePeriod('7d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="period === '7d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">7D</button>
                             <button @click="changePeriod('30d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="period === '30d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">30D</button>
-                            <button @click="changePeriod('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="period === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">All</button>
+                            <button @click="changePeriod('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="period === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">{{ __('All') }}</button>
                         </div>
                     </div>
 
@@ -105,7 +105,7 @@
                     </span>
                 </div>
                 <div class="text-2xl font-bold text-white" x-text="formatCurrency(overview.revenue?.total || 0)"></div>
-                <div class="text-xs text-gray-400 mt-1">Total Revenue</div>
+                <div class="text-xs text-gray-400 mt-1">{{ __('Total Revenue') }}</div>
                 <div class="mt-3 flex items-center gap-2">
                     <div class="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full" :style="'width:' + Math.min(overview.revenue?.progress || 0, 100) + '%'"></div>
@@ -123,7 +123,7 @@
                     <span x-show="eventMode === 'live' && overview.tickets?.today" class="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-400" x-text="'+' + overview.tickets?.today + ' today'"></span>
                 </div>
                 <div class="text-2xl font-bold text-white" x-text="(overview.tickets?.sold || 0).toLocaleString()"></div>
-                <div class="text-xs text-gray-400 mt-1">Tickets Sold</div>
+                <div class="text-xs text-gray-400 mt-1">{{ __('Tickets Sold') }}</div>
                 <div class="mt-3 flex items-center gap-2">
                     <div class="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full" :style="'width:' + (overview.tickets?.progress || 0) + '%'"></div>
@@ -140,7 +140,7 @@
                     </div>
                 </div>
                 <div class="text-2xl font-bold text-white" x-text="(overview.visits?.total || 0).toLocaleString()"></div>
-                <div class="text-xs text-gray-400 mt-1">Total Visits</div>
+                <div class="text-xs text-gray-400 mt-1">{{ __('Total Visits') }}</div>
                 <div class="mt-3 text-[11px] text-gray-500" x-text="(overview.visits?.unique || 0).toLocaleString() + ' unique'"></div>
             </div>
 
@@ -152,7 +152,7 @@
                     </div>
                 </div>
                 <div class="text-2xl font-bold text-white" x-text="(overview.conversion?.rate || 0) + '%'"></div>
-                <div class="text-xs text-gray-400 mt-1">Conversion Rate</div>
+                <div class="text-xs text-gray-400 mt-1">{{ __('Conversion Rate') }}</div>
                 <div class="mt-3 text-[11px] text-gray-500">Visits -> Purchases</div>
             </div>
 
@@ -175,8 +175,8 @@
             <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Performance Overview</h2>
-                        <p class="text-xs text-gray-500">Click to toggle metrics</p>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Performance Overview') }}</h2>
+                        <p class="text-xs text-gray-500">{{ __('Click to toggle metrics') }}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <template x-for="m in chartMetrics" :key="m.key">
@@ -197,25 +197,25 @@
                         <x-heroicon-o-arrow-trending-up class="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h2 class="text-lg font-semibold">AI Forecast</h2>
-                        <p class="text-xs text-white/60">Predictions based on trends</p>
+                        <h2 class="text-lg font-semibold">{{ __('AI Forecast') }}</h2>
+                        <p class="text-xs text-white/60">{{ __('Predictions based on trends') }}</p>
                     </div>
                 </div>
 
                 {{-- Next 3 Days --}}
                 <div class="bg-white/10 rounded-xl p-4 mb-4">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-white/80">Next 3 Days</span>
+                        <span class="text-sm font-medium text-white/80">{{ __('Next 3 Days') }}</span>
                         <span class="text-xs px-2 py-0.5 bg-emerald-500/30 text-emerald-300 rounded-full" x-text="getForecastConfidence(3) + '%'"></span>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <div class="text-xl font-bold" x-text="formatCurrency(getForecastRevenue(3))"></div>
-                            <div class="text-xs text-white/50">Revenue</div>
+                            <div class="text-xs text-white/50">{{ __('Revenue') }}</div>
                         </div>
                         <div>
                             <div class="text-xl font-bold" x-text="'+' + getForecastTickets(3)"></div>
-                            <div class="text-xs text-white/50">Tickets</div>
+                            <div class="text-xs text-white/50">{{ __('Tickets') }}</div>
                         </div>
                     </div>
                 </div>
@@ -223,24 +223,24 @@
                 {{-- Next 7 Days --}}
                 <div class="bg-white/10 rounded-xl p-4 mb-4">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-white/80">Next 7 Days</span>
+                        <span class="text-sm font-medium text-white/80">{{ __('Next 7 Days') }}</span>
                         <span class="text-xs px-2 py-0.5 bg-amber-500/30 text-amber-300 rounded-full" x-text="getForecastConfidence(7) + '%'"></span>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <div class="text-xl font-bold" x-text="formatCurrency(getForecastRevenue(7))"></div>
-                            <div class="text-xs text-white/50">Revenue</div>
+                            <div class="text-xs text-white/50">{{ __('Revenue') }}</div>
                         </div>
                         <div>
                             <div class="text-xl font-bold" x-text="'+' + getForecastTickets(7)"></div>
-                            <div class="text-xs text-white/50">Tickets</div>
+                            <div class="text-xs text-white/50">{{ __('Tickets') }}</div>
                         </div>
                     </div>
                 </div>
 
                 {{-- Summary --}}
                 <div class="bg-white/5 rounded-xl p-3 text-center">
-                    <div class="text-xs text-white/50 mb-1">Projected by event date</div>
+                    <div class="text-xs text-white/50 mb-1">{{ __('Projected by event date') }}</div>
                     <div class="text-lg font-bold text-emerald-300" x-text="Math.min(100, Math.round((overview.tickets?.progress || 0) + getForecastTickets(30) / (overview.tickets?.capacity || 1) * 100)) + '% capacity'"></div>
                 </div>
             </div>
@@ -252,29 +252,29 @@
                         <x-heroicon-o-check-circle class="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Final Results</h2>
-                        <p class="text-xs text-gray-500">Event completed</p>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Final Results') }}</h2>
+                        <p class="text-xs text-gray-500">{{ __('Event completed') }}</p>
                     </div>
                 </div>
                 <div class="space-y-3">
                     <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                        <span class="text-sm text-gray-500">Total Revenue</span>
+                        <span class="text-sm text-gray-500">{{ __('Total Revenue') }}</span>
                         <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="formatCurrency(overview.revenue?.total || 0)"></span>
                     </div>
                     <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                        <span class="text-sm text-gray-500">Tickets Sold</span>
+                        <span class="text-sm text-gray-500">{{ __('Tickets Sold') }}</span>
                         <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="(overview.tickets?.sold || 0).toLocaleString()"></span>
                     </div>
                     <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                        <span class="text-sm text-gray-500">Capacity</span>
+                        <span class="text-sm text-gray-500">{{ __('Capacity') }}</span>
                         <span class="text-sm font-bold text-emerald-600" x-text="(overview.tickets?.progress || 0) + '%'"></span>
                     </div>
                     <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                        <span class="text-sm text-gray-500">Conversion</span>
+                        <span class="text-sm text-gray-500">{{ __('Conversion') }}</span>
                         <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="(overview.conversion?.rate || 0) + '%'"></span>
                     </div>
                     <div class="flex justify-between py-2">
-                        <span class="text-sm text-gray-500">Ad Spend</span>
+                        <span class="text-sm text-gray-500">{{ __('Ad Spend') }}</span>
                         <span class="text-sm font-bold text-gray-900 dark:text-white" x-text="formatCurrency(getTotalAdSpend())"></span>
                     </div>
                 </div>
@@ -284,17 +284,17 @@
         {{-- Tickets & Campaign ROI --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ticket Performance</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Ticket Performance') }}</h2>
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
                             <tr class="border-b border-gray-100 dark:border-gray-700">
-                                <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
-                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">Sold</th>
-                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">Conv.</th>
-                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">Trend</th>
+                                <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Type') }}</th>
+                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('Price') }}</th>
+                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('Sold') }}</th>
+                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('Revenue') }}</th>
+                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('Conv.') }}</th>
+                                <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('Trend') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -321,7 +321,7 @@
             </div>
 
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Campaign ROI</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Campaign ROI') }}</h2>
                 <div class="space-y-3">
                     <template x-for="c in adCampaigns" :key="c.id">
                         <div @click="$wire.openMilestoneDetail(c.id)" class="p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-primary-200 transition-colors cursor-pointer">
@@ -333,14 +333,14 @@
                                 <span class="text-[10px] px-1.5 py-0.5 rounded-full" :class="c.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'" x-text="c.is_active ? 'Active' : 'Ended'"></span>
                             </div>
                             <div class="grid grid-cols-2 gap-2 text-xs">
-                                <div><span class="text-gray-500">Spend:</span> <span class="font-medium" x-text="formatCurrency(c.budget)"></span></div>
-                                <div><span class="text-gray-500">Revenue:</span> <span class="font-medium text-emerald-600" x-text="formatCurrency(c.attributed_revenue || 0)"></span></div>
-                                <div><span class="text-gray-500">CAC:</span> <span class="font-medium" x-text="(c.cac || 0) + ' RON'"></span></div>
-                                <div><span class="text-gray-500">ROI:</span> <span class="font-semibold" :class="(c.roi || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'" x-text="((c.roi || 0) >= 0 ? '+' : '') + (c.roi || 0) + '%'"></span></div>
+                                <div><span class="text-gray-500">{{ __('Spend:') }}</span> <span class="font-medium" x-text="formatCurrency(c.budget)"></span></div>
+                                <div><span class="text-gray-500">{{ __('Revenue:') }}</span> <span class="font-medium text-emerald-600" x-text="formatCurrency(c.attributed_revenue || 0)"></span></div>
+                                <div><span class="text-gray-500">{{ __('CAC:') }}</span> <span class="font-medium" x-text="(c.cac || 0) + ' RON'"></span></div>
+                                <div><span class="text-gray-500">{{ __('ROI:') }}</span> <span class="font-semibold" :class="(c.roi || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'" x-text="((c.roi || 0) >= 0 ? '+' : '') + (c.roi || 0) + '%'"></span></div>
                             </div>
                         </div>
                     </template>
-                    <div x-show="adCampaigns.length === 0" class="text-center py-6 text-gray-400 text-sm">No ad campaigns</div>
+                    <div x-show="adCampaigns.length === 0" class="text-center py-6 text-gray-400 text-sm">{{ __('No ad campaigns') }}</div>
                 </div>
             </div>
         </div>
@@ -348,7 +348,7 @@
         {{-- Traffic Sources & Locations --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Traffic Sources</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Traffic Sources') }}</h2>
                 <div class="space-y-3">
                     <template x-for="s in trafficSources" :key="s.name">
                         <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -377,7 +377,7 @@
             </div>
 
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Locations</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Top Locations') }}</h2>
                 <div class="space-y-3">
                     <template x-for="l in topLocations" :key="l.city">
                         <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -400,11 +400,11 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Conversion Funnel</h2>
-                    <p class="text-xs text-gray-500">Visitor journey from page view to purchase</p>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Conversion Funnel') }}</h2>
+                    <p class="text-xs text-gray-500">{{ __('Visitor journey from page view to purchase') }}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="text-xs text-gray-500">Overall conversion:</span>
+                    <span class="text-xs text-gray-500">{{ __('Overall conversion:') }}</span>
                     <span class="text-sm font-bold text-emerald-600" x-text="(funnel.overall_conversion_rate || 0) + '%'"></span>
                 </div>
             </div>
@@ -417,7 +417,7 @@
                             <div class="w-10 h-10 rounded-lg bg-cyan-500 flex items-center justify-center">
                                 <x-heroicon-o-eye class="w-5 h-5 text-white" />
                             </div>
-                            <div class="text-sm font-medium text-cyan-800 dark:text-cyan-200">Page Views</div>
+                            <div class="text-sm font-medium text-cyan-800 dark:text-cyan-200">{{ __('Page Views') }}</div>
                         </div>
                         <div class="text-2xl font-bold text-cyan-900 dark:text-cyan-100" x-text="(funnel.page_views || 0).toLocaleString()"></div>
                         <div class="text-xs text-cyan-600 dark:text-cyan-400 mt-1" x-text="(funnel.unique_visitors || 0).toLocaleString() + ' unique'"></div>
@@ -441,7 +441,7 @@
                             <div class="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
                                 <x-heroicon-o-shopping-cart class="w-5 h-5 text-white" />
                             </div>
-                            <div class="text-sm font-medium text-blue-800 dark:text-blue-200">Add to Cart</div>
+                            <div class="text-sm font-medium text-blue-800 dark:text-blue-200">{{ __('Add to Cart') }}</div>
                         </div>
                         <div class="text-2xl font-bold text-blue-900 dark:text-blue-100" x-text="(funnel.add_to_cart || 0).toLocaleString()"></div>
                         <div class="text-xs text-blue-600 dark:text-blue-400 mt-1" x-text="(funnel.view_to_cart_rate || 0) + '% of visitors'"></div>
@@ -465,7 +465,7 @@
                             <div class="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center">
                                 <x-heroicon-o-credit-card class="w-5 h-5 text-white" />
                             </div>
-                            <div class="text-sm font-medium text-violet-800 dark:text-violet-200">Checkout</div>
+                            <div class="text-sm font-medium text-violet-800 dark:text-violet-200">{{ __('Checkout') }}</div>
                         </div>
                         <div class="text-2xl font-bold text-violet-900 dark:text-violet-100" x-text="(funnel.checkout_started || 0).toLocaleString()"></div>
                         <div class="text-xs text-violet-600 dark:text-violet-400 mt-1" x-text="(funnel.cart_to_checkout_rate || 0) + '% of carts'"></div>
@@ -489,7 +489,7 @@
                             <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
                                 <x-heroicon-o-check-badge class="w-5 h-5 text-white" />
                             </div>
-                            <div class="text-sm font-medium text-emerald-800 dark:text-emerald-200">Purchases</div>
+                            <div class="text-sm font-medium text-emerald-800 dark:text-emerald-200">{{ __('Purchases') }}</div>
                         </div>
                         <div class="text-2xl font-bold text-emerald-900 dark:text-emerald-100" x-text="(funnel.purchases || 0).toLocaleString()"></div>
                         <div class="text-xs text-emerald-600 dark:text-emerald-400 mt-1" x-text="(funnel.checkout_to_purchase_rate || 0) + '% of checkouts'"></div>
@@ -510,11 +510,11 @@
                 <div class="flex flex-col">
                     <div class="bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 flex-1 flex flex-col justify-center">
                         <div class="text-center">
-                            <div class="text-xs text-gray-400 mb-1">Drop-off Rate</div>
+                            <div class="text-xs text-gray-400 mb-1">{{ __('Drop-off Rate') }}</div>
                             <div class="text-3xl font-bold text-white" x-text="(100 - (funnel.overall_conversion_rate || 0)).toFixed(1) + '%'"></div>
-                            <div class="text-xs text-gray-400 mt-2">visitors leave without buying</div>
+                            <div class="text-xs text-gray-400 mt-2">{{ __('visitors leave without buying') }}</div>
                             <div class="mt-3 pt-3 border-t border-gray-700">
-                                <div class="text-xs text-emerald-400">Biggest opportunity:</div>
+                                <div class="text-xs text-emerald-400">{{ __('Biggest opportunity:') }}</div>
                                 <div class="text-xs text-white font-medium mt-1" x-text="getBiggestDropoff()"></div>
                             </div>
                         </div>
@@ -529,7 +529,7 @@
         {{-- Milestones Timeline --}}
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Campaign Milestones</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Campaign Milestones') }}</h2>
                 <span class="text-xs text-gray-400" x-text="milestones.length + ' total'"></span>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -546,16 +546,16 @@
                         </div>
                         <div x-show="m.budget" class="grid grid-cols-2 gap-2 mb-3 text-xs">
                             <div class="p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <div class="text-gray-500">Budget</div>
+                                <div class="text-gray-500">{{ __('Budget') }}</div>
                                 <div class="font-semibold text-gray-900 dark:text-white" x-text="formatCurrency(m.budget)"></div>
                             </div>
                             <div class="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                                <div class="text-gray-500">Revenue</div>
+                                <div class="text-gray-500">{{ __('Revenue') }}</div>
                                 <div class="font-semibold text-emerald-600" x-text="formatCurrency(m.attributed_revenue || 0)"></div>
                             </div>
                         </div>
                         <div x-show="m.roi !== null && m.roi !== undefined" class="flex items-center justify-between p-2 rounded-lg" :class="(m.roi || 0) >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20'">
-                            <span class="text-xs text-gray-600 dark:text-gray-400">ROI</span>
+                            <span class="text-xs text-gray-600 dark:text-gray-400">{{ __('ROI') }}</span>
                             <span class="text-sm font-bold" :class="(m.roi || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'" x-text="((m.roi || 0) >= 0 ? '+' : '') + (m.roi || 0) + '%'"></span>
                         </div>
                         <div x-show="m.impact && !m.budget" class="mt-2 flex items-center gap-1 text-xs text-emerald-600">
@@ -572,20 +572,20 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Sales</h2>
-                    <p class="text-xs text-gray-500">Click buyer for journey details</p>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Recent Sales') }}</h2>
+                    <p class="text-xs text-gray-500">{{ __('Click buyer for journey details') }}</p>
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
                         <tr class="border-b border-gray-100 dark:border-gray-700">
-                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Buyer</th>
-                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Tickets</th>
-                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
-                            <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Buyer') }}</th>
+                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Date') }}</th>
+                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Tickets') }}</th>
+                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Source') }}</th>
+                            <th class="pb-3 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Payment') }}</th>
+                            <th class="pb-3 text-right text-xs font-medium text-gray-500 uppercase">{{ __('Amount') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -597,7 +597,7 @@
                                         <div>
                                             <div class="flex items-center gap-2">
                                                 <span class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="s.name"></span>
-                                                <span x-show="s.is_returning" class="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded-full">Returning</span>
+                                                <span x-show="s.is_returning" class="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 rounded-full">{{ __('Returning') }}</span>
                                             </div>
                                             <div class="text-xs text-gray-400" x-text="s.email"></div>
                                         </div>
@@ -627,12 +627,12 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Goals Progress</h2>
-                    <p class="text-xs text-gray-500">Track your event targets</p>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Goals Progress') }}</h2>
+                    <p class="text-xs text-gray-500">{{ __('Track your event targets') }}</p>
                 </div>
                 <button wire:click="openGoalModal" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors">
                     <x-heroicon-o-plus class="w-4 h-4" />
-                    Add Goal
+                    {{ __('Add Goal') }}
                 </button>
             </div>
             @if(count($this->goals) > 0)
@@ -708,8 +708,8 @@
             @else
             <div class="text-center py-8">
                 <x-heroicon-o-flag class="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                <p class="text-gray-500 text-sm">No goals set yet</p>
-                <p class="text-gray-400 text-xs">Set targets to track your event's success</p>
+                <p class="text-gray-500 text-sm">{{ __('No goals set yet') }}</p>
+                <p class="text-gray-400 text-xs">{{ __('Set targets to track your event\'s success') }}</p>
             </div>
             @endif
         </div>
@@ -720,12 +720,12 @@
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Scheduled Reports</h2>
-                    <p class="text-xs text-gray-500">Automated analytics reports</p>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Scheduled Reports') }}</h2>
+                    <p class="text-xs text-gray-500">{{ __('Automated analytics reports') }}</p>
                 </div>
                 <button wire:click="openScheduleModal" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors">
                     <x-heroicon-o-plus class="w-4 h-4" />
-                    Add Schedule
+                    {{ __('Add Schedule') }}
                 </button>
             </div>
             <div class="space-y-3">
@@ -749,20 +749,20 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-gray-400">Next: {{ $schedule['next_send_at'] ?? 'Not scheduled' }}</span>
-                        <button wire:click="sendTestReport({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-primary-600 transition-colors" title="Send Test">
+                        <button wire:click="sendTestReport({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-primary-600 transition-colors" title="{{ __('Send Test') }}">
                             <x-heroicon-o-paper-airplane class="w-4 h-4" />
                         </button>
-                        <button wire:click="toggleScheduleActive({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Toggle Active">
+                        <button wire:click="toggleScheduleActive({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="{{ __('Toggle Active') }}">
                             @if($schedule['is_active'])
                             <x-heroicon-o-pause class="w-4 h-4" />
                             @else
                             <x-heroicon-o-play class="w-4 h-4" />
                             @endif
                         </button>
-                        <button wire:click="openScheduleModal({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Edit">
+                        <button wire:click="openScheduleModal({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="{{ __('Edit') }}">
                             <x-heroicon-o-pencil class="w-4 h-4" />
                         </button>
-                        <button wire:click="deleteSchedule({{ $schedule['id'] }})" wire:confirm="Delete this report schedule?" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                        <button wire:click="deleteSchedule({{ $schedule['id'] }})" wire:confirm="Delete this report schedule?" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="{{ __('Delete') }}">
                             <x-heroicon-o-trash class="w-4 h-4" />
                         </button>
                     </div>
@@ -790,17 +790,17 @@
                     <div class="p-6">
                         <form wire:submit="saveGoal" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal Type</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Goal Type') }}</label>
                                 <select wire:model.live="goalData.type" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
-                                    <option value="revenue">Revenue Target</option>
-                                    <option value="tickets">Tickets Target</option>
-                                    <option value="visitors">Visitors Target</option>
-                                    <option value="conversion_rate">Conversion Rate Target</option>
+                                    <option value="revenue">{{ __('Revenue Target') }}</option>
+                                    <option value="tickets">{{ __('Tickets Target') }}</option>
+                                    <option value="visitors">{{ __('Visitors Target') }}</option>
+                                    <option value="conversion_rate">{{ __('Conversion Rate Target') }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name (Optional)</label>
-                                <input type="text" wire:model="goalData.name" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" placeholder="e.g., Q1 Revenue Goal">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Name (Optional)') }}</label>
+                                <input type="text" wire:model="goalData.name" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" placeholder="{{ __('e.g., Q1 Revenue Goal') }}">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -814,11 +814,11 @@
                                 <input type="number" wire:model="goalData.target_value" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" required min="0" step="any">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline (Optional)</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Deadline (Optional)') }}</label>
                                 <input type="date" wire:model="goalData.deadline" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alert at milestones</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Alert at milestones') }}</label>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach([25, 50, 75, 90, 100] as $threshold)
                                     <label class="inline-flex items-center gap-1.5">
@@ -831,16 +831,16 @@
                             <div class="flex items-center gap-4">
                                 <label class="inline-flex items-center gap-2">
                                     <input type="checkbox" wire:model="goalData.email_alerts" class="rounded border-gray-300 text-primary-600">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">Email Alerts</span>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Email Alerts') }}</span>
                                 </label>
                                 <label class="inline-flex items-center gap-2">
                                     <input type="checkbox" wire:model="goalData.in_app_alerts" class="rounded border-gray-300 text-primary-600">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">In-App Alerts</span>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('In-App Alerts') }}</span>
                                 </label>
                             </div>
                             <div class="pt-4 flex justify-end gap-3">
                                 <button type="button" wire:click="$set('showGoalModal', false)" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                                    Cancel
+                                    {{ __('Cancel') }}
                                 </button>
                                 <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
                                     {{ $this->editingGoalId ? 'Update Goal' : 'Create Goal' }}
@@ -859,7 +859,7 @@
                 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
                     <div class="p-6 border-b border-gray-100 dark:border-gray-700">
                         <div class="flex items-center justify-between">
-                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Export Analytics</h2>
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ __('Export Analytics') }}</h2>
                             <button wire:click="$set('showExportModal', false)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
                                 <x-heroicon-o-x-mark class="w-5 h-5" />
                             </button>
@@ -871,20 +871,20 @@
                         <div class="grid grid-cols-3 gap-3">
                             <button wire:click="exportToCsv" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 transition-colors">
                                 <x-heroicon-o-table-cells class="w-8 h-8 text-emerald-600" />
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">CSV</span>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('CSV') }}</span>
                             </button>
                             <button wire:click="exportToPdf" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 transition-colors">
                                 <x-heroicon-o-document class="w-8 h-8 text-red-600" />
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">PDF</span>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('PDF') }}</span>
                             </button>
                             <button wire:click="exportSales" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 transition-colors">
                                 <x-heroicon-o-banknotes class="w-8 h-8 text-blue-600" />
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sales</span>
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Sales') }}</span>
                             </button>
                         </div>
 
                         <div class="pt-2">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Include sections:</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Include sections:') }}</label>
                             <div class="flex flex-wrap gap-2">
                                 @foreach(['overview' => 'Overview', 'traffic' => 'Traffic', 'milestones' => 'Milestones', 'goals' => 'Goals', 'funnel' => 'Funnel'] as $key => $label)
                                 <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
@@ -917,30 +917,30 @@
                     <div class="p-6">
                         <form wire:submit="saveSchedule" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Frequency') }}</label>
                                 <select wire:model.live="scheduleData.frequency" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
+                                    <option value="daily">{{ __('Daily') }}</option>
+                                    <option value="weekly">{{ __('Weekly') }}</option>
+                                    <option value="monthly">{{ __('Monthly') }}</option>
                                 </select>
                             </div>
                             @if($this->scheduleData['frequency'] === 'weekly')
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Week</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Day of Week') }}</label>
                                 <select wire:model="scheduleData.day_of_week" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
-                                    <option value="0">Sunday</option>
-                                    <option value="1">Monday</option>
-                                    <option value="2">Tuesday</option>
-                                    <option value="3">Wednesday</option>
-                                    <option value="4">Thursday</option>
-                                    <option value="5">Friday</option>
-                                    <option value="6">Saturday</option>
+                                    <option value="0">{{ __('Sunday') }}</option>
+                                    <option value="1">{{ __('Monday') }}</option>
+                                    <option value="2">{{ __('Tuesday') }}</option>
+                                    <option value="3">{{ __('Wednesday') }}</option>
+                                    <option value="4">{{ __('Thursday') }}</option>
+                                    <option value="5">{{ __('Friday') }}</option>
+                                    <option value="6">{{ __('Saturday') }}</option>
                                 </select>
                             </div>
                             @endif
                             @if($this->scheduleData['frequency'] === 'monthly')
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Month</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Day of Month') }}</label>
                                 <select wire:model="scheduleData.day_of_month" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
                                     @for($i = 1; $i <= 28; $i++)
                                     <option value="{{ $i }}">{{ $i }}</option>
@@ -949,16 +949,16 @@
                             </div>
                             @endif
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Send At</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Send At') }}</label>
                                 <input type="time" wire:model="scheduleData.send_at" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" required>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recipients (one per line)</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Recipients (one per line)') }}</label>
                                 <textarea wire:model="scheduleData.recipients" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" rows="2" placeholder="email@example.com"></textarea>
-                                <p class="text-xs text-gray-400 mt-1">Separate multiple emails with commas or new lines</p>
+                                <p class="text-xs text-gray-400 mt-1">{{ __('Separate multiple emails with commas or new lines') }}</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Sections</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ __('Report Sections') }}</label>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach(['overview' => 'Overview', 'chart' => 'Chart', 'traffic' => 'Traffic', 'milestones' => 'Milestones', 'goals' => 'Goals', 'top_locations' => 'Locations', 'funnel' => 'Funnel'] as $key => $label)
                                     <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
@@ -969,26 +969,26 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Attachment Format</label>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Attachment Format') }}</label>
                                 <select wire:model="scheduleData.format" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
-                                    <option value="email">Email Only</option>
-                                    <option value="pdf">Include PDF</option>
-                                    <option value="csv">Include CSV</option>
+                                    <option value="email">{{ __('Email Only') }}</option>
+                                    <option value="pdf">{{ __('Include PDF') }}</option>
+                                    <option value="csv">{{ __('Include CSV') }}</option>
                                 </select>
                             </div>
                             <div class="flex items-center gap-4">
                                 <label class="inline-flex items-center gap-2">
                                     <input type="checkbox" wire:model="scheduleData.include_comparison" class="rounded border-gray-300 text-primary-600">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">Include Period Comparison</span>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Include Period Comparison') }}</span>
                                 </label>
                                 <label class="inline-flex items-center gap-2">
                                     <input type="checkbox" wire:model="scheduleData.is_active" class="rounded border-gray-300 text-primary-600">
-                                    <span class="text-sm text-gray-600 dark:text-gray-400">Active</span>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Active') }}</span>
                                 </label>
                             </div>
                             <div class="pt-4 flex justify-end gap-3">
                                 <button type="button" wire:click="$set('showScheduleModal', false)" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                                    Cancel
+                                    {{ __('Cancel') }}
                                 </button>
                                 <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
                                     {{ $this->editingScheduleId ? 'Update Schedule' : 'Create Schedule' }}
@@ -1031,31 +1031,31 @@
 
                         <div class="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                             <div class="flex-1">
-                                <div class="text-xs text-gray-500 mb-1">Start Date</div>
+                                <div class="text-xs text-gray-500 mb-1">{{ __('Start Date') }}</div>
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $this->selectedMilestone['start_date_formatted'] ?? 'N/A' }}</div>
                             </div>
                             <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400" />
                             <div class="flex-1">
-                                <div class="text-xs text-gray-500 mb-1">End Date</div>
+                                <div class="text-xs text-gray-500 mb-1">{{ __('End Date') }}</div>
                                 <div class="font-medium text-gray-900 dark:text-white">{{ $this->selectedMilestone['end_date_formatted'] ?? 'Ongoing' }}</div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20">
-                                <div class="text-xs text-blue-600 dark:text-blue-400 mb-1">Budget</div>
+                                <div class="text-xs text-blue-600 dark:text-blue-400 mb-1">{{ __('Budget') }}</div>
                                 <div class="text-xl font-bold text-blue-700 dark:text-blue-300">
                                     {{ number_format($this->selectedMilestone['budget'] ?? 0, 2) }} {{ $this->selectedMilestone['currency'] ?? 'RON' }}
                                 </div>
                             </div>
                             <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
-                                <div class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Revenue</div>
+                                <div class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">{{ __('Revenue') }}</div>
                                 <div class="text-xl font-bold text-emerald-700 dark:text-emerald-300">
                                     {{ number_format($this->selectedMilestone['attributed_revenue'] ?? 0, 2) }} RON
                                 </div>
                             </div>
                             <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20">
-                                <div class="text-xs text-purple-600 dark:text-purple-400 mb-1">Conversions</div>
+                                <div class="text-xs text-purple-600 dark:text-purple-400 mb-1">{{ __('Conversions') }}</div>
                                 <div class="text-xl font-bold text-purple-700 dark:text-purple-300">
                                     {{ number_format($this->selectedMilestone['conversions'] ?? 0) }}
                                 </div>
@@ -1072,13 +1072,13 @@
                         <div class="space-y-3">
                             @if($this->selectedMilestone['cac'] ?? null)
                             <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Customer Acquisition Cost</span>
+                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ __('Customer Acquisition Cost') }}</span>
                                 <span class="font-medium text-gray-900 dark:text-white">{{ number_format($this->selectedMilestone['cac'], 2) }} RON</span>
                             </div>
                             @endif
                             @if($this->selectedMilestone['targeting'] ?? null)
                             <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                <div class="text-xs text-gray-500 mb-1">Targeting</div>
+                                <div class="text-xs text-gray-500 mb-1">{{ __('Targeting') }}</div>
                                 <p class="text-sm text-gray-700 dark:text-gray-300">{{ $this->selectedMilestone['targeting'] }}</p>
                             </div>
                             @endif
@@ -1116,21 +1116,21 @@
                         <div class="grid grid-cols-3 gap-4">
                             <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-center">
                                 <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{{ number_format($this->selectedBuyer['purchase']['amount'] ?? 0, 2) }}</div>
-                                <div class="text-xs text-emerald-600">Amount (RON)</div>
+                                <div class="text-xs text-emerald-600">{{ __('Amount (RON)') }}</div>
                             </div>
                             <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-center">
                                 <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ $this->selectedBuyer['purchase']['quantity'] ?? 0 }}</div>
-                                <div class="text-xs text-blue-600">Tickets</div>
+                                <div class="text-xs text-blue-600">{{ __('Tickets') }}</div>
                             </div>
                             <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-center">
                                 <div class="text-2xl font-bold text-purple-700 dark:text-purple-300">{{ $this->selectedBuyer['timing']['sessions_count'] ?? 1 }}</div>
-                                <div class="text-xs text-purple-600">Sessions</div>
+                                <div class="text-xs text-purple-600">{{ __('Sessions') }}</div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                                <div class="text-xs text-gray-500 mb-2">Source</div>
+                                <div class="text-xs text-gray-500 mb-2">{{ __('Source') }}</div>
                                 <div class="flex items-center gap-2">
                                     <span class="px-2 py-1 text-xs font-medium rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
                                         {{ $this->selectedBuyer['source']['channel'] ?? 'Direct' }}
@@ -1141,7 +1141,7 @@
                                 </div>
                             </div>
                             <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                                <div class="text-xs text-gray-500 mb-2">Device</div>
+                                <div class="text-xs text-gray-500 mb-2">{{ __('Device') }}</div>
                                 <div class="flex items-center gap-2">
                                     @if(($this->selectedBuyer['device']['type'] ?? 'Desktop') === 'Mobile')
                                     <x-heroicon-o-device-phone-mobile class="w-4 h-4 text-gray-500" />
@@ -1156,21 +1156,21 @@
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                                <div class="text-xs text-gray-500 mb-2">Location</div>
+                                <div class="text-xs text-gray-500 mb-2">{{ __('Location') }}</div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-lg">{{ $this->selectedBuyer['location']['flag'] ?? '🌍' }}</span>
                                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ $this->selectedBuyer['location']['city'] ?? 'Unknown' }}</span>
                                 </div>
                             </div>
                             <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                                <div class="text-xs text-gray-500 mb-2">Time to Purchase</div>
+                                <div class="text-xs text-gray-500 mb-2">{{ __('Time to Purchase') }}</div>
                                 <div class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $this->selectedBuyer['timing']['time_to_purchase'] ?? 'N/A' }}</div>
                             </div>
                         </div>
 
                         @if(!empty($this->selectedBuyer['journey']))
                         <div>
-                            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Customer Journey</h3>
+                            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{{ __('Customer Journey') }}</h3>
                             <div class="relative pl-6 space-y-4">
                                 <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
                                 @foreach($this->selectedBuyer['journey'] as $step)
@@ -1195,7 +1195,7 @@
                         <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
                             <div class="flex items-center gap-2 mb-2">
                                 <x-heroicon-s-star class="w-5 h-5 text-amber-500" />
-                                <span class="font-medium text-amber-700 dark:text-amber-300">Returning Customer</span>
+                                <span class="font-medium text-amber-700 dark:text-amber-300">{{ __('Returning Customer') }}</span>
                             </div>
                             <div class="text-sm text-amber-600 dark:text-amber-400">
                                 {{ $this->selectedBuyer['customer']['previous_purchases'] ?? 0 }} previous purchases •
@@ -1224,8 +1224,8 @@
                                 <x-heroicon-o-globe-alt class="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 class="text-xl font-bold text-slate-800">Live Visitors</h2>
-                                <p class="text-sm text-slate-500">Real-time global activity</p>
+                                <h2 class="text-xl font-bold text-slate-800">{{ __('Live Visitors') }}</h2>
+                                <p class="text-sm text-slate-500">{{ __('Real-time global activity') }}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-4">
@@ -1235,7 +1235,7 @@
                                     <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                                 </span>
                                 <span class="text-lg font-bold text-slate-800" x-text="liveVisitors"></span>
-                                <span class="text-sm text-slate-500">online now</span>
+                                <span class="text-sm text-slate-500">{{ __('online now') }}</span>
                             </div>
                             <button @click="showGlobeModal = false" class="p-3 bg-white hover:bg-slate-100 rounded-xl shadow-sm border border-slate-200 transition-colors">
                                 <x-heroicon-o-x-mark class="w-5 h-5 text-slate-600" />
@@ -1248,8 +1248,8 @@
                 <div class="absolute bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 overflow-hidden" style="z-index: 1000;">
                     <div class="p-4 border-b border-slate-200">
                         <div class="flex items-center justify-between">
-                            <span class="text-sm font-semibold text-slate-800">Live Activity</span>
-                            <span class="text-xs text-slate-400">Last 5 minutes</span>
+                            <span class="text-sm font-semibold text-slate-800">{{ __('Live Activity') }}</span>
+                            <span class="text-xs text-slate-400">{{ __('Last 5 minutes') }}</span>
                         </div>
                     </div>
                     <div class="p-2 max-h-64 overflow-y-auto">
@@ -1268,7 +1268,7 @@
 
                 {{-- Top Locations Panel (Bottom Right) --}}
                 <div class="absolute bottom-6 right-6 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 p-4" style="z-index: 1000;">
-                    <div class="text-sm font-semibold text-slate-800 mb-3">Top Locations</div>
+                    <div class="text-sm font-semibold text-slate-800 mb-3">{{ __('Top Locations') }}</div>
                     <div class="space-y-2">
                         <template x-for="l in topLocations.slice(0, 5)" :key="l.city">
                             <div class="flex items-center justify-between">

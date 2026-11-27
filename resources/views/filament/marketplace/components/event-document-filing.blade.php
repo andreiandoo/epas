@@ -46,11 +46,11 @@
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
                 <strong style="font-size:14px;">{{ $g['label'] }}</strong>
                 @if($g['filed'])
-                    <span style="{{ $badge('#dcfce7', '#14532d') }}">Depus</span>
+                    <span style="{{ $badge('#dcfce7', '#14532d') }}">{{ __('Depus') }}</span>
                 @elseif($g['refile'])
-                    <span style="{{ $badge('#fef3c7', '#92400e') }}">De redepus</span>
+                    <span style="{{ $badge('#fef3c7', '#92400e') }}">{{ __('De redepus') }}</span>
                 @elseif(!$g['blocked'])
-                    <span style="{{ $badge('#fef3c7', '#92400e') }}">De depus</span>
+                    <span style="{{ $badge('#fef3c7', '#92400e') }}">{{ __('De depus') }}</span>
                 @endif
             </div>
 
@@ -111,7 +111,7 @@
                     @if($registry->third_party_procedure)
                         <div>{!! nl2br(e($registry->third_party_procedure)) !!}</div>
                     @else
-                        <div style="opacity:.75;">Procedura nu e completată pe registru.</div>
+                        <div style="opacity:.75;">{{ __('Procedura nu e completată pe registru.') }}</div>
                     @endif
                 </div>
             @endif
@@ -139,7 +139,7 @@
                 <button type="button" style="margin-left:6px;font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer;opacity:.75;"
                     x-bind:disabled="busy !== null"
                     x-on:click="run('{{ $g['group'] }}', 'undo', 'Anulezi depunerea înregistrată? Documentele vor apărea din nou ca nedepuse.')">
-                    Anulează depunerea
+                    {{ __('Anulează depunerea') }}
                 </button>
             @endif
         </div>

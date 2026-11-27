@@ -18,10 +18,10 @@
     class="mt-2"
 >
     <div class="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-t-lg">
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Live Preview</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Live Preview') }}</span>
         <button @click="open = !open" type="button" class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
-            <span x-show="open">Ascunde</span>
-            <span x-show="!open">Arată preview</span>
+            <span x-show="open">{{ __('Ascunde') }}</span>
+            <span x-show="!open">{{ __('Arată preview') }}</span>
         </button>
     </div>
     <div x-show="open" x-transition x-cloak>

@@ -92,7 +92,7 @@
     >
         @if($canConfirm)
             <button type="button" style="{{ $button }}background:#2563eb;color:#fff;" x-on:click="open('confirmDialog')">
-                Depune manual
+                {{ __('Depune manual') }}
             </button>
 
             <dialog x-ref="confirmDialog" class="ep-filing" style="{{ $dialog }}">
@@ -100,36 +100,36 @@
 
                 @if(!$row['document'])
                     <div style="margin-bottom:8px;padding:6px 8px;border-radius:8px;background:rgba(245,158,11,.12);">
-                        Documentul nu e generat în platformă. Depunerea se înregistrează ca făcută în afara platformei.
+                        {{ __('Documentul nu e generat în platformă. Depunerea se înregistrează ca făcută în afara platformei.') }}
                     </div>
                 @endif
 
                 @if($registry)
                     <div style="margin-bottom:8px;">
-                        <div style="{{ $label }}">Direcția</div>
+                        <div style="{{ $label }}">{{ __('Direcția') }}</div>
                         <div style="font-weight:600;">{{ $registry->name }}@if($registry->subname) · {{ $registry->subname }}@endif</div>
                     </div>
                     @if($registry->address || $registry->city)
                         <div style="margin-bottom:8px;">
-                            <div style="{{ $label }}">Adresă</div>
+                            <div style="{{ $label }}">{{ __('Adresă') }}</div>
                             <div>{{ implode(', ', array_filter([$registry->address, $registry->city])) }}</div>
                         </div>
                     @endif
                     @if($recipient)
                         <div style="margin-bottom:8px;">
-                            <div style="{{ $label }}">Email</div>
+                            <div style="{{ $label }}">{{ __('Email') }}</div>
                             <div><a href="mailto:{{ $recipient }}" style="text-decoration:underline;">{{ $recipient }}</a></div>
                         </div>
                     @endif
                     @if($registry->phone)
                         <div style="margin-bottom:8px;">
-                            <div style="{{ $label }}">Telefon</div>
+                            <div style="{{ $label }}">{{ __('Telefon') }}</div>
                             <div>{{ $registry->phone }}</div>
                         </div>
                     @endif
                     @if($registry->submission_method === MarketplaceTaxRegistry::SUBMISSION_THIRD_PARTY)
                         <div style="margin-bottom:8px;">
-                            <div style="{{ $label }}">Se depune prin</div>
+                            <div style="{{ $label }}">{{ __('Se depune prin') }}</div>
                             <div>
                                 {{ $registry->third_party_name ?: 'soluția terță' }}
                                 @if($registry->third_party_url)
@@ -142,27 +142,27 @@
                         </div>
                     @endif
                     @if(!$recipient && !$registry->address && !$registry->city && !$registry->third_party_name)
-                        <div style="margin-bottom:8px;color:#b45309;">Registrul fiscal nu are completate datele de depunere.</div>
+                        <div style="margin-bottom:8px;color:#b45309;">{{ __('Registrul fiscal nu are completate datele de depunere.') }}</div>
                     @endif
                 @else
-                    <div style="margin-bottom:8px;color:#b45309;">Evenimentul nu are un registru fiscal asociat, deci nu știm unde se depune.</div>
+                    <div style="margin-bottom:8px;color:#b45309;">{{ __('Evenimentul nu are un registru fiscal asociat, deci nu știm unde se depune.') }}</div>
                 @endif
 
                 @if($fileUrl)
                     <div style="margin-bottom:8px;">
-                        <a href="{{ $fileUrl }}" target="_blank" rel="noopener" style="text-decoration:underline;">Deschide documentul</a>
+                        <a href="{{ $fileUrl }}" target="_blank" rel="noopener" style="text-decoration:underline;">{{ __('Deschide documentul') }}</a>
                     </div>
                 @endif
 
                 <label style="display:block;margin-top:12px;max-width:220px;">
-                    <span style="{{ $label }}display:block;margin-bottom:2px;">Data depunerii</span>
+                    <span style="{{ $label }}display:block;margin-bottom:2px;">{{ __('Data depunerii') }}</span>
                     @include('filament.marketplace.components.eu-date-input', ['model' => 'filedOn', 'max' => $today, 'style' => $input])
                 </label>
 
                 <div x-show="error" x-text="error" style="margin-top:8px;color:#dc2626;"></div>
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-                    <button type="button" style="{{ $button }}background:transparent;color:inherit;" x-on:click="$refs.confirmDialog.close()">Renunță</button>
+                    <button type="button" style="{{ $button }}background:transparent;color:inherit;" x-on:click="$refs.confirmDialog.close()">{{ __('Renunță') }}</button>
                     <button type="button" style="{{ $button }}background:#2563eb;color:#fff;" x-bind:disabled="busy || !filedOn"
                         x-on:click="send({ action: 'confirm_manual', filed_on: filedOn })">
                         <span x-text="busy ? 'Se salvează...' : 'Confirmă depunerea'"></span>
@@ -177,29 +177,29 @@
             </button>
 
             <dialog x-ref="numberDialog" class="ep-filing" style="{{ $dialog }}">
-                <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Număr de înregistrare</div>
+                <div style="font-size:15px;font-weight:700;margin-bottom:4px;">{{ __('Număr de înregistrare') }}</div>
                 <div style="margin-bottom:12px;opacity:.75;">
                     {{ $row['label'] }}@if($registry) · {{ $registry->name }}@endif
                 </div>
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                     <label style="display:block;">
-                        <span style="{{ $label }}display:block;margin-bottom:2px;">Nr. înregistrare</span>
+                        <span style="{{ $label }}display:block;margin-bottom:2px;">{{ __('Nr. înregistrare') }}</span>
                         <input type="text" maxlength="100" x-model="number" autofocus x-on:keydown.enter.prevent style="{{ $input }}">
                     </label>
                     <label style="display:block;">
-                        <span style="{{ $label }}display:block;margin-bottom:2px;">Data înregistrării</span>
+                        <span style="{{ $label }}display:block;margin-bottom:2px;">{{ __('Data înregistrării') }}</span>
                         @include('filament.marketplace.components.eu-date-input', ['model' => 'registrationDate', 'max' => $today, 'style' => $input])
                     </label>
                 </div>
                 @if(($filing['registered_source'] ?? null) !== \App\Models\EventDocumentFiling::REGISTERED_UPLOADED)
-                    <div style="margin-top:8px;font-size:12px;opacity:.75;">Dacă documentul a fost generat aici, PDF-ul se completează cu numărul și data.</div>
+                    <div style="margin-top:8px;font-size:12px;opacity:.75;">{{ __('Dacă documentul a fost generat aici, PDF-ul se completează cu numărul și data.') }}</div>
                 @endif
 
                 <div x-show="error" x-text="error" style="margin-top:8px;color:#dc2626;"></div>
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-                    <button type="button" style="{{ $button }}background:transparent;color:inherit;" x-on:click="$refs.numberDialog.close()">Renunță</button>
+                    <button type="button" style="{{ $button }}background:transparent;color:inherit;" x-on:click="$refs.numberDialog.close()">{{ __('Renunță') }}</button>
                     <button type="button" style="{{ $button }}background:#2563eb;color:#fff;" x-bind:disabled="busy || !number.trim()"
                         x-on:click="send({ action: 'registration_number', registration_number: number, registration_date: registrationDate })">
                         <span x-text="busy ? 'Se salvează...' : 'Salvează'"></span>
@@ -210,26 +210,26 @@
 
         @if($canUpload)
             <button type="button" style="{{ $button }}background:rgba(128,128,128,.15);color:inherit;" x-on:click="open('uploadDialog')">
-                Încarcă exemplarul înregistrat
+                {{ __('Încarcă exemplarul înregistrat') }}
             </button>
 
             <dialog x-ref="uploadDialog" class="ep-filing" style="{{ $dialog }}">
-                <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Exemplar înregistrat</div>
+                <div style="font-size:15px;font-weight:700;margin-bottom:4px;">{{ __('Exemplar înregistrat') }}</div>
                 <div style="margin-bottom:12px;opacity:.75;">
                     {{ $row['label'] }} · PDF-ul primit înapoi de la primărie, cu numărul de înregistrare. Apare și în contul organizatorului.
                 </div>
 
                 <label style="display:block;margin-bottom:8px;">
-                    <span style="{{ $label }}display:block;margin-bottom:2px;">Fișier PDF (maximum 10 MB)</span>
+                    <span style="{{ $label }}display:block;margin-bottom:2px;">{{ __('Fișier PDF (maximum 10 MB)') }}</span>
                     <input type="file" accept="application/pdf,.pdf" x-ref="registeredFile" style="{{ $input }}">
                 </label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                     <label style="display:block;">
-                        <span style="{{ $label }}display:block;margin-bottom:2px;">Nr. înregistrare</span>
+                        <span style="{{ $label }}display:block;margin-bottom:2px;">{{ __('Nr. înregistrare') }}</span>
                         <input type="text" maxlength="100" x-model="number" x-on:keydown.enter.prevent style="{{ $input }}">
                     </label>
                     <label style="display:block;">
-                        <span style="{{ $label }}display:block;margin-bottom:2px;">Data înregistrării</span>
+                        <span style="{{ $label }}display:block;margin-bottom:2px;">{{ __('Data înregistrării') }}</span>
                         @include('filament.marketplace.components.eu-date-input', ['model' => 'registrationDate', 'max' => $today, 'style' => $input])
                     </label>
                 </div>
@@ -237,7 +237,7 @@
                 <div x-show="error" x-text="error" style="margin-top:8px;color:#dc2626;"></div>
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-                    <button type="button" style="{{ $button }}background:transparent;color:inherit;" x-on:click="$refs.uploadDialog.close()">Renunță</button>
+                    <button type="button" style="{{ $button }}background:transparent;color:inherit;" x-on:click="$refs.uploadDialog.close()">{{ __('Renunță') }}</button>
                     <button type="button" style="{{ $button }}background:#2563eb;color:#fff;" x-bind:disabled="busy || !number.trim()"
                         x-on:click="upload()">
                         <span x-text="busy ? 'Se încarcă...' : 'Încarcă'"></span>

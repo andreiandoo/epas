@@ -51,7 +51,7 @@
         wire:click="toggleDropdown"
         type="button"
         class="relative flex items-center justify-center w-10 h-10 text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-        title="Notificari"
+        title="{{ __('Notificari') }}"
     >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -79,13 +79,13 @@
         >
             {{-- Header --}}
             <div class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                <div><h3 class="text-sm font-semibold text-gray-900 dark:text-white">Jurnalul zilei</h3><p class="text-[11px] text-gray-500 dark:text-gray-400">Ultimele 3 zile</p></div>
+                <div><h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Jurnalul zilei') }}</h3><p class="text-[11px] text-gray-500 dark:text-gray-400">{{ __('Ultimele 3 zile') }}</p></div>
                 @if($unreadCount > 0)
                     <button
                         wire:click="markAllAsRead"
                         class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
                     >
-                        Marcheaza toate citite
+                        {{ __('Marcheaza toate citite') }}
                     </button>
                 @endif
             </div>
@@ -156,7 +156,7 @@
                         <svg class="w-12 h-12 text-gray-300 dark:text-gray-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
                         </svg>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Nu exista notificari</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Nu exista notificari') }}</p>
                     </div>
                 @endforelse
             </div>
@@ -168,7 +168,7 @@
                         href="{{ route('filament.marketplace.pages.notifications') }}"
                         class="flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition"
                     >
-                        Vezi toate
+                        {{ __('Vezi toate') }}
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
@@ -178,7 +178,7 @@
                         type="button"
                         class="flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg transition"
                         :class="soundEnabled ? 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' : 'text-gray-400 hover:bg-gray-100 dark:text-gray-500 dark:hover:bg-gray-700'"
-                        :title="soundEnabled ? 'Dezactiveaza sunetul' : 'Activeaza sunetul'"
+                        :title="soundEnabled ? @js(__('Dezactiveaza sunetul')) : @js(__('Activeaza sunetul'))"
                     >
                         <svg x-show="soundEnabled" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>

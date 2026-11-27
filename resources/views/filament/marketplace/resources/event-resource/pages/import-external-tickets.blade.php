@@ -11,15 +11,15 @@
             <div class="flex items-center gap-4">
                 <div class="text-center">
                     <div class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ $existingCount }}</div>
-                    <div class="text-xs text-gray-500">Bilete externe</div>
+                    <div class="text-xs text-gray-500">{{ __('Bilete externe') }}</div>
                 </div>
                 <div class="text-center">
                     <div class="text-2xl font-bold text-success-600 dark:text-success-400">{{ $checkedInCount }}</div>
-                    <div class="text-xs text-gray-500">Scanate</div>
+                    <div class="text-xs text-gray-500">{{ __('Scanate') }}</div>
                 </div>
                 <div class="text-center">
                     <div class="text-2xl font-bold text-warning-600 dark:text-warning-400">{{ $existingCount - $checkedInCount }}</div>
-                    <div class="text-xs text-gray-500">Rămase</div>
+                    <div class="text-xs text-gray-500">{{ __('Rămase') }}</div>
                 </div>
             </div>
         </div>
@@ -27,16 +27,16 @@
 
         {{-- Step 1: Upload CSV --}}
         <x-filament::section>
-            <x-slot name="heading">1. Încarcă fișier CSV</x-slot>
-            <x-slot name="description">Selectează fișierul CSV cu biletele de la operatorul extern. Separatorul (virgulă sau punct-virgulă) este detectat automat.</x-slot>
+            <x-slot name="heading">{{ __('1. Încarcă fișier CSV') }}</x-slot>
+            <x-slot name="description">{{ __('Selectează fișierul CSV cu biletele de la operatorul extern. Separatorul (virgulă sau punct-virgulă) este detectat automat.') }}</x-slot>
 
             <div class="mb-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center gap-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400">
-                        Nu știi cum să formatezi fișierul? Descarcă modelul CSV cu coloanele recunoscute automat.
+                        {{ __('Nu știi cum să formatezi fișierul? Descarcă modelul CSV cu coloanele recunoscute automat.') }}
                     </div>
                     <x-filament::button wire:click="downloadTemplate" color="gray" size="sm" icon="heroicon-o-arrow-down-tray">
-                        Descarcă model CSV
+                        {{ __('Descarcă model CSV') }}
                     </x-filament::button>
                 </div>
             </div>
@@ -44,11 +44,11 @@
             <form wire:submit="uploadCsv" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Sursă / Operator extern
+                        {{ __('Sursă / Operator extern') }}
                     </label>
-                    <input type="text" wire:model="source_name" placeholder="ex: iaBilet, Eventim, MyTicket..."
+                    <input type="text" wire:model="source_name" placeholder="{{ __('ex: iaBilet, Eventim, MyTicket...') }}"
                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
-                    <p class="mt-1 text-xs text-gray-400">Numele platformei de unde provin biletele (opțional, se salvează la fiecare bilet importat)</p>
+                    <p class="mt-1 text-xs text-gray-400">{{ __('Numele platformei de unde provin biletele (opțional, se salvează la fiecare bilet importat)') }}</p>
                 </div>
 
                 <div>
@@ -59,8 +59,8 @@
                 </div>
 
                 <x-filament::button type="submit" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="uploadCsv">Citește CSV</span>
-                    <span wire:loading wire:target="uploadCsv">Se citește...</span>
+                    <span wire:loading.remove wire:target="uploadCsv">{{ __('Citește CSV') }}</span>
+                    <span wire:loading wire:target="uploadCsv">{{ __('Se citește...') }}</span>
                 </x-filament::button>
             </form>
         </x-filament::section>
@@ -69,7 +69,7 @@
         @if(!empty($this->csvHeaders))
         <x-filament::section>
             <x-slot name="heading">2. Mapare coloane ({{ $this->csvTotalRows }} rânduri detectate)</x-slot>
-            <x-slot name="description">Verifică și ajustează maparea coloanelor. Barcode este obligatoriu.</x-slot>
+            <x-slot name="description">{{ __('Verifică și ajustează maparea coloanelor. Barcode este obligatoriu.') }}</x-slot>
 
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 @php
@@ -79,7 +79,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Cod bilet / Barcode <span class="text-danger-500">*</span>
+                        {{ __('Cod bilet / Barcode') }} <span class="text-danger-500">*</span>
                     </label>
                     <select wire:model="col_barcode" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
                         @foreach($headerOptions as $val => $label)
@@ -89,7 +89,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prenume</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Prenume') }}</label>
                     <select wire:model="col_first_name" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
                         @foreach($headerOptions as $val => $label)
                             <option value="{{ $val }}">{{ $label }}</option>
@@ -98,7 +98,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nume</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Nume') }}</label>
                     <select wire:model="col_last_name" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
                         @foreach($headerOptions as $val => $label)
                             <option value="{{ $val }}">{{ $label }}</option>
@@ -107,7 +107,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Email') }}</label>
                     <select wire:model="col_email" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
                         @foreach($headerOptions as $val => $label)
                             <option value="{{ $val }}">{{ $label }}</option>
@@ -116,7 +116,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tip bilet</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('Tip bilet') }}</label>
                     <select wire:model="col_ticket_type" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
                         @foreach($headerOptions as $val => $label)
                             <option value="{{ $val }}">{{ $label }}</option>
@@ -125,7 +125,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID extern</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ __('ID extern') }}</label>
                     <select wire:model="col_original_id" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
                         @foreach($headerOptions as $val => $label)
                             <option value="{{ $val }}">{{ $label }}</option>
@@ -164,7 +164,7 @@
             <div class="mt-4">
                 <x-filament::button wire:click="runImport" color="success" wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="runImport">Importă {{ $this->csvTotalRows }} bilete</span>
-                    <span wire:loading wire:target="runImport">Se importă...</span>
+                    <span wire:loading wire:target="runImport">{{ __('Se importă...') }}</span>
                 </x-filament::button>
             </div>
         </x-filament::section>
@@ -182,7 +182,7 @@
         {{-- Existing external tickets table --}}
         @if($existingCount > 0)
         <x-filament::section>
-            <x-slot name="heading">Bilete externe importate</x-slot>
+            <x-slot name="heading">{{ __('Bilete externe importate') }}</x-slot>
 
             @php
                 $tickets = \App\Models\ExternalTicket::where('event_id', $this->record->id)
@@ -195,13 +195,13 @@
                 <table class="min-w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50 dark:bg-gray-800">
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Barcode</th>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Nume</th>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Email</th>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Tip bilet</th>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Sursă</th>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Status</th>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Check-in</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">{{ __('Barcode') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">{{ __('Nume') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">{{ __('Email') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">{{ __('Tip bilet') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">{{ __('Sursă') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">{{ __('Status') }}</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-500">{{ __('Check-in') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -214,9 +214,9 @@
                             <td class="px-3 py-2 text-gray-500 text-xs">{{ $ticket->source_name ?? '-' }}</td>
                             <td class="px-3 py-2">
                                 @if($ticket->status === 'valid')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200">Valid</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200">{{ __('Valid') }}</span>
                                 @elseif($ticket->status === 'used')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-info-100 text-info-800 dark:bg-info-900 dark:text-info-200">Folosit</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-info-100 text-info-800 dark:bg-info-900 dark:text-info-200">{{ __('Folosit') }}</span>
                                 @else
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-100 text-danger-800 dark:bg-danger-900 dark:text-danger-200">{{ ucfirst($ticket->status) }}</span>
                                 @endif

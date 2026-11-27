@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     @if(!$marketplace)
         <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-            <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found. Please contact support.</p>
+            <p class="text-yellow-800 dark:text-yellow-200">{{ __('No marketplace account found. Please contact support.') }}</p>
         </div>
     @else
 
@@ -49,7 +49,7 @@
         <div class="flex flex-wrap items-end gap-4">
             {{-- Period Quick Buttons --}}
             <div>
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Perioada</label>
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{{ __('Perioada') }}</label>
                 <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
                     @foreach(['7d' => '7 Zile', '30d' => '30 Zile', '90d' => '90 Zile'] as $key => $label)
                         <button
@@ -69,7 +69,7 @@
                                 ? 'bg-emerald-600 text-white'
                                 : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600' }}"
                     >
-                        Custom
+                        {{ __('Custom') }}
                     </button>
                 </div>
             </div>
@@ -78,7 +78,7 @@
             @if($period === 'custom')
             <div class="flex items-end gap-2">
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">De la</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{{ __('De la') }}</label>
                     <input
                         type="date"
                         wire:model.live="customFrom"
@@ -86,7 +86,7 @@
                     />
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Pana la</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{{ __('Pana la') }}</label>
                     <input
                         type="date"
                         wire:model.live="customTo"
@@ -99,12 +99,12 @@
             {{-- Organizer Filter --}}
             <div class="ml-auto flex items-end gap-3">
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Organizator</label>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">{{ __('Organizator') }}</label>
                     <select
                         wire:model.live="organizerId"
                         class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 min-w-[200px]"
                     >
-                        <option value="">Toti organizatorii</option>
+                        <option value="">{{ __('Toti organizatorii') }}</option>
                         @foreach($organizers as $id => $name)
                             <option value="{{ $id }}">{{ $name }}</option>
                         @endforeach
@@ -115,10 +115,10 @@
                 <button
                     wire:click="exportCsv"
                     class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                    title="Export CSV"
+                    title="{{ __('Export CSV') }}"
                 >
                     <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
-                    CSV
+                    {{ __('CSV') }}
                 </button>
             </div>
         </div>
@@ -146,10 +146,10 @@
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_sales'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_sales'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('RON') }}</span></p>
                         {!! $renderDelta($deltas['total_sales'] ?? null) !!}
                     </div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Vanzari Totale</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Vanzari Totale') }}</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500">{{ number_format($stats['total_orders']) }} comenzi</p>
                 </div>
             </div>
@@ -163,10 +163,10 @@
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_commissions'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['total_commissions'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('RON') }}</span></p>
                         {!! $renderDelta($deltas['total_commissions'] ?? null) !!}
                     </div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Comisioane</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Comisioane') }}</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500">rata: {{ number_format($stats['effective_commission_rate'], 1) }}%</p>
                 </div>
             </div>
@@ -180,10 +180,10 @@
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['refund_fee_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['refund_fee_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('RON') }}</span></p>
                         {!! $renderDelta($deltas['refund_fee_revenue'] ?? null) !!}
                     </div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Taxa Retur</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Taxa Retur') }}</p>
                 </div>
             </div>
         </div>
@@ -196,10 +196,10 @@
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['gift_card_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['gift_card_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('RON') }}</span></p>
                         {!! $renderDelta($deltas['gift_card_revenue'] ?? null) !!}
                     </div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Carduri Cadou</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Carduri Cadou') }}</p>
                 </div>
             </div>
         </div>
@@ -212,10 +212,10 @@
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['services_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">RON</span></p>
+                        <p class="text-xl font-bold text-gray-900 dark:text-white truncate">{{ number_format($stats['services_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ __('RON') }}</span></p>
                         {!! $renderDelta($deltas['services_revenue'] ?? null) !!}
                     </div>
-                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Servicii Extra</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Servicii Extra') }}</p>
                 </div>
             </div>
         </div>
@@ -228,10 +228,10 @@
                 </div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <p class="text-xl font-bold text-emerald-700 dark:text-emerald-400 truncate">{{ number_format($stats['grand_total'], 2) }} <span class="text-sm font-medium">RON</span></p>
+                        <p class="text-xl font-bold text-emerald-700 dark:text-emerald-400 truncate">{{ number_format($stats['grand_total'], 2) }} <span class="text-sm font-medium">{{ __('RON') }}</span></p>
                         {!! $renderDelta($deltas['grand_total'] ?? null) !!}
                     </div>
-                    <p class="text-xs font-medium text-emerald-600 dark:text-emerald-500 uppercase tracking-wide">Venit Total Marketplace</p>
+                    <p class="text-xs font-medium text-emerald-600 dark:text-emerald-500 uppercase tracking-wide">{{ __('Venit Total Marketplace') }}</p>
                 </div>
             </div>
         </div>
@@ -240,24 +240,24 @@
     {{-- Averages Row --}}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Medie Zilnica Vanzari</p>
-            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_daily_sales'], 2) }} <span class="text-xs text-gray-400">RON</span></p>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Medie Zilnica Vanzari') }}</p>
+            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_daily_sales'], 2) }} <span class="text-xs text-gray-400">{{ __('RON') }}</span></p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Medie Zilnica Comisioane</p>
-            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_daily_commissions'], 2) }} <span class="text-xs text-gray-400">RON</span></p>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Medie Zilnica Comisioane') }}</p>
+            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_daily_commissions'], 2) }} <span class="text-xs text-gray-400">{{ __('RON') }}</span></p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Medie Zilnica Venit Total</p>
-            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_daily_revenue'], 2) }} <span class="text-xs text-gray-400">RON</span></p>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Medie Zilnica Venit Total') }}</p>
+            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_daily_revenue'], 2) }} <span class="text-xs text-gray-400">{{ __('RON') }}</span></p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Valoare Medie Comanda</p>
-            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_order_value'], 2) }} <span class="text-xs text-gray-400">RON</span></p>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Valoare Medie Comanda') }}</p>
+            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_order_value'], 2) }} <span class="text-xs text-gray-400">{{ __('RON') }}</span></p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Comision Mediu / Comanda</p>
-            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_commission_per_order'], 2) }} <span class="text-xs text-gray-400">RON</span></p>
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{{ __('Comision Mediu / Comanda') }}</p>
+            <p class="text-lg font-bold text-gray-900 dark:text-white mt-0.5">{{ number_format($stats['avg_commission_per_order'], 2) }} <span class="text-xs text-gray-400">{{ __('RON') }}</span></p>
         </div>
     </div>
 
@@ -266,7 +266,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5"
              wire:key="chart-{{ $period }}-{{ $organizerId }}-{{ $customFrom }}-{{ $customTo }}"
              x-data x-init="$nextTick(() => initSalesCommissionsChart())">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Vanzari vs Comisioane</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Vanzari vs Comisioane') }}</h3>
             <div class="h-72">
                 <canvas id="salesCommissionsChart" data-chart='@json($chartData)'></canvas>
             </div>
@@ -277,9 +277,9 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {{-- Breakdown by Type --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Breakdown Venituri</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Breakdown Venituri') }}</h3>
             @if(($stats['vat_collected'] ?? 0) > 0)
-                <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">Sumele sunt fără TVA. TVA colectat în perioadă (nu intră în venituri): <strong>{{ number_format($stats['vat_collected'], 2) }} RON</strong></p>
+                <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ __('Sumele sunt fără TVA. TVA colectat în perioadă (nu intră în venituri):') }} <strong>{{ number_format($stats['vat_collected'], 2) }} RON</strong></p>
             @endif
             <div class="space-y-3">
                 @foreach($breakdown as $item)
@@ -308,15 +308,15 @@
 
         {{-- Services Breakdown --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Detaliu Servicii Extra</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Detaliu Servicii Extra') }}</h3>
             @if(count($servicesByType) > 0)
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="text-left py-2.5 px-3 font-medium text-gray-500 dark:text-gray-400">Tip Serviciu</th>
-                                <th class="text-right py-2.5 px-3 font-medium text-gray-500 dark:text-gray-400">Comenzi</th>
-                                <th class="text-right py-2.5 px-3 font-medium text-gray-500 dark:text-gray-400">Venit</th>
+                                <th class="text-left py-2.5 px-3 font-medium text-gray-500 dark:text-gray-400">{{ __('Tip Serviciu') }}</th>
+                                <th class="text-right py-2.5 px-3 font-medium text-gray-500 dark:text-gray-400">{{ __('Comenzi') }}</th>
+                                <th class="text-right py-2.5 px-3 font-medium text-gray-500 dark:text-gray-400">{{ __('Venit') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -330,7 +330,7 @@
                         </tbody>
                         <tfoot>
                             <tr class="border-t border-gray-300 dark:border-gray-600">
-                                <td class="py-2.5 px-3 font-semibold text-gray-900 dark:text-white">Total</td>
+                                <td class="py-2.5 px-3 font-semibold text-gray-900 dark:text-white">{{ __('Total') }}</td>
                                 <td class="py-2.5 px-3 text-right font-semibold text-gray-900 dark:text-white">{{ array_sum(array_column($servicesByType, 'count')) }}</td>
                                 <td class="py-2.5 px-3 text-right font-semibold text-gray-900 dark:text-white">{{ number_format($stats['services_revenue'], 2) }} RON</td>
                             </tr>
@@ -340,7 +340,7 @@
             @else
                 <div class="text-center py-8">
                     <x-heroicon-o-bolt class="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Niciun serviciu extra in aceasta perioada.</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Niciun serviciu extra in aceasta perioada.') }}</p>
                 </div>
             @endif
         </div>
@@ -349,17 +349,17 @@
     {{-- Top Organizers Table --}}
     @if(!$organizerId && count($topOrganizers) > 0)
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Organizatori (dupa vanzari in perioada selectata)</h3>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ __('Top Organizatori (dupa vanzari in perioada selectata)') }}</h3>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-gray-200 dark:border-gray-700">
                         <th class="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">#</th>
-                        <th class="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Organizator</th>
-                        <th class="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Comenzi</th>
-                        <th class="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Vanzari</th>
-                        <th class="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Comisioane</th>
-                        <th class="text-center py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Actiune</th>
+                        <th class="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{{ __('Organizator') }}</th>
+                        <th class="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{{ __('Comenzi') }}</th>
+                        <th class="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{{ __('Vanzari') }}</th>
+                        <th class="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{{ __('Comisioane') }}</th>
+                        <th class="text-center py-3 px-4 font-medium text-gray-500 dark:text-gray-400">{{ __('Actiune') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -389,7 +389,7 @@
                                 wire:click="$set('organizerId', '{{ $org['id'] }}')"
                                 class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 underline"
                             >
-                                Filtreaza
+                                {{ __('Filtreaza') }}
                             </button>
                         </td>
                     </tr>

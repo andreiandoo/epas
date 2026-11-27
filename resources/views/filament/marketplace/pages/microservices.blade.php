@@ -3,8 +3,8 @@
         @if($microservices->isEmpty())
             <div class="text-center py-12">
                 <x-heroicon-o-puzzle-piece class="mx-auto h-12 w-12 text-gray-400" />
-                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No active microservices</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Contact support to enable microservices for your account.</p>
+                <h3 class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ __('No active microservices') }}</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Contact support to enable microservices for your account.') }}</p>
             </div>
         @else
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

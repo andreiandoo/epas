@@ -11,8 +11,8 @@
     {{-- Golden Price Zone --}}
     @if(!empty($goldenPrice))
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Golden Price Zone</h3>
-        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Intervalul de pret la care se vinde cel mai bine pe fiecare categorie</p>
+        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Golden Price Zone') }}</h3>
+        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Intervalul de pret la care se vinde cel mai bine pe fiecare categorie') }}</p>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($goldenPrice as $gp)
                 <div class="p-4 border border-gray-100 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
@@ -45,7 +45,7 @@
     {{-- Price vs Volume Scatter --}}
     @if(!empty($priceVolume))
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Pret vs Volum vandut</h3>
+        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Pret vs Volum vandut') }}</h3>
         <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Fiecare punct = un tip de bilet. Marime = revenue</p>
         <div class="h-80" wire:ignore x-data="{
             init() {
@@ -82,8 +82,8 @@
         {{-- Pareto / Revenue Concentration --}}
         @if(!empty($pareto))
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Concentrare revenue (Pareto)</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Cum este distribuit revenue-ul intre evenimente</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Concentrare revenue (Pareto)') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Cum este distribuit revenue-ul intre evenimente') }}</p>
             <div class="h-64" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from(array_slice($pareto, 0, 15)) }};
@@ -116,25 +116,25 @@
 
         {{-- Repeat Customer --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Clienti recurenti</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Rata de repeat si valoare medie</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Clienti recurenti') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Rata de repeat si valoare medie') }}</p>
             @if(!empty($repeatCustomer) && $repeatCustomer['total_customers'] > 0)
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
                     <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{{ $repeatCustomer['repeat_rate'] }}%</div>
-                    <div class="text-xs text-emerald-600 dark:text-emerald-500">Repeat rate</div>
+                    <div class="text-xs text-emerald-600 dark:text-emerald-500">{{ __('Repeat rate') }}</div>
                 </div>
                 <div class="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
                     <div class="text-2xl font-bold text-indigo-700 dark:text-indigo-400">{{ number_format($repeatCustomer['avg_orders'], 1) }}</div>
-                    <div class="text-xs text-indigo-600 dark:text-indigo-500">Comenzi medii/client</div>
+                    <div class="text-xs text-indigo-600 dark:text-indigo-500">{{ __('Comenzi medii/client') }}</div>
                 </div>
                 <div class="p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20">
                     <div class="text-lg font-bold text-violet-700 dark:text-violet-400">{{ $currencySymbol }}{{ number_format($repeatCustomer['avg_repeat_spent'], 0) }}</div>
-                    <div class="text-xs text-violet-600 dark:text-violet-500">Avg cheltuiala repeat</div>
+                    <div class="text-xs text-violet-600 dark:text-violet-500">{{ __('Avg cheltuiala repeat') }}</div>
                 </div>
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
                     <div class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ $currencySymbol }}{{ number_format($repeatCustomer['avg_single_spent'], 0) }}</div>
-                    <div class="text-xs text-gray-500">Avg cheltuiala one-time</div>
+                    <div class="text-xs text-gray-500">{{ __('Avg cheltuiala one-time') }}</div>
                 </div>
             </div>
             <div class="h-32" wire:ignore x-data="{
@@ -153,7 +153,7 @@
                 <canvas x-ref="canvas"></canvas>
             </div>
             @else
-                <p class="text-sm text-gray-500">Nu sunt suficiente date.</p>
+                <p class="text-sm text-gray-500">{{ __('Nu sunt suficiente date.') }}</p>
             @endif
         </div>
     </div>
@@ -162,8 +162,8 @@
         {{-- Booking Lead Time --}}
         @if(!empty($leadTime))
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Lead time de cumparare</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Cu cate zile inainte de eveniment se cumpara biletele</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Lead time de cumparare') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Cu cate zile inainte de eveniment se cumpara biletele') }}</p>
             <div class="h-48" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from($leadTime) }};
@@ -185,8 +185,8 @@
         {{-- Refund Rate by Category --}}
         @if(!empty($refundRate))
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
-            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Rata de refund pe categorii</h3>
-            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Categorii cu cele mai multe refund-uri</p>
+            <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ __('Rata de refund pe categorii') }}</h3>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{ __('Categorii cu cele mai multe refund-uri') }}</p>
             <div class="h-48" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from($refundRate) }};
