@@ -75,6 +75,12 @@ class ChatConsole extends Page
         $adminId = Auth::guard('marketplace_admin')->id();
         $status = ChatOperatorStatus::query()->where('marketplace_admin_id', $adminId)->first();
         $this->presence = $status?->presence ?? ChatOperatorStatus::PRESENCE_OFFLINE;
+
+        // Deschis din bara de atenție: /chat-console?c=REFERINTA
+        $ref = request()->query('c');
+        if (is_string($ref) && $ref !== '' && $this->findConversation($ref)) {
+            $this->select($ref);
+        }
     }
 
     // -------- Presence --------

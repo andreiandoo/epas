@@ -653,6 +653,14 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
     Route::post('/chat/{conversation}/attach', [\App\Http\Controllers\Marketplace\ChatPollController::class, 'upload'])
         ->name('marketplace.chat.attach');
 
+    // Bara de atenție a operatorilor (microserviciul operator-cockpit)
+    Route::get('/cockpit/poll', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'poll'])
+        ->name('marketplace.cockpit.poll');
+    Route::post('/cockpit/claim', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'claim'])
+        ->name('marketplace.cockpit.claim');
+    Route::post('/cockpit/snooze', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'snooze'])
+        ->name('marketplace.cockpit.snooze');
+
     Route::get('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'edit'])
         ->name('marketplace.ticket-customizer.edit');
     Route::put('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'update'])

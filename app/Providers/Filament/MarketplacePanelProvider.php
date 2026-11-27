@@ -347,6 +347,21 @@ class MarketplacePanelProvider extends PanelProvider
                 return '<script>window.EP_MARKETPLACE_IS_SUPER_ADMIN = ' . ($isSuper ? 'true' : 'false') . ';</script>';
             })
 
+            // Bara de atenție a operatorilor (microserviciul operator-cockpit), doar dacă e activ.
+            ->renderHook('panels::body.end', function (): string {
+                try {
+                    $admin = auth('marketplace_admin')->user();
+                    if (! $admin || ! \App\Services\OperatorCockpit\AttentionService::isEnabledFor($admin->marketplaceClient)) {
+                        return '';
+                    }
+
+                    return view('filament.components.operator-cockpit')->render();
+                } catch (\Throwable $e) {
+                    report($e);
+                    return '';
+                }
+            })
+
             // Live-chat sound notifier: plays a chime when a new unclaimed chat arrives
             // (any operator) or a new incoming message lands on a chat this operator
             // has claimed. Silent on the chat console page itself.
