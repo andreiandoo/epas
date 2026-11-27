@@ -363,7 +363,20 @@ class PaymentRefundService
 
         // Validate total doesn't exceed remaining
         $alreadyRefundedAmount = (float) ($order->refunded_amount ?? 0);
-        $maxRefundable = (float) $order->total - $alreadyRefundedAmount;
+        $maxRefundable = round((float) $order->total - $alreadyRefundedAmount, 2);
+
+        // Per-ticket shares are rounded one by one (e.g. 3.78 lei VAT / 4 tickets
+        // = 0.945 -> 0.95 each = 3.80), so the sum can top what was paid by a
+        // few bani. Take that rounding back off the last ticket.
+        $overshoot = round($totalRefund - $maxRefundable, 2);
+        if ($overshoot > 0 && $overshoot <= 0.01 * count($items) && !empty($items)) {
+            $last = count($items) - 1;
+            $items[$last]['refund_amount'] = round($items[$last]['refund_amount'] - $overshoot, 2);
+            if ($totalVatRefunded >= $overshoot) {
+                $totalVatRefunded = round($totalVatRefunded - $overshoot, 2);
+            }
+            $totalRefund = $maxRefundable;
+        }
         if ($totalRefund > $maxRefundable + 0.01) {
             return new RefundResult(success: false, error: "Suma de refund ({$totalRefund}) depășește maximul disponibil ({$maxRefundable}).");
         }
