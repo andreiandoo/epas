@@ -22,11 +22,31 @@
              while typing would blank the textarea + steal focus; pausing avoids
              it entirely. The interval lives in a wire:ignore node so it is
              created once and never touched by morphs. --}}
-        <div wire:ignore x-data x-init="
+        {{-- Cu Reverb conectat, consola se reîmprospătează la fiecare mesaj/schimbare
+             (canalul chat.operators.{marketplace}), iar intervalul de 3s rămâne doar
+             plasă de siguranță (la 12s). Semnalele venite cât operatorul scrie sunt
+             amânate până termină. --}}
+        <div wire:ignore x-data data-rt-client="{{ (int) (auth('marketplace_admin')->user()?->marketplace_client_id ?? 0) }}" x-init="
             if (window.__epChatPoll) clearInterval(window.__epChatPoll);
+            window.__epChatLastSync = Date.now();
+            window.__epChatPending = false;
+            const sync = () => { window.__epChatLastSync = Date.now(); window.__epChatPending = false; try { @this.heartbeat(); } catch (e) {} };
             window.__epChatPoll = setInterval(() => {
-                if (!window.__epChatTyping) { try { @this.heartbeat(); } catch (e) {} }
+                if (window.__epChatTyping) return;
+                const live = window.epRealtime && window.epRealtime.isConnected();
+                if (window.__epChatPending || !live || Date.now() - window.__epChatLastSync >= 12000) sync();
             }, 3000);
+            const cid = parseInt($el.dataset.rtClient, 10);
+            if (window.epRealtime && cid && !window.__epChatRtBound) {
+                window.__epChatRtBound = true;
+                const onSignal = () => {
+                    if (window.__epChatTyping) { window.__epChatPending = true; return; }
+                    clearTimeout(window.__epChatRtTimer);
+                    window.__epChatRtTimer = setTimeout(sync, 250);
+                };
+                window.epRealtime.on('chat.operators.' + cid, true, 'message', onSignal);
+                window.epRealtime.on('chat.operators.' + cid, true, 'conversation.updated', onSignal);
+            }
         "></div>
 
         {{-- Top bar: presence + quick pills --}}

@@ -441,6 +441,9 @@ class AttentionService
             if ($affected === 0) {
                 return ['ok' => false, 'message' => 'L-a preluat deja altcineva.'];
             }
+
+            // Update-ul direct nu declanșează observatorii; anunțăm explicit ceilalți operatori.
+            CockpitSignal::changed((int) $this->client->id, $category);
         }
 
         return ['ok' => true];

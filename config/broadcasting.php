@@ -37,7 +37,9 @@ return [
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
             ],
             'client_options' => [
-                // Guzzle client options if needed
+                // Un Reverb blocat nu trebuie să țină pe loc request-ul care trimite.
+                'timeout' => 3,
+                'connect_timeout' => 2,
             ],
         ],
 

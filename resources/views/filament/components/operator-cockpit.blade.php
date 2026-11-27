@@ -99,7 +99,7 @@
     }
 </style>
 
-<div id="epc-root" data-poll-ms="{{ (int) config('operator_cockpit.poll_interval_ms', 15000) }}">
+<div id="epc-root" data-poll-ms="{{ (int) config('operator_cockpit.poll_interval_ms', 15000) }}" data-client-id="{{ (int) ($clientId ?? 0) }}">
     <nav class="epc-rail" aria-label="Bara de atenție">
         <span class="epc-rail-lbl">Acțiuni</span>
         <div class="epc-tiles" style="display:grid;gap:10px"></div>
@@ -163,7 +163,10 @@
     var pollMs = parseInt(root.getAttribute('data-poll-ms'), 10) || 15000;
 
     var state = { items: {}, filter: 'all', super: false };
-    var closeTimer = null, pollTimer = null, msgTimer = null;
+    var closeTimer = null, pollTimer = null, msgTimer = null, signalTimer = null, lastPoll = 0;
+    var clientId = parseInt(root.getAttribute('data-client-id'), 10) || 0;
+    // Cu Reverb conectat, polling-ul devine doar plasă de siguranță.
+    var SAFETY_MS = 60000;
 
     function lsGet(k, d) { try { var v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
     function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -361,6 +364,7 @@
 
     // ---------- polling ----------
     function poll() {
+        lastPoll = Date.now();
         return fetch('/marketplace/cockpit/poll', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
@@ -386,7 +390,20 @@
     function start() {
         stop();
         poll();
-        pollTimer = setInterval(function () { if (!document.hidden) poll(); }, pollMs);
+        pollTimer = setInterval(function () {
+            if (document.hidden) return;
+            var live = window.epRealtime && window.epRealtime.isConnected();
+            if (live && Date.now() - lastPoll < SAFETY_MS) return;
+            poll();
+        }, pollMs);
+    }
+    if (window.epRealtime && clientId) {
+        window.epRealtime.on('cockpit.' + clientId, true, 'changed', function () {
+            clearTimeout(signalTimer);
+            signalTimer = setTimeout(poll, 600);
+        });
+        // La reconectare ne resincronizăm, poate am pierdut semnale.
+        window.epRealtime.onStatus(function (live) { if (live) poll(); });
     }
     function stop() { if (pollTimer) clearInterval(pollTimer); pollTimer = null; }
     document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });

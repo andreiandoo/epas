@@ -54,3 +54,12 @@ Broadcast::channel('chat.conversation.{conversationId}', function ($user, $conve
     return $conversation
         && (int) $conversation->marketplace_client_id === (int) ($admin->marketplace_client_id ?? 0);
 }, ['guards' => ['marketplace_admin', 'web']]);
+
+/*
+| Bara de atenție a operatorilor (microserviciul operator-cockpit). Semnalul nu
+| duce date, doar categoria schimbată; detaliile vin prin /marketplace/cockpit/poll.
+*/
+Broadcast::channel('cockpit.{marketplaceClientId}', function ($user, $marketplaceClientId) {
+    $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+    return $admin && (int) ($admin->marketplace_client_id ?? 0) === (int) $marketplaceClientId;
+}, ['guards' => ['marketplace_admin']]);

@@ -347,6 +347,15 @@ class MarketplacePanelProvider extends PanelProvider
                 return '<script>window.EP_MARKETPLACE_IS_SUPER_ADMIN = ' . ($isSuper ? 'true' : 'false') . ';</script>';
             })
 
+            // Client Reverb comun (WebSocket, protocol Pusher), doar cu broadcast pe Reverb.
+            ->renderHook('panels::head.end', function (): string {
+                if (config('broadcasting.default') !== 'reverb' || ! config('reverb-client.host') || ! auth('marketplace_admin')->check()) {
+                    return '';
+                }
+
+                return view('filament.components.realtime-client')->render();
+            })
+
             // Bara de atenție a operatorilor (microserviciul operator-cockpit), doar dacă e activ.
             ->renderHook('panels::body.end', function (): string {
                 try {
@@ -355,7 +364,7 @@ class MarketplacePanelProvider extends PanelProvider
                         return '';
                     }
 
-                    return view('filament.components.operator-cockpit')->render();
+                    return view('filament.components.operator-cockpit', ['clientId' => (int) $admin->marketplace_client_id])->render();
                 } catch (\Throwable $e) {
                     report($e);
                     return '';
@@ -489,6 +498,16 @@ class MarketplacePanelProvider extends PanelProvider
                 document.addEventListener('livewire:navigated', setup);
                 // If DOM already parsed by the time this runs, kick off immediately.
                 if (document.readyState !== 'loading') setup();
+
+                // Cu Reverb: sunetul vine imediat la un mesaj nou, nu la următorul poll de 10s.
+                if (window.epRealtime && window.epRealtime.clientId && !window.__epChatSoundRt) {
+                    window.__epChatSoundRt = true;
+                    let rtTimer = null;
+                    window.epRealtime.on('chat.operators.' + window.epRealtime.clientId, true, 'message', function () {
+                        clearTimeout(rtTimer);
+                        rtTimer = setTimeout(tick, 400);
+                    });
+                }
             })();
             </script>
             HTML)

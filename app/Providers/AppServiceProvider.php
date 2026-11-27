@@ -196,6 +196,18 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Artist::observe(\App\Observers\ArtistObserver::class);
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
         \App\Models\Order::observe(\App\Observers\FacebookCapiOrderObserver::class);
+
+        // Bara de atenție a operatorilor: semnal Reverb când se schimbă ce afișează.
+        foreach ([
+            \App\Models\SupportTicket::class,
+            \App\Models\MarketplaceTodo::class,
+            \App\Models\MarketplaceArtistAccount::class,
+            \App\Models\Event::class,
+            \App\Models\Chat\ChatConversation::class,
+            \App\Models\Chat\ChatMessage::class,
+        ] as $cockpitModel) {
+            $cockpitModel::observe(\App\Observers\OperatorCockpitObserver::class);
+        }
         /* Cadourile din aplicatie: intentiile scrise la checkout devin
            transferuri abia cand comanda e platita. Vezi GiftPurchaseService. */
         \App\Models\Order::observe(\App\Observers\GiftIntentOrderObserver::class);
