@@ -7761,5 +7761,19 @@
     "Contract exceptat": "Szerződés alól mentes",
     "Contract semnat": "Szerződés aláírva",
     "Contract nesemnat": "Szerződés aláíratlan",
-    "Neverificați": "Nem ellenőrzött"
+    "Neverificați": "Nem ellenőrzött",
+    "Neachitate": "Kifizetetlen",
+    "Achitate": "Kifizetett",
+    "Probleme Oblio": "Oblio problémák",
+    "Nevalidate": "Nem validált",
+    "Fiscale": "Fiskális",
+    "Tip document": "Dokumentumtípus",
+    "Oblio: stornată": "Oblio: sztornózva",
+    "Oblio: anulată": "Oblio: törölve",
+    "Oblio: ștearsă": "Oblio: eltávolítva",
+    "Oblio: activă": "Oblio: aktív",
+    "Oblio: neverificată": "Oblio: nem ellenőrzött",
+    "Detectat la": "Észlelve",
+    "Verificat la": "Ellenőrizve",
+    "Se verifică la deschiderea facturii": "Megnyitáskor ellenőrzi"
 }

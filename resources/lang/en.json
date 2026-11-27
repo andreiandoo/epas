@@ -4382,5 +4382,20 @@
     "Contract exceptat": "Contract exempt",
     "Contract semnat": "Contract signed",
     "Contract nesemnat": "Contract unsigned",
-    "Neverificați": "Unverified"
+    "Neverificați": "Unverified",
+    "Neachitate": "Unpaid",
+    "Achitate": "Paid",
+    "Proforma": "Proforma",
+    "Probleme Oblio": "Oblio issues",
+    "Nevalidate": "Not validated",
+    "Fiscale": "Fiscal",
+    "Tip document": "Document type",
+    "Oblio: stornată": "Oblio: reversed",
+    "Oblio: anulată": "Oblio: canceled",
+    "Oblio: ștearsă": "Oblio: deleted",
+    "Oblio: activă": "Oblio: active",
+    "Oblio: neverificată": "Oblio: unchecked",
+    "Detectat la": "Detected at",
+    "Verificat la": "Checked at",
+    "Se verifică la deschiderea facturii": "Checked when the invoice is opened"
 }

@@ -447,7 +447,9 @@ class OrganizerInvoiceResource extends Resource
                         'proforma' => 'Proforma',
                         'nevalidata' => 'Nevalidată',
                         default => $state,
-                    }),
+                    })
+                    // Shown as a pill in the Stare cell.
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 // Oblio-returned series + number for the most recent doc
                 // issued (fiscal wins over proforma when both exist). Pulled
@@ -513,7 +515,9 @@ class OrganizerInvoiceResource extends Resource
                         }
                         return !empty($meta['accounting']['external_ref']) ? 'Se verifică la deschiderea facturii' : null;
                     })
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    // Shown as a pill in the Stare cell.
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('issue_date')
                     ->label(__('Data emiterii'))
@@ -541,18 +545,59 @@ class OrganizerInvoiceResource extends Resource
                     ->weight('bold')
                     ->description(fn (Invoice $record): string => number_format((float) $record->subtotal, 2, ',', '.') . ' + ' . __('TVA') . ' ' . number_format((float) $record->vat_amount, 2, ',', '.')),
 
+                // Payment state + accounting type (fiscală / proforma / nevalidată) + Oblio state as pills.
                 Tables\Columns\TextColumn::make('status')
                     ->label(__('Stare'))
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'paid' => 'success',
-                        'outstanding' => 'warning',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'paid' => 'Achitată',
-                        'outstanding' => 'Neachitată',
-                        default => $state,
+                    ->html()
+                    ->state(function (Invoice $record): \Illuminate\Support\HtmlString {
+                        $meta = $record->meta ?? [];
+                        $pill = fn (string $tone, string $label, ?string $tip = null, bool $dot = false): string => '<span class="ep-pill ep-pill--' . $tone . '"'
+                            . ($tip ? ' title="' . e($tip) . '"' : '') . '>' . ($dot ? '<span class="ep-dot"></span>' : '') . e($label) . '</span>';
+
+                        $html = match ($record->status) {
+                            'paid' => $pill('ok', __('Achitată'), null, true),
+                            'outstanding' => $pill('warn', __('Neachitată'), null, true),
+                            default => $pill('mute', (string) $record->status, null, true),
+                        };
+
+                        // Same logic as the (now hidden) Tip column.
+                        if (! empty($meta['accounting']['external_ref'])) {
+                            $html .= ' ' . $pill('mute', __('Fiscală'));
+                        } elseif (! empty($meta['accounting_proforma']['external_ref'])) {
+                            $html .= ' ' . $pill('warn', __('Proforma'));
+                        } else {
+                            $html .= ' ' . $pill('mute', __('Nevalidată'));
+                        }
+
+                        // Same logic as the (now hidden) Stare Oblio column.
+                        $oblio = null;
+                        if ($record->isStornoedInOblio()) {
+                            $oblio = 'stornoed';
+                        } elseif ($record->isCanceledInOblio()) {
+                            $oblio = 'canceled';
+                        } elseif ($record->isDeletedInOblio()) {
+                            $oblio = 'deleted';
+                        } elseif (! empty($meta['accounting']['external_ref'])) {
+                            $oblio = ! empty($meta['accounting']['status_check_at']) ? 'live' : 'unchecked';
+                        }
+                        if ($oblio) {
+                            $when = $meta['accounting']['stornoed_at'] ?? $meta['accounting']['canceled_at'] ?? $meta['accounting']['deleted_at'] ?? null;
+                            $tip = $when
+                                ? __('Detectat la') . ' ' . \Carbon\Carbon::parse($when)->format('d.m.Y H:i')
+                                : (! empty($meta['accounting']['status_check_at'])
+                                    ? __('Verificat la') . ' ' . \Carbon\Carbon::parse($meta['accounting']['status_check_at'])->format('d.m.Y H:i')
+                                    : __('Se verifică la deschiderea facturii'));
+                            [$tone, $label] = match ($oblio) {
+                                'stornoed' => ['bad', __('Oblio: stornată')],
+                                'canceled' => ['bad', __('Oblio: anulată')],
+                                'deleted' => ['bad', __('Oblio: ștearsă')],
+                                'live' => ['ok', __('Oblio: activă')],
+                                default => ['mute', __('Oblio: neverificată')],
+                            };
+                            $html .= ' ' . $pill($tone, $label, $tip);
+                        }
+
+                        return new \Illuminate\Support\HtmlString('<div class="ep-stare">' . $html . '</div>');
                     }),
             ])
             ->defaultSort('issue_date', 'desc')
