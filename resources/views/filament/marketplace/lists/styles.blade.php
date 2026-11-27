@@ -83,7 +83,7 @@
 }
 
 /* evenimente: poster + titlu lat, iconita harta, data mica cu ziua in majuscule */
-.ep-lst .ep-title-cell{min-width:420px}
+.ep-lst .ep-title-cell{white-space:normal;overflow-wrap:anywhere}
 .ep-lst .ep-ev{display:flex;align-items:flex-start;gap:12px}
 .ep-lst .ep-ev-body{min-width:0;flex:1}
 .ep-lst .ep-poster{display:block;flex:none;width:36px;height:48px;border-radius:6px;background:var(--l-mute-bg);overflow:hidden}
@@ -96,5 +96,38 @@
 .ep-lst .ep-lst-total{font-size:13px;color:var(--l-soft);white-space:nowrap}
 .ep-lst .ep-lst-total strong{color:var(--l-text);font-weight:600}
 .ep-lst .ep-lst-total-sep{color:var(--l-faint);margin-inline:6px}
+
+/* total + filtre active pe acelasi ax */
+.ep-lst .fi-ta-filter-indicators>div{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.ep-lst .fi-ta-filter-indicators .ep-lst-total,.ep-lst .fi-ta-filter-indicators .ep-lst-total-sep,.ep-lst .fi-ta-filter-indicators-label{display:inline-flex;align-items:center;line-height:1;margin:0}
+.ep-lst .fi-ta-filter-indicators .ep-lst-total strong{margin-inline-start:4px}
+
+/* coloana de actiuni: doar cat ii trebuie */
+.ep-lst .fi-ta-table td:last-child,.ep-lst .fi-ta-table th:last-child{width:1%;white-space:nowrap}
+
+/* bara de jos: rezumat stanga, pe pagina + paginatie dreapta, butoane fara chenar */
+.ep-lst .fi-pagination{display:flex!important;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:12px 14px}
+.ep-lst .fi-pagination-overview{margin-inline-end:auto;font-size:13px;font-weight:400;color:var(--l-muted)}
+.ep-lst .fi-pagination-records-per-page-select-ctn{justify-self:auto}
+.ep-lst .fi-pagination-records-per-page-select .fi-input-wrp{min-height:30px;border-radius:8px;box-shadow:none;border:1px solid var(--l-ctl-bd);background:var(--l-ctl)}
+.ep-lst .fi-pagination-records-per-page-select .fi-input-wrp-label{font-size:12px;color:var(--l-muted)}
+.ep-lst .fi-pagination-records-per-page-select .fi-select-input{padding-block:4px;font-size:13px}
+.ep-lst .fi-pagination-items{display:flex;gap:4px;border:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important;overflow:visible!important}
+.ep-lst .fi-pagination-item{border:0!important;background:transparent!important}
+.ep-lst .fi-pagination-item-btn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:30px;padding:0 9px;border-radius:8px;background:transparent!important;color:var(--l-soft);font-size:13px;font-weight:500}
+.ep-lst .fi-pagination-item-btn:hover{background:var(--l-hover)!important;color:var(--l-text)}
+.ep-lst .fi-pagination-item.fi-active .fi-pagination-item-btn{background:var(--l-on)!important;color:var(--l-text)}
+.ep-lst .fi-pagination-item-label{color:inherit}
+
+/* epas-skin.css face celulele de titlu/nume display:block (ies din grila tabelului si se suprapun peste coloana urmatoare) */
+.ep-lst td.fi-ta-cell.fi-ta-cell-title,.ep-lst td.fi-ta-cell.fi-ta-cell-name{display:table-cell!important}
+/* titlul ia tot spatiul ramas; restul coloanelor au latimi fixe */
+.ep-lst .fi-ta-header-cell-title,.ep-lst .fi-ta-header-cell-name{width:100%}
+.ep-lst .fi-ta-cell-title{min-width:420px}
+.ep-lst .fi-ta-header-cell-event-date,.ep-lst .fi-ta-cell-event-date{width:120px}
+.ep-lst [class*=fi-ta-header-cell-marketplace-organizer],.ep-lst [class*=fi-ta-cell-marketplace-organizer]{width:150px}
+.ep-lst .fi-ta-header-cell-general-quota,.ep-lst .fi-ta-cell-general-quota{width:130px}
+.ep-lst .fi-ta-header-cell-stare,.ep-lst .fi-ta-cell-stare{width:180px}
+.ep-lst [class*=fi-ta-header-cell-tics-listing],.ep-lst [class*=fi-ta-cell-tics-listing]{width:100px}
 </style>
 </div>

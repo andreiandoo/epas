@@ -2,7 +2,7 @@
 @php use Filament\Tables\Filters\Indicator; @endphp
 <div class="fi-ta-filter-indicators">
     <div>
-        <span class="ep-lst-total">{{ __('Total') }}: <strong>{{ number_format($total, 0, ',', '.') }}</strong></span>
+        <span class="ep-lst-total">{{ __('Rezultate') }}: <strong>{{ number_format($total, 0, ',', '.') }}</strong></span>
         <span class="ep-lst-total-sep" aria-hidden="true">|</span>
         <span class="fi-ta-filter-indicators-label">
             {{ __('filament-tables::table.filters.indicator') }}
