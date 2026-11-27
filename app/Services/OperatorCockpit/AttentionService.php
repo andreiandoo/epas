@@ -587,7 +587,13 @@ class AttentionService
 
         $board = \Illuminate\Support\Facades\Cache::remember('cockpit-ops-v2:' . $this->client->id . ':' . $from->format('Ymd'), 300, function () use ($pivot, $tz, $from, $to) {
             $service = app(\App\Services\Marketplace\OpsBoardService::class);
-            $built = $service->build($this->client, $from, $to, \App\Services\Marketplace\OpsBoardService::trackFrom($pivot, $tz), ['only_open' => true]);
+            $locale = app()->getLocale();
+            app()->setLocale('ro'); // în cache intră textele sursă; traducerea se face la afișare
+            try {
+                $built = $service->build($this->client, $from, $to, \App\Services\Marketplace\OpsBoardService::trackFrom($pivot, $tz), ['only_open' => true]);
+            } finally {
+                app()->setLocale($locale);
+            }
 
             $rows = [];
             foreach (['backlog', 'period', 'upcoming'] as $zone) {

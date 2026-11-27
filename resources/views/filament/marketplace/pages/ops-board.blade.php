@@ -100,16 +100,16 @@
 
     @php
         $zones = [
-            'backlog' => ['Din urmă', 'evenimente încheiate cu ceva încă deschis · urmărite de la ' . $trackFromLabel, 'Nicio restanță din perioadele anterioare.'],
-            'period' => ['Evenimentele perioadei', $periodLabel, 'Niciun eveniment în această perioadă.'],
+            'backlog' => [__('Din urmă'), __('evenimente încheiate cu ceva încă deschis · urmărite de la :date', ['date' => $trackFromLabel]), __('Nicio restanță din perioadele anterioare.')],
+            'period' => [__('Evenimentele perioadei'), $periodLabel, __('Niciun eveniment în această perioadă.')],
         ];
     @endphp
 
     @php
         $pills = [
-            'overdue' => ['restante', 'is-red'],
-            'todo' => ['de făcut', 'is-amber'],
-            'awaiting_payment' => ['așteaptă plata', 'is-blue'],
+            'overdue' => [__('restante'), 'is-red'],
+            'todo' => [__('de făcut'), 'is-amber'],
+            'awaiting_payment' => [__('așteaptă plata'), 'is-blue'],
         ];
     @endphp
 
@@ -119,8 +119,8 @@
     <div class="opsb" wire:poll.30s.visible x-data="{ q: '', hit(el) { return this.q.trim() === '' || el.dataset.s.includes(this.q.trim().toLowerCase()); } }">
         <div class="opsb-bar">
             <div class="opsb-seg">
-                <button type="button" wire:click="setPeriod('week')" @class(['is-on' => $this->period === 'week'])>Săptămână</button>
-                <button type="button" wire:click="setPeriod('month')" @class(['is-on' => $this->period === 'month'])>Lună</button>
+                <button type="button" wire:click="setPeriod('week')" @class(['is-on' => $this->period === 'week'])>{{ __('Săptămână') }}</button>
+                <button type="button" wire:click="setPeriod('month')" @class(['is-on' => $this->period === 'month'])>{{ __('Lună') }}</button>
             </div>
             <button type="button" class="opsb-btn" wire:click="previous" aria-label="{{ __('Perioada anterioară') }}">←</button>
             <div class="opsb-period">{{ $periodLabel }}</div>
@@ -145,7 +145,7 @@
                         <button type="button" wire:click="toggleStatus('{{ $active }}')" class="opsb-stat {{ $pills[$active][1] }} is-on" style="text-decoration:none;">{{ $pills[$active][0] }} ✕</button>
                     @endif
                 @endforeach
-                <span>— se văd doar evenimentele care au cel puțin un task în {{ count($this->status) > 1 ? 'una dintre aceste stări' : 'această stare' }}.</span>
+                <span>— {{ count($this->status) > 1 ? __('se văd doar evenimentele care au cel puțin un task în una dintre aceste stări.') : __('se văd doar evenimentele care au cel puțin un task în această stare.') }}</span>
                 <button type="button" wire:click="clearStatus">{{ __('Șterge filtrul') }}</button>
             </div>
         @endif
@@ -207,7 +207,7 @@
                                 <tr>
                                     <th>{{ __('Eveniment') }}</th>
                                     @foreach($tasks as $taskLabel)
-                                        <th>{{ $taskLabel }}</th>
+                                        <th>{{ __($taskLabel) }}</th>
                                     @endforeach
                                 </tr>
                             </thead>
@@ -234,7 +234,7 @@
                                     @if($this->byRegistry && $row['registry'] !== $lastRegistry)
                                         @php $lastRegistry = $row['registry']; @endphp
                                         <tr class="opsb-group" wire:key="opsb-{{ $key }}-group-{{ $row['registry_id'] ?? 0 }}">
-                                            <td colspan="{{ count($tasks) + 1 }}">{{ $row['registry'] ?? 'Fără registru fiscal' }}</td>
+                                            <td colspan="{{ count($tasks) + 1 }}">{{ $row['registry'] ?? __('Fără registru fiscal') }}</td>
                                         </tr>
                                     @endif
                                     <tr wire:key="opsb-{{ $key }}-{{ $row['id'] }}" @class(['opsb-row-done' => $isDone]) data-s="{{ mb_strtolower($row['title'] . ' ' . $row['organizer']) }}" x-show="{{ $rowShow }}">
@@ -253,7 +253,7 @@
                                             @endif
                                             <div>
                                                 <button type="button" class="opsb-link" wire:click="toggleHistory({{ $row['id'] }})">
-                                                    {{ $this->historyFor === $row['id'] ? 'Ascunde istoricul' : 'Istoric' }}
+                                                    {{ $this->historyFor === $row['id'] ? __('Ascunde istoricul') : __('Istoric') }}
                                                 </button>
                                             </div>
                                         </td>
@@ -265,14 +265,14 @@
                                                         <strong>{{ $cell['label'] }}</strong>
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
                                                         @if($cell['prior'] ?? null)<small class="opsb-prior">{{ $cell['prior'] }}</small>@endif
-                                                        @if($cell['at'] ?? null)<small class="opsb-actor" title="Rezolvat{{ ($cell['by'] ?? null) ? ' de ' . $cell['by'] : '' }} la {{ $cell['at'] }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
+                                                        @if($cell['at'] ?? null)<small class="opsb-actor" title="{{ ($cell['by'] ?? null) ? __('Rezolvat de :name la :date', ['name' => $cell['by'], 'date' => $cell['at']]) : __('Rezolvat la :date', ['date' => $cell['at']]) }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
                                                     </a>
                                                 @else
                                                     <span class="opsb-cell opsb-{{ $cell['state'] }}">
                                                         <strong>{{ $cell['label'] }}</strong>
                                                         @if($cell['detail'])<small>{{ $cell['detail'] }}</small>@endif
                                                         @if($cell['prior'] ?? null)<small class="opsb-prior">{{ $cell['prior'] }}</small>@endif
-                                                        @if($cell['at'] ?? null)<small class="opsb-actor" title="Rezolvat{{ ($cell['by'] ?? null) ? ' de ' . $cell['by'] : '' }} la {{ $cell['at'] }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
+                                                        @if($cell['at'] ?? null)<small class="opsb-actor" title="{{ ($cell['by'] ?? null) ? __('Rezolvat de :name la :date', ['name' => $cell['by'], 'date' => $cell['at']]) : __('Rezolvat la :date', ['date' => $cell['at']]) }}">✓ {{ ($cell['by'] ?? null) ? $cell['by'] . ' · ' : '' }}{{ $cell['at'] }}</small>@endif
                                                     </span>
                                                 @endif
                                                 @if($cell['file'] ?? null)
@@ -289,7 +289,7 @@
                                         <tr class="opsb-history" wire:key="opsb-{{ $key }}-history-{{ $row['id'] }}" data-s="{{ mb_strtolower($row['title'] . ' ' . $row['organizer']) }}" x-show="{{ $rowShow }}">
                                             <td colspan="{{ count($tasks) + 1 }}">
                                                 @if(empty($history))
-                                                    Nimic înregistrat încă pe acest eveniment.
+                                                    {{ __('Nimic înregistrat încă pe acest eveniment.') }}
                                                 @else
                                                     <ul>
                                                         @foreach($history as $entry)

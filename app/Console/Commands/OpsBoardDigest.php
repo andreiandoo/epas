@@ -31,6 +31,7 @@ class OpsBoardDigest extends Command
 
     public function handle(OpsBoardService $board): int
     {
+        app()->setLocale('ro');
         $escalation = (bool) $this->option('escalation');
 
         $pivots = MarketplaceClientMicroservice::query()

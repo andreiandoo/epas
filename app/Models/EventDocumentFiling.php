@@ -91,9 +91,9 @@ class EventDocumentFiling extends Model
     public function methodLabel(): string
     {
         return match ($this->method) {
-            self::METHOD_THIRD_PARTY => 'terț' . ($this->third_party_name ? ' (' . $this->third_party_name . ')' : ''),
-            self::METHOD_ORGANIZER => 'confirmare organizator',
-            self::METHOD_MANUAL => 'depunere manuală',
+            self::METHOD_THIRD_PARTY => __('terț') . ($this->third_party_name ? ' (' . $this->third_party_name . ')' : ''),
+            self::METHOD_ORGANIZER => __('confirmare organizator'),
+            self::METHOD_MANUAL => __('depunere manuală'),
             default => 'email',
         };
     }

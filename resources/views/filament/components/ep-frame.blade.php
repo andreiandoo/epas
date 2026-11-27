@@ -122,6 +122,15 @@
         html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-nav::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ep-frame-muted) 45%, transparent); border-radius: 6px; }
         html.ep-frame .fi-main-sidebar .fi-sidebar-item-btn,
         html.ep-frame .fi-main-sidebar .fi-sidebar-group-btn { white-space: nowrap; }
+        /* Deschis: aceleași poziții ca în starea cu iconițe (pătrate de 40px de la x=12, la 6px unul de altul),
+           ca iconițele să nu se miște când apare meniul. */
+        html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-nav { padding: 12px 12px 24px 11.5px !important; }
+        html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-nav-groups { gap: 6px !important; margin: 0 !important; padding: 0 !important; }
+        html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group { margin: 0 !important; padding: 0 !important; }
+        html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-btn { height: 40px !important; min-height: 40px; padding: 0 8px !important; margin: 0 !important; }
+        html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group:not(:has(> .fi-sidebar-group-btn)) > .fi-sidebar-group-items { gap: 6px !important; margin: 0 !important; padding: 0 !important; }
+        html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group:not(:has(> .fi-sidebar-group-btn)) > .fi-sidebar-group-items > .fi-sidebar-item { margin: 0 !important; }
+        html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group:not(:has(> .fi-sidebar-group-btn)) > .fi-sidebar-group-items > .fi-sidebar-item > .fi-sidebar-item-btn { height: 40px !important; min-height: 40px; padding: 0 8px !important; margin: 0 !important; }
 
         /* Iconița grupei (adăugată din script) */
         html.ep-frame .fi-main-sidebar .ep-gicon { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; color: #10b981; }
@@ -261,7 +270,7 @@
                 html.classList.add('ep-nav-open');
                 requestAnimationFrame(function () { requestAnimationFrame(function () { html.classList.add('ep-nav-reveal'); }); });
                 repositionSecondary();
-            }, 110);
+            }, 60);
         }
         function close() {
             clearTimeout(openT);
@@ -285,7 +294,7 @@
         function syncToggle() {
             document.querySelectorAll('.ep-sidebar-toggle').forEach(function (b) {
                 b.setAttribute('aria-pressed', pinned() ? 'true' : 'false');
-                b.setAttribute('title', pinned() ? 'Meniul rămâne deschis. Click ca să se deschidă doar la hover.' : 'Ține meniul din stânga deschis');
+                b.setAttribute('title', pinned() ? @js(__('Meniul rămâne deschis. Click ca să se deschidă doar la hover.')) : @js(__('Ține meniul din stânga deschis')));
             });
         }
 

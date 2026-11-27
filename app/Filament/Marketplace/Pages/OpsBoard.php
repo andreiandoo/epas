@@ -89,7 +89,7 @@ class OpsBoard extends Page
 
     public function getTitle(): string
     {
-        return 'Operațiuni';
+        return __('Operațiuni');
     }
 
     public function setPeriod(string $period): void
@@ -146,11 +146,11 @@ class OpsBoard extends Page
                 ? Event::where('marketplace_client_id', $marketplaceId)->find((int) ($arguments['event'] ?? 0))
                 : null;
         };
-        $label = fn (array $arguments) => EventDocumentFilingService::TYPE_LABELS[$arguments['type'] ?? ''] ?? 'Document';
+        $label = fn (array $arguments) => __(EventDocumentFilingService::TYPE_LABELS[$arguments['type'] ?? ''] ?? 'Document');
 
         return Actions\Action::make('markFiled')
             ->label(__('Am depus'))
-            ->modalHeading(fn (array $arguments) => 'Am depus: ' . $label($arguments))
+            ->modalHeading(fn (array $arguments) => __('Am depus: :doc', ['doc' => $label($arguments)]))
             ->modalDescription(function (array $arguments) use ($event) {
                 $record = $event($arguments);
                 $title = $record?->title;
@@ -292,9 +292,9 @@ class OpsBoard extends Page
             'history' => $historyEvent ? $service->history($historyEvent) : null,
             'tasks' => OpsBoardService::TASKS,
             'periodLabel' => $this->period === 'month'
-                ? $from->locale('ro')->translatedFormat('F Y')
-                : $from->locale('ro')->translatedFormat('j M') . ' – ' . $to->locale('ro')->translatedFormat('j M Y'),
-            'trackFromLabel' => $this->trackFrom()->locale('ro')->translatedFormat('j M Y'),
+                ? $from->locale(app()->getLocale())->translatedFormat('F Y')
+                : $from->locale(app()->getLocale())->translatedFormat('j M') . ' – ' . $to->locale(app()->getLocale())->translatedFormat('j M Y'),
+            'trackFromLabel' => $this->trackFrom()->locale(app()->getLocale())->translatedFormat('j M Y'),
         ];
     }
 

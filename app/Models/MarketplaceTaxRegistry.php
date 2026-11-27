@@ -125,7 +125,7 @@ class MarketplaceTaxRegistry extends Model
     {
         return match ($this->submission_method) {
             self::SUBMISSION_EMAIL => 'Email',
-            self::SUBMISSION_THIRD_PARTY => 'Terț' . ($this->third_party_name ? ': ' . $this->third_party_name : ''),
+            self::SUBMISSION_THIRD_PARTY => __('Terț') . ($this->third_party_name ? ': ' . $this->third_party_name : ''),
             default => null,
         };
     }

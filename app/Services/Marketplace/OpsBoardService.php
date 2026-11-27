@@ -388,7 +388,7 @@ class OpsBoardService
             'factura' => $this->facturaCell($ended, $cancelled, $payouts, $facts, $decontDue),
             'impozit' => match (true) {
                 $ownDocuments => $theirs,
-                $cancelled => $this->cell('na', 'Nu se aplică', 'eveniment anulat'),
+                $cancelled => $this->cell('na', 'Nu se aplică', __('eveniment anulat')),
                 default => $this->documentCell($docs[self::DOC_TYPES['impozit']] ?? null, $filings[self::DOC_TYPES['impozit']] ?? null, $ended, $taxDue, $docsUrl),
             },
             // A cancelled event still needs its tickets destroyed, right away.
@@ -409,7 +409,7 @@ class OpsBoardService
 
         return [
             'id' => $event->id,
-            'title' => $this->text($event->title) ?: ('Eveniment #' . $event->id),
+            'title' => $this->text($event->title) ?: __('Eveniment #:id', ['id' => $event->id]),
             'date_label' => $this->dateLabel($start, $end),
             'sort' => $start->toDateString(),
             'organizer' => $event->marketplaceOrganizer?->name,
@@ -482,7 +482,7 @@ class OpsBoardService
             ->where('d.event_id', $event->id)
             ->get(['d.created_at', 'd.file_path', 'd.generated_by_name', 't.name as template_name']);
         foreach ($generated as $doc) {
-            $add($doc->created_at, 'Document generat: ' . ($doc->template_name ?: 'document'), $doc->generated_by_name, $file($doc->file_path));
+            $add($doc->created_at, __('Document generat: :name', ['name' => $doc->template_name ?: __('document')]), $doc->generated_by_name, $file($doc->file_path));
         }
         // Organizer-side documents; the mirrored copies of the ones above are skipped.
         $mirrored = $generated->pluck('file_path')->filter()->all();
@@ -492,13 +492,13 @@ class OpsBoardService
             ->get(['created_at', 'file_path', 'title', 'document_type']);
         foreach ($organizerDocs as $doc) {
             if (! in_array($doc->file_path, $mirrored, true)) {
-                $add($doc->created_at, 'Document generat de organizator: ' . ($doc->title ?: $doc->document_type), 'organizator', $file($doc->file_path));
+                $add($doc->created_at, __('Document generat de organizator: :name', ['name' => $doc->title ?: $doc->document_type]), __('organizator'), $file($doc->file_path));
             }
         }
 
         if (EventDocumentFilingService::available()) {
             foreach (EventDocumentFiling::where('event_id', $event->id)->get() as $filing) {
-                $label = EventDocumentFilingService::TYPE_LABELS[$filing->document_type] ?? $filing->document_type;
+                $label = __(EventDocumentFilingService::TYPE_LABELS[$filing->document_type] ?? $filing->document_type);
                 // Marked on another day than it was filed: listed when it was
                 // marked, with the real filing day in the text.
                 $tzName = MarketplaceTz::tz($event->marketplaceClient);
@@ -507,17 +507,19 @@ class OpsBoardService
                     && $filing->created_at->copy()->setTimezone($tzName)->format('d.m.Y') !== $filedDay;
                 $add(
                     $backdated ? $filing->created_at : $filing->filed_at,
-                    'Depus' . ($backdated ? ' pe ' . $filedDay : '') . ': ' . $label . ' prin ' . $filing->methodLabel()
-                        . ($filing->sent_to ? ' la ' . $filing->sent_to : '')
-                        . ($filing->registration_number ? ' · nr. ' . $filing->registration_number : ''),
+                    ($backdated
+                        ? __('Depus pe :date: :doc prin :method', ['date' => $filedDay, 'doc' => $label, 'method' => __($filing->methodLabel())])
+                        : __('Depus: :doc prin :method', ['doc' => $label, 'method' => __($filing->methodLabel())]))
+                        . ($filing->sent_to ? ' ' . __('la :to', ['to' => $filing->sent_to]) : '')
+                        . ($filing->registration_number ? ' · ' . __('nr. :nr', ['nr' => $filing->registration_number]) : ''),
                     $filing->filed_by_name,
                     $docsUrl,
                 );
-                $add($filing->voided_at, 'Depunere anulată: ' . $label, $filing->voided_by_name, $docsUrl);
+                $add($filing->voided_at, __('Depunere anulată: :doc', ['doc' => $label]), $filing->voided_by_name, $docsUrl);
                 if ($filing->registered_at && $filing->registered_file_path) {
                     $add(
                         $filing->registered_at,
-                        'Exemplar înregistrat ' . ($filing->registered_source === EventDocumentFiling::REGISTERED_UPLOADED ? 'încărcat' : 'completat') . ': ' . $label,
+                        ($filing->registered_source === EventDocumentFiling::REGISTERED_UPLOADED ? __('Exemplar înregistrat încărcat: :doc', ['doc' => $label]) : __('Exemplar înregistrat completat: :doc', ['doc' => $label])),
                         $filing->registered_by_name,
                         $file($filing->registered_file_path),
                     );
@@ -536,19 +538,19 @@ class OpsBoardService
                 ->filter()
                 ->unique()
         )->pluck('name', 'id');
-        $requester = ['organizer' => 'organizator', 'automated' => 'sistem'];
+        $requester = ['organizer' => __('organizator'), 'automated' => __('sistem')];
         foreach ($payouts as $payout) {
-            $name = 'Decont ' . ($payout->decont_series ?: $payout->reference);
+            $name = __('Decont :ref', ['ref' => $payout->decont_series ?: $payout->reference]);
             $url = "/marketplace/payouts/{$payout->id}";
             // created_by / completed_by are filled only since they exist;
             // for older rows the source still tells an organizer request apart.
-            $add($payout->created_at, $name . ' creat', $admins[$payout->created_by] ?? $requester[$payout->source] ?? null, $url);
-            $add($payout->approved_at, $name . ' aprobat', $admins[$payout->approved_by] ?? null, $url);
-            $add($payout->completed_at, $name . ' achitat' . ($payout->payment_reference ? ' (' . $payout->payment_reference . ')' : ''), $admins[$payout->completed_by] ?? null, $url);
-            $add($payout->rejected_at, $name . ' respins', $admins[$payout->rejected_by] ?? null, $url);
+            $add($payout->created_at, $name . ' ' . __('creat'), $admins[$payout->created_by] ?? $requester[$payout->source] ?? null, $url);
+            $add($payout->approved_at, $name . ' ' . __('aprobat'), $admins[$payout->approved_by] ?? null, $url);
+            $add($payout->completed_at, $name . ' ' . __('achitat') . ($payout->payment_reference ? ' (' . $payout->payment_reference . ')' : ''), $admins[$payout->completed_by] ?? null, $url);
+            $add($payout->rejected_at, $name . ' ' . __('respins'), $admins[$payout->rejected_by] ?? null, $url);
         }
         foreach ($invoices as $invoice) {
-            $add($invoice->created_at, 'Factură emisă' . ($invoice->number ? ': ' . $invoice->number : ''), $admins[$invoice->issued_by_admin_id] ?? null, "/marketplace/organizer-invoices/{$invoice->id}/edit");
+            $add($invoice->created_at, __('Factură emisă') . ($invoice->number ? ': ' . $invoice->number : ''), $admins[$invoice->issued_by_admin_id] ?? null, "/marketplace/organizer-invoices/{$invoice->id}/edit");
         }
 
         usort($entries, fn ($a, $b) => $b['at'] <=> $a['at']);
@@ -592,24 +594,24 @@ class OpsBoardService
     {
         $registry = $registries[$event->marketplace_tax_registry_id] ?? null;
         if (! $registry) {
-            return ['label' => 'Fără registru fiscal', 'missing' => true, 'url' => "/marketplace/events/{$event->id}/edit"];
+            return ['label' => __('Fără registru fiscal'), 'missing' => true, 'url' => "/marketplace/events/{$event->id}/edit"];
         }
 
         $url = "/marketplace/tax-registry/{$registry->id}/edit";
         if ($orgFiles) {
-            return ['label' => $registry->name . ' · excepție, depune organizatorul', 'missing' => false, 'url' => "/marketplace/organizers/{$event->marketplaceOrganizer->id}/edit?tab=date-legale"];
+            return ['label' => $registry->name . ' · ' . __('excepție, depune organizatorul'), 'missing' => false, 'url' => "/marketplace/organizers/{$event->marketplaceOrganizer->id}/edit?tab=date-legale"];
         }
         $method = $registry->submissionLabel();
 
         return $method
-            ? ['label' => $registry->name . ' · ' . $method, 'missing' => false, 'url' => $url]
-            : ['label' => $registry->name . ' · metodă de depunere nesetată', 'missing' => true, 'url' => $url];
+            ? ['label' => $registry->name . ' · ' . __($method), 'missing' => false, 'url' => $url]
+            : ['label' => $registry->name . ' · ' . __('metodă de depunere nesetată'), 'missing' => true, 'url' => $url];
     }
 
     protected function cerereCell(Event $event, Carbon $start, bool $ended, bool $cancelled, array $docs, array $facts, string $url): array
     {
         if ($cancelled) {
-            return $this->cell('na', 'Nu se aplică', 'eveniment anulat');
+            return $this->cell('na', 'Nu se aplică', __('eveniment anulat'));
         }
 
         $due = $start->copy()->subDays(self::CERERE_DAYS_BEFORE);
@@ -629,7 +631,7 @@ class OpsBoardService
             $cell = $this->cell(
                 'redo',
                 'De refăcut',
-                'bilete modificate după generare',
+                __('bilete modificate după generare'),
                 $due,
                 $this->today->gt($due),
                 true,
@@ -637,9 +639,8 @@ class OpsBoardService
             );
             // Cererea veche a fost totuși depusă: se vede ce și când.
             if ($filing && ! empty($filing['filed_at'])) {
-                $cell['prior'] = 'Depusă anterior: '
-                    . Carbon::parse((string) $filing['filed_at'], 'UTC')->setTimezone($this->tz)->locale('ro')->translatedFormat('j M')
-                    . (! empty($filing['registration_number']) ? ' · nr. ' . $filing['registration_number'] : ' · fără nr. înregistrare')
+                $cell['prior'] = __('Depusă anterior: :date', ['date' => Carbon::parse((string) $filing['filed_at'], 'UTC')->setTimezone($this->tz)->locale(app()->getLocale())->translatedFormat('j M')])
+                    . (! empty($filing['registration_number']) ? ' · ' . __('nr. :nr', ['nr' => $filing['registration_number']]) : ' · ' . __('fără nr. înregistrare'))
                     . (! empty($filing['by']) ? ' · ' . $filing['by'] : '');
             }
 
@@ -666,10 +667,10 @@ class OpsBoardService
     {
         if ($payouts->isEmpty()) {
             if ($cancelled) {
-                return $this->cell('na', 'Nu se aplică', 'eveniment anulat');
+                return $this->cell('na', 'Nu se aplică', __('eveniment anulat'));
             }
             if (! $ended) {
-                return $this->cell('waiting', 'După eveniment', 'scadent ' . $this->day($due));
+                return $this->cell('waiting', 'După eveniment', __('scadent :date', ['date' => $this->day($due)]));
             }
 
             return $this->todoCell($due, '/marketplace/payouts');
@@ -682,14 +683,14 @@ class OpsBoardService
         $unpaid = $payouts->filter(fn ($p) => $p->status !== 'completed');
         if ($unpaid->isNotEmpty()) {
             $days = (int) Carbon::parse($unpaid->min('created_at'))->setTimezone($this->tz)->startOfDay()->diffInDays($this->today);
-            $detail = ($unpaid->count() > 1 ? $unpaid->count() . ' deconturi · ' : '')
-                . ($days > 0 ? 'de ' . $days . ($days === 1 ? ' zi' : ' zile') : 'de azi');
+            $detail = ($unpaid->count() > 1 ? __(':n deconturi', ['n' => $unpaid->count()]) . ' · ' : '')
+                . ($days > 0 ? ($days === 1 ? __('de o zi') : __('de :n zile', ['n' => $days])) : __('de azi'));
 
             return $this->cell('progress', 'Așteaptă plata', $detail, null, false, true, $url);
         }
 
         if (! $ended) {
-            return $this->cell('waiting', 'Parțial achitat', 'decontul final după eveniment', null, false, false, $url);
+            return $this->cell('waiting', 'Parțial achitat', __('decontul final după eveniment'), null, false, false, $url);
         }
 
         $left = $this->ticketsLeftOut($event, $payouts, $facts);
@@ -697,7 +698,7 @@ class OpsBoardService
             return $this->cell(
                 'warn',
                 'Achitat parțial',
-                $left . ($left === 1 ? ' bilet nedecontat' : ' bilete nedecontate'),
+                $left === 1 ? __('1 bilet nedecontat') : __(':n bilete nedecontate', ['n' => $left]),
                 null,
                 false,
                 true,
@@ -718,13 +719,13 @@ class OpsBoardService
     {
         if ($payouts->isEmpty()) {
             return $cancelled
-                ? $this->cell('na', 'Nu se aplică', 'eveniment anulat')
+                ? $this->cell('na', 'Nu se aplică', __('eveniment anulat'))
                 : $this->cell('waiting', 'După decont');
         }
 
         // No commission, nothing to invoice.
         if ((float) $payouts->sum(fn ($p) => (float) $p->commission_amount) <= 0.01) {
-            return $this->cell('na', 'Nu se aplică', 'comision 0');
+            return $this->cell('na', 'Nu se aplică', __('comision 0'));
         }
 
         $invoiceId = $payouts->map(fn ($p) => $facts['invoiced'][$p->id] ?? null)->filter()->max();
@@ -752,7 +753,7 @@ class OpsBoardService
             return $this->filedCell($filing, $generatedAt, $due, $url);
         }
         if (! $applies) {
-            return $this->cell('waiting', 'După eveniment', 'scadent ' . $this->day($due));
+            return $this->cell('waiting', 'După eveniment', __('scadent :date', ['date' => $this->day($due)]));
         }
 
         return $this->todoCell($due, $url);
@@ -770,8 +771,8 @@ class OpsBoardService
         }
 
         if (EventDocumentFilingService::covers($filing, $generatedAt)) {
-            $detail = $filing['method_label'] . ($generatedAt ? '' : ', fără document în platformă')
-                . (! empty($filing['registration_number']) ? ' · nr. ' . $filing['registration_number'] : '');
+            $detail = __((string) $filing['method_label']) . ($generatedAt ? '' : ', ' . __('fără document în platformă'))
+                . (! empty($filing['registration_number']) ? ' · ' . __('nr. :nr', ['nr' => $filing['registration_number']]) : '');
 
             return $this->withActor(
                 $this->cell('done', 'Depus', $detail, null, false, false, $url),
@@ -782,15 +783,15 @@ class OpsBoardService
 
         // Nu putem depune noi la această primărie: nu e o sarcină a operatorilor.
         if ($this->orgFiles) {
-            return $this->cell('generated', 'Generat', 'depune organizatorul', $due, false, false, $url);
+            return $this->cell('generated', 'Generat', __('depune organizatorul'), $due, false, false, $url);
         }
 
         $label = $filing ? 'De redepus' : 'De depus';
         $late = (int) $due->diffInDays($this->today, false);
 
         return $late > 0
-            ? $this->cell('overdue', $label, 'restant de ' . $late . ($late === 1 ? ' zi' : ' zile'), $due, true, true, $url)
-            : $this->cell('tofile', $label, $late === 0 ? 'scadent azi' : 'scadent ' . $this->day($due), $due, false, true, $url);
+            ? $this->cell('overdue', $label, ($late === 1 ? __('restant de o zi') : __('restant de :n zile', ['n' => $late])), $due, true, true, $url)
+            : $this->cell('tofile', $label, $late === 0 ? __('scadent azi') : __('scadent :date', ['date' => $this->day($due)]), $due, false, true, $url);
     }
 
     /**
@@ -821,8 +822,8 @@ class OpsBoardService
         $late = (int) $due->diffInDays($this->today, false);
 
         return $late > 0
-            ? $this->cell('overdue', 'Restant', 'de ' . $late . ($late === 1 ? ' zi' : ' zile') . ' · scadent ' . $this->day($due), $due, true, true, $url)
-            : $this->cell('todo', 'De făcut', $late === 0 ? 'scadent azi' : 'scadent ' . $this->day($due), $due, false, true, $url);
+            ? $this->cell('overdue', 'Restant', ($late === 1 ? __('de o zi') : __('de :n zile', ['n' => $late])) . ' · ' . __('scadent :date', ['date' => $this->day($due)]), $due, true, true, $url)
+            : $this->cell('todo', 'De făcut', $late === 0 ? __('scadent azi') : __('scadent :date', ['date' => $this->day($due)]), $due, false, true, $url);
     }
 
     /**
@@ -833,7 +834,7 @@ class OpsBoardService
     {
         return [
             'state' => $state,
-            'label' => $label,
+            'label' => __($label),
             'detail' => $detail,
             'due' => $due?->toDateString(),
             'overdue' => $overdue,
@@ -854,7 +855,7 @@ class OpsBoardService
     {
         $cell['by'] = $by ?: null;
         $cell['at'] = $at
-            ? Carbon::parse((string) $at, 'UTC')->setTimezone($this->tz)->locale('ro')->translatedFormat('j M, H:i')
+            ? Carbon::parse((string) $at, 'UTC')->setTimezone($this->tz)->locale(app()->getLocale())->translatedFormat('j M, H:i')
             : null;
 
         return $cell;
@@ -939,15 +940,15 @@ class OpsBoardService
     protected function dateLabel(Carbon $start, Carbon $end): string
     {
         if ($start->equalTo($end)) {
-            return $start->locale('ro')->translatedFormat('D, j M');
+            return $start->locale(app()->getLocale())->translatedFormat('D, j M');
         }
 
-        return $start->locale('ro')->translatedFormat('j M') . ' – ' . $end->locale('ro')->translatedFormat('j M');
+        return $start->locale(app()->getLocale())->translatedFormat('j M') . ' – ' . $end->locale(app()->getLocale())->translatedFormat('j M');
     }
 
     protected function day(Carbon $date): string
     {
-        return $date->locale('ro')->translatedFormat('j M');
+        return $date->locale(app()->getLocale())->translatedFormat('j M');
     }
 
     /** Timestamps are stored in UTC; show the day in the marketplace timezone. */
