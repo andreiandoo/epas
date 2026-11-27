@@ -31,7 +31,17 @@
     }
     .epc-tile:hover, .epc-tile:focus-visible { transform: translateX(-3px); outline: none; box-shadow: 0 0 0 2px var(--epc-rail), 0 0 0 4px var(--col); }
     .epc-tile.is-empty { background: transparent; color: var(--col); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--col) 45%, transparent); opacity: .75; }
-    .epc-tile .epc-new { position: absolute; top: -4px; right: -4px; width: 11px; height: 11px; border-radius: 50%; background: var(--epc-fg); border: 2px solid var(--epc-rail); }
+    .epc-tile { --cut: var(--col); }
+    .epc-tile.is-empty { --cut: var(--epc-rail); }
+    .epc-tile svg { width: 21px; height: 21px; display: block; }
+    /* Contorul: etichetă cu fundal, ridicată ca un <sup> în colțul iconiței */
+    .epc-tile .epc-count {
+        position: absolute; top: -8px; right: -10px; min-width: 19px; height: 19px; padding: 0 5px;
+        border-radius: 10px; font-size: 10.5px; font-weight: 700; line-height: 15px; text-align: center;
+        background: var(--epc-fg); color: var(--epc-rail); border: 2px solid var(--epc-rail);
+        font-variant-numeric: tabular-nums; pointer-events: none;
+    }
+    .epc-tile .epc-count.is-new { background: #f2645f; color: #fff; }
     .epc-tile.is-hot::after { content: ""; position: absolute; inset: -5px; border-radius: 12px; border: 2px solid var(--col); animation: epc-pulse 1.6s ease-out infinite; pointer-events: none; }
     @keyframes epc-pulse { from { opacity: .9; transform: scale(.92); } to { opacity: 0; transform: scale(1.18); } }
     .epc-spacer { flex: 1; }
@@ -168,6 +178,14 @@
     var CATS = ['chat', 'ticket', 'todo', 'artist', 'event'];
     var LABEL = { chat: 'Chat clienți', ticket: 'Tichete suport', todo: 'ToDos', artist: 'Conturi artist în review', event: 'Evenimente de revizuit' };
     var COLOR = { chat: 'var(--epc-chat)', ticket: 'var(--epc-ticket)', todo: 'var(--epc-todo)', artist: 'var(--epc-artist)', event: 'var(--epc-event)' };
+    // Iconițe pline per categorie; detaliile interioare se „decupează” cu var(--cut).
+    var ICONS = {
+        chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3.5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-9.2L6 21.2V17.5H4a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2z"/><path stroke="var(--cut)" stroke-width="1.8" stroke-linecap="round" d="M7 9h10M7 12.5h6"/></svg>',
+        ticket: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5h16a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/><path stroke="var(--cut)" stroke-width="1.6" stroke-dasharray="1.6 1.8" d="M15 6.5v11"/></svg>',
+        todo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 2.5h6a1.5 1.5 0 0 1 1.5 1.5H18a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1.5A1.5 1.5 0 0 1 9 2.5z"/><path fill="none" stroke="var(--cut)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 13.5l2.7 2.7L16.5 10"/></svg>',
+        artist: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20 2.5v13.2a3.3 3.3 0 1 1-2-3V7.4l-8 1.6v8.7a3.3 3.3 0 1 1-2-3V5.3z"/></svg>',
+        event: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2h2v2h6V2h2v2h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2z"/><path stroke="var(--cut)" stroke-width="1.6" d="M3 9h18"/><path fill="var(--cut)" d="M7 12h3v3H7zM14 12h3v3h-3z"/></svg>'
+    };
     var LS_PIN = 'epc_pinned', LS_SEEN = 'epc_seen', LS_SOUND = 'epc_sound', LS_KNOWN = 'epc_known';
 
     var root = document.getElementById('epc-root');
@@ -362,9 +380,13 @@
             b.style.setProperty('--col', COLOR[cat]);
             b.title = LABEL[cat];
             b.setAttribute('aria-label', LABEL[cat] + ': ' + list.length);
-            b.textContent = list.length > 99 ? '99+' : String(list.length);
-            if (list.some(function (i) { return seen.indexOf(i.key) === -1; })) {
-                var d = document.createElement('span'); d.className = 'epc-new'; b.appendChild(d);
+            b.innerHTML = ICONS[cat];
+            if (list.length) {
+                var c = document.createElement('span');
+                var isNew = list.some(function (i) { return seen.indexOf(i.key) === -1; });
+                c.className = 'epc-count' + (isNew ? ' is-new' : '');
+                c.textContent = list.length > 99 ? '99+' : String(list.length);
+                b.appendChild(c);
             }
             b.addEventListener('click', function () {
                 open();
