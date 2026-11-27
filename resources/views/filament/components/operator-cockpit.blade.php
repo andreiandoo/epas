@@ -186,6 +186,15 @@
     .epc-catbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px 0; font-size: 12.5px; color: var(--epc-muted); }
     .epc-catbar b { color: var(--epc-fg); }
     .epc-catbar button { border: 0; background: transparent; color: var(--epc-muted); cursor: pointer; font-size: 12.5px; text-decoration: underline; padding: 0; }
+    .epc-helppop {
+        position: fixed; right: 64px; z-index: 43; width: 240px; padding: 14px 16px; border-radius: 12px;
+        background: var(--epc-drawer); border: 1px solid var(--epc-line); color: var(--epc-fg);
+        box-shadow: 0 16px 40px rgba(0,0,0,.3); display: grid; gap: 6px; font-size: 13px;
+    }
+    .epc-helppop p { margin: 0 0 4px; color: var(--epc-muted); font-size: 12.5px; }
+    .epc-helppop a { color: #10b981; text-decoration: none; font-weight: 600; }
+    .epc-helppop a:hover { text-decoration: underline; }
+    .epc-helpbtn { color: #10b981 !important; }
     .epc-empty { padding: 28px 16px; color: var(--epc-muted); font-size: 13px; }
     .epc-msg { margin: 8px 12px 0; padding: 8px 10px; border-radius: 7px; font-size: 12.5px; background: color-mix(in srgb, var(--epc-late) 14%, transparent); color: var(--epc-fg); }
     .epc-foot { border-top: 1px solid var(--epc-line); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--epc-muted); }
@@ -199,7 +208,6 @@
 
 <div id="epc-root" data-me="{{ (int) ($meId ?? 0) }}" data-poll-ms="{{ (int) config('operator_cockpit.poll_interval_ms', 15000) }}" data-client-id="{{ (int) ($clientId ?? 0) }}">
     <nav class="epc-rail" aria-label="Bara de atenție">
-        <span class="epc-rail-lbl">Acțiuni</span>
         <div class="epc-tiles" style="display:grid;gap:10px"></div>
         <div class="epc-sep"></div>
         <span class="epc-rail-lbl">Echipa</span>
@@ -213,7 +221,17 @@
             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
             <span class="epc-jn" hidden></span>
         </button>
+        <button type="button" class="epc-icon-btn epc-helpbtn" title="Ai nevoie de ajutor?" aria-label="Ai nevoie de ajutor?" aria-expanded="false">
+            <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path stroke-linecap="round" d="M5.6 5.6l3.9 3.9M18.4 5.6l-3.9 3.9M5.6 18.4l3.9-3.9M18.4 18.4l-3.9-3.9"/></svg>
+        </button>
     </nav>
+
+    <div class="epc-helppop" role="dialog" aria-label="Ajutor" hidden>
+        <b>Ai nevoie de ajutor?</b>
+        <p>Scrie-ne sau sună-ne, te ajutăm cu panoul.</p>
+        <a href="mailto:help@tixello.com">help@tixello.com</a>
+        <a href="tel:0040750292962">0040 750 29 29 62</a>
+    </div>
 
     <button type="button" class="epc-fab" aria-label="Deschide bara de atenție" hidden>
         <span class="epc-fab-n">0</span><span class="epc-fab-dot" hidden></span>
@@ -967,6 +985,23 @@
         }
     });
     root.querySelector('.epc-setbtn').addEventListener('click', function () { open(); setTab('settings'); });
+
+    // „Ai nevoie de ajutor?” (mutat din meniul din stânga)
+    var helpBtn = root.querySelector('.epc-helpbtn');
+    var helpPop = root.querySelector('.epc-helppop');
+    helpBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var show = helpPop.hidden;
+        if (show) {
+            var r = helpBtn.getBoundingClientRect();
+            helpPop.style.bottom = Math.max(8, window.innerHeight - r.bottom) + 'px';
+        }
+        helpPop.hidden = !show;
+        helpBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+        if (!helpPop.hidden && !helpPop.contains(e.target)) { helpPop.hidden = true; helpBtn.setAttribute('aria-expanded', 'false'); }
+    });
 
     // ================================================================ prezență
     // „Online” = cel puțin o fereastră a panoului deschisă (chiar și în fundal).

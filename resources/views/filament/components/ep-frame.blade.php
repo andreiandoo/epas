@@ -35,7 +35,7 @@
             display: flex; align-items: center; transition: left .18s cubic-bezier(.2,.8,.2,1);
         }
         /* epas-skin face bara transparentă pe dark și îi pune umbră; în cadru are fundalul barelor laterale */
-        html.ep-frame body .fi-custom-topbar.fi-custom-topbar { background-color: var(--ep-frame-bg) !important; background-image: none !important; box-shadow: none !important; }
+        html.ep-frame body .fi-custom-topbar.fi-custom-topbar.fi-custom-topbar.fi-custom-topbar { background-color: var(--ep-frame-bg) !important; background-image: none !important; box-shadow: none !important; }
         html.ep-frame .fi-custom-topbar > .ep-topbar-row { width: 100%; max-width: none; height: var(--ep-top); align-items: center; gap: 12px; }
         html.ep-frame .fi-custom-topbar > .ep-topbar-row > * { align-self: center; }
         html.ep-frame .ep-frame-brand {
@@ -73,7 +73,7 @@
 
         /* ---- conținutul: lasă loc cadrului ---- */
         html.ep-frame .fi-layout { padding-left: var(--ep-left-now); transition: padding-left .18s cubic-bezier(.2,.8,.2,1); }
-        html.ep-frame .fi-main-ctn { padding-top: var(--ep-top); }
+        html.ep-frame .fi-main-ctn { padding-top: calc(var(--ep-top) + 20px); }
 
         /* ---- meniul din stânga: pe toată înălțimea ---- */
         html.ep-frame .fi-sidebar.fi-main-sidebar {
@@ -90,8 +90,8 @@
         }
         html.ep-frame .fi-main-sidebar .fi-sidebar-header,
         html.ep-frame .fi-main-sidebar .ep-sidebar-logo { display: none !important; }
-        html.ep-frame .fi-main-sidebar .fi-sidebar-nav,
-        html.ep-frame .fi-main-sidebar .fi-sidebar-footer { background: transparent !important; }
+        html.ep-frame .fi-main-sidebar .fi-sidebar-nav { background: transparent !important; }
+        html.ep-frame .fi-main-sidebar .fi-sidebar-footer { display: none !important; }
         html.ep-frame .fi-main-sidebar .fi-sidebar-nav { padding-top: 12px !important; scrollbar-width: none; }
         html.ep-frame .fi-main-sidebar .fi-sidebar-nav::-webkit-scrollbar { width: 0; }
         html.ep-frame:is(.ep-nav-open, .ep-nav-pinned) .fi-main-sidebar .fi-sidebar-nav { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ep-frame-muted) 45%, transparent) transparent; }
@@ -101,10 +101,12 @@
         html.ep-frame .fi-main-sidebar .fi-sidebar-group-btn { white-space: nowrap; }
 
         /* Iconița grupei (adăugată din script) */
-        html.ep-frame .fi-main-sidebar .ep-gicon { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; color: var(--ep-frame-muted); }
+        html.ep-frame .fi-main-sidebar .ep-gicon { display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none; color: #10b981; }
         html.ep-frame .fi-main-sidebar .ep-gicon svg { width: 22px; height: 22px; }
+        /* iconița proprie a grupei Chat, pe aceeași culoare */
+        html.ep-frame .fi-main-sidebar .fi-sidebar-group-btn > svg:first-child { color: #10b981 !important; }
         html.ep-frame .fi-main-sidebar .fi-sidebar-group.fi-active .ep-gicon,
-        html.ep-frame .fi-main-sidebar .fi-sidebar-group-btn:hover .ep-gicon { color: var(--ep-frame-fg); }
+        html.ep-frame .fi-main-sidebar .fi-sidebar-group-btn:hover .ep-gicon { color: #34d399; }
         html.ep-frame .fi-main-sidebar .fi-sidebar-group-btn { gap: 10px; }
 
         /* Închis: o iconiță pe grupă (ca la Chat), elementele grupei apar la deschidere */
@@ -133,6 +135,8 @@
 
         /* Bara de atenție din dreapta: pe toată înălțimea */
         html.ep-frame .epc-rail, html.ep-frame .epc-drawer { top: 0 !important; }
+        html.ep-frame .epc-rail { z-index: 42 !important; }
+        html.ep-frame .epc-drawer { z-index: 41 !important; }
 
         /* Tooltip-ul vechi pentru modul „doar iconițe” nu mai e necesar */
         html.ep-frame .ep-rail-tooltip { display: none !important; }
@@ -232,6 +236,29 @@
             });
         }
 
+        // Ascultători pe document, nu pe meniu: Filament re-randează meniul când deschizi o grupă,
+        // iar ascultătorii puși direct pe element s-ar pierde.
+        function inMenu(el) { return !!(el && el.closest && el.closest('.fi-main-sidebar, #ep-secondary-sidebar')); }
+        document.addEventListener('mouseover', function (e) {
+            if (!framed()) return;
+            if (inMenu(e.target)) open();
+        });
+        document.addEventListener('mouseout', function (e) {
+            if (!framed() || !inMenu(e.target)) return;
+            if (!inMenu(e.relatedTarget)) close();
+        });
+        document.addEventListener('focusin', function (e) { if (framed() && inMenu(e.target)) open(); });
+        // Plasă de siguranță: dacă mouse-ul e clar în afara meniului și meniul a rămas deschis, îl închidem.
+        var lastCheck = 0;
+        document.addEventListener('mousemove', function (e) {
+            if (!framed() || pinned() || !html.classList.contains('ep-nav-open') || secondaryOpen()) return;
+            var now = Date.now();
+            if (now - lastCheck < 150) return;
+            lastCheck = now;
+            var side = document.querySelector('.fi-sidebar.fi-main-sidebar');
+            if (side && e.clientX > side.getBoundingClientRect().right + 12 && !inMenu(e.target)) close();
+        }, { passive: true });
+
         function bind() {
             syncToggle();
             if (!framed()) return;
@@ -239,19 +266,11 @@
             var side = document.querySelector('.fi-sidebar.fi-main-sidebar');
             if (!side || side.__epFrameBound) return;
             side.__epFrameBound = true;
-            side.addEventListener('mouseenter', open);
-            side.addEventListener('mouseleave', close);
-            side.addEventListener('focusin', open);
-            side.addEventListener('focusout', function (e) { if (!side.contains(e.relatedTarget)) close(); });
-            var sec = document.getElementById('ep-secondary-sidebar');
-            if (sec && !sec.__epFrameBound) {
-                sec.__epFrameBound = true;
-                sec.addEventListener('mouseenter', function () { clearTimeout(closeT); });
-            }
             if (document.body && !document.body.__epFrameObs) {
                 document.body.__epFrameObs = true;
                 new MutationObserver(function () {
-                    if (!secondaryOpen() && !side.matches(':hover')) close();
+                    var s = document.querySelector('.fi-sidebar.fi-main-sidebar');
+                    if (!secondaryOpen() && !(s && s.matches(':hover'))) close();
                 }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
             }
             // Filament re-randează meniul la unele acțiuni; refacem iconițele grupelor.
