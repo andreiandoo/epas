@@ -364,12 +364,13 @@ class MarketplacePanelProvider extends PanelProvider
                         return '';
                     }
 
-                    $html = view('filament.components.operator-cockpit', ['clientId' => (int) $admin->marketplace_client_id])->render();
+                    $html = view('filament.components.operator-cockpit', ['clientId' => (int) $admin->marketplace_client_id, 'meId' => (int) $admin->id])->render();
 
-                    // Dock-ul de chat vine cu bara, doar dacă marketplace-ul are și live-chat.
-                    if ($admin->marketplaceClient?->hasMicroservice('live-chat')) {
-                        $html .= view('filament.components.chat-dock')->render();
-                    }
+                    // Dock-ul de chat (clienți dacă e live-chat, plus chatul intern al echipei).
+                    $html .= view('filament.components.chat-dock', [
+                        'meId' => (int) $admin->id,
+                        'liveChat' => (bool) $admin->marketplaceClient?->hasMicroservice('live-chat'),
+                    ])->render();
 
                     return $html;
                 } catch (\Throwable $e) {
@@ -427,6 +428,8 @@ class MarketplacePanelProvider extends PanelProvider
 
                 // New unclaimed chat: two rising notes (attention chime)
                 function playNewChat() {
+                    // Cu bara activă, sunetele trec prin preferințele operatorului (și Nu deranja).
+                    if (window.epSound) { window.epSound.play('chat_new'); return; }
                     if (!audioUnlocked) return;
                     playNote(660, 0, 0.18);
                     playNote(880, 0.09, 0.18);
@@ -434,6 +437,7 @@ class MarketplacePanelProvider extends PanelProvider
 
                 // New message on a claimed chat: single soft note
                 function playNewMessage() {
+                    if (window.epSound) { window.epSound.play('chat_mine'); return; }
                     if (!audioUnlocked) return;
                     playNote(520, 0, 0.14);
                 }

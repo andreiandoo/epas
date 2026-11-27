@@ -63,3 +63,9 @@ Broadcast::channel('cockpit.{marketplaceClientId}', function ($user, $marketplac
     $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
     return $admin && (int) ($admin->marketplace_client_id ?? 0) === (int) $marketplaceClientId;
 }, ['guards' => ['marketplace_admin']]);
+
+// Chatul intern al echipei: fiecare operator primește pe canalul lui mesajele din conversațiile în care e membru.
+Broadcast::channel('team-user.{adminId}', function ($user, $adminId) {
+    $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+    return $admin && (int) $admin->id === (int) $adminId;
+}, ['guards' => ['marketplace_admin']]);

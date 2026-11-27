@@ -299,6 +299,11 @@ Schedule::command('chat:purge-transcripts')
     ->dailyAt('04:00')
     ->withoutOverlapping();
 
+// Chatul intern: atașamentele se șterg după 30 de zile (cele marcate „Păstrează”, după un an).
+Schedule::command('team-chat:purge-attachments')
+    ->dailyAt('04:30')
+    ->withoutOverlapping();
+
 // Notificări marketplace (operatori + organizatori): doar ultimele 3 zile.
 Schedule::command('marketplace-notifications:prune --days=3 --organizer-days=3')
     ->dailyAt('04:20')

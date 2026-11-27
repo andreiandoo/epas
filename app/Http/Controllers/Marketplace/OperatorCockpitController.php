@@ -28,6 +28,7 @@ class OperatorCockpitController extends Controller
             'items' => $items,
             'counts' => array_map('count', $items),
             'journal' => $this->journal(),
+            'prefs' => $this->prefs(Auth::guard('marketplace_admin')->user()),
             'generated_at' => now()->toIso8601String(),
         ]);
     }
@@ -62,6 +63,61 @@ class OperatorCockpitController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Sunete per categorie și „Nu deranja”. Salvate pe operator, ca să-l urmeze pe orice calculator.
+     */
+    public function savePrefs(Request $request): JsonResponse
+    {
+        $admin = Auth::guard('marketplace_admin')->user();
+        if (! $this->service() || ! $admin instanceof MarketplaceAdmin) {
+            return response()->json(['ok' => false], 403);
+        }
+
+        $current = $this->prefs($admin);
+        $sounds = (array) $request->input('sounds', []);
+        foreach (array_keys($current['sounds']) as $key) {
+            if (array_key_exists($key, $sounds)) {
+                $current['sounds'][$key] = (bool) $sounds[$key];
+            }
+        }
+
+        if ($request->has('dnd_minutes')) {
+            $minutes = (int) $request->input('dnd_minutes');
+            $current['dnd_until'] = match (true) {
+                $minutes === -1 => now()->addDay()->startOfDay()->addHours(8)->toIso8601String(), // până mâine la 8
+                $minutes > 0 => now()->addMinutes(min($minutes, 1440))->toIso8601String(),
+                default => null,
+            };
+        }
+
+        $settings = (array) ($admin->settings ?? []);
+        $settings['cockpit_prefs'] = $current;
+        $admin->forceFill(['settings' => $settings])->saveQuietly();
+
+        return response()->json(['ok' => true, 'prefs' => $this->prefs($admin->fresh())]);
+    }
+
+    private function prefs($admin): array
+    {
+        $saved = (array) data_get($admin?->settings, 'cockpit_prefs', []);
+        $sounds = array_merge(
+            ['action' => true, 'chat' => true, 'dm' => true, 'group' => true],
+            array_map('boolval', (array) ($saved['sounds'] ?? []))
+        );
+        $dnd = $saved['dnd_until'] ?? null;
+        if ($dnd) {
+            try {
+                if (\Carbon\Carbon::parse($dnd)->isPast()) {
+                    $dnd = null;
+                }
+            } catch (\Throwable) {
+                $dnd = null;
+            }
+        }
+
+        return ['sounds' => array_intersect_key($sounds, array_flip(['action', 'chat', 'dm', 'group'])), 'dnd_until' => $dnd];
     }
 
     public function journalRead(Request $request): JsonResponse

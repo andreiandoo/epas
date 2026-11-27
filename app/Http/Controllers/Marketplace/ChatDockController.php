@@ -24,29 +24,45 @@ class ChatDockController extends Controller
 
     public function state(): JsonResponse
     {
-        $admin = $this->admin();
+        $admin = $this->operator();
         if (! $admin) {
             return response()->json(['ok' => false], 403);
         }
 
         $clientId = (int) $admin->marketplace_client_id;
+        $hasLiveChat = (bool) $admin->marketplaceClient?->hasMicroservice('live-chat');
         $windows = collect((array) data_get($admin->settings, 'chat_dock', []))
             ->filter(fn ($w) => is_array($w) && ! empty($w['ref']))
             ->map(fn ($w) => ['ref' => (string) $w['ref'], 'min' => (bool) ($w['min'] ?? false)])
             ->values();
 
-        // Doar conversațiile care încă există.
-        $existing = ChatConversation::query()
+        // Doar conversațiile care încă există (și, la chatul intern, unde operatorul e încă membru).
+        $existing = $hasLiveChat ? ChatConversation::query()
             ->where('marketplace_client_id', $clientId)
             ->whereIn('reference', $windows->pluck('ref'))
             ->pluck('reference')
+            ->all() : [];
+
+        $teamIds = $windows->pluck('ref')
+            ->filter(fn ($r) => str_starts_with($r, 'team:'))
+            ->map(fn ($r) => (int) substr($r, 5))
             ->all();
+        if ($teamIds && \App\Services\TeamChat\TeamChatService::isAvailable()) {
+            $memberOf = \App\Models\TeamChat\TeamThreadMember::query()
+                ->where('marketplace_admin_id', $admin->id)
+                ->whereIn('team_thread_id', $teamIds)
+                ->pluck('team_thread_id')
+                ->map(fn ($id) => 'team:' . $id)
+                ->all();
+            $existing = array_merge($existing, $memberOf);
+        }
 
         return response()->json([
             'ok' => true,
             'me' => ['id' => (int) $admin->id, 'name' => $this->cleanName($admin->name)],
+            'live_chat' => $hasLiveChat,
             'windows' => $windows->filter(fn ($w) => in_array($w['ref'], $existing, true))->values(),
-            'canned' => ChatCannedResponse::query()
+            'canned' => ! $hasLiveChat ? [] : ChatCannedResponse::query()
                 ->where('marketplace_client_id', $clientId)
                 ->where('is_active', true)
                 ->orderBy('sort_order')->orderBy('title')
@@ -57,7 +73,7 @@ class ChatDockController extends Controller
 
     public function saveState(Request $request): JsonResponse
     {
-        $admin = $this->admin();
+        $admin = $this->operator();
         if (! $admin) {
             return response()->json(['ok' => false], 403);
         }
@@ -227,6 +243,19 @@ class ChatDockController extends Controller
     }
 
     // ------------------------------------------------------------------
+
+    /**
+     * Operator cu bara activă; nu cere live-chat (dock-ul ține și ferestrele de chat intern).
+     */
+    private function operator(): ?MarketplaceAdmin
+    {
+        $admin = Auth::guard('marketplace_admin')->user();
+        if (! $admin instanceof MarketplaceAdmin || ! \App\Services\OperatorCockpit\AttentionService::isEnabledFor($admin->marketplaceClient)) {
+            return null;
+        }
+
+        return $admin;
+    }
 
     private function admin(): ?MarketplaceAdmin
     {

@@ -662,6 +662,27 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         ->name('marketplace.cockpit.snooze');
     Route::post('/cockpit/journal-read', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'journalRead'])
         ->name('marketplace.cockpit.journal-read');
+    Route::post('/cockpit/prefs', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'savePrefs'])
+        ->name('marketplace.cockpit.prefs');
+
+    // Chatul intern al echipei
+    Route::prefix('team-chat')->group(function () {
+        Route::get('/threads', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'threads'])->name('marketplace.team-chat.threads');
+        Route::post('/dm', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'dm'])->name('marketplace.team-chat.dm');
+        Route::post('/groups', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'group'])->name('marketplace.team-chat.group');
+        Route::post('/help', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'help'])->name('marketplace.team-chat.help');
+        Route::get('/threads/{thread}', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'show'])->whereNumber('thread')->name('marketplace.team-chat.show');
+        Route::post('/threads/{thread}/messages', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'post'])->whereNumber('thread')->name('marketplace.team-chat.post');
+        Route::post('/threads/{thread}/read', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'read'])->whereNumber('thread')->name('marketplace.team-chat.read');
+        Route::post('/threads/{thread}/typing', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'typing'])->whereNumber('thread')->name('marketplace.team-chat.typing');
+        Route::post('/threads/{thread}/members', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'addMembers'])->whereNumber('thread')->name('marketplace.team-chat.members');
+        Route::post('/threads/{thread}/leave', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'leave'])->whereNumber('thread')->name('marketplace.team-chat.leave');
+        Route::post('/threads/{thread}/mute', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'mute'])->whereNumber('thread')->name('marketplace.team-chat.mute');
+        Route::post('/messages/{message}/edit', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'edit'])->whereNumber('message')->name('marketplace.team-chat.edit');
+        Route::post('/messages/{message}/delete', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'destroy'])->whereNumber('message')->name('marketplace.team-chat.delete');
+        Route::get('/attachments/{attachment}', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'attachment'])->whereNumber('attachment')->name('marketplace.team-chat.attachment');
+        Route::post('/attachments/{attachment}/keep', [\App\Http\Controllers\Marketplace\TeamChatController::class, 'keep'])->whereNumber('attachment')->name('marketplace.team-chat.keep');
+    });
 
     // Dock-ul de chat (ferestre lipite jos, în orice ecran)
     Route::get('/chat-dock/state', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'state'])
