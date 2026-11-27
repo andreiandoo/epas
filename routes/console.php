@@ -214,6 +214,15 @@ Schedule::command('db:backup --verify')
         \Log::error('Daily database backup (db:backup) failed');
     });
 
+// Chatul intern nu intră în backup-ul zilnic; mesajele text se salvează separat, săptămânal.
+Schedule::command('db:backup-team-chat')
+    ->weeklyOn(0, '03:40')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        \Log::error('Weekly team chat backup (db:backup-team-chat) failed');
+    });
+
 // Daily at 04:30: drop rendered invitation PDFs for events that ended more
 // than 1 day ago (plus deleted/orphan batches). They are regenerable on
 // demand and had grown to 18 GB.
