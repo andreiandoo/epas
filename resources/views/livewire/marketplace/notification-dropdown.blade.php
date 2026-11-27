@@ -79,7 +79,7 @@
         >
             {{-- Header --}}
             <div class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Notificari</h3>
+                <div><h3 class="text-sm font-semibold text-gray-900 dark:text-white">Jurnalul zilei</h3><p class="text-[11px] text-gray-500 dark:text-gray-400">Ultimele 3 zile</p></div>
                 @if($unreadCount > 0)
                     <button
                         wire:click="markAllAsRead"
@@ -95,7 +95,7 @@
                 @forelse($notifications as $notification)
                     <div
                         wire:click="markAsRead({{ $notification->id }})"
-                        class="flex items-start gap-3 px-4 py-3 transition cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 {{ !$notification->isRead() ? 'bg-primary-50/50 dark:bg-primary-900/20' : '' }}"
+                        class="flex items-start gap-3 px-4 py-3 transition cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 {{ $notification->needsOperatorAttention() ? 'bg-primary-50/50 dark:bg-primary-900/20' : '' }}"
                     >
                         {{-- Icon --}}
                         <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full
@@ -137,7 +137,7 @@
                                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
                                     {{ $notification->title }}
                                 </p>
-                                @if(!$notification->isRead())
+                                @if($notification->needsOperatorAttention())
                                     <span class="flex-shrink-0 w-2 h-2 bg-primary-500 rounded-full"></span>
                                 @endif
                             </div>

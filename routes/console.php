@@ -290,6 +290,11 @@ Schedule::command('chat:purge-transcripts')
     ->dailyAt('04:00')
     ->withoutOverlapping();
 
+// Jurnalul operatorilor marketplace: doar ultimele 3 zile.
+Schedule::command('marketplace-notifications:prune --days=3')
+    ->dailyAt('04:20')
+    ->withoutOverlapping();
+
 // WhatsApp: Process scheduled reminders (every 10 minutes)
 Schedule::call(function () {
     $service = app(\App\Services\WhatsApp\WhatsAppService::class);

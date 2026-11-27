@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class MarketplaceNotification extends Model
@@ -172,6 +173,24 @@ class MarketplaceNotification extends Model
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    /**
+     * Citiri per operator (panoul marketplace).
+     */
+    public function operatorReads(): HasMany
+    {
+        return $this->hasMany(MarketplaceNotificationRead::class, 'marketplace_notification_id');
+    }
+
+    /**
+     * True doar pentru tipurile care cer acțiune și pe care operatorul curent nu le-a citit.
+     * Necesită atributul read_by_me (vezi OperatorNotificationJournal::query()).
+     */
+    public function needsOperatorAttention(): bool
+    {
+        return \App\Services\Marketplace\OperatorNotificationJournal::isActionType($this->type)
+            && ! (bool) ($this->read_by_me ?? false);
     }
 
     /**

@@ -2,24 +2,25 @@
 
 namespace App\Livewire\Marketplace;
 
-use App\Models\MarketplaceNotification;
-use App\Services\MarketplaceNotificationService;
+use App\Services\Marketplace\OperatorNotificationJournal;
 use Illuminate\Support\Collection;
-use Livewire\Component;
 use Livewire\Attributes\On;
+use Livewire\Component;
 
+/**
+ * Clopoțelul din topbar = jurnalul zilnic al operatorului (ultimele 3 zile).
+ * Badge-ul și sunetul țin doar de tipurile care cer acțiune; restul sunt informative.
+ */
 class NotificationDropdown extends Component
 {
     public bool $isOpen = false;
     public Collection $notifications;
     public int $unreadCount = 0;
-    public ?int $lastNotificationId = null;
+    public ?int $lastActionNotificationId = null;
 
-    protected MarketplaceNotificationService $notificationService;
-
-    public function boot(MarketplaceNotificationService $notificationService): void
+    protected function journal(): OperatorNotificationJournal
     {
-        $this->notificationService = $notificationService;
+        return app(OperatorNotificationJournal::class);
     }
 
     public function mount(): void
@@ -29,44 +30,38 @@ class NotificationDropdown extends Component
 
     public function loadNotifications(): void
     {
-        $marketplaceClientId = $this->getMarketplaceClientId();
+        $journal = $this->journal();
 
-        if (!$marketplaceClientId) {
+        if (! $journal->clientId()) {
             $this->notifications = collect();
             $this->unreadCount = 0;
             return;
         }
 
-        $this->notifications = MarketplaceNotification::where('marketplace_client_id', $marketplaceClientId)
+        $this->notifications = $journal->query()
             ->orderByDesc('created_at')
             ->limit(10)
             ->get();
 
-        $this->unreadCount = MarketplaceNotification::where('marketplace_client_id', $marketplaceClientId)
-            ->unread()
-            ->count();
+        $this->unreadCount = $journal->unreadCount();
 
-        // Track the latest notification ID to detect new ones
-        if ($this->notifications->isNotEmpty()) {
-            $newLastId = $this->notifications->first()->id;
-            if ($this->lastNotificationId !== null && $newLastId > $this->lastNotificationId) {
-                // New notification detected - play sound
-                $this->dispatch('play-notification-sound');
-            }
-            $this->lastNotificationId = $newLastId;
+        // Sunet doar pentru o notificare nouă care cere acțiune.
+        $latestActionId = (int) ($journal->unreadQuery()->max('id') ?? 0);
+        if ($this->lastActionNotificationId !== null && $latestActionId > $this->lastActionNotificationId) {
+            $this->dispatch('play-notification-sound');
         }
+        $this->lastActionNotificationId = $latestActionId;
     }
 
     #[On('notification-created')]
     public function handleNewNotification(): void
     {
         $this->loadNotifications();
-        $this->dispatch('play-notification-sound');
     }
 
     public function toggleDropdown(): void
     {
-        $this->isOpen = !$this->isOpen;
+        $this->isOpen = ! $this->isOpen;
         if ($this->isOpen) {
             $this->loadNotifications();
         }
@@ -79,47 +74,19 @@ class NotificationDropdown extends Component
 
     public function markAsRead(int $notificationId): void
     {
-        $notification = MarketplaceNotification::find($notificationId);
-        if ($notification && $notification->marketplace_client_id === $this->getMarketplaceClientId()) {
-            $notification->markAsRead();
-            $this->loadNotifications();
-        }
+        $this->journal()->markRead($notificationId);
+        $this->loadNotifications();
     }
 
     public function markAllAsRead(): void
     {
-        $marketplaceClientId = $this->getMarketplaceClientId();
-        if ($marketplaceClientId) {
-            MarketplaceNotification::where('marketplace_client_id', $marketplaceClientId)
-                ->unread()
-                ->update(['read_at' => now()]);
-            $this->loadNotifications();
-        }
-    }
-
-    /**
-     * Poll for new notifications every 30 seconds
-     */
-    public function checkForNewNotifications(): void
-    {
+        $this->journal()->markAllRead();
         $this->loadNotifications();
     }
 
-    protected function getMarketplaceClientId(): ?int
+    public function checkForNewNotifications(): void
     {
-        // Use Filament's auth in panel context
-        $user = filament()->auth()->user() ?? auth('marketplace_admin')->user();
-
-        if ($user && isset($user->marketplace_client_id)) {
-            return $user->marketplace_client_id;
-        }
-
-        // Check for super-admin mode
-        if (session('super_admin_marketplace_client_id')) {
-            return session('super_admin_marketplace_client_id');
-        }
-
-        return null;
+        $this->loadNotifications();
     }
 
     public function render()

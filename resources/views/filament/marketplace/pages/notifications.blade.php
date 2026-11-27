@@ -8,7 +8,7 @@
                         <x-heroicon-o-bell class="w-6 h-6 text-primary-600 dark:text-primary-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Total notificari</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Ultimele 3 zile</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($totalCount) }}</p>
                     </div>
                 </div>
@@ -20,7 +20,7 @@
                         <x-heroicon-o-bell-alert class="w-6 h-6 text-warning-600 dark:text-warning-400" />
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Necitite</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">De văzut (cer acțiune)</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($unreadCount) }}</p>
                     </div>
                 </div>
@@ -56,7 +56,7 @@
                     <select wire:model.live="filterStatus" class="w-full mt-1 border-gray-300 rounded-lg shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white focus:border-primary-500 focus:ring-primary-500">
                         <option value="">Toate</option>
                         <option value="unread">Necitite</option>
-                        <option value="read">Citite</option>
+                        <option value="action">Cer acțiune</option>
                     </select>
                 </div>
             </div>
@@ -66,7 +66,7 @@
         <x-filament::section>
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
                 @forelse($notifications as $notification)
-                    <div class="flex items-start gap-4 py-4 {{ !$notification->isRead() ? 'bg-primary-50/50 dark:bg-primary-900/10' : '' }} px-4 -mx-4 first:rounded-t-lg last:rounded-b-lg">
+                    <div class="flex items-start gap-4 py-4 {{ $notification->needsOperatorAttention() ? 'bg-primary-50/50 dark:bg-primary-900/10' : '' }} px-4 -mx-4 first:rounded-t-lg last:rounded-b-lg">
                         {{-- Icon --}}
                         <div class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full
                             @switch($notification->color ?? $notification->default_color)
@@ -84,7 +84,7 @@
                         <div class="flex-1 min-w-0">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-900 dark:text-white {{ !$notification->isRead() ? 'font-bold' : '' }}">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white {{ $notification->needsOperatorAttention() ? 'font-bold' : '' }}">
                                         {{ $notification->title }}
                                     </p>
                                     @if($notification->message)
@@ -118,19 +118,17 @@
                                         </a>
                                     @endif
 
-                                    @if($notification->isRead())
-                                        <button wire:click="markAsUnread({{ $notification->id }})" class="p-2 text-gray-500 hover:text-warning-600 dark:hover:text-warning-400" title="Marcheaza necitit">
-                                            <x-heroicon-o-envelope class="w-5 h-5" />
-                                        </button>
-                                    @else
-                                        <button wire:click="markAsRead({{ $notification->id }})" class="p-2 text-gray-500 hover:text-success-600 dark:hover:text-success-400" title="Marcheaza citit">
-                                            <x-heroicon-o-check class="w-5 h-5" />
-                                        </button>
+                                    @if(\App\Services\Marketplace\OperatorNotificationJournal::isActionType($notification->type))
+                                        @if($notification->read_by_me)
+                                            <button wire:click="markAsUnread({{ $notification->id }})" class="p-2 text-gray-500 hover:text-warning-600 dark:hover:text-warning-400" title="Marcheaza necitit">
+                                                <x-heroicon-o-envelope class="w-5 h-5" />
+                                            </button>
+                                        @else
+                                            <button wire:click="markAsRead({{ $notification->id }})" class="p-2 text-gray-500 hover:text-success-600 dark:hover:text-success-400" title="Marcheaza citit">
+                                                <x-heroicon-o-check class="w-5 h-5" />
+                                            </button>
+                                        @endif
                                     @endif
-
-                                    <button wire:click="deleteNotification({{ $notification->id }})" wire:confirm="Esti sigur ca vrei sa stergi aceasta notificare?" class="p-2 text-gray-500 hover:text-danger-600 dark:hover:text-danger-400" title="Sterge">
-                                        <x-heroicon-o-trash class="w-5 h-5" />
-                                    </button>
                                 </div>
                             </div>
                         </div>
