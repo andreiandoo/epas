@@ -2188,6 +2188,17 @@ class OrderResource extends Resource
             ";
         }
 
+        // Netopia's own id for the payment (asked for by their support)
+        $netopiaPurchaseId = $record->meta['netopia_purchase_id'] ?? null;
+        if ($netopiaPurchaseId) {
+            $html .= "
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                    <span style='font-size: 13px; color: #94A3B8;'>ID Netopia</span>
+                    <span style='font-size: 11px; font-weight: 600; color: #E2E8F0; font-family: monospace; user-select: all;'>" . e($netopiaPurchaseId) . "</span>
+                </div>
+            ";
+        }
+
         // Card Info
         if ($cardLast4) {
             $cardDisplay = $cardBrand ? "{$cardBrand} •••• {$cardLast4}" : "•••• {$cardLast4}";

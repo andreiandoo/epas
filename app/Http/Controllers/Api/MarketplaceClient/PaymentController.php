@@ -442,12 +442,20 @@ class PaymentController extends BaseController
                     ->update(['status' => 'valid', 'updated_at' => now()]);
 
                 // Payment successful - save transaction ID from processor
-                $order->update([
+                $paidUpdate = [
                     'status' => 'completed',
                     'payment_status' => 'paid',
                     'paid_at' => now(),
                     'payment_reference' => $result['transaction_id'] ?? $result['payment_id'] ?? $order->payment_reference,
-                ]);
+                ];
+                // Netopia's own id for this payment: what their support asks for
+                // and what their status lookups expect.
+                if (!empty($result['metadata']['purchase_id'])) {
+                    $paidMeta = is_array($order->meta) ? $order->meta : [];
+                    $paidMeta['netopia_purchase_id'] = (string) $result['metadata']['purchase_id'];
+                    $paidUpdate['meta'] = $paidMeta;
+                }
+                $order->update($paidUpdate);
 
                 // Confirm seat purchases (held → sold) now that payment is confirmed
                 $seatedItems = $order->meta['seated_items'] ?? [];
