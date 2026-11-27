@@ -7803,5 +7803,11 @@
     "Rambursare parțială": "Részleges visszatérítés",
     "Anulare": "Lemondás",
     "În analiză": "Elbírálás alatt",
-    "Comenzi cu asigurare bilete": "Jegybiztosításos rendelések"
+    "Comenzi cu asigurare bilete": "Jegybiztosításos rendelések",
+    "Tip factură": "Számla típusa",
+    "Organizator (comision)": "Szervező (jutalék)",
+    "Client general (comision)": "Általános ügyfél (jutalék)",
+    "Cerută de client": "Ügyfél által kért",
+    "Comision lunar": "Havi jutalék",
+    "Altă factură": "Egyéb számla"
 }

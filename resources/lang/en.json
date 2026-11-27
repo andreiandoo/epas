@@ -4427,5 +4427,11 @@
     "Rambursare parțială": "Partial refund",
     "Anulare": "Cancellation",
     "În analiză": "Under review",
-    "Comenzi cu asigurare bilete": "Orders with ticket insurance"
+    "Comenzi cu asigurare bilete": "Orders with ticket insurance",
+    "Tip factură": "Invoice type",
+    "Organizator (comision)": "Organizer (commission)",
+    "Client general (comision)": "General customer (commission)",
+    "Cerută de client": "Requested by customer",
+    "Comision lunar": "Monthly commission",
+    "Altă factură": "Other invoice"
 }

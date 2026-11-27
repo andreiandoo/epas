@@ -132,5 +132,9 @@
 .ep-lst .ep-av--round{border-radius:999px}
 /* facturi: celula Organizator / Eveniment / Perioada ia spatiul ramas */
 .ep-lst .fi-ta-header-cell-organizer\.name{width:100%}
+/* bilete: codul in monospace, locul ca eticheta separata cu pin */
+.ep-lst td.fi-ta-cell-code .fi-ta-text-item{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--l-text)}
+.ep-lst td.fi-ta-cell-code .fi-ta-text-description{display:inline-flex;width:fit-content;align-items:center;gap:5px;margin-top:5px;padding:2px 8px 2px 6px;border-radius:6px;background:var(--l-mute-bg);color:var(--l-soft);font-size:11.5px;line-height:1.5}
+.ep-lst td.fi-ta-cell-code .fi-ta-text-description::before{content:"";width:11px;height:11px;flex:none;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z'/%3E%3Ccircle cx='12' cy='10' r='2.5'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z'/%3E%3Ccircle cx='12' cy='10' r='2.5'/%3E%3C/svg%3E") center/contain no-repeat}
 </style>
 </div>

@@ -315,6 +315,56 @@ class OrganizerInvoiceResource extends Resource
             ]);
     }
 
+    /** Invoice kinds: key => [label, colour]. */
+    public const INVOICE_KINDS = [
+        'organizer' => ['Organizator (comision)', 'info'],
+        'general_client' => ['Client general (comision)', 'primary'],
+        'order_company' => ['Cerută de client', 'warning'],
+        'service' => ['Servicii', 'success'],
+        'monthly' => ['Comision lunar', 'gray'],
+        'other' => ['Altă factură', 'gray'],
+    ];
+
+    /**
+     * Decont invoices carry meta.recipient_type organizer|general_client, invoices a
+     * buyer's company asked for carry order_company, service orders carry
+     * meta.service_order_id; monthly commission invoices have neither payout nor those.
+     */
+    public static function invoiceKind(Invoice $record): string
+    {
+        $meta = $record->meta ?? [];
+        $recipient = $meta['recipient_type'] ?? null;
+        if ($recipient === \App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE) return 'order_company';
+        if (! empty($meta['service_order_id'])) return 'service';
+        if ($recipient === 'general_client') return 'general_client';
+        if ($record->marketplace_payout_id || $recipient === 'organizer') return 'organizer';
+        if ($record->period_start && $record->period_end) return 'monthly';
+
+        return 'other';
+    }
+
+    /** Same rules as invoiceKind(), in SQL, for the filter. */
+    public static function scopeInvoiceKind(Builder $q, string $kind): Builder
+    {
+        $noService = fn (Builder $w) => $w->whereNull('meta->service_order_id');
+        $notCompany = fn (Builder $w) => $w->where(fn (Builder $x) => $x->whereNull('meta->recipient_type')->orWhere('meta->recipient_type', '!=', \App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE));
+
+        return match ($kind) {
+            'order_company' => $q->where('meta->recipient_type', \App\Services\Invoicing\CompanyInvoiceService::RECIPIENT_TYPE),
+            'service' => $notCompany($q)->whereNotNull('meta->service_order_id'),
+            'general_client' => $noService($notCompany($q))->where('meta->recipient_type', 'general_client'),
+            'organizer' => $noService($notCompany($q))
+                ->where(fn (Builder $w) => $w->whereNull('meta->recipient_type')->orWhere('meta->recipient_type', '!=', 'general_client'))
+                ->where(fn (Builder $w) => $w->whereNotNull('marketplace_payout_id')->orWhere('meta->recipient_type', 'organizer')),
+            'monthly' => $noService($notCompany($q))->whereNull('marketplace_payout_id')
+                ->where(fn (Builder $w) => $w->whereNull('meta->recipient_type')->orWhereNotIn('meta->recipient_type', ['organizer', 'general_client']))
+                ->whereNotNull('period_start')->whereNotNull('period_end'),
+            default => $noService($notCompany($q))->whereNull('marketplace_payout_id')
+                ->where(fn (Builder $w) => $w->whereNull('meta->recipient_type')->orWhereNotIn('meta->recipient_type', ['organizer', 'general_client']))
+                ->where(fn (Builder $w) => $w->whereNull('period_start')->orWhereNull('period_end')),
+        };
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -325,6 +375,14 @@ class OrganizerInvoiceResource extends Resource
                     ->description(fn ($record): ?string => ($record->meta['accounting']['invoice_number'] ?? $record->meta['accounting_proforma']['invoice_number'] ?? null))
                     ->searchable()
                     ->sortable(),
+
+                // What the invoice is for, from how it was created (see invoiceKind()).
+                Tables\Columns\TextColumn::make('invoice_kind')
+                    ->label(__('Tip factură'))
+                    ->badge()
+                    ->state(fn (Invoice $record): string => static::invoiceKind($record))
+                    ->formatStateUsing(fn (string $state): string => static::INVOICE_KINDS[$state][0] ?? $state)
+                    ->color(fn (string $state): string => static::INVOICE_KINDS[$state][1] ?? 'gray'),
 
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label(__('Organizator / Eveniment / Perioadă'))
@@ -602,6 +660,10 @@ class OrganizerInvoiceResource extends Resource
             ])
             ->defaultSort('issue_date', 'desc')
             ->filters([
+                Tables\Filters\SelectFilter::make('invoice_kind')
+                    ->label(__('Tip factură'))
+                    ->options(fn () => collect(static::INVOICE_KINDS)->map(fn ($k) => __($k[0]))->all())
+                    ->query(fn (Builder $query, array $data) => filled($data['value'] ?? null) ? static::scopeInvoiceKind($query, $data['value']) : $query),
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
                     ->label(__('Organizator'))
                     ->relationship('organizer', 'name')

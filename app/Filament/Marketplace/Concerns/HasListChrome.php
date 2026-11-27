@@ -101,12 +101,12 @@ trait HasListChrome
      */
     public function getTableColumnsSessionKey(): string
     {
-        return 'tables.' . md5(static::class) . '_columns_v2';
+        return 'tables.' . md5(static::class) . '_columns_v3';
     }
 
     public function getHasReorderedTableColumnsSessionKey(): string
     {
-        return 'tables.' . md5(static::class) . '_has_reordered_columns_v2';
+        return 'tables.' . md5(static::class) . '_has_reordered_columns_v3';
     }
 
     public function getPageClasses(): array

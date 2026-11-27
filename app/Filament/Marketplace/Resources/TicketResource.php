@@ -128,7 +128,7 @@ class TicketResource extends Resource
             // Beneficiary falls back to the order's customer: one query for the page instead of one per row.
             ->modifyQueryUsing(fn (Builder $query) => $query->with('order'))
             ->reorderableColumns()
-            ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::AboveContentCollapsible)
+            ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::Dropdown)
             ->filtersFormColumns(2)
             ->columns([
                 Tables\Columns\TextColumn::make('code')
