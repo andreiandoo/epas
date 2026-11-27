@@ -135,10 +135,110 @@
     }
 </style>
 
-<div id="epd-root" aria-label="Conversații deschise" data-me="{{ (int) ($meId ?? 0) }}" data-live-chat="{{ ! empty($liveChat) ? '1' : '0' }}"></div>
+<div id="epd-root" aria-label="{{ __('Conversații deschise') }}" data-me="{{ (int) ($meId ?? 0) }}" data-live-chat="{{ ! empty($liveChat) ? '1' : '0' }}"></div>
 
+@php
+    $__epT = [];
+    foreach ([
+        ':e evenimente · :t bilete vândute',
+        ':name scrie…',
+        'Acțiunea nu a reușit.',
+        'Adaugă în conversație',
+        'Atașează fișier',
+        'Atașează imagine sau PDF',
+        'Caută în istoricul clientului',
+        'Caută: eveniment, nr. comandă sau nr. bilet…',
+        'Cere ajutor de la',
+        'Client din :date · :n zile',
+        'Clientul așteaptă în coadă.',
+        'Clienților li se pot trimite doar imagini.',
+        'Context vizitator',
+        'Context vizitator și istoric',
+        'Conversația e la :name. Poți lăsa o notă internă.',
+        'Conversația e închisă.',
+        'Deschide chatul clientului',
+        'Deschide în consolă',
+        'Dispozitiv',
+        'Editează',
+        'Editează mesajul',
+        'Fișierul e prea mare (maxim 10 MB).',
+        'Fișierul nu s-a încărcat.',
+        'Fără conexiune.',
+        'Fără conexiune. Fișierul nu s-a încărcat.',
+        'Fără conexiune. Imaginea nu s-a încărcat.',
+        'Fără conexiune. Mesajul nu a plecat.',
+        'Imaginea e prea mare (maxim 3 MB).',
+        'Imaginea nu s-a încărcat.',
+        'Istoric client',
+        'Istoric conversații',
+        'Istoric organizator',
+        'Marchează rezolvată',
+        'Membri',
+        'Mesaj',
+        'Mesaj șters',
+        'Mesajul nu a plecat. Încearcă din nou.',
+        'Nicio comandă găsită.',
+        'Niciun eveniment găsit.',
+        'Niciun rezultat pentru căutare.',
+        'Notificări',
+        'Notă internă',
+        'Notă internă (clientul nu o vede)',
+        'Nu am putut prelua conversația.',
+        'Nu am putut salva.',
+        'Nu am putut trimite cererea.',
+        'Nu am putut încărca contextul.',
+        'Nu am putut șterge mesajul.',
+        'Nu mai păstra',
+        'Oprește 1 oră',
+        'Oprește 8 ore',
+        'Oprește o săptămână',
+        'Pagină',
+        'Pornește notificările',
+        'Preiau',
+        'Preiau conversația',
+        'Părăsește conversația',
+        'Păstrează un an',
+        'Renunță',
+        'Rezoluție',
+        'Salvează',
+        'Scrie un mesaj…',
+        'Scrie un mesaj… (@ pentru coleg)',
+        'Se încarcă…',
+        'Sigur ștergi?',
+        'Status',
+        'Transferă către',
+        'Trecute',
+        'Trimite o imagine',
+        'Un coleg',
+        'Urmează',
+        'a ta',
+        'alt operator',
+        'cerere de ajutor · :n colegi',
+        'departament · :n membri',
+        'editat',
+        'fișier expirat',
+        'fără notificări',
+        'grup · :n membri',
+        'mesaj direct',
+        'preluată de :name',
+        'păstrat până pe :date',
+        'se încarcă',
+        'se șterge pe :date',
+        'toată conversația',
+        'toată echipa · :n membri',
+        'în coadă',
+        'închisă',
+        'Șterge',
+    ] as $__k) { $__epT[$__k] = __($__k); }
+@endphp
 <script>
 (function () {
+    var __T = @json($__epT);
+    function __(s, r) {
+        var x = Object.prototype.hasOwnProperty.call(__T, s) ? __T[s] : s;
+        if (r) Object.keys(r).sort(function (a, b) { return b.length - a.length; }).forEach(function (k) { x = x.split(':' + k).join(String(r[k])); });
+        return x;
+    }
     if (window.epDock) return;
     var root = document.getElementById('epd-root');
     if (!root) return;
@@ -245,9 +345,9 @@
         el.innerHTML =
             '<div class="epd-head" role="button" tabindex="0">' +
                 '<span class="epd-ava' + (team ? '' : ' is-sq') + '">' + (team ? '' : ICON.chat) + '</span>' +
-                '<div class="epd-who"><b>…</b><small>se încarcă</small></div>' +
+                ('<div class="epd-who"><b>…</b><small>' + __('se încarcă') + '</small></div>') +
                 '<span class="epd-badge" hidden></span>' +
-                (team ? '' : '<button type="button" class="epd-hbtn" data-a="info" aria-pressed="false" title="Context vizitator și istoric" aria-label="Context vizitator și istoric">' + ICON.info + '</button>') +
+                (team ? '' : ('<button type="button" class="epd-hbtn" data-a="info" aria-pressed="false" title="' + __('Context vizitator și istoric') + '" aria-label="' + __('Context vizitator și istoric') + '">') + ICON.info + '</button>') +
                 '<button type="button" class="epd-hbtn" data-a="menu" title="Opțiuni" aria-label="Opțiuni">' + ICON.more + '</button>' +
                 '<button type="button" class="epd-hbtn" data-a="min" title="Minimizează" aria-label="Minimizează">' + ICON.min + '</button>' +
                 '<button type="button" class="epd-hbtn" data-a="close" title="Închide fereastra" aria-label="Închide fereastra">' + ICON.close + '</button>' +
@@ -259,11 +359,11 @@
             '<div class="epd-typing"></div>' +
             '<div class="epd-foot">' +
                 '<div class="epd-compose">' +
-                    '<button type="button" class="epd-hbtn" data-a="attach" title="' + (team ? 'Atașează imagine sau PDF' : 'Trimite o imagine') + '" aria-label="Atașează fișier">' + ICON.clip + '</button>' +
+                    '<button type="button" class="epd-hbtn" data-a="attach" title="' + (team ? __('Atașează imagine sau PDF') : __('Trimite o imagine')) + ('" aria-label="' + __('Atașează fișier') + '">') + ICON.clip + '</button>' +
                     (team ? '' :
                         '<button type="button" class="epd-hbtn" data-a="canned" title="Răspunsuri rapide" aria-label="Răspunsuri rapide" hidden>' + ICON.bolt + '</button>' +
-                        '<button type="button" class="epd-hbtn" data-a="note" aria-pressed="false" title="Notă internă (clientul nu o vede)" aria-label="Notă internă">' + ICON.note + '</button>') +
-                    '<textarea rows="1" placeholder="' + (team ? 'Scrie un mesaj… (@ pentru coleg)' : 'Scrie un mesaj…') + '" aria-label="Mesaj"></textarea>' +
+                        ('<button type="button" class="epd-hbtn" data-a="note" aria-pressed="false" title="' + __('Notă internă (clientul nu o vede)') + '" aria-label="' + __('Notă internă') + '">') + ICON.note + '</button>') +
+                    '<textarea rows="1" placeholder="' + (team ? __('Scrie un mesaj… (@ pentru coleg)') : __('Scrie un mesaj…')) + ('" aria-label="' + __('Mesaj') + '"></textarea>') +
                     '<button type="button" class="epd-send" title="Trimite (Enter)" aria-label="Trimite">' + ICON.send + '</button>' +
                     '<input type="file" accept="' + (team ? 'image/*,application/pdf' : 'image/*') + '" hidden>' +
                 '</div>' +
@@ -370,40 +470,40 @@
 
     function customerMenu(w) {
         var c = w.conv || {};
-        var h = '<a href="' + esc(c.console_url || '/marketplace/chat-console') + '">Deschide în consolă</a>';
-        if (!c.closed && !c.mine) h += '<button type="button" data-act="claim">Preiau conversația</button>';
+        var h = '<a href="' + esc(c.console_url || '/marketplace/chat-console') + ('">' + __('Deschide în consolă') + '</a>');
+        if (!c.closed && !c.mine) h += ('<button type="button" data-act="claim">' + __('Preiau conversația') + '</button>');
         if (!c.closed && operators.length) {
-            h += '<div class="epd-sep"></div><div class="epd-lbl">Transferă către</div>';
+            h += ('<div class="epd-sep"></div><div class="epd-lbl">' + __('Transferă către') + '</div>');
             operators.forEach(function (o) { h += '<button type="button" data-act="transfer" data-id="' + o.id + '">' + esc(o.name) + '</button>'; });
         }
         var colleagues = window.epTeam ? window.epTeam.colleagues() : [];
         if (colleagues.length) {
-            h += '<div class="epd-sep"></div><div class="epd-lbl">Cere ajutor de la</div>';
+            h += ('<div class="epd-sep"></div><div class="epd-lbl">' + __('Cere ajutor de la') + '</div>');
             colleagues.forEach(function (o) { h += '<button type="button" data-act="help" data-id="' + o.id + '">' + esc(o.name) + '</button>'; });
         }
-        if (!c.closed) h += '<div class="epd-sep"></div><button type="button" data-act="resolve">Marchează rezolvată</button>';
+        if (!c.closed) h += ('<div class="epd-sep"></div><button type="button" data-act="resolve">' + __('Marchează rezolvată') + '</button>');
         return h;
     }
 
     function teamMenu(w) {
         var t = w.thread || {};
         var h = '';
-        if (t.chat_ref && LIVE_CHAT) h += '<button type="button" data-act="open-chat" data-ref="' + esc(t.chat_ref) + '">Deschide chatul clientului</button><div class="epd-sep"></div>';
+        if (t.chat_ref && LIVE_CHAT) h += '<button type="button" data-act="open-chat" data-ref="' + esc(t.chat_ref) + ('">' + __('Deschide chatul clientului') + '</button><div class="epd-sep"></div>');
         var st = window.epTeam && window.epTeam.thread(w.threadId);
-        h += '<div class="epd-lbl">Notificări</div>';
-        if (st && st.muted) h += '<button type="button" data-act="mute" data-min="0">Pornește notificările</button>';
-        else h += '<button type="button" data-act="mute" data-min="60">Oprește 1 oră</button><button type="button" data-act="mute" data-min="480">Oprește 8 ore</button><button type="button" data-act="mute" data-min="10080">Oprește o săptămână</button>';
+        h += ('<div class="epd-lbl">' + __('Notificări') + '</div>');
+        if (st && st.muted) h += ('<button type="button" data-act="mute" data-min="0">' + __('Pornește notificările') + '</button>');
+        else h += ('<button type="button" data-act="mute" data-min="60">' + __('Oprește 1 oră') + '</button><button type="button" data-act="mute" data-min="480">' + __('Oprește 8 ore') + '</button><button type="button" data-act="mute" data-min="10080">' + __('Oprește o săptămână') + '</button>');
         if (t.type !== 'dm') {
-            h += '<div class="epd-sep"></div><div class="epd-lbl">Membri (' + (t.members || []).length + ')</div>';
+            h += '<div class="epd-sep"></div><div class="epd-lbl">' + __('Membri') + ' (' + (t.members || []).length + ')</div>';
             (t.members || []).forEach(function (m) { h += '<div class="epd-member">' + esc(m.name) + (m.id === ME ? ' (tu)' : '') + '</div>'; });
             if (!t.is_system) {
                 var ids = (t.members || []).map(function (m) { return m.id; });
                 var others = (window.epTeam ? window.epTeam.colleagues() : []).filter(function (c) { return ids.indexOf(c.id) === -1; });
                 if (others.length) {
-                    h += '<div class="epd-sep"></div><div class="epd-lbl">Adaugă în conversație</div>';
+                    h += ('<div class="epd-sep"></div><div class="epd-lbl">' + __('Adaugă în conversație') + '</div>');
                     others.forEach(function (c) { h += '<button type="button" data-act="add" data-id="' + c.id + '">+ ' + esc(c.name) + '</button>'; });
                 }
-                h += '<div class="epd-sep"></div><button type="button" data-act="leave">Părăsește conversația</button>';
+                h += ('<div class="epd-sep"></div><button type="button" data-act="leave">' + __('Părăsește conversația') + '</button>');
             }
         }
         return h;
@@ -435,11 +535,11 @@
 
     function loadContext(w) {
         var box = w.el.querySelector('.epd-ctx');
-        if (!box.innerHTML) box.innerHTML = '<p class="epd-muted">Se încarcă…</p>';
+        if (!box.innerHTML) box.innerHTML = ('<p class="epd-muted">' + __('Se încarcă…') + '</p>');
         req('GET', BASE + encodeURIComponent(w.ref) + '/context' + (w.ctxSearch ? '?search=' + encodeURIComponent(w.ctxSearch) : '')).then(function (res) {
-            if (!res || !res.ok) { box.innerHTML = '<p class="epd-muted">Nu am putut încărca contextul.</p>'; return; }
+            if (!res || !res.ok) { box.innerHTML = ('<p class="epd-muted">' + __('Nu am putut încărca contextul.') + '</p>'); return; }
             renderContext(w, res);
-        }).catch(function () { box.innerHTML = '<p class="epd-muted">Fără conexiune.</p>'; });
+        }).catch(function () { box.innerHTML = ('<p class="epd-muted">' + __('Fără conexiune.') + '</p>'); });
     }
 
     function row(label, value, wide, html) {
@@ -449,18 +549,18 @@
 
     function renderContext(w, d) {
         var v = d.visitor || {};
-        var h = '<section><h5>Context vizitator</h5><dl>'
+        var h = ('<section><h5>' + __('Context vizitator') + '</h5><dl>')
             + row('Nume', v.name) + row('Tip', v.type)
             + (v.email ? row('Email', v.email, true) : '')
             + (v.event ? row('Eveniment', v.event_url ? '<a href="' + esc(v.event_url) + '" target="_blank" rel="noopener">' + esc(v.event) + '</a>' : esc(v.event), true, true) : '')
             + row('Operator', v.operator)
-            + (v.page ? row('Pagină', '<a href="' + esc(v.page) + '" target="_blank" rel="noopener noreferrer">' + esc(v.page) + '</a>', true, true) : '')
-            + row('IP', v.ip) + row('Dispozitiv', v.device) + row('Browser', v.browser) + row('Rezoluție', v.screen)
+            + (v.page ? row(__('Pagină'), '<a href="' + esc(v.page) + '" target="_blank" rel="noopener noreferrer">' + esc(v.page) + '</a>', true, true) : '')
+            + row('IP', v.ip) + row(__('Dispozitiv'), v.device) + row('Browser', v.browser) + row(__('Rezoluție'), v.screen)
             + '</dl></section>';
 
         var hist = d.history || [];
         if (hist.length) {
-            h += '<section class="epd-hist"><h5>Istoric conversații (' + hist.length + ')</h5>';
+            h += ('<section class="epd-hist"><h5>' + __('Istoric conversații') + ' (') + hist.length + ')</h5>';
             hist.forEach(function (x) { h += '<button type="button" data-open-ref="' + esc(x.ref) + '"><span>' + esc(x.date) + '</span><span class="epd-tag">' + esc(x.status) + '</span></button>'; });
             h += '</section>';
         }
@@ -468,13 +568,13 @@
         var p = d.profile;
         if (p) {
             var cust = p.type === 'customer', s = p.stats || {};
-            h += '<section><h5>' + (cust ? 'Istoric client' : 'Istoric organizator')
-                + (cust ? '' : '<span>' + esc((s.events || 0) + ' evenimente · ' + (s.tickets_sold || 0) + ' bilete vândute') + '</span>') + '</h5>';
+            h += '<section><h5>' + (cust ? __('Istoric client') : __('Istoric organizator'))
+                + (cust ? '' : '<span>' + esc(__(':e evenimente · :t bilete vândute', { e: s.events || 0, t: s.tickets_sold || 0 })) + '</span>') + '</h5>';
             if (cust) {
                 h += '<div class="epd-stats"><span>' + esc((s.orders || 0) + ' comenzi') + '</span><span>' + esc((s.tickets || 0) + ' bilete') + '</span>'
                     + (s.ltv ? '<span>LTV: <b>' + esc(s.ltv) + '</b></span>' : '')
-                    + (s.since ? '<span>Client din ' + esc(s.since) + ' · ' + esc(s.since_days) + ' zile</span>' : '') + '</div>'
-                    + '<input type="search" class="epd-ctx-search" placeholder="Caută: eveniment, nr. comandă sau nr. bilet…" aria-label="Caută în istoricul clientului" value="' + esc(w.ctxSearch) + '">';
+                    + (s.since ? '<span>' + __('Client din :date · :n zile', { date: esc(s.since), n: esc(s.since_days) }) + '</span>' : '') + '</div>'
+                    + ('<input type="search" class="epd-ctx-search" placeholder="' + __('Caută: eveniment, nr. comandă sau nr. bilet…') + '" aria-label="' + __('Caută în istoricul clientului') + '" value="') + esc(w.ctxSearch) + '">';
             }
             var ev = function (e, up) {
                 var o = '<div class="epd-ev' + (up ? ' is-up' : '') + '"><div class="epd-ev-h">'
@@ -482,15 +582,15 @@
                     + '<span class="epd-tag">' + esc(e.count) + '</span></div>'
                     + (e.date ? '<small>' + esc(e.date) + '</small>' : '');
                 (e.orders || []).forEach(function (ord) {
-                    o += '<div class="epd-ord">' + (ord.url ? '<a href="' + esc(ord.url) + '" target="_blank" rel="noopener" title="Status: ' + esc(ord.status) + '">' + esc(ord.number) + '</a>' : esc(ord.number))
+                    o += '<div class="epd-ord">' + (ord.url ? '<a href="' + esc(ord.url) + ('" target="_blank" rel="noopener" title="' + __('Status') + ': ') + esc(ord.status) + '">' + esc(ord.number) + '</a>' : esc(ord.number))
                         + ' · ' + esc(ord.status) + ' · ' + esc(ord.detail) + '</div>';
                 });
                 return o + '</div>';
             };
-            if ((p.upcoming || []).length) { h += '<div class="epd-sub">Urmează</div>'; p.upcoming.forEach(function (e) { h += ev(e, true); }); }
-            if ((p.past || []).length) { h += '<div class="epd-sub">Trecute</div>'; p.past.forEach(function (e) { h += ev(e, false); }); }
+            if ((p.upcoming || []).length) { h += ('<div class="epd-sub">' + __('Urmează') + '</div>'); p.upcoming.forEach(function (e) { h += ev(e, true); }); }
+            if ((p.past || []).length) { h += '<div class="epd-sub">' + __('Trecute') + '</div>'; p.past.forEach(function (e) { h += ev(e, false); }); }
             if (!(p.upcoming || []).length && !(p.past || []).length) {
-                h += '<p class="epd-muted">' + (p.searching ? 'Niciun rezultat pentru căutare.' : (cust ? 'Nicio comandă găsită.' : 'Niciun eveniment găsit.')) + '</p>';
+                h += '<p class="epd-muted">' + (p.searching ? __('Niciun rezultat pentru căutare.') : (cust ? __('Nicio comandă găsită.') : __('Niciun eveniment găsit.'))) + '</p>';
             }
             h += '</section>';
         }
@@ -516,20 +616,20 @@
         var c = w.conv;
         if (!c) return;
         w.el.querySelector('.epd-who b').textContent = c.name + (c.subject ? ' · ' + c.subject : '');
-        w.el.querySelector('.epd-who small').textContent = c.type + ' · ' + (c.closed ? 'închisă' : (c.mine ? 'a ta' : (c.owner_name ? 'preluată de ' + c.owner_name : 'în coadă')));
+        w.el.querySelector('.epd-who small').textContent = c.type + ' · ' + (c.closed ? __('închisă') : (c.mine ? __('a ta') : (c.owner_name ? __('preluată de :name', { name: c.owner_name }) : __('în coadă'))));
         renderBadge(w);
 
         var bar = w.el.querySelector('.epd-bar');
         if (!c.closed && !c.owner_id) {
-            bar.innerHTML = '<span>Clientul așteaptă în coadă.</span><button type="button" class="epd-btn is-pri" data-a="claim">Preiau</button>';
+            bar.innerHTML = ('<span>' + __('Clientul așteaptă în coadă.') + '</span><button type="button" class="epd-btn is-pri" data-a="claim">' + __('Preiau') + '</button>');
             bar.hidden = false;
         } else if (!c.closed && !c.mine) {
-            bar.innerHTML = '<span>Conversația e la ' + esc(c.owner_name || 'alt operator') + '. Poți lăsa o notă internă.</span>';
+            bar.innerHTML = '<span>' + __('Conversația e la :name. Poți lăsa o notă internă.', { name: esc(c.owner_name || __('alt operator')) }) + '</span>';
             bar.hidden = false;
         } else {
             bar.hidden = true;
         }
-        setClosed(w, !!c.closed, 'Conversația e închisă.');
+        setClosed(w, !!c.closed, __('Conversația e închisă.'));
     }
 
     function setClosed(w, closed, text) {
@@ -549,13 +649,13 @@
         ava.classList.toggle('is-sq', t.kind !== 'dm');
         ava.innerHTML = t.kind === 'dm' ? esc(initials(t.name)) : (ICON[t.kind] || ICON.group);
         w.el.querySelector('.epd-who b').textContent = t.name;
-        var sub = t.kind === 'dm' ? 'mesaj direct'
-            : t.kind === 'help' ? 'cerere de ajutor · ' + t.members.length + ' colegi'
-            : t.kind === 'team' ? 'toată echipa · ' + t.members.length + ' membri'
-            : t.kind === 'department' ? 'departament · ' + t.members.length + ' membri'
-            : 'grup · ' + t.members.length + ' membri';
+        var sub = t.kind === 'dm' ? __('mesaj direct')
+            : t.kind === 'help' ? __('cerere de ajutor · :n colegi', { n: t.members.length })
+            : t.kind === 'team' ? __('toată echipa · :n membri', { n: t.members.length })
+            : t.kind === 'department' ? __('departament · :n membri', { n: t.members.length })
+            : __('grup · :n membri', { n: t.members.length });
         var st = window.epTeam && window.epTeam.thread(w.threadId);
-        if (st && st.muted) sub += ' · fără notificări';
+        if (st && st.muted) sub += (' · ' + __('fără notificări'));
         w.el.querySelector('.epd-who small').textContent = sub;
         renderBadge(w);
     }
@@ -568,7 +668,7 @@
                 ? '<a href="' + esc(a.url) + '" target="_blank" rel="noopener"><img src="' + esc(a.url) + '" alt="' + esc(a.name) + '"></a>'
                 : '<a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.name) + '</a>';
         }).join('');
-        var meta = (m.kind === 'note' ? 'Notă internă · ' : '') + (m.author && m.kind !== 'in' ? m.author + ' · ' : '') + (m.time || '');
+        var meta = (m.kind === 'note' ? (__('Notă internă') + ' · ') : '') + (m.author && m.kind !== 'in' ? m.author + ' · ' : '') + (m.time || '');
         return '<div class="epd-msg ' + m.kind + '" data-id="' + m.id + '">' + (m.body ? richText(m.body, false) : '') + att + '<span class="epd-meta">' + esc(meta) + '</span></div>';
     }
 
@@ -580,23 +680,23 @@
         var cls = 'epd-msg ' + (m.mine ? 'out' : 'in') + (m.mentions_me && !m.mine ? ' is-mention' : '') + (m.deleted ? ' is-deleted' : '');
         var html = '<div class="' + cls + '" data-id="' + m.id + '">';
         if (!m.mine && w.thread && w.thread.type !== 'dm') html += '<span class="epd-author">' + esc(m.author) + '</span>';
-        if (m.deleted) html += 'Mesaj șters';
+        if (m.deleted) html += __('Mesaj șters');
         else if (m.body) html += richText(m.body, true);
         (m.attachments || []).forEach(function (a) {
             html += '<div class="epd-att">';
-            if (a.purged) html += '<span>' + esc(a.name) + ' · fișier expirat</span>';
+            if (a.purged) html += '<span>' + esc(a.name) + (' · ' + __('fișier expirat') + '</span>');
             else {
                 html += a.image
                     ? '<a href="' + esc(a.url) + '" target="_blank" rel="noopener"><img src="' + esc(a.url) + '" alt="' + esc(a.name) + '"></a>'
                     : '<a href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.name) + '</a>';
-                html += '<span>' + (a.keep ? 'păstrat până pe ' : 'se șterge pe ') + esc(a.expires) + '</span>';
-                html += '<button type="button" data-keep="' + a.id + '" data-val="' + (a.keep ? '0' : '1') + '">' + (a.keep ? 'Nu mai păstra' : 'Păstrează un an') + '</button>';
+                html += '<span>' + __(a.keep ? 'păstrat până pe :date' : 'se șterge pe :date', { date: esc(a.expires) }) + '</span>';
+                html += '<button type="button" data-keep="' + a.id + '" data-val="' + (a.keep ? '0' : '1') + '">' + (a.keep ? __('Nu mai păstra') : __('Păstrează un an')) + '</button>';
             }
             html += '</div>';
         });
-        html += '<span class="epd-meta">' + esc(m.time) + (m.edited && !m.deleted ? ' · editat' : '') + '</span></div>';
+        html += '<span class="epd-meta">' + esc(m.time) + (m.edited && !m.deleted ? (' · ' + __('editat')) : '') + '</span></div>';
         if (m.mine && !m.deleted) {
-            html += '<div class="epd-own" data-own="' + m.id + '">' + (m.editable ? '<button type="button" data-edit="' + m.id + '">Editează</button>' : '') + '<button type="button" data-del="' + m.id + '">Șterge</button></div>';
+            html += '<div class="epd-own" data-own="' + m.id + '">' + (m.editable ? '<button type="button" data-edit="' + m.id + ('">' + __('Editează') + '</button>') : '') + '<button type="button" data-del="' + m.id + ('">' + __('Șterge') + '</button></div>');
         }
         return out + html;
     }
@@ -610,9 +710,9 @@
         }
         var del = e.target.closest('[data-del]');
         if (del) {
-            if (del.getAttribute('data-confirm') !== '1') { del.setAttribute('data-confirm', '1'); del.textContent = 'Sigur ștergi?'; return; }
+            if (del.getAttribute('data-confirm') !== '1') { del.setAttribute('data-confirm', '1'); del.textContent = __('Sigur ștergi?'); return; }
             req('POST', TEAM + 'messages/' + del.getAttribute('data-del') + '/delete').then(function (res) {
-                if (!res.ok) showErr(w, res.message || 'Nu am putut șterge mesajul.');
+                if (!res.ok) showErr(w, res.message || __('Nu am putut șterge mesajul.'));
                 reload(w);
             });
             return;
@@ -623,7 +723,7 @@
         if (save) {
             var box = save.closest('.epd-edit');
             req('POST', TEAM + 'messages/' + save.getAttribute('data-edit-save') + '/edit', { body: box.querySelector('textarea').value }).then(function (res) {
-                if (!res.ok) showErr(w, res.message || 'Nu am putut salva.');
+                if (!res.ok) showErr(w, res.message || __('Nu am putut salva.'));
                 reload(w);
             });
             return;
@@ -639,7 +739,7 @@
         if (own) own.remove();
         var box = document.createElement('div');
         box.className = 'epd-edit';
-        box.innerHTML = '<textarea aria-label="Editează mesajul"></textarea><div><button type="button" class="epd-btn" data-edit-cancel="1">Renunță</button><button type="button" class="epd-btn is-pri" data-edit-save="' + id + '">Salvează</button></div>';
+        box.innerHTML = ('<textarea aria-label="' + __('Editează mesajul') + '"></textarea><div><button type="button" class="epd-btn" data-edit-cancel="1">' + __('Renunță') + '</button><button type="button" class="epd-btn is-pri" data-edit-save="') + id + ('">' + __('Salvează') + '</button></div>');
         box.querySelector('textarea').value = msg.body || '';
         bubble.replaceWith(box);
         box.querySelector('textarea').focus();
@@ -653,7 +753,7 @@
 
     function showTyping(w, name) {
         var el = w.el.querySelector('.epd-typing');
-        el.textContent = name + ' scrie…';
+        el.textContent = __(':name scrie…', { name: name });
         el.classList.add('is-on');
         clearTimeout(w.typingTimer);
         w.typingTimer = setTimeout(function () { el.classList.remove('is-on'); }, 4500);
@@ -674,7 +774,7 @@
         var box = old || document.createElement('div');
         box.className = 'epd-pop';
         box.setAttribute('data-pop', 'mention');
-        box.innerHTML = list.map(function (x, i) { return '<button type="button" class="' + (i === 0 ? 'is-on' : '') + '" data-name="' + esc(x.name.split(' ')[0]) + '">' + esc(x.id ? x.name : '@toti (toată conversația)') + '</button>'; }).join('');
+        box.innerHTML = list.map(function (x, i) { return '<button type="button" class="' + (i === 0 ? 'is-on' : '') + '" data-name="' + esc(x.name.split(' ')[0]) + '">' + esc(x.id ? x.name : ('@toti (' + __('toată conversația') + ')')) + '</button>'; }).join('');
         if (!old) {
             foot.appendChild(box);
             box.addEventListener('mousedown', function (e) { e.preventDefault(); });
@@ -784,7 +884,7 @@
     window.addEventListener('ep:team-typing', function (e) {
         var d = e.detail || {};
         var w = find('team:' + d.thread_id);
-        if (w && d.admin_id !== ME) showTyping(w, d.name || 'Un coleg');
+        if (w && d.admin_id !== ME) showTyping(w, d.name || __('Un coleg'));
     });
     // Numărul de necitite vine de pe server, deci rămâne și după ce schimbi pagina.
     window.addEventListener('ep:team-threads', function () {
@@ -806,11 +906,11 @@
         btn.disabled = true;
         var done = function (res) {
             btn.disabled = false;
-            if (!res.ok) { showErr(w, res.message || 'Mesajul nu a plecat. Încearcă din nou.'); return; }
+            if (!res.ok) { showErr(w, res.message || __('Mesajul nu a plecat. Încearcă din nou.')); return; }
             ta.value = ''; ta.style.height = '';
             refresh(w);
         };
-        var fail = function () { btn.disabled = false; showErr(w, 'Fără conexiune. Mesajul nu a plecat.'); };
+        var fail = function () { btn.disabled = false; showErr(w, __('Fără conexiune. Mesajul nu a plecat.')); };
         if (w.team) {
             var fd = new FormData(); fd.append('body', text);
             req('POST', TEAM + 'threads/' + w.threadId + '/messages', fd).then(done).catch(fail);
@@ -822,46 +922,46 @@
 
     function upload(w, f) {
         if (w.team) {
-            if (f.size > 10 * 1024 * 1024) { showErr(w, 'Fișierul e prea mare (maxim 10 MB).'); return; }
+            if (f.size > 10 * 1024 * 1024) { showErr(w, __('Fișierul e prea mare (maxim 10 MB).')); return; }
             var ta = w.el.querySelector('textarea');
             var fd = new FormData(); fd.append('file', f); fd.append('body', ta.value.trim());
             req('POST', TEAM + 'threads/' + w.threadId + '/messages', fd).then(function (res) {
-                if (!res.ok) { showErr(w, res.message || 'Fișierul nu s-a încărcat.'); return; }
+                if (!res.ok) { showErr(w, res.message || __('Fișierul nu s-a încărcat.')); return; }
                 ta.value = ''; ta.style.height = '';
                 refresh(w);
-            }).catch(function () { showErr(w, 'Fără conexiune. Fișierul nu s-a încărcat.'); });
+            }).catch(function () { showErr(w, __('Fără conexiune. Fișierul nu s-a încărcat.')); });
             return;
         }
         if (!w.conv) return;
-        if (f.type.indexOf('image/') !== 0) { showErr(w, 'Clienților li se pot trimite doar imagini.'); return; }
-        if (f.size > 3 * 1024 * 1024) { showErr(w, 'Imaginea e prea mare (maxim 3 MB).'); return; }
+        if (f.type.indexOf('image/') !== 0) { showErr(w, __('Clienților li se pot trimite doar imagini.')); return; }
+        if (f.size > 3 * 1024 * 1024) { showErr(w, __('Imaginea e prea mare (maxim 3 MB).')); return; }
         var reader = new FileReader();
         reader.onload = function () {
             req('POST', w.conv.attach_url, { data: reader.result, name: f.name }).then(function (res) {
-                if (!res.ok) { showErr(w, res.message || 'Imaginea nu s-a încărcat.'); return; }
+                if (!res.ok) { showErr(w, res.message || __('Imaginea nu s-a încărcat.')); return; }
                 refresh(w);
-            }).catch(function () { showErr(w, 'Fără conexiune. Imaginea nu s-a încărcat.'); });
+            }).catch(function () { showErr(w, __('Fără conexiune. Imaginea nu s-a încărcat.')); });
         };
         reader.readAsDataURL(f);
     }
 
     function claim(w) {
         req('POST', BASE + encodeURIComponent(w.ref) + '/claim').then(function (res) {
-            if (!res.ok) showErr(w, res.message || 'Nu am putut prelua conversația.');
+            if (!res.ok) showErr(w, res.message || __('Nu am putut prelua conversația.'));
             refresh(w);
         });
     }
 
     function action(w, name, data) {
         req('POST', BASE + encodeURIComponent(w.ref) + '/' + name, data || {}).then(function (res) {
-            if (!res.ok) showErr(w, res.message || 'Acțiunea nu a reușit.');
+            if (!res.ok) showErr(w, res.message || __('Acțiunea nu a reușit.'));
             refresh(w);
         });
     }
 
     function teamAction(w, name, data) {
         return req('POST', TEAM + 'threads/' + w.threadId + '/' + name, data || {}).then(function (res) {
-            if (!res.ok) showErr(w, res.message || 'Acțiunea nu a reușit.');
+            if (!res.ok) showErr(w, res.message || __('Acțiunea nu a reușit.'));
             if (window.epTeam) window.epTeam.reload().then(function () { renderTeamMeta(w); });
             if (name !== 'leave') refresh(w);
             return res;
@@ -871,7 +971,7 @@
     function askHelp(w, adminId) {
         if (!w.conv || !adminId) return;
         req('POST', TEAM + 'help', { conversation_ref: w.conv.ref, member_ids: [adminId] }).then(function (res) {
-            if (!res.ok) { showErr(w, res.message || 'Nu am putut trimite cererea.'); return; }
+            if (!res.ok) { showErr(w, res.message || __('Nu am putut trimite cererea.')); return; }
             if (window.epTeam) window.epTeam.reload();
             openTeam(res.thread_id);
         });

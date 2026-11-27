@@ -45,7 +45,7 @@ class TeamChatController extends Controller
     {
         [$admin, $t] = $this->resolve($thread);
         if (! $t) {
-            return response()->json(['ok' => false, 'message' => 'Conversația nu există.'], 404);
+            return response()->json(['ok' => false, 'message' => __('Conversația nu există.')], 404);
         }
 
         $messages = $this->chat->messages($admin, $t, (int) $request->query('after', 0), (int) $request->query('before', 0));
@@ -64,8 +64,8 @@ class TeamChatController extends Controller
                 'id' => (int) $t->id,
                 'type' => $t->type,
                 'name' => $t->type === TeamThread::TYPE_DM
-                    ? ($members->firstWhere('id', '!=', (int) $admin->id)['name'] ?? 'Conversație')
-                    : (string) $t->name,
+                    ? ($members->firstWhere('id', '!=', (int) $admin->id)['name'] ?? __('Conversație'))
+                    : ($t->system_key === 'team' ? __('Toată echipa') : (string) $t->name),
                 'is_system' => (bool) $t->is_system,
                 // dm | team (Toată echipa) | department | group | help
                 'kind' => $t->type === TeamThread::TYPE_DM ? 'dm'
@@ -86,7 +86,7 @@ class TeamChatController extends Controller
     {
         [$admin, $t] = $this->resolve($thread);
         if (! $t) {
-            return response()->json(['ok' => false, 'message' => 'Conversația nu există.'], 404);
+            return response()->json(['ok' => false, 'message' => __('Conversația nu există.')], 404);
         }
 
         return $this->attempt(function () use ($admin, $t, $request) {
@@ -280,7 +280,7 @@ class TeamChatController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
-            return response()->json(['ok' => false, 'message' => 'Nu am găsit ce ai cerut.'], 404);
+            return response()->json(['ok' => false, 'message' => __('Nu am găsit ce ai cerut.')], 404);
         }
 
         return response()->json(array_merge(['ok' => true], is_array($result) ? $result : []));

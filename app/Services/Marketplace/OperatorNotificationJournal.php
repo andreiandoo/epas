@@ -159,12 +159,12 @@ class OperatorNotificationJournal
                 return [
                     'id' => (int) $n->id,
                     'type' => $n->type,
-                    'label' => $labels[$n->type] ?? $n->type,
+                    'label' => __($labels[$n->type] ?? $n->type),
                     'color' => $n->color ?: (MarketplaceNotification::getTypeColors()[$n->type] ?? 'primary'),
                     'title' => (string) $n->title,
                     'message' => $n->message ? mb_strimwidth((string) $n->message, 0, 160, '…') : null,
                     'time' => $at && $at->isSameDay($today) ? $at->format('H:i') : $at?->format('d.m H:i'),
-                    'day' => ! $at ? '' : ($at->isSameDay($today) ? 'Azi' : ($at->isSameDay($today->copy()->subDay()) ? 'Ieri' : $at->format('d.m'))),
+                    'day' => ! $at ? '' : ($at->isSameDay($today) ? __('Azi') : ($at->isSameDay($today->copy()->subDay()) ? __('Ieri') : $at->format('d.m'))),
                     // Linkurile notificărilor de organizator duc în contul lui, nu în panou.
                     'url' => $st['url'] ?? (str_starts_with($url, '/marketplace') ? $url : null),
                     // Cere acțiune doar cât timp cererea din spate e încă deschisă.
@@ -221,12 +221,14 @@ class OperatorNotificationJournal
                 $m = $models->get($n->actionable_id);
                 $status = $m?->status;
                 $open = in_array($status, [\App\Models\OrderCompanyInvoice::STATUS_REQUESTED, \App\Models\OrderCompanyInvoice::STATUS_PENDING, \App\Models\OrderCompanyInvoice::STATUS_FAILED], true);
-                $sent = $m?->sent_to_customer_at ? ' · trimisă clientului ' . $m->sent_to_customer_at->copy()->timezone('Europe/Bucharest')->format('d.m H:i') : '';
+                $sent = $m?->sent_to_customer_at ? ' · ' . __('trimisă clientului :date', ['date' => $m->sent_to_customer_at->copy()->timezone('Europe/Bucharest')->format('d.m H:i')]) : '';
                 $out[$n->id] = [
                     'open' => $m ? $open : false,
-                    'state' => $m ? ((\App\Models\OrderCompanyInvoice::STATUS_LABELS[$status] ?? $status) . $sent) : 'cererea nu mai există',
-                    'explain' => 'Clientul a cerut factură pe firmă' . ($m?->order?->order_number ? ' pentru comanda ' . $m->order->order_number : '')
-                        . '. Factura pentru bilete o emite organizatorul și o încarcă în contul lui; o trimitem noi clientului. Urmărești până apare încărcată.',
+                    'state' => $m ? (__(\App\Models\OrderCompanyInvoice::STATUS_LABELS[$status] ?? $status) . $sent) : __('cererea nu mai există'),
+                    'explain' => ($m?->order?->order_number
+                            ? __('Clientul a cerut factură pe firmă pentru comanda :order.', ['order' => $m->order->order_number])
+                            : __('Clientul a cerut factură pe firmă.'))
+                        . ' ' . __('Factura pentru bilete o emite organizatorul și o încarcă în contul lui; o trimitem noi clientului. Urmărești până apare încărcată.'),
                     'url' => $m?->order_id ? $panel(\App\Filament\Marketplace\Resources\OrderResource::class, 'view', $m->order_id) : null,
                 ];
             }
@@ -237,9 +239,9 @@ class OperatorNotificationJournal
             $ids = $rows->map(fn ($n) => $n->actionable_type === \App\Models\MarketplaceRefundRequest::class ? $n->actionable_id : data_get($n->data, 'refund_request_id'))->filter();
             $models = \App\Models\MarketplaceRefundRequest::query()->whereIn('id', $ids)->get()->keyBy('id');
             $labels = [
-                'pending' => 'în așteptare', 'under_review' => 'în analiză', 'approved' => 'aprobată, de procesat',
-                'processing' => 'în procesare', 'refunded' => 'rambursată', 'partially_refunded' => 'rambursată parțial',
-                'rejected' => 'respinsă', 'failed' => 'eșuată la procesator',
+                'pending' => __('în așteptare'), 'under_review' => __('în analiză'), 'approved' => __('aprobată, de procesat'),
+                'processing' => __('în procesare'), 'refunded' => __('rambursată'), 'partially_refunded' => __('rambursată parțial'),
+                'rejected' => __('respinsă'), 'failed' => __('eșuată la procesator'),
             ];
             foreach ($rows as $n) {
                 $id = $n->actionable_type === \App\Models\MarketplaceRefundRequest::class ? $n->actionable_id : data_get($n->data, 'refund_request_id');
@@ -247,7 +249,7 @@ class OperatorNotificationJournal
                 $out[$n->id] = [
                     'open' => $m ? in_array($m->status, ['pending', 'under_review', 'approved', 'failed'], true) : true,
                     'state' => $m ? ($labels[$m->status] ?? $m->status) : null,
-                    'explain' => 'Un client a cerut rambursarea unei comenzi. Se analizează și se aprobă sau se respinge din Rambursări.',
+                    'explain' => __('Un client a cerut rambursarea unei comenzi. Se analizează și se aprobă sau se respinge din Rambursări.'),
                     'url' => $m ? $panel(\App\Filament\Marketplace\Resources\RefundRequestResource::class, 'view', $m->id) : null,
                 ];
             }
@@ -257,14 +259,14 @@ class OperatorNotificationJournal
         if ($rows = $byType->get(MarketplaceNotification::TYPE_PAYOUT_REQUEST)) {
             $ids = $rows->map(fn ($n) => $n->actionable_type === \App\Models\MarketplacePayout::class ? $n->actionable_id : data_get($n->data, 'payout_id'))->filter();
             $models = \App\Models\MarketplacePayout::query()->whereIn('id', $ids)->get(['id', 'status', 'reference'])->keyBy('id');
-            $labels = ['pending' => 'așteaptă aprobarea', 'approved' => 'aprobat, de plătit', 'processing' => 'în plată', 'completed' => 'plătit', 'rejected' => 'respins', 'cancelled' => 'anulat'];
+            $labels = ['pending' => __('așteaptă aprobarea'), 'approved' => __('aprobat, de plătit'), 'processing' => __('în plată'), 'completed' => __('plătit'), 'rejected' => __('respins'), 'cancelled' => __('anulat')];
             foreach ($rows as $n) {
                 $id = $n->actionable_type === \App\Models\MarketplacePayout::class ? $n->actionable_id : data_get($n->data, 'payout_id');
                 $m = $id ? $models->get($id) : null;
                 $out[$n->id] = [
                     'open' => $m ? $m->status === 'pending' : true,
                     'state' => $m ? ($labels[$m->status] ?? $m->status) : null,
-                    'explain' => 'Organizatorul a cerut decontul' . ($m?->reference ? ' ' . $m->reference : '') . '. Îl verifici și îl aprobi din Deconturi.',
+                    'explain' => __('Organizatorul a cerut decontul :ref. Îl verifici și îl aprobi din Deconturi.', ['ref' => (string) ($m?->reference ?? '')]),
                     'url' => $m ? $panel(\App\Filament\Marketplace\Resources\PayoutResource::class, 'view', $m->id) : null,
                 ];
             }
@@ -274,7 +276,7 @@ class OperatorNotificationJournal
         if ($rows = $byType->get(MarketplaceNotification::TYPE_DOCUMENT_ACTION)) {
             $svc = app(\App\Services\Marketplace\OrganizerFiscalDocuments::class);
             $events = \App\Models\Event::query()->whereIn('id', $rows->map(fn ($n) => data_get($n->data, 'event_id') ?: $n->actionable_id)->filter())->get()->keyBy('id');
-            $what = ['cerere_missing' => 'cererea de vizare', 'cerere_stale' => 'cererea de vizare din nou (s-au schimbat biletele)', 'impozit_pv_missing' => 'declarația de impozit și PV-ul de distrugere'];
+            $what = ['cerere_missing' => __('cererea de vizare'), 'cerere_stale' => __('cererea de vizare din nou (s-au schimbat biletele)'), 'impozit_pv_missing' => __('declarația de impozit și PV-ul de distrugere')];
             foreach ($rows as $n) {
                 $eventId = data_get($n->data, 'event_id') ?: $n->actionable_id;
                 $event = $eventId ? $events->get($eventId) : null;
@@ -288,8 +290,8 @@ class OperatorNotificationJournal
                 }
                 $out[$n->id] = [
                     'open' => (bool) $still,
-                    'state' => $still ? 'încă negenerat' : 'rezolvat',
-                    'explain' => 'Organizatorul are de generat ' . ($what[$issue] ?? 'documentele fiscale') . ' pentru eveniment. Termenele și depunerea le urmărești în Ops board.',
+                    'state' => $still ? __('încă negenerat') : __('rezolvat'),
+                    'explain' => __('Organizatorul are de generat :what pentru eveniment. Termenele și depunerea le urmărești în Ops board.', ['what' => $what[$issue] ?? __('documentele fiscale')]),
                     'url' => '/marketplace/ops-board',
                 ];
             }

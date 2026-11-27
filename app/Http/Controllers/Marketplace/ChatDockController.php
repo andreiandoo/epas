@@ -98,7 +98,7 @@ class ChatDockController extends Controller
         $admin = $this->admin();
         $conversation = $admin ? $this->find($admin, $reference) : null;
         if (! $conversation) {
-            return response()->json(['ok' => false, 'message' => 'Conversația nu mai există.'], 404);
+            return response()->json(['ok' => false, 'message' => __('Conversația nu mai există.')], 404);
         }
 
         $isMine = (int) $conversation->assigned_to_marketplace_admin_id === (int) $admin->id;
@@ -131,7 +131,7 @@ class ChatDockController extends Controller
                 'ref' => (string) $conversation->reference,
                 'status' => (string) $conversation->status,
                 'closed' => $conversation->isClosed(),
-                'name' => $conversation->guest_name ?: (data_get($conversation->context, 'visitor_name') ?: 'Vizitator'),
+                'name' => $conversation->guest_name ?: (data_get($conversation->context, 'visitor_name') ?: __('Vizitator')),
                 'type' => $this->visitorLabel($conversation->visitor_type),
                 'subject' => $conversation->subject,
                 'owner_id' => $conversation->assigned_to_marketplace_admin_id ? (int) $conversation->assigned_to_marketplace_admin_id : null,
@@ -198,13 +198,13 @@ class ChatDockController extends Controller
                 'title' => (string) ($ev['event_title'] ?? 'Eveniment'),
                 'url' => $eventId ? $this->panelUrl(\App\Filament\Marketplace\Resources\EventResource::class, 'edit', (int) $eventId) : null,
                 'date' => $ev['event_date'] ?? null,
-                'count' => isset($ev['total']) ? ((int) $ev['total']) . ' bilete' : (((int) ($ev['tickets_sold'] ?? 0)) . ' vândute'),
+                'count' => isset($ev['total']) ? __(':n bilete', ['n' => (int) $ev['total']]) : __(':n vândute', ['n' => (int) ($ev['tickets_sold'] ?? 0)]),
                 'orders' => collect((array) ($ev['orders'] ?? []))->map(fn ($o) => [
                     'number' => (string) ($o['order_number'] ?? ''),
                     'url' => ! empty($o['order_id']) ? $this->panelUrl(\App\Filament\Marketplace\Resources\OrderResource::class, 'view', (int) $o['order_id']) : null,
-                    'status' => $orderStatus[$o['status'] ?? ''] ?? ucfirst((string) ($o['status'] ?? '')),
+                    'status' => __($orderStatus[$o['status'] ?? ''] ?? ucfirst((string) ($o['status'] ?? ''))),
                     'status_key' => (string) ($o['status'] ?? ''),
-                    'detail' => trim(($o['tickets'] ?? 0) . ' bilete · ' . ($o['order_date'] ?? '') . ' · ' . ($o['payment'] ?? ''), ' ·'),
+                    'detail' => trim(__(':n bilete', ['n' => $o['tickets'] ?? 0]) . ' · ' . ($o['order_date'] ?? '') . ' · ' . ($o['payment'] ?? ''), ' ·'),
                 ])->values()->all(),
             ];
         };
@@ -217,7 +217,7 @@ class ChatDockController extends Controller
                 'email' => $c->guest_email,
                 'event' => $c->event_id ? (($eventTitle ? $eventTitle . ' ' : '') . '(#' . $c->event_id . ')') : null,
                 'event_url' => $c->event_id ? $this->panelUrl(\App\Filament\Marketplace\Resources\EventResource::class, 'edit', (int) $c->event_id) : null,
-                'operator' => $c->assigned_to_marketplace_admin_id ? $this->cleanName(MarketplaceAdmin::query()->whereKey($c->assigned_to_marketplace_admin_id)->value('name')) : 'nepreluat',
+                'operator' => $c->assigned_to_marketplace_admin_id ? $this->cleanName(MarketplaceAdmin::query()->whereKey($c->assigned_to_marketplace_admin_id)->value('name')) : __('nepreluat'),
                 'page' => data_get($ctx, 'opened_url'),
                 'ip' => data_get($ctx, 'ip'),
                 'device' => data_get($ctx, 'device'),
@@ -227,7 +227,7 @@ class ChatDockController extends Controller
             'history' => $history->map(fn ($h) => [
                 'ref' => (string) $h->reference,
                 'date' => $h->created_at?->copy()->timezone('Europe/Bucharest')->format('d.m.Y H:i'),
-                'status' => $statusLabels[$h->status] ?? $h->status,
+                'status' => __($statusLabels[$h->status] ?? $h->status),
             ])->values(),
             'profile' => empty($visitor['type']) ? null : [
                 'type' => $visitor['type'],
@@ -253,12 +253,12 @@ class ChatDockController extends Controller
         $admin = $this->admin();
         $conversation = $admin ? $this->find($admin, $reference) : null;
         if (! $conversation || $conversation->isClosed()) {
-            return response()->json(['ok' => false, 'message' => 'Conversația e închisă.'], 422);
+            return response()->json(['ok' => false, 'message' => __('Conversația e închisă.')], 422);
         }
 
         $body = trim((string) $request->input('text', ''));
         if ($body === '') {
-            return response()->json(['ok' => false, 'message' => 'Mesajul e gol.'], 422);
+            return response()->json(['ok' => false, 'message' => __('Mesajul e gol.')], 422);
         }
         $internal = $request->boolean('internal');
 
@@ -284,13 +284,13 @@ class ChatDockController extends Controller
         $admin = $this->admin();
         $conversation = $admin ? $this->find($admin, $reference) : null;
         if (! $conversation) {
-            return response()->json(['ok' => false, 'message' => 'Conversația nu mai există.'], 404);
+            return response()->json(['ok' => false, 'message' => __('Conversația nu mai există.')], 404);
         }
 
         $owner = $conversation->assigned_to_marketplace_admin_id;
         if ($owner && (int) $owner !== (int) $admin->id) {
             $name = MarketplaceAdmin::query()->whereKey($owner)->value('name');
-            return response()->json(['ok' => false, 'message' => 'A preluat-o deja ' . $this->cleanName($name ?: 'alt operator') . '.'], 409);
+            return response()->json(['ok' => false, 'message' => __('A preluat-o deja :name.', ['name' => $this->cleanName($name ?: __('alt operator'))])], 409);
         }
 
         app(ChatRoutingService::class)->assignTo($conversation, (int) $admin->id);
@@ -312,7 +312,7 @@ class ChatDockController extends Controller
             ->where('marketplace_client_id', $admin->marketplace_client_id)
             ->first();
         if (! $target) {
-            return response()->json(['ok' => false, 'message' => 'Operatorul nu există.'], 422);
+            return response()->json(['ok' => false, 'message' => __('Operatorul nu există.')], 422);
         }
 
         app(ChatRoutingService::class)->assignTo($conversation, $targetId);
@@ -413,10 +413,10 @@ class ChatDockController extends Controller
     private function visitorLabel(?string $type): string
     {
         return match ($type) {
-            ChatConversation::VISITOR_ORGANIZER => 'organizator',
-            ChatConversation::VISITOR_ARTIST => 'artist',
-            ChatConversation::VISITOR_CUSTOMER => 'client',
-            default => 'vizitator',
+            ChatConversation::VISITOR_ORGANIZER => __('organizator'),
+            ChatConversation::VISITOR_ARTIST => __('artist'),
+            ChatConversation::VISITOR_CUSTOMER => __('client'),
+            default => __('vizitator'),
         };
     }
 

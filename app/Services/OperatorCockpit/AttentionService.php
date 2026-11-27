@@ -158,10 +158,10 @@ class AttentionService
             }
 
             $waitingSince = $c->queued_at ?? $c->created_at;
-            $who = $c->guest_name ?: ($c->context['visitor_name'] ?? null) ?: 'Vizitator';
+            $who = $c->guest_name ?: ($c->context['visitor_name'] ?? null) ?: __('Vizitator');
             $meta = $owner
-                ? ($isMine ? 'al tău' : 'preluat de ' . $this->adminName($owner)) . ' · ' . (int) $c->unread_incoming . ' necitite'
-                : ($c->status === ChatConversation::STATUS_OFFLINE_MESSAGE ? 'mesaj lăsat' : 'în coadă') . ' · ' . $this->ago($waitingSince);
+                ? ($isMine ? __('al tău') : __('preluat de :name', ['name' => $this->adminName($owner)])) . ' · ' . __(':count necitite', ['count' => (int) $c->unread_incoming])
+                : ($c->status === ChatConversation::STATUS_OFFLINE_MESSAGE ? __('mesaj lăsat') : __('în coadă')) . ' · ' . $this->ago($waitingSince);
 
             $items[] = $this->item(
                 'chat',
@@ -218,7 +218,7 @@ class AttentionService
                 : $opened && $opened->lt(now()->subMinutes((int) $this->thresholds['ticket_unassigned_minutes']));
 
             $dept = $this->departmentName($t);
-            $meta = trim(($dept ? $dept . ' · ' : '') . $this->ownerLabel($owner) . ' · ' . ($owner ? 'activitate ' . $this->ago($lastActivity) : 'deschis ' . $this->ago($opened)));
+            $meta = trim(($dept ? $dept . ' · ' : '') . $this->ownerLabel($owner) . ' · ' . ($owner ? __('activitate :ago', ['ago' => $this->ago($lastActivity)]) : __('deschis :ago', ['ago' => $this->ago($opened)])));
 
             $items[] = $this->item(
                 'ticket',
@@ -263,7 +263,7 @@ class AttentionService
             $late = $t->priority === 'urgent'
                 || ($since && $since->lt(now()->subMinutes((int) $this->thresholds['todo_idle_minutes'])));
 
-            $priority = ['urgent' => 'Urgent', 'high' => 'Important'][$t->priority] ?? null;
+            $priority = ['urgent' => __('Urgent'), 'high' => __('Important')][$t->priority] ?? null;
             $meta = trim(($priority ? $priority . ' · ' : '') . $this->ownerLabel($owner) . ' · ' . $this->ago($since));
 
             $items[] = $this->item(
@@ -308,7 +308,7 @@ class AttentionService
                 'artist',
                 $a->id,
                 (string) $name . ($a->artist_id ? '' : ' · cont nou'),
-                $this->ownerLabel($owner) . ' · în așteptare ' . $this->ago($a->created_at),
+                $this->ownerLabel($owner) . ' · ' . __('în așteptare :ago', ['ago' => $this->ago($a->created_at)]),
                 $owner,
                 $a->created_at && $a->created_at->lt(now()->subMinutes((int) $this->thresholds['artist_pending_minutes'])),
                 $this->resourceUrl(ArtistAccountResource::class, 'view', $a->id),
@@ -404,12 +404,12 @@ class AttentionService
         $parts = [];
         if ($kind === 'approval') {
             $parts[] = $this->ownerLabel($e->assigned_to_marketplace_admin_id);
-            $parts[] = 'trimis ' . $this->ago($since);
+            $parts[] = __('trimis :ago', ['ago' => $this->ago($since)]);
         } else {
-            $parts[] = 'trimise ' . $this->ago($since);
+            $parts[] = __('trimise :ago', ['ago' => $this->ago($since)]);
         }
         if ($startsAt) {
-            $parts[] = 'începe ' . $startsAt->format('d.m');
+            $parts[] = __('începe :date', ['date' => $startsAt->format('d.m')]);
         }
         if ($organizer) {
             $parts[] = $organizer;
@@ -418,7 +418,7 @@ class AttentionService
         $item = $this->item(
             'event',
             $e->id,
-            (string) ($title ?: 'Eveniment #' . $e->id),
+            (string) ($title ?: __('Eveniment #:id', ['id' => $e->id])),
             implode(' · ', $parts),
             $kind === 'approval' ? $e->assigned_to_marketplace_admin_id : null,
             $late,
@@ -473,7 +473,7 @@ class AttentionService
                 $o->id,
                 trim(($o->order_number ? $o->order_number . ' · ' : '') . $o->service_type_label),
                 implode(' · ', array_filter([
-                    $toPay ? 'plată prin transfer de confirmat' : 'plătită, de activat',
+                    $toPay ? __('plată prin transfer de confirmat') : __('plătită, de activat'),
                     $o->marketplaceOrganizer?->name,
                     $total,
                     $this->ago($since),
@@ -523,7 +523,7 @@ class AttentionService
                 $out[] = [
                     'id' => (int) $event->id,
                     'kind' => $issue['kind'],
-                    'title' => (string) ($name ?: 'Eveniment #' . $event->id),
+                    'title' => (string) ($name ?: __('Eveniment #:id', ['id' => $event->id])),
                     'event_date' => $start?->format('d.m.Y'),
                     'organizer' => $event->marketplaceOrganizer?->name,
                     'deadline' => $deadline?->toDateString(),
@@ -669,7 +669,7 @@ class AttentionService
                 $out[] = [
                     'id' => (int) $event->id,
                     'kind' => $issue['kind'],
-                    'title' => (string) ($name ?: 'Eveniment #' . $event->id),
+                    'title' => (string) ($name ?: __('Eveniment #:id', ['id' => $event->id])),
                     'event_date' => $svc->startDay($event)?->format('d.m.Y'),
                     'organizer' => $event->marketplaceOrganizer?->name,
                     'deadline' => $deadline->format('d.m'),
@@ -696,13 +696,18 @@ class AttentionService
 
     private function docItem(int $eventId, string $title, ?string $date, ?string $organizer, ?string $eventUrl, ?string $actionUrl, array $tasks, string $kind): array
     {
+        // Textele sarcinilor vin din cache (Ops board), deci le traducem aici, la fiecare afișare.
+        $tasks = array_map(fn ($t) => array_merge($t, [
+            'name' => __((string) $t['name']),
+            'state' => $t['state'] !== '' ? __((string) $t['state']) : '',
+        ]), $tasks);
         $overdue = (bool) array_filter($tasks, fn ($t) => $t['overdue']);
         $item = $this->item(
             'docs',
             $eventId,
             $title,
             implode(' · ', array_filter([
-                implode(', ', array_map(fn ($t) => $t['name'] . ($t['state'] ? ': ' . $t['state'] : '') . ($t['due'] ? ' (termen ' . $t['due'] . ')' : ''), $tasks)),
+                implode(', ', array_map(fn ($t) => $t['name'] . ($t['state'] ? ': ' . $t['state'] : '') . ($t['due'] ? ' (' . __('termen :date', ['date' => $t['due']]) . ')' : ''), $tasks)),
                 $date,
                 $organizer,
             ])),
@@ -744,17 +749,17 @@ class AttentionService
         };
 
         if (! $model) {
-            return ['ok' => false, 'message' => 'Element necunoscut.'];
+            return ['ok' => false, 'message' => __('Element necunoscut.')];
         }
 
         $record = $model->where('marketplace_client_id', $this->client->id)->whereKey($id)->first();
         if (! $record) {
-            return ['ok' => false, 'message' => 'Elementul nu mai există.'];
+            return ['ok' => false, 'message' => __('Elementul nu mai există.')];
         }
 
         $current = $record->assigned_to_marketplace_admin_id;
         if ($current && (int) $current !== $adminId) {
-            return ['ok' => false, 'message' => 'L-a preluat deja ' . $this->adminName($current) . '.'];
+            return ['ok' => false, 'message' => __('L-a preluat deja :name.', ['name' => $this->adminName($current)])];
         }
 
         if ($category === 'chat') {
@@ -772,7 +777,7 @@ class AttentionService
                 ->update($update);
 
             if ($affected === 0) {
-                return ['ok' => false, 'message' => 'L-a preluat deja altcineva.'];
+                return ['ok' => false, 'message' => __('L-a preluat deja altcineva.')];
             }
 
             // Update-ul direct nu declanșează observatorii; anunțăm explicit ceilalți operatori.
@@ -901,10 +906,10 @@ class AttentionService
     private function ownerLabel($owner): string
     {
         if (! $owner) {
-            return 'nealocat';
+            return __('nealocat');
         }
 
-        return (int) $owner === (int) $this->admin->id ? 'al tău' : 'preluat de ' . $this->adminName($owner);
+        return (int) $owner === (int) $this->admin->id ? __('al tău') : __('preluat de :name', ['name' => $this->adminName($owner)]);
     }
 
     private function adminName($id): string
@@ -921,10 +926,10 @@ class AttentionService
     private function visitorLabel(?string $type): string
     {
         return match ($type) {
-            ChatConversation::VISITOR_ORGANIZER => 'organizator',
-            ChatConversation::VISITOR_ARTIST => 'artist',
-            ChatConversation::VISITOR_CUSTOMER => 'client',
-            default => 'vizitator',
+            ChatConversation::VISITOR_ORGANIZER => __('organizator'),
+            ChatConversation::VISITOR_ARTIST => __('artist'),
+            ChatConversation::VISITOR_CUSTOMER => __('client'),
+            default => __('vizitator'),
         };
     }
 
@@ -936,17 +941,17 @@ class AttentionService
 
         $minutes = (int) $date->diffInMinutes(now());
         if ($minutes < 1) {
-            return 'acum';
+            return __('acum');
         }
         if ($minutes < 60) {
-            return 'de ' . $minutes . ' min';
+            return __('de :n min', ['n' => $minutes]);
         }
         $hours = intdiv($minutes, 60);
         if ($hours < 48) {
-            return 'de ' . $hours . 'h';
+            return __('de :n h', ['n' => $hours]);
         }
 
-        return 'de ' . intdiv($hours, 24) . ' zile';
+        return __('de :n zile', ['n' => intdiv($hours, 24)]);
     }
 
     private function resourceUrl(string $resource, string $page, int $id): string

@@ -78,6 +78,11 @@ class DepartmentScope
 
     public static function journalTypeOptions(): array
     {
-        return MarketplaceNotification::getTypeLabels();
+        return array_map(fn ($l) => __($l), MarketplaceNotification::getTypeLabels());
+    }
+
+    public static function categoryOptions(): array
+    {
+        return array_map(fn ($l) => __($l), self::CATEGORIES);
     }
 }

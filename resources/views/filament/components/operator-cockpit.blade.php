@@ -207,58 +207,58 @@
 </style>
 
 <div id="epc-root" data-me="{{ (int) ($meId ?? 0) }}" data-poll-ms="{{ (int) config('operator_cockpit.poll_interval_ms', 15000) }}" data-client-id="{{ (int) ($clientId ?? 0) }}">
-    <nav class="epc-rail" aria-label="Bara de atenție">
+    <nav class="epc-rail" aria-label="{{ __('Bara de atenție') }}">
         <div class="epc-tiles" style="display:grid;gap:10px"></div>
         <div class="epc-sep"></div>
-        <span class="epc-rail-lbl">Echipa</span>
+        <span class="epc-rail-lbl">{{ __('Echipa') }}</span>
         <div class="epc-team"></div>
-        <button type="button" class="epc-plus" title="Conversație nouă cu echipa" aria-label="Conversație nouă cu echipa">+</button>
+        <button type="button" class="epc-plus" title="{{ __('Conversație nouă cu echipa') }}" aria-label="{{ __('Conversație nouă cu echipa') }}">+</button>
         <div class="epc-spacer"></div>
-        <button type="button" class="epc-icon-btn epc-setbtn" title="Sunete și Nu deranja" aria-label="Sunete și Nu deranja">
+        <button type="button" class="epc-icon-btn epc-setbtn" title="{{ __('Sunete și Nu deranja') }}" aria-label="{{ __('Sunete și Nu deranja') }}">
             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
         </button>
-        <button type="button" class="epc-icon-btn epc-jbtn" title="Jurnalul zilei" aria-label="Jurnalul zilei">
+        <button type="button" class="epc-icon-btn epc-jbtn" title="{{ __('Jurnalul zilei') }}" aria-label="{{ __('Jurnalul zilei') }}">
             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
             <span class="epc-jn" hidden></span>
         </button>
-        <button type="button" class="epc-icon-btn epc-helpbtn" title="Ai nevoie de ajutor?" aria-label="Ai nevoie de ajutor?" aria-expanded="false">
+        <button type="button" class="epc-icon-btn epc-helpbtn" title="{{ __('Ai nevoie de ajutor?') }}" aria-label="{{ __('Ai nevoie de ajutor?') }}" aria-expanded="false">
             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path stroke-linecap="round" d="M5.6 5.6l3.9 3.9M18.4 5.6l-3.9 3.9M5.6 18.4l3.9-3.9M18.4 18.4l-3.9-3.9"/></svg>
         </button>
     </nav>
 
-    <div class="epc-helppop" role="dialog" aria-label="Ajutor" hidden>
-        <b>Ai nevoie de ajutor?</b>
-        <p>Scrie-ne sau sună-ne, te ajutăm cu panoul.</p>
+    <div class="epc-helppop" role="dialog" aria-label="{{ __('Ajutor') }}" hidden>
+        <b>{{ __('Ai nevoie de ajutor?') }}</b>
+        <p>{{ __('Scrie-ne sau sună-ne, te ajutăm cu panoul.') }}</p>
         <a href="mailto:help@tixello.com">help@tixello.com</a>
         <a href="tel:0040750292962">0040 750 29 29 62</a>
     </div>
 
-    <button type="button" class="epc-fab" aria-label="Deschide bara de atenție" hidden>
+    <button type="button" class="epc-fab" aria-label="{{ __('Deschide bara de atenție') }}" hidden>
         <span class="epc-fab-n">0</span><span class="epc-fab-dot" hidden></span>
     </button>
 
-    <aside class="epc-drawer" aria-label="De rezolvat" aria-hidden="true">
+    <aside class="epc-drawer" aria-label="{{ __('De rezolvat') }}" aria-hidden="true">
         <div class="epc-head">
             <div class="epc-head-row">
                 <div class="epc-tabs" role="tablist">
-                    <button type="button" class="epc-tab is-on" role="tab" data-tab="todo" aria-selected="true">De rezolvat</button>
-                    <button type="button" class="epc-tab" role="tab" data-tab="journal" aria-selected="false">Jurnal <span class="epc-tab-n" hidden></span></button>
-                    <button type="button" class="epc-tab" role="tab" data-tab="team" aria-selected="false">Echipa <span class="epc-tab-n epc-team-n" hidden></span></button>
+                    <button type="button" class="epc-tab is-on" role="tab" data-tab="todo" aria-selected="true">{{ __('De rezolvat') }}</button>
+                    <button type="button" class="epc-tab" role="tab" data-tab="journal" aria-selected="false">{{ __('Jurnal') }} <span class="epc-tab-n" hidden></span></button>
+                    <button type="button" class="epc-tab" role="tab" data-tab="team" aria-selected="false">{{ __('Echipa') }} <span class="epc-tab-n epc-team-n" hidden></span></button>
                 </div>
                 <div class="epc-head-actions">
-                    <button type="button" class="epc-ibtn epc-pin" aria-pressed="false" title="Fixează sertarul deschis" aria-label="Fixează sertarul deschis">
+                    <button type="button" class="epc-ibtn epc-pin" aria-pressed="false" title="{{ __('Fixează sertarul deschis') }}" aria-label="{{ __('Fixează sertarul deschis') }}">
                         <svg fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M15 3l6 6-3 1-4 4 .5 4.5L13 20l-4-4-5 5M9 16l-4-4 1.5-1.5L11 11l4-4 1-3z"/></svg>
                     </button>
-                    <button type="button" class="epc-ibtn epc-close" title="Închide (Esc)" aria-label="Închide">
+                    <button type="button" class="epc-ibtn epc-close" title="{{ __('Închide (Esc)') }}" aria-label="{{ __('Închide') }}">
                         <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
                     </button>
                 </div>
             </div>
-            <div class="epc-seg" role="group" aria-label="Filtru" data-for="todo">
-                <button type="button" class="is-on" data-f="all">Toate</button>
-                <button type="button" data-f="mine">Ale mele</button>
-                <button type="button" data-f="pool">Nealocate</button>
-                <button type="button" data-f="others" hidden>Ale altora</button>
+            <div class="epc-seg" role="group" aria-label="{{ __('Filtru') }}" data-for="todo">
+                <button type="button" class="is-on" data-f="all">{{ __('Toate') }}</button>
+                <button type="button" data-f="mine">{{ __('Ale mele') }}</button>
+                <button type="button" data-f="pool">{{ __('Nealocate') }}</button>
+                <button type="button" data-f="others" hidden>{{ __('Ale altora') }}</button>
             </div>
         </div>
         <div class="epc-msg" role="status" hidden></div>
@@ -267,19 +267,133 @@
         <div class="epc-body epc-tbody" hidden></div>
         <div class="epc-body epc-sbody" hidden></div>
         <div class="epc-foot">
-            <a href="/marketplace/notifications">Toate notificările (3 zile)</a>
-            <button type="button" class="epc-pill epc-sound">Setări</button>
+            <a href="/marketplace/notifications">{{ __('Toate notificările (3 zile)') }}</a>
+            <button type="button" class="epc-pill epc-sound">{{ __('Setări') }}</button>
         </div>
     </aside>
 </div>
 
+@php
+    $__epT = [];
+    foreach ([
+        '1 oră',
+        '4 ore',
+        ':n notificări cer acțiune (rambursări, plăți, documente, facturi pe firmă)',
+        ':n online',
+        ':name',
+        ':name te-a menționat',
+        ':name te-a menționat în :thread',
+        ':name în :thread',
+        'Activ până :time. Auzi doar mesajele clienților de pe chat-urile tale.',
+        'Activează',
+        'Alege cel puțin un coleg.',
+        'Alege…',
+        'Amână 1h',
+        'Apar în colțul ecranului când panoul e în fundal',
+        'Arată tot',
+        'Ascultă',
+        'Așa arată notificările pe desktop.',
+        'Browserul acesta nu permite notificări.',
+        'Browserul pornește sunetele doar după primul click pe pagină.',
+        'Ca la WhatsApp. Trebuie să ai măcar un tab deschis.',
+        'Caută conversație',
+        'Caută conversație…',
+        'Cer acțiune',
+        'Cereri de rambursare, deconturi, documente de generat și facturi cerute pe firmă. Ies singure de aici când cererea e rezolvată (de exemplu când organizatorul încarcă factura) sau când apeși „Văzut”.',
+        'Chat clienți',
+        'Chat cu clienții',
+        'Client nou în coadă, mesaj pe chatul tău',
+        'Colegii care îți scriu direct',
+        'Confirmă plata',
+        'Conturi artist în review',
+        'Conversații',
+        'Creează grupul',
+        'Deschide',
+        'Doar :cat',
+        'Documente evenimente',
+        'Dă un nume grupului.',
+        'Echipa',
+        'Element nou în bară',
+        'Evenimente de revizuit',
+        'Evenimente noi de aprobat',
+        'Fixează sertarul deschis',
+        'Fără conexiune. Încearcă din nou.',
+        'Grup nou',
+        'Mesaj intern 1:1 și @mențiuni',
+        'Mesaj nou',
+        'Mesaj în grupurile echipei',
+        'Modificări la evenimente live',
+        'Nicio conversație găsită.',
+        'Nimic de rezolvat aici. Când apare ceva, pătratul categoriei se colorează.',
+        'Nimic în ultimele 3 zile.',
+        'Notificări pe desktop',
+        'Notificările sunt blocate pentru core.tixello.com. Le poți permite din lacătul de lângă adresă.',
+        'Nu am putut crea grupul.',
+        'Nu am putut deschide conversația.',
+        'Nu am putut prelua elementul. Încearcă din nou.',
+        'Nu am putut salva setarea.',
+        'Nu deranja',
+        'Oprește',
+        'Oprit',
+        'Oprit. Auzi toate sunetele pornite mai sus.',
+        'Ops board',
+        'Pornit',
+        'Preiau',
+        'Până mâine la 8',
+        'Renunță',
+        'Respectă sunetele și „Nu deranja” de mai sus.',
+        'Revizuiește',
+        'Scrie unui coleg',
+        'Scrie-i lui :name',
+        'Se încarcă…',
+        'Sertarul rămâne deschis. Click ca să se închidă singur.',
+        'Servicii',
+        'Sunete',
+        'Tichete suport',
+        'Tichete, ToDos, artiști, evenimente',
+        'Toate',
+        'Toată echipa, departamente, grupuri',
+        'Tu',
+        'Un coleg',
+        'Văzut',
+        'acum :n h',
+        'acum :n min',
+        'acum :n zile',
+        'al tău',
+        'de aprobat',
+        'fără activitate înregistrată',
+        'fără notificări',
+        'ieri',
+        'membri',
+        'nealocat',
+        'nu se alocă, doar se aprobă',
+        'online',
+        'preluat',
+        'restant',
+        'restant, termen :date',
+        'rezolvat',
+        'se preiau',
+        'stare',
+        'termen :date',
+        'tu',
+        'Încearcă',
+        'Începe conversația',
+        'întârziat',
+    ] as $__k) { $__epT[$__k] = __($__k); }
+@endphp
 <script>
 (function () {
+    var __T = @json($__epT);
+    function __(s, r) {
+        var x = Object.prototype.hasOwnProperty.call(__T, s) ? __T[s] : s;
+        if (r) Object.keys(r).sort(function (a, b) { return b.length - a.length; }).forEach(function (k) { x = x.split(':' + k).join(String(r[k])); });
+        return x;
+    }
     if (window.__epcInit) return;
     window.__epcInit = true;
 
     var CATS = ['chat', 'ticket', 'todo', 'artist', 'event', 'service', 'docs'];
-    var LABEL = { chat: 'Chat clienți', ticket: 'Tichete suport', todo: 'ToDos', artist: 'Conturi artist în review', event: 'Evenimente de revizuit', service: 'Servicii', docs: 'Documente evenimente' };
+    var LABEL = { chat: __('Chat clienți'), ticket: __('Tichete suport'), todo: 'ToDos', artist: __('Conturi artist în review'), event: __('Evenimente de revizuit'), service: __('Servicii'), docs: __('Documente evenimente') };
     var COLOR = { chat: 'var(--epc-chat)', ticket: 'var(--epc-ticket)', todo: 'var(--epc-todo)', artist: 'var(--epc-artist)', event: 'var(--epc-event)', service: 'var(--epc-service)', docs: 'var(--epc-docs)' };
     // Iconițe pline per categorie; detaliile interioare se „decupează” cu var(--cut).
     var ICONS = {
@@ -391,7 +505,7 @@
     function renderPin() {
         var p = isPinned();
         pinBtn.setAttribute('aria-pressed', p ? 'true' : 'false');
-        pinBtn.title = p ? 'Sertarul rămâne deschis. Click ca să se închidă singur.' : 'Fixează sertarul deschis';
+        pinBtn.title = p ? __('Sertarul rămâne deschis. Click ca să se închidă singur.') : __('Fixează sertarul deschis');
     }
     pinBtn.addEventListener('click', function () { lsSet(LS_PIN, isPinned() ? '0' : '1'); renderPin(); });
     root.querySelector('.epc-close').addEventListener('click', function () { lsSet(LS_PIN, '0'); renderPin(); close(); });
@@ -441,16 +555,16 @@
         var tabN = root.querySelector('.epc-tab-n');
         tabN.hidden = !state.journalUnread;
         tabN.textContent = String(state.journalUnread);
-        tabN.title = state.journalUnread + ' notificări cer acțiune (rambursări, plăți, documente, facturi pe firmă)';
+        tabN.title = __(':n notificări cer acțiune (rambursări, plăți, documente, facturi pe firmă)', { n: state.journalUnread });
     }
     var journalFilter = 'all';
     function renderJournal() {
         var html = '', day = null;
         var actionCount = state.journal.filter(function (j) { return j.attention; }).length;
-        html += '<div class="epc-jfilter"><button type="button" data-jf="all" class="' + (journalFilter === 'all' ? 'is-on' : '') + '">Toate</button>'
-            + '<button type="button" data-jf="action" class="' + (journalFilter === 'action' ? 'is-on' : '') + '">Cer acțiune (' + actionCount + ')</button></div>';
+        html += '<div class="epc-jfilter"><button type="button" data-jf="all" class="' + (journalFilter === 'all' ? 'is-on' : '') + ('">' + __('Toate') + '</button>')
+            + '<button type="button" data-jf="action" class="' + (journalFilter === 'action' ? 'is-on' : '') + ('">' + __('Cer acțiune') + ' (') + actionCount + ')</button></div>';
         if (journalFilter === 'action') {
-            html += '<p class="epc-jnote">Cereri de rambursare, deconturi, documente de generat și facturi cerute pe firmă. Ies singure de aici când cererea e rezolvată (de exemplu când organizatorul încarcă factura) sau când apeși „Văzut”.</p>';
+            html += ('<p class="epc-jnote">' + __('Cereri de rambursare, deconturi, documente de generat și facturi cerute pe firmă. Ies singure de aici când cererea e rezolvată (de exemplu când organizatorul încarcă factura) sau când apeși „Văzut”.') + '</p>');
         }
         state.journal.filter(function (j) { return journalFilter === 'all' || j.attention; }).forEach(function (j) {
             if (j.day !== day) { day = j.day; html += '<div class="epc-jday">' + esc(day) + '</div>'; }
@@ -458,17 +572,17 @@
                 ? '<a class="epc-jt" href="' + esc(j.url) + '" title="' + esc(j.title) + '">' + esc(j.title) + '</a>'
                 : '<span class="epc-jt" title="' + esc(j.title) + '">' + esc(j.title) + '</span>';
             // La cele care cer acțiune: starea de acum a cererii în loc de textul scris pentru organizator.
-            var meta = j.explain ? (j.label + (j.state ? ' · stare: ' + j.state : '')) : (j.label + (j.message ? ' · ' + j.message : ''));
+            var meta = j.explain ? (j.label + (j.state ? (' · ' + __('stare') + ': ') + j.state : '')) : (j.label + (j.message ? ' · ' + j.message : ''));
             html += '<div class="epc-jrow' + (j.attention ? ' is-att' : '') + '">'
                 + '<span class="epc-jdot" style="background:' + (JCOLOR[j.color] || JCOLOR.primary) + '"></span>'
                 + title
                 + '<span class="epc-jtime">' + esc(j.time) + '</span>'
                 + '<span class="epc-jm" title="' + esc(meta) + '">' + esc(meta) + '</span>'
-                + (j.attention ? '<button type="button" class="epc-btn epc-jread" data-jread="' + j.id + '">Văzut</button>' : (j.done ? '<span class="epc-chip epc-jread">rezolvat</span>' : ''))
+                + (j.attention ? '<button type="button" class="epc-btn epc-jread" data-jread="' + j.id + ('">' + __('Văzut') + '</button>') : (j.done ? '<span class="epc-chip epc-jread">' + __('rezolvat') + '</span>' : ''))
                 + (j.explain ? '<span class="epc-jx">' + esc(j.explain) + (j.message ? '<br><span class="epc-jorig">' + esc(j.message) + '</span>' : '') + '</span>' : '')
                 + '</div>';
         });
-        jbody.innerHTML = html || '<p class="epc-empty">Nimic în ultimele 3 zile.</p>';
+        jbody.innerHTML = html || ('<p class="epc-empty">' + __('Nimic în ultimele 3 zile.') + '</p>');
     }
     jbody.addEventListener('click', function (e) {
         var link = e.target.closest('a[href*="chat-console?c="]');
@@ -553,36 +667,36 @@
     function renderBody() {
         var html = '';
         if (state.cat) {
-            html += '<div class="epc-catbar"><span>Doar <b>' + esc(LABEL[state.cat]) + '</b></span><button type="button" data-allcats="1">Arată tot</button></div>';
+            html += '<div class="epc-catbar"><span>' + __('Doar :cat', { cat: '<b>' + esc(LABEL[state.cat]) + '</b>' }) + ('</span><button type="button" data-allcats="1">' + __('Arată tot') + '</button></div>');
         }
         CATS.forEach(function (cat) {
             if (state.cat && state.cat !== cat) return;
             var list = (state.items[cat] || []).filter(passes);
             if (!list.length) return;
             html += '<div class="epc-grp" data-g="' + cat + '"><span class="epc-sq" style="background:' + COLOR[cat] + '"></span>' + esc(LABEL[cat]) + '<span class="epc-n">' + list.length + '</span></div>';
-            var SUB = { approval: ['Evenimente noi de aprobat', 'se preiau'], changes: ['Modificări la evenimente live', 'nu se alocă, doar se aprobă'] };
+            var SUB = { approval: [__('Evenimente noi de aprobat'), __('se preiau')], changes: [__('Modificări la evenimente live'), __('nu se alocă, doar se aprobă')] };
             var lastKind = null;
             list.forEach(function (i) {
                 if (cat === 'event' && i.kind && i.kind !== lastKind) {
                     lastKind = i.kind;
                     html += '<div class="epc-sub">' + esc(SUB[i.kind][0]) + ' <small>· ' + esc(SUB[i.kind][1]) + '</small></div>';
                 }
-                var chip = i.late ? '<span class="epc-chip is-late">întârziat</span>'
-                    : (i.mine ? '<span class="epc-chip">al tău</span>' : (i.owner_id ? '<span class="epc-chip">' + esc(i.owner_name || 'preluat') + '</span>' : '<span class="epc-chip">nealocat</span>'));
-                if (!i.late && i.kind === 'changes') chip = '<span class="epc-chip">de aprobat</span>';
+                var chip = i.late ? ('<span class="epc-chip is-late">' + __('întârziat') + '</span>')
+                    : (i.mine ? ('<span class="epc-chip">' + __('al tău') + '</span>') : (i.owner_id ? '<span class="epc-chip">' + esc(i.owner_name || __('preluat')) + '</span>' : '<span class="epc-chip">' + __('nealocat') + '</span>'));
+                if (!i.late && i.kind === 'changes') chip = '<span class="epc-chip">' + __('de aprobat') + '</span>';
                 if (!i.late && (i.category === 'service' || i.category === 'docs')) chip = '';
                 var action = i.claimable === false
-                    ? '<a class="epc-btn is-pri" href="' + esc(i.url) + '">' + (i.kind === 'changes' ? 'Revizuiește' : i.kind === 'payment' ? 'Confirmă plata' : i.kind === 'activate' ? 'Activează' : (i.category === 'docs' && i.url.indexOf('ops-board') !== -1) ? 'Ops board' : 'Deschide') + '</a>'
+                    ? '<a class="epc-btn is-pri" href="' + esc(i.url) + '">' + (i.kind === 'changes' ? __('Revizuiește') : i.kind === 'payment' ? __('Confirmă plata') : i.kind === 'activate' ? __('Activează') : (i.category === 'docs' && i.url.indexOf('ops-board') !== -1) ? __('Ops board') : __('Deschide')) + '</a>'
                     : !i.owner_id
-                    ? '<button type="button" class="epc-btn is-pri" data-claim="' + esc(i.key) + '" data-url="' + esc(i.url) + '">Preiau</button>'
-                    : '<a class="epc-btn" href="' + esc(i.url) + '">Deschide</a>';
-                var snooze = '<button type="button" class="epc-snooze" data-snooze="' + esc(i.key) + '" title="Amână 1h" aria-label="Amână 1h"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" d="M12 9v4l2.5 2M9 2h6"/></svg></button>';
+                    ? '<button type="button" class="epc-btn is-pri" data-claim="' + esc(i.key) + '" data-url="' + esc(i.url) + ('">' + __('Preiau') + '</button>')
+                    : '<a class="epc-btn" href="' + esc(i.url) + ('">' + __('Deschide') + '</a>');
+                var snooze = '<button type="button" class="epc-snooze" data-snooze="' + esc(i.key) + ('" title="' + __('Amână 1h') + '" aria-label="' + __('Amână 1h') + '"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" d="M12 9v4l2.5 2M9 2h6"/></svg></button>');
                 html += '<div class="epc-item' + (i.mine && state.filter === 'all' ? ' is-mine' : '') + '"><a class="epc-item-t" href="' + esc(i.event_url || i.url) + '" title="' + esc(i.title) + '">' + esc(i.title) + '</a>'
                     + (i.category === 'docs'
                         ? '<span class="epc-item-m epc-tasks" title="' + esc(i.meta) + '">'
                             + (i.tasks || []).map(function (t) {
                                 return '<span><b class="epc-doc">' + esc(t.name) + '</b>' + (t.state ? ' ' + esc(t.state) : '')
-                                    + (t.due ? ' · <span class="epc-deadline' + (t.overdue ? ' is-late' : '') + '">' + (t.overdue ? 'restant, termen ' : 'termen ') + esc(t.due) + '</span>' : (t.overdue ? ' · <span class="epc-deadline is-late">restant</span>' : ''))
+                                    + (t.due ? ' · <span class="epc-deadline' + (t.overdue ? ' is-late' : '') + '">' + __(t.overdue ? 'restant, termen :date' : 'termen :date', { date: esc(t.due) }) + '</span>' : (t.overdue ? (' · <span class="epc-deadline is-late">' + __('restant') + '</span>') : ''))
                                     + '</span>';
                             }).join('')
                             + '<span class="epc-docmeta">' + esc([i.event_date, i.organizer].filter(Boolean).join(' · ')) + '</span></span>'
@@ -590,7 +704,7 @@
                     + '<span class="epc-item-a">' + chip + action + snooze + '</span></div>';
             });
         });
-        body.innerHTML = html || '<p class="epc-empty">Nimic de rezolvat aici. Când apare ceva, pătratul categoriei se colorează.</p>';
+        body.innerHTML = html || ('<p class="epc-empty">' + __('Nimic de rezolvat aici. Când apare ceva, pătratul categoriei se colorează.') + '</p>');
     }
 
     function showMsg(text) {
@@ -636,9 +750,9 @@
                     window.location.href = url;
                     return;
                 }
-                showMsg((res && res.message) || 'Nu am putut prelua elementul. Încearcă din nou.');
+                showMsg((res && res.message) || __('Nu am putut prelua elementul. Încearcă din nou.'));
                 poll();
-            }).catch(function () { claimBtn.disabled = false; showMsg('Fără conexiune. Încearcă din nou.'); });
+            }).catch(function () { claimBtn.disabled = false; showMsg(__('Fără conexiune. Încearcă din nou.')); });
         } else if (snoozeBtn) {
             snoozeBtn.disabled = true;
             post('/marketplace/cockpit/snooze', snoozeBtn.getAttribute('data-snooze')).then(function () { poll(); });
@@ -770,39 +884,39 @@
 
     function renderTeamTab() {
         var f = team.filter.toLowerCase();
-        var html = '<div class="epc-tbar"><input type="search" class="epc-tsearch" placeholder="Caută conversație…" aria-label="Caută conversație" value="' + esc(team.filter) + '">'
-            + '<button type="button" class="epc-btn" data-tf="dm">Mesaj nou</button><button type="button" class="epc-btn" data-tf="group">Grup nou</button></div>';
+        var html = ('<div class="epc-tbar"><input type="search" class="epc-tsearch" placeholder="' + __('Caută conversație…') + '" aria-label="' + __('Caută conversație') + '" value="') + esc(team.filter) + '">'
+            + ('<button type="button" class="epc-btn" data-tf="dm">' + __('Mesaj nou') + '</button><button type="button" class="epc-btn" data-tf="group">' + __('Grup nou') + '</button></div>');
 
         if (team.form === 'dm') {
-            html += '<div class="epc-form"><label for="epc-dm-sel">Scrie unui coleg</label><select id="epc-dm-sel"><option value="">Alege…</option>'
+            html += ('<div class="epc-form"><label for="epc-dm-sel">' + __('Scrie unui coleg') + '</label><select id="epc-dm-sel"><option value="">' + __('Alege…') + '</option>')
                 + team.colleagues.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('')
-                + '</select><div class="epc-row"><button type="button" class="epc-btn" data-tf="cancel">Renunță</button><button type="button" class="epc-btn is-pri" data-tf="dm-go">Deschide</button></div></div>';
+                + ('</select><div class="epc-row"><button type="button" class="epc-btn" data-tf="cancel">' + __('Renunță') + '</button><button type="button" class="epc-btn is-pri" data-tf="dm-go">' + __('Deschide') + '</button></div></div>');
         } else if (team.form === 'group') {
             html += '<div class="epc-form"><input type="text" id="epc-g-name" maxlength="80" placeholder="Numele grupului" aria-label="Numele grupului">'
                 + '<div class="epc-checks">' + team.colleagues.map(function (c) { return '<label><input type="checkbox" value="' + c.id + '"> ' + esc(c.name) + '</label>'; }).join('') + '</div>'
-                + '<div class="epc-row"><button type="button" class="epc-btn" data-tf="cancel">Renunță</button><button type="button" class="epc-btn is-pri" data-tf="group-go">Creează grupul</button></div></div>';
+                + ('<div class="epc-row"><button type="button" class="epc-btn" data-tf="cancel">' + __('Renunță') + '</button><button type="button" class="epc-btn is-pri" data-tf="group-go">' + __('Creează grupul') + '</button></div></div>');
         }
 
         // Toată echipa, cu cine e online acum și când au fost activi ceilalți.
         var people = team.people.filter(function (p) { return !f || p.name.toLowerCase().indexOf(f) !== -1; });
         if (people.length) {
             var onlineCount = team.people.filter(function (p) { return p.online; }).length;
-            html += '<div class="epc-sect"><span>Echipa</span><span>' + onlineCount + ' online</span></div><div class="epc-people">';
+            html += ('<div class="epc-sect"><span>' + __('Echipa') + '</span><span>') + __(':n online', { n: onlineCount }) + '</span></div><div class="epc-people">';
             people.forEach(function (p) {
-                html += '<button type="button" class="epc-person" ' + (p.me ? 'disabled' : 'data-dm="' + p.id + '"') + ' title="' + (p.me ? 'Tu' : 'Scrie-i lui ' + esc(p.name)) + '">'
+                html += '<button type="button" class="epc-person" ' + (p.me ? 'disabled' : 'data-dm="' + p.id + '"') + ' title="' + (p.me ? __('Tu') : __('Scrie-i lui :name', { name: esc(p.name) })) + '">'
                     + '<span class="epc-dot' + (p.online ? ' is-on' : '') + '"></span>'
                     + '<span>' + esc(p.name) + (p.me ? ' (tu)' : '') + '</span>'
-                    + '<small>' + (p.online ? 'online' : esc(seenAgo(p.last_seen))) + '</small></button>';
+                    + '<small>' + (p.online ? __('online') : esc(seenAgo(p.last_seen))) + '</small></button>';
             });
-            html += '</div><div class="epc-sect"><span>Conversații</span></div>';
+            html += ('</div><div class="epc-sect"><span>' + __('Conversații') + '</span></div>');
         }
 
         var rows = team.threads.filter(function (t) { return !f || t.name.toLowerCase().indexOf(f) !== -1; });
         rows.forEach(function (t) {
-            var last = t.last ? ((t.last.mine ? 'Tu: ' : (t.last.author && t.type !== 'dm' ? t.last.author + ': ' : '')) + t.last.text) : (t.type === 'dm' ? 'Începe conversația' : t.members + ' membri');
+            var last = t.last ? ((t.last.mine ? __('Tu') + ': ' : (t.last.author && t.type !== 'dm' ? t.last.author + ': ' : '')) + t.last.text) : (t.type === 'dm' ? __('Începe conversația') : t.members + (' ' + __('membri')));
             html += '<button type="button" class="epc-trow' + (t.unread ? ' is-unread' : '') + '" data-thread="' + t.id + '">'
                 + '<span class="epc-ava' + (t.type !== 'dm' ? ' is-group' : '') + '" style="--ava:' + avaColor(t) + '">' + esc(t.initials) + '</span>'
-                + '<span class="epc-tn">' + esc(t.name) + (t.muted ? ' · fără notificări' : '') + '</span>'
+                + '<span class="epc-tn">' + esc(t.name) + (t.muted ? (' · ' + __('fără notificări')) : '') + '</span>'
                 + '<span class="epc-tl">' + esc(last) + '</span>'
                 + (t.unread ? '<span class="epc-tu' + (t.mentioned || t.type === 'dm' ? ' is-mention' : '') + '">' + (t.mentioned ? '@' : t.unread) + '</span>' : '')
                 + '</button>';
@@ -813,11 +927,11 @@
                     .sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });
                 var shown = team.open[t.id] ? members : members.slice(0, 6);
                 html += '<div class="epc-members">' + shown.map(function (p) {
-                    return '<span><i class="epc-dot' + (p.online ? ' is-on' : '') + '"></i>' + esc(p.me ? 'tu' : p.name.split(' ')[0]) + '</span>';
-                }).join('') + (members.length > shown.length ? '<button type="button" class="epc-more" data-more="' + t.id + '">+' + (members.length - shown.length) + ' membri</button>' : '') + '</div>';
+                    return '<span><i class="epc-dot' + (p.online ? ' is-on' : '') + '"></i>' + esc(p.me ? __('tu') : p.name.split(' ')[0]) + '</span>';
+                }).join('') + (members.length > shown.length ? '<button type="button" class="epc-more" data-more="' + t.id + '">+' + (members.length - shown.length) + (' ' + __('membri') + '</button>') : '') + '</div>';
             }
         });
-        if (!rows.length) html += '<p class="epc-empty">' + (team.loaded ? 'Nicio conversație găsită.' : 'Se încarcă…') + '</p>';
+        if (!rows.length) html += '<p class="epc-empty">' + (team.loaded ? __('Nicio conversație găsită.') : __('Se încarcă…')) + '</p>';
         tbody.innerHTML = html;
 
         var search = tbody.querySelector('.epc-tsearch');
@@ -830,13 +944,13 @@
     }
 
     function seenAgo(iso) {
-        if (!iso) return 'fără activitate înregistrată';
+        if (!iso) return __('fără activitate înregistrată');
         var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-        if (mins < 60) return 'acum ' + Math.max(mins, 1) + ' min';
+        if (mins < 60) return __('acum :n min', { n: Math.max(mins, 1) });
         var h = Math.round(mins / 60);
-        if (h < 24) return 'acum ' + h + ' h';
+        if (h < 24) return __('acum :n h', { n: h });
         var d = Math.round(h / 24);
-        return d === 1 ? 'ieri' : 'acum ' + d + ' zile';
+        return d === 1 ? __('ieri') : __('acum :n zile', { n: d });
     }
 
     tbody.addEventListener('click', function (e) {
@@ -845,7 +959,7 @@
         var person = e.target.closest('[data-dm]');
         if (person) {
             teamPost('/marketplace/team-chat/dm', { admin_id: parseInt(person.getAttribute('data-dm'), 10) }).then(function (res) {
-                if (res.ok) { loadTeam(); openTeamThread(res.thread_id); } else showMsg(res.message || 'Nu am putut deschide conversația.');
+                if (res.ok) { loadTeam(); openTeamThread(res.thread_id); } else showMsg(res.message || __('Nu am putut deschide conversația.'));
             });
             return;
         }
@@ -862,18 +976,18 @@
             b.disabled = true;
             teamPost('/marketplace/team-chat/dm', { admin_id: id }).then(function (res) {
                 if (res.ok) { team.form = null; loadTeam(); openTeamThread(res.thread_id); }
-                else { b.disabled = false; showMsg(res.message || 'Nu am putut deschide conversația.'); }
+                else { b.disabled = false; showMsg(res.message || __('Nu am putut deschide conversația.')); }
             });
         }
         if (act === 'group-go') {
             var name = tbody.querySelector('#epc-g-name').value.trim();
             var ids = Array.prototype.map.call(tbody.querySelectorAll('.epc-checks input:checked'), function (i) { return parseInt(i.value, 10); });
-            if (!name) { showMsg('Dă un nume grupului.'); return; }
-            if (!ids.length) { showMsg('Alege cel puțin un coleg.'); return; }
+            if (!name) { showMsg(__('Dă un nume grupului.')); return; }
+            if (!ids.length) { showMsg(__('Alege cel puțin un coleg.')); return; }
             b.disabled = true;
             teamPost('/marketplace/team-chat/groups', { name: name, member_ids: ids }).then(function (res) {
                 if (res.ok) { team.form = null; loadTeam(); openTeamThread(res.thread_id); }
-                else { b.disabled = false; showMsg(res.message || 'Nu am putut crea grupul.'); }
+                else { b.disabled = false; showMsg(res.message || __('Nu am putut crea grupul.')); }
             });
         }
     });
@@ -904,7 +1018,9 @@
             var kindSnd = mentioned || d.type === 'dm' || d.type === 'help' ? 'dm' : 'group';
             window.epSound.play(kindSnd);
             if (window.epNotify) {
-                var title = (d.author_name || 'Un coleg') + (d.thread_name ? ' în ' + d.thread_name : '') + (mentioned ? ' te-a menționat' : '');
+                var title = (d.thread_name
+                    ? __(mentioned ? ':name te-a menționat în :thread' : ':name în :thread', { name: d.author_name || __('Un coleg'), thread: d.thread_name })
+                    : __(mentioned ? ':name te-a menționat' : ':name', { name: d.author_name || __('Un coleg') }));
                 window.epNotify(kindSnd, title, d.preview || '', 'team-' + d.message_id, function () { openTeamThread(d.thread_id); });
             }
         });
@@ -922,42 +1038,42 @@
 
     // ================================================================ setări sunete
     var SOUND_ROWS = [
-        ['action', 'Element nou în bară', 'Tichete, ToDos, artiști, evenimente', 'action'],
-        ['chat', 'Chat cu clienții', 'Client nou în coadă, mesaj pe chatul tău', 'chat_new'],
-        ['dm', 'Mesaj intern 1:1 și @mențiuni', 'Colegii care îți scriu direct', 'dm'],
-        ['group', 'Mesaj în grupurile echipei', 'Toată echipa, departamente, grupuri', 'group']
+        ['action', __('Element nou în bară'), __('Tichete, ToDos, artiști, evenimente'), 'action'],
+        ['chat', __('Chat cu clienții'), __('Client nou în coadă, mesaj pe chatul tău'), 'chat_new'],
+        ['dm', __('Mesaj intern 1:1 și @mențiuni'), __('Colegii care îți scriu direct'), 'dm'],
+        ['group', __('Mesaj în grupurile echipei'), __('Toată echipa, departamente, grupuri'), 'group']
     ];
     function renderSettings() {
         var dnd = dndActive();
         var until = dnd ? new Date(prefs.dnd_until) : null;
-        var untilTxt = until ? until.toLocaleString('ro-RO', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-        var html = '<div class="epc-set"><div><h4>Sunete</h4></div><div class="epc-opts">';
+        var untilTxt = until ? until.toLocaleString(document.documentElement.lang || 'ro', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        var html = '<div class="epc-set"><div><h4>' + __('Sunete') + '</h4></div><div class="epc-opts">';
         SOUND_ROWS.forEach(function (r) {
             var on = prefs.sounds[r[0]] !== false;
             html += '<div class="epc-opt"><span>' + esc(r[1]) + '<small>' + esc(r[2]) + '</small></span>'
-                + '<span style="display:flex;gap:6px"><button type="button" class="epc-btn" data-preview="' + r[3] + '">Ascultă</button>'
-                + '<button type="button" class="epc-pill" data-sound="' + r[0] + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + (on ? 'Pornit' : 'Oprit') + '</button></span></div>';
+                + '<span style="display:flex;gap:6px"><button type="button" class="epc-btn" data-preview="' + r[3] + ('">' + __('Ascultă') + '</button>')
+                + '<button type="button" class="epc-pill" data-sound="' + r[0] + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + (on ? __('Pornit') : __('Oprit')) + '</button></span></div>';
         });
-        html += '</div><div><h4>Nu deranja</h4></div>'
-            + '<p class="epc-dnd-state">' + (dnd ? 'Activ până ' + esc(untilTxt) + '. Auzi doar mesajele clienților de pe chat-urile tale.' : 'Oprit. Auzi toate sunetele pornite mai sus.') + '</p>'
-            + '<div class="epc-dnd"><button type="button" class="epc-btn" data-dnd="60">1 oră</button><button type="button" class="epc-btn" data-dnd="240">4 ore</button><button type="button" class="epc-btn" data-dnd="-1">Până mâine la 8</button>'
-            + (dnd ? '<button type="button" class="epc-btn is-pri" data-dnd="0">Oprește</button>' : '') + '</div>'
-            + '<div><h4>Notificări pe desktop</h4></div>' + desktopHtml()
-            + '<p style="color:var(--epc-muted);font-size:12px;margin:0">Browserul pornește sunetele doar după primul click pe pagină.</p></div>';
+        html += '</div><div><h4>' + __('Nu deranja') + '</h4></div>'
+            + '<p class="epc-dnd-state">' + (dnd ? __('Activ până :time. Auzi doar mesajele clienților de pe chat-urile tale.', { time: esc(untilTxt) }) : __('Oprit. Auzi toate sunetele pornite mai sus.')) + '</p>'
+            + ('<div class="epc-dnd"><button type="button" class="epc-btn" data-dnd="60">' + __('1 oră') + '</button><button type="button" class="epc-btn" data-dnd="240">' + __('4 ore') + '</button><button type="button" class="epc-btn" data-dnd="-1">' + __('Până mâine la 8') + '</button>')
+            + (dnd ? ('<button type="button" class="epc-btn is-pri" data-dnd="0">' + __('Oprește') + '</button>') : '') + '</div>'
+            + ('<div><h4>' + __('Notificări pe desktop') + '</h4></div>') + desktopHtml()
+            + ('<p style="color:var(--epc-muted);font-size:12px;margin:0">' + __('Browserul pornește sunetele doar după primul click pe pagină.') + '</p></div>');
         sbody.innerHTML = html;
     }
     function desktopHtml() {
-        if (!('Notification' in window)) return '<p class="epc-dnd-state">Browserul acesta nu permite notificări.</p>';
-        if (Notification.permission === 'denied') return '<p class="epc-dnd-state">Notificările sunt blocate pentru core.tixello.com. Le poți permite din lacătul de lângă adresă.</p>';
-        if (Notification.permission !== 'granted') return '<div class="epc-opt"><span>Apar în colțul ecranului când panoul e în fundal<small>Ca la WhatsApp. Trebuie să ai măcar un tab deschis.</small></span><button type="button" class="epc-btn is-pri" data-desktop="ask">Activează</button></div>';
+        if (!('Notification' in window)) return ('<p class="epc-dnd-state">' + __('Browserul acesta nu permite notificări.') + '</p>');
+        if (Notification.permission === 'denied') return ('<p class="epc-dnd-state">' + __('Notificările sunt blocate pentru core.tixello.com. Le poți permite din lacătul de lângă adresă.') + '</p>');
+        if (Notification.permission !== 'granted') return ('<div class="epc-opt"><span>' + __('Apar în colțul ecranului când panoul e în fundal') + '<small>' + __('Ca la WhatsApp. Trebuie să ai măcar un tab deschis.') + '</small></span><button type="button" class="epc-btn is-pri" data-desktop="ask">' + __('Activează') + '</button></div>');
         var on = lsGet(LS_DESKTOP, '1') === '1';
-        return '<div class="epc-opt"><span>Apar în colțul ecranului când panoul e în fundal<small>Respectă sunetele și „Nu deranja” de mai sus.</small></span>'
-            + '<span style="display:flex;gap:6px"><button type="button" class="epc-btn" data-desktop="test">Încearcă</button><button type="button" class="epc-pill" data-desktop="toggle" aria-pressed="' + (on ? 'true' : 'false') + '">' + (on ? 'Pornit' : 'Oprit') + '</button></span></div>';
+        return ('<div class="epc-opt"><span>' + __('Apar în colțul ecranului când panoul e în fundal') + '<small>' + __('Respectă sunetele și „Nu deranja” de mai sus.') + '</small></span>')
+            + ('<span style="display:flex;gap:6px"><button type="button" class="epc-btn" data-desktop="test">' + __('Încearcă') + '</button><button type="button" class="epc-pill" data-desktop="toggle" aria-pressed="') + (on ? 'true' : 'false') + '">' + (on ? __('Pornit') : __('Oprit')) + '</button></span></div>';
     }
     function savePrefs(data) {
         return teamPost('/marketplace/cockpit/prefs', data).then(function (res) {
             if (res && res.ok && res.prefs) { prefs = res.prefs; renderSettings(); }
-            else showMsg('Nu am putut salva setarea.');
+            else showMsg(__('Nu am putut salva setarea.'));
         });
     }
     sbody.addEventListener('click', function (e) {
@@ -981,7 +1097,7 @@
             var act = dk.getAttribute('data-desktop');
             if (act === 'ask') Notification.requestPermission().then(function () { lsSet(LS_DESKTOP, '1'); renderSettings(); });
             else if (act === 'toggle') { lsSet(LS_DESKTOP, lsGet(LS_DESKTOP, '1') === '1' ? '0' : '1'); renderSettings(); }
-            else if (act === 'test') { try { new Notification('Tixello', { body: 'Așa arată notificările pe desktop.', tag: 'epc-test' }); } catch (err) {} }
+            else if (act === 'test') { try { new Notification('Tixello', { body: __('Așa arată notificările pe desktop.'), tag: 'epc-test' }); } catch (err) {} }
         }
     });
     root.querySelector('.epc-setbtn').addEventListener('click', function () { open(); setTab('settings'); });

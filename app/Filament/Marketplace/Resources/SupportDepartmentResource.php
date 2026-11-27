@@ -92,7 +92,7 @@ class SupportDepartmentResource extends Resource
                 ->schema([
                     Forms\Components\CheckboxList::make('cockpit_scope.categories')
                         ->label(__('Acțiuni (pătratele din bară)'))
-                        ->options(\App\Services\OperatorCockpit\DepartmentScope::CATEGORIES)
+                        ->options(fn () => \App\Services\OperatorCockpit\DepartmentScope::categoryOptions())
                         ->columns(1)
                         ->bulkToggleable(),
 

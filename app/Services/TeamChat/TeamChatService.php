@@ -229,9 +229,9 @@ class TeamChatService
                 'mentioned' => $mentioned,
                 'muted' => $m->muted_until && $m->muted_until->isFuture(),
                 'last' => $last ? [
-                    'author' => $last->marketplace_admin_id ? ($this->cleanName($last->author?->name) ?: 'Coleg') : null,
+                    'author' => $last->marketplace_admin_id ? ($this->cleanName($last->author?->name) ?: __('Coleg')) : null,
                     'mine' => (int) $last->marketplace_admin_id === (int) $admin->id,
-                    'text' => $last->trashed() ? 'mesaj șters' : mb_strimwidth((string) ($last->body ?: 'atașament'), 0, 80, '…'),
+                    'text' => $last->trashed() ? __('mesaj șters') : mb_strimwidth((string) ($last->body ?: __('atașament')), 0, 80, '…'),
                 ] : null,
                 'last_at' => optional($t->last_message_at ?? $t->created_at)->toIso8601String(),
                 'chat_ref' => $t->chat_conversation_id ? ChatConversation::query()->whereKey($t->chat_conversation_id)->value('reference') : null,
@@ -276,7 +276,7 @@ class TeamChatService
     {
         $name = trim(mb_substr($name, 0, 80));
         if ($name === '') {
-            throw new \InvalidArgumentException('Dă un nume grupului.');
+            throw new \InvalidArgumentException(__('Dă un nume grupului.'));
         }
 
         $ids = $this->validColleagueIds($admin, $memberIds);
@@ -290,7 +290,7 @@ class TeamChatService
             'created_by_marketplace_admin_id' => $admin->id,
         ]);
         $this->addMembers($thread, $ids);
-        $this->systemMessage($thread, $this->cleanName($admin->name) . ' a creat grupul „' . $name . '”.');
+        $this->systemMessage($thread, __(':name a creat grupul „:group”.', ['name' => $this->cleanName($admin->name), 'group' => $name]));
 
         return $thread;
     }
@@ -307,7 +307,7 @@ class TeamChatService
 
         $ids = $this->validColleagueIds($admin, $memberIds);
         if (! $ids) {
-            throw new \InvalidArgumentException('Alege cel puțin un coleg.');
+            throw new \InvalidArgumentException(__('Alege cel puțin un coleg.'));
         }
         $ids[] = (int) $admin->id;
 
@@ -322,7 +322,7 @@ class TeamChatService
         ]);
         $this->addMembers($thread, $ids);
 
-        $text = trim((string) $note) !== '' ? trim((string) $note) : 'Am nevoie de ajutor la conversația ' . $conversation->reference . '.';
+        $text = trim((string) $note) !== '' ? trim((string) $note) : __('Am nevoie de ajutor la conversația :ref.', ['ref' => $conversation->reference]);
         $this->post($admin, $thread, $text);
 
         return $thread;
@@ -346,10 +346,10 @@ class TeamChatService
     public function addMembersBy(MarketplaceAdmin $admin, TeamThread $thread, array $memberIds): void
     {
         if ($thread->type !== TeamThread::TYPE_GROUP && $thread->type !== TeamThread::TYPE_HELP) {
-            throw new \InvalidArgumentException('Într-o conversație 1:1 nu se pot adăuga membri.');
+            throw new \InvalidArgumentException(__('Într-o conversație 1:1 nu se pot adăuga membri.'));
         }
         if ($thread->is_system) {
-            throw new \InvalidArgumentException('Membrii acestui grup se stabilesc automat.');
+            throw new \InvalidArgumentException(__('Membrii acestui grup se stabilesc automat.'));
         }
 
         $ids = $this->validColleagueIds($admin, $memberIds);
@@ -367,11 +367,11 @@ class TeamChatService
     public function leave(MarketplaceAdmin $admin, TeamThread $thread): void
     {
         if ($thread->is_system || $thread->type === TeamThread::TYPE_DM) {
-            throw new \InvalidArgumentException('Nu poți părăsi această conversație.');
+            throw new \InvalidArgumentException(__('Nu poți părăsi această conversație.'));
         }
 
         TeamThreadMember::query()->where('team_thread_id', $thread->id)->where('marketplace_admin_id', $admin->id)->delete();
-        $this->systemMessage($thread, $this->cleanName($admin->name) . ' a părăsit grupul.');
+        $this->systemMessage($thread, __(':name a părăsit grupul.', ['name' => $this->cleanName($admin->name)]));
     }
 
     public function mute(MarketplaceAdmin $admin, TeamThread $thread, ?int $minutes): void
@@ -406,7 +406,7 @@ class TeamChatService
     {
         $body = $body !== null ? trim(mb_substr($body, 0, 5000)) : '';
         if ($body === '' && ! $file) {
-            throw new \InvalidArgumentException('Mesajul e gol.');
+            throw new \InvalidArgumentException(__('Mesajul e gol.'));
         }
 
         $stored = $file ? $this->storeFile($thread, $file) : null;
@@ -442,12 +442,12 @@ class TeamChatService
     {
         $this->assertOwn($admin, $message);
         if ($message->created_at && $message->created_at->lt(now()->subMinutes(TeamMessage::EDIT_WINDOW_MINUTES))) {
-            throw new \InvalidArgumentException('Mesajul se poate edita doar ' . TeamMessage::EDIT_WINDOW_MINUTES . ' minute după trimitere.');
+            throw new \InvalidArgumentException(__('Mesajul se poate edita doar :n minute după trimitere.', ['n' => TeamMessage::EDIT_WINDOW_MINUTES]));
         }
 
         $body = trim(mb_substr($body, 0, 5000));
         if ($body === '' && $message->attachments()->doesntExist()) {
-            throw new \InvalidArgumentException('Mesajul e gol.');
+            throw new \InvalidArgumentException(__('Mesajul e gol.'));
         }
 
         $message->forceFill([
@@ -512,7 +512,7 @@ class TeamChatService
             'system' => $m->marketplace_admin_id === null,
             'mine' => (int) $m->marketplace_admin_id === (int) $admin->id,
             'author_id' => $m->marketplace_admin_id ? (int) $m->marketplace_admin_id : null,
-            'author' => $m->marketplace_admin_id ? ($this->cleanName($m->author?->name) ?: 'Coleg') : null,
+            'author' => $m->marketplace_admin_id ? ($this->cleanName($m->author?->name) ?: __('Coleg')) : null,
             'body' => $deleted ? null : $m->body,
             'deleted' => $deleted,
             'edited' => (bool) $m->edited_at,
@@ -544,10 +544,13 @@ class TeamChatService
     private function threadName(TeamThread $thread, ?MarketplaceAdmin $partner): string
     {
         if ($thread->type === TeamThread::TYPE_DM) {
-            return $partner ? $this->cleanName($partner->name) : 'Conversație';
+            return $partner ? $this->cleanName($partner->name) : __('Conversație');
+        }
+        if ($thread->system_key === 'team') {
+            return __('Toată echipa');
         }
 
-        return (string) ($thread->name ?: 'Grup');
+        return (string) ($thread->name ?: __('Grup'));
     }
 
     private function initials(string $name): string
@@ -613,17 +616,17 @@ class TeamChatService
     private function storeFile(TeamThread $thread, UploadedFile $file): array
     {
         if (! $file->isValid()) {
-            throw new \InvalidArgumentException('Fișierul nu s-a încărcat.');
+            throw new \InvalidArgumentException(__('Fișierul nu s-a încărcat.'));
         }
         if ($file->getSize() > self::MAX_ATTACHMENT_BYTES) {
-            throw new \InvalidArgumentException('Fișierul depășește 10 MB.');
+            throw new \InvalidArgumentException(__('Fișierul depășește 10 MB.'));
         }
 
         // Tipul real, din conținut; nu ne bazăm pe ce declară browserul.
         $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file($file->getRealPath());
         $ext = self::ALLOWED_MIME[$mime] ?? null;
         if (! $ext) {
-            throw new \InvalidArgumentException('Se pot trimite doar imagini (JPG, PNG, WEBP, GIF) și PDF.');
+            throw new \InvalidArgumentException(__('Se pot trimite doar imagini (JPG, PNG, WEBP, GIF) și PDF.'));
         }
 
         $path = 'team-chat/' . $thread->marketplace_client_id . '/' . now()->format('Y/m') . '/' . Str::random(40) . '.' . $ext;
@@ -642,7 +645,7 @@ class TeamChatService
     private function assertOwn(MarketplaceAdmin $admin, TeamMessage $message): void
     {
         if ((int) $message->marketplace_admin_id !== (int) $admin->id) {
-            throw new \InvalidArgumentException('Poți modifica doar mesajele tale.');
+            throw new \InvalidArgumentException(__('Poți modifica doar mesajele tale.'));
         }
     }
 
@@ -658,7 +661,7 @@ class TeamChatService
             'action' => $action,
             'author_name' => $authorName,
             'thread_name' => $thread->type === TeamThread::TYPE_DM ? null : (string) $thread->name,
-            'preview' => $action === 'new' ? mb_strimwidth((string) ($message->body ?: 'a trimis un fișier'), 0, 120, '…') : null,
+            'preview' => $action === 'new' ? mb_strimwidth((string) ($message->body ?: __('a trimis un fișier')), 0, 120, '…') : null,
             'author_id' => $message->marketplace_admin_id ? (int) $message->marketplace_admin_id : null,
             'mentions' => array_map('intval', (array) $message->mentions),
             'type' => $thread->type,
