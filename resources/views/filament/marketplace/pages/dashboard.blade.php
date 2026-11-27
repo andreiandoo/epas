@@ -4,979 +4,1026 @@
             <p class="text-yellow-800 dark:text-yellow-200">{{ __('No marketplace account found. Please contact support.') }}</p>
         </div>
     @else
-        {{-- Live chat stats — visible only when the live-chat microservice is
-             active for this marketplace. --}}
-        @if(\Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user()?->marketplaceClient?->hasMicroservice('live-chat'))
-            <div class="mb-6">
-                @livewire(\App\Filament\Marketplace\Widgets\ChatStatsWidget::class)
-            </div>
-        @endif
-
-        {{-- Sections that ALL marketplace admins should see (pending events
-             to review + open support tickets) live above the super-admin
-             gate. Everything else (today/month stats, charts, top tables,
-             billing breakdown) stays super-admin only. --}}
-
-        <!-- Tokenuri Facebook CAPI expirate / invalide, pe organizator -->
-        @if(!empty($expiredCapiTokens))
-        <div x-data="{ open: true }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-red-300 dark:border-red-700">
-            <div class="flex items-center justify-between gap-3 px-4 py-3 border-b bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button" :aria-expanded="open">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 text-red-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-key class="w-5 h-5 text-red-500" />
-                    <h3 class="font-semibold text-red-800 dark:text-red-200">{{ __('Tokenuri Facebook expirate') }}</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-red-500 rounded-full">{{ count($expiredCapiTokens) }}</span>
-                </div>
-                <span class="hidden text-xs text-red-600 sm:inline dark:text-red-400">{{ __('Conversiile nu ajung în Meta până la schimbarea tokenului') }}</span>
-            </div>
-            <div class="divide-y divide-gray-100 dark:divide-gray-700" x-show="open" x-collapse>
-                @foreach($expiredCapiTokens as $capi)
-                @php
-                    $capiEditUrl = route('filament.marketplace.resources.organizers.edit', ['record' => $capi['organizer_id']]) . '?tab=bilete-termeni';
-                @endphp
-                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ $capiEditUrl }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-red-600 dark:hover:text-red-400">
-                                {{ $capi['organizer_name'] }}
-                            </a>
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
-                                {{ $capi['is_expired'] ? 'Expirat' : 'Invalid' }}
-                            </span>
-                            <span class="text-xs text-gray-400 tabular-nums">Pixel {{ $capi['pixel_id'] }}</span>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            @if($capi['expired_at'])
-                                <span>{{ __('Expirat pe') }} <strong class="font-semibold text-gray-700 dark:text-gray-200 tabular-nums">{{ \App\Support\MarketplaceTz::fmt($capi['expired_at'], 'd.m.Y H:i', fallback: '') }}</strong></span>
-                                <span>·</span>
-                            @endif
-                            @if($capi['first_failed_at'])
-                                <span class="tabular-nums">Respins din {{ \App\Support\MarketplaceTz::fmt($capi['first_failed_at'], 'd.m.Y H:i', fallback: '') }}</span>
-                                <span>·</span>
-                            @endif
-                            <span class="tabular-nums">{{ $capi['failed_count'] }} {{ $capi['failed_count'] === 1 ? 'eveniment pierdut' : 'evenimente pierdute' }}</span>
-                            <span>·</span>
-                            <span class="tabular-nums">Ultimul trimis cu succes: {{ $capi['last_sent_at'] ? \App\Support\MarketplaceTz::fmt($capi['last_sent_at'], 'd.m.Y H:i', fallback: '') : 'niciodată' }}</span>
-                        </div>
-                        @if($capi['message'])
-                            <p class="mt-1 text-[11px] text-gray-400 truncate" title="{{ $capi['message'] }}">{{ $capi['message'] }}</p>
-                        @endif
-                    </div>
-                    <a href="{{ $capiEditUrl }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-300 dark:bg-red-900/40 dark:hover:bg-red-900/60 rounded-lg transition-colors">
-                        <x-heroicon-o-pencil-square class="w-3.5 h-3.5" />
-                        {{ __('Schimbă tokenul') }}
-                    </a>
-                </div>
-                @endforeach
-                <p class="px-4 py-2 text-[11px] text-gray-400 bg-gray-50 dark:bg-gray-900/30">
-                    {{ __('Tokenul se schimbă în tab-ul „Bilete & Termeni”, secțiunea Facebook Conversions API. Rândul dispare după primul eveniment trimis cu succes (lista se actualizează la 10 minute).') }}
-                </p>
-            </div>
-        </div>
-        @endif
-
-        {{-- Secțiunile pliabile: două pe rând cât sunt închise; cea deschisă ia tot rândul. --}}
-        <div class="grid items-start grid-cols-1 gap-3 mb-5 lg:grid-cols-2">
-
-        <!-- Pending support tickets — visible to all admins -->
-        @if(isset($pendingSupportTickets) && $pendingSupportTickets->count() > 0)
-        <div x-data="{ open: false }" :class="open ? 'lg:col-span-2' : ''" class="overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-orange-300 dark:border-orange-700">
-            <div class="flex items-center justify-between px-4 py-3 border-b bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 text-orange-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-lifebuoy class="w-5 h-5 text-orange-500" />
-                    <h3 class="font-semibold text-orange-800 dark:text-orange-200">{{ __('Tichete suport active') }}</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-orange-500 rounded-full">{{ $pendingSupportTicketsCount }}</span>
-                </div>
-                <a href="{{ route('filament.marketplace.resources.support-tickets.index') }}" class="text-xs text-orange-600 dark:text-orange-400 hover:underline">
-                    {{ __('Vezi toate') }}
-                </a>
-            </div>
-            <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96" x-show="open" x-collapse x-cloak>
-                @foreach($pendingSupportTickets as $supportTicket)
-                @php
-                    $statusLabel = match ($supportTicket->status) {
-                        'open' => 'Deschis',
-                        'in_progress' => 'Așteaptă răspuns',
-                        'awaiting_organizer' => 'Răspuns trimis',
-                        default => $supportTicket->status,
-                    };
-                    $statusClass = match ($supportTicket->status) {
-                        'open' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-                        'in_progress' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-                        'awaiting_organizer' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-                        default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                    };
-                    $openerName = $supportTicket->opener?->name ?? $supportTicket->opener?->public_name ?? '—';
-                @endphp
-                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ route('filament.marketplace.resources.support-tickets.view', $supportTicket->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-orange-600 dark:hover:text-orange-400">
-                                {{ $supportTicket->subject }}
-                            </a>
-                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded {{ $statusClass }}">{{ $statusLabel }}</span>
-                            <span class="font-mono text-[10px] text-gray-500">{{ $supportTicket->ticket_number }}</span>
-                        </div>
-                        <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            <span>{{ $openerName }}</span>
-                            <span>·</span>
-                            <span>{{ $supportTicket->department?->getTranslation('name', 'ro') ?? '—' }}</span>
-                            @if ($supportTicket->assignee)
-                                <span>·</span>
-                                <span>Asignat: {{ $supportTicket->assignee->name }}</span>
-                            @endif
-                            <span class="text-gray-400">{{ $supportTicket->last_activity_at?->diffForHumans() }}</span>
-                        </div>
-                    </div>
-                    <a href="{{ route('filament.marketplace.resources.support-tickets.view', $supportTicket->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 dark:text-orange-300 dark:bg-orange-900/40 dark:hover:bg-orange-900/60 rounded-lg transition-colors">
-                        <x-heroicon-o-eye class="w-3.5 h-3.5" />
-                        {{ __('Deschide') }}
-                    </a>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
-
-        {{-- TODOs active și Conturi artist în review: mutate în bara de atenție din dreapta. --}}
-
-        <!-- Invitation Abuse Detector — events where free-ticket giveaways exceed paid-ticket commission -->
-        {{-- Financial report — restricted to Super Administrators only. --}}
-        @if(($isSuperAdmin ?? false) && isset($invitationAbuse) && ($invitationAbuse['all_time']['summary']['events_count'] ?? 0) > 0)
         @php
-            $iaAllSum = $invitationAbuse['all_time']['summary'];
-            $iaMonthSum = $invitationAbuse['current_month']['summary'];
-            $iaMonthEvents = $invitationAbuse['current_month']['events'];
-            $iaMonthLabel = $invitationAbuse['current_month']['label'] ?? '';
-            $currency = $marketplace->currency ?? 'RON';
+            $isSA = $isSuperAdmin ?? false;
+            $hasChat = (bool) \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user()?->marketplaceClient?->hasMicroservice('live-chat');
+            $tzName = \App\Support\MarketplaceTz::tz($marketplace);
+            $nowTz = \Illuminate\Support\Carbon::now($tzName)->locale(app()->getLocale());
+            $hasSupport = isset($pendingSupportTickets) && $pendingSupportTickets->count() > 0;
+            $hasReview = isset($pendingReviewEvents) && $pendingReviewEvents->count() > 0;
+            $hasRecent = isset($recentlyPublishedEvents);
+            $showLost = $isSA && isset($invitationAbuse) && ($invitationAbuse['all_time']['summary']['events_count'] ?? 0) > 0;
+            $salesBreakdownUrl = route('filament.marketplace.pages.sales-breakdown', ['month' => ($chartMonthMeta['monthRef'] ?? \Carbon\Carbon::now('Europe/Bucharest')->format('Y-m'))]);
+            $initialPanel = !empty($expiredCapiTokens) ? 'tokens' : null;
         @endphp
-        <div x-data="{ open: false }" :class="open ? 'lg:col-span-2' : ''" class="overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-blue-300 dark:border-blue-800">
-            <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b bg-blue-800 dark:bg-blue-900 border-blue-800 dark:border-blue-800">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 text-blue-100 transition-transform" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-blue-100" />
-                    <h3 class="font-semibold text-white">{{ __('Comisioane pierdute') }}</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-blue-900 bg-amber-300 rounded-full">{{ number_format($iaAllSum['events_count']) }} evenimente</span>
+
+        <style>
+            .ep-dash {
+                --ep-card: #ffffff; --ep-bd: #e5e7eb; --ep-bd2: #f1f3f5; --ep-tx: #111827; --ep-mu: #6b7280; --ep-mu2: #4b5563;
+                --ep-in: #f3f4f6; --ep-on: #ffffff; --ep-btn: #ffffff; --ep-btnbd: #d1d5db; --ep-hover: #9ca3af; --ep-link: #2563eb;
+                --ep-amber: #b45309; --ep-rose: #be123c; --ep-green: #047857; --ep-yellow: #ca8a04;
+                --ep-g1: #4f46e5; --ep-g2: #7e22ce; --ep-g3: #047857; --ep-g3bg: rgba(16, 185, 129, .08);
+                --ep-okbg: #ecfdf5; --ep-warnbg: #fffbeb; --ep-pos: #047857; --ep-neg: #b91c1c;
+                color: var(--ep-tx); max-width: 1360px; margin: 0 auto; width: 100%;
+                display: flex; flex-direction: column; gap: 22px;
+            }
+            .dark .ep-dash {
+                --ep-card: #12161c; --ep-bd: #232a35; --ep-bd2: #1c222b; --ep-tx: #e6e9ee; --ep-mu: #8b95a3; --ep-mu2: #aab3c0;
+                --ep-in: #0e1217; --ep-on: #232a35; --ep-btn: #171c23; --ep-btnbd: #2c3441; --ep-hover: #3a4453; --ep-link: #7cb4ff;
+                --ep-amber: #fbbf24; --ep-rose: #fca5a5; --ep-green: #6ee7b7; --ep-yellow: #facc15;
+                --ep-g1: #a5b4fc; --ep-g2: #d8b4fe; --ep-g3: #6ee7b7; --ep-g3bg: rgba(16, 185, 129, .06);
+                --ep-okbg: #10261d; --ep-warnbg: #2a2110; --ep-pos: #34d399; --ep-neg: #f87171;
+            }
+            .ep-dash a { color: var(--ep-link); text-decoration: none; }
+            .ep-dash a:hover { text-decoration: underline; }
+            .ep-dash [x-cloak] { display: none !important; }
+            .ep-card { background: var(--ep-card); border: 1px solid var(--ep-bd); border-radius: 12px; }
+            .ep-card-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--ep-bd); }
+            .ep-card-h h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ep-tx); }
+            .ep-hint { font-size: 12px; color: var(--ep-mu); line-height: 1.45; }
+            .ep-cap { font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: .06em; text-transform: uppercase; color: var(--ep-mu); }
+            .ep-sec { display: flex; flex-direction: column; gap: 10px; }
+            .ep-sec-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+            .ep-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--ep-btnbd); background: var(--ep-btn); color: var(--ep-tx); font-size: 12px; font-weight: 500; line-height: 1; cursor: pointer; white-space: nowrap; }
+            .ep-dash a.ep-btn { color: var(--ep-tx); }
+            .ep-btn:disabled { opacity: .35; cursor: not-allowed; }
+            .ep-btn-ghost { border-color: transparent; background: transparent; color: var(--ep-mu2); }
+            .ep-dash a.ep-btn-ghost { color: var(--ep-link); }
+            .ep-in { height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--ep-btnbd); background: var(--ep-btn); color: var(--ep-tx); font-size: 12px; color-scheme: light; }
+            .dark .ep-in { color-scheme: dark; }
+            .ep-seg { display: inline-flex; flex-wrap: wrap; padding: 3px; border-radius: 9px; background: var(--ep-in); border: 1px solid var(--ep-btnbd); gap: 2px; }
+            .ep-seg button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--ep-mu); font-size: 12px; font-weight: 500; line-height: 1; cursor: pointer; }
+            .ep-seg button.on { background: var(--ep-on); color: var(--ep-tx); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+
+            /* Cer atentie */
+            .ep-attrow { display: flex; flex-wrap: wrap; gap: 12px; }
+            .ep-att { flex: 1 1 260px; display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--ep-bd); background: var(--ep-card); color: var(--ep-tx); text-align: left; cursor: pointer; text-decoration: none; font: inherit; }
+            .ep-dash a.ep-att { color: var(--ep-tx); }
+            .ep-att:hover, .ep-dash a.ep-att:hover { border-color: var(--ep-hover); text-decoration: none; }
+            .ep-att .n { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 28px; }
+            .ep-att .t { font-weight: 600; font-size: 14px; }
+            .ep-att .chev { margin-left: auto; width: 16px; height: 16px; color: var(--ep-mu); transition: transform .15s; flex: none; }
+            .ep-att .chev.open { transform: rotate(90deg); }
+            .ep-att.tone-red { border-color: rgba(220, 38, 38, .5); } .ep-att.tone-red .n { color: var(--ep-neg); }
+            .ep-att.tone-orange { border-color: rgba(234, 88, 12, .5); } .ep-att.tone-orange .n { color: #ea580c; }
+            .ep-att.tone-amber .n, .ep-att.tone-yellow .n { color: var(--ep-amber); }
+            .ep-att.tone-yellow { border-color: rgba(217, 119, 6, .45); }
+
+            /* KPI-uri */
+            .ep-kpis { display: grid; gap: 1px; background: var(--ep-bd); border: 1px solid var(--ep-bd); border-radius: 12px; overflow: hidden; }
+            .ep-k6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+            .ep-k3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .ep-k4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .ep-kpi { background: var(--ep-card); padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+            .ep-kpi .l { font-size: 12px; color: var(--ep-mu); }
+            .ep-kpi .v { font-size: 24px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+            .ep-kpi .v small { font-size: 13px; font-weight: 500; color: var(--ep-mu); }
+            .ep-kpi .s { font-size: 12px; color: var(--ep-mu); line-height: 1.4; }
+            .ep-mini { background: var(--ep-card); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+            .ep-mini .l { font-size: 11.5px; color: var(--ep-mu); }
+            .ep-mini .v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+            .ep-mini .v small { font-size: 12px; font-weight: 500; color: var(--ep-mu); }
+            .ep-mini .s { font-size: 11.5px; color: var(--ep-mu); line-height: 1.4; }
+            .ep-mini.ok { background: var(--ep-okbg); } .ep-mini.ok .v { color: var(--ep-green); }
+            .ep-mini.warn { background: var(--ep-warnbg); } .ep-mini.warn .v { color: var(--ep-amber); }
+            .ep-mini.pred { background: var(--ep-g3bg); } .ep-mini.pred .v { color: var(--ep-g3); }
+            .ep-amber { color: var(--ep-amber); } .ep-rose { color: var(--ep-rose); } .ep-green { color: var(--ep-green); }
+            .ep-pct { font-weight: 600; } .ep-pct.pos { color: var(--ep-pos); } .ep-pct.neg { color: var(--ep-neg); }
+            .ep-grp { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 0 2px 8px; }
+
+            /* Coloane */
+            .ep-cols { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+            .ep-main { flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+            .ep-rail { flex: 1 1 300px; max-width: 400px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+            @media (max-width: 1100px) { .ep-rail { max-width: none; flex-basis: 100%; } }
+
+            /* Randuri / liste */
+            .ep-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 7px 0; border-top: 1px solid var(--ep-bd2); }
+            .ep-row:first-child { border-top: 0; }
+            .ep-row > span:first-child { color: var(--ep-mu2); }
+            .ep-row .num { font-variant-numeric: tabular-nums; text-align: right; }
+            .ep-li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; border-top: 1px solid var(--ep-bd2); }
+            .ep-li:first-child { border-top: 0; }
+            .ep-li .main { flex: 1; min-width: 0; }
+            .ep-li .ttl { font-size: 14px; font-weight: 500; }
+            .ep-li .meta { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 3px; font-size: 12px; color: var(--ep-mu); }
+            .ep-list-scroll { max-height: 24rem; overflow-y: auto; }
+            .ep-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--ep-in); color: var(--ep-mu2); margin: 0 6px 0 4px; }
+            .ep-badge.t-red { background: rgba(220, 38, 38, .14); color: var(--ep-neg); }
+            .ep-badge.t-blue { background: rgba(59, 130, 246, .14); color: var(--ep-link); }
+            .ep-badge.t-amber { background: rgba(245, 158, 11, .16); color: var(--ep-amber); }
+            .ep-badge.t-green { background: rgba(16, 185, 129, .14); color: var(--ep-pos); }
+            .ep-badge.t-gray { background: var(--ep-in); color: var(--ep-mu2); }
+
+            /* Tabele */
+            .ep-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+            .ep-tbl th { font-weight: 500; color: var(--ep-mu); padding: 9px 14px; border-bottom: 1px solid var(--ep-bd); text-align: right; white-space: nowrap; background: var(--ep-card); }
+            .ep-tbl th.l { text-align: left; }
+            .ep-tbl th.grp { text-align: center; font-weight: 600; }
+            .ep-tbl th.g1 { color: var(--ep-g1); } .ep-tbl th.g2 { color: var(--ep-g3); }
+            .ep-tbl td { padding: 11px 14px; border-bottom: 1px solid var(--ep-bd2); }
+            .ep-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+            .ep-tbl td.strong { font-weight: 600; } .ep-tbl td.mut { color: var(--ep-mu2); }
+            .ep-tbl .sep { border-left: 1px solid var(--ep-bd); }
+            .ep-tbl td .sub { display: block; font-size: 11px; font-weight: 400; color: var(--ep-mu); }
+            .ep-tbl .clip { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .ep-tbl td.nm, .ep-tbl td.ven { overflow: hidden; }
+            .ep-tbl a.ep-evlink { color: var(--ep-tx); }
+            .ep-tbl a.ep-evlink:hover { color: var(--ep-link); }
+            .ep-tbl .evn { font-weight: 500; }
+            .ep-tbl .multi { background: var(--ep-warnbg); } .ep-tbl .multi-name { font-weight: 500; color: var(--ep-amber); }
+            .ep-tbl tfoot td { border-bottom: 0; border-top: 1px solid var(--ep-bd); font-weight: 600; background: var(--ep-card); }
+            .ep-tbl tfoot td.mut { font-weight: 500; }
+            .ep-tbl thead.ep-sticky th { position: sticky; z-index: 5; }
+            .ep-tbl thead.ep-sticky tr.r1 th { top: 0; height: 36px; box-sizing: border-box; }
+            .ep-tbl thead.ep-sticky tr.r2 th { top: 36px; }
+            .ep-drwrap { overflow: auto; max-height: 70vh; border-radius: 0 0 12px 12px; }
+            .ep-showall { width: 100%; padding: 10px 12px; font-size: 13px; font-weight: 600; color: var(--ep-link); background: transparent; border: 0; cursor: pointer; }
+            .ep-showall:hover { background: var(--ep-in); }
+            .ep-tblwrap { overflow-x: auto; }
+
+            /* Grafic */
+            .ep-legend { padding: 14px 20px 4px; display: flex; flex-wrap: wrap; gap: 14px; }
+            .ep-legend .sw { display: inline-block; vertical-align: middle; margin-right: 4px; }
+            .ep-chart { position: relative; height: 260px; padding: 10px 20px 12px; box-sizing: content-box; }
+            .ep-chart > div { position: relative; height: 100%; }
+            .ep-monthnav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--ep-bd); }
+            .ep-mbadge { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--ep-in); color: var(--ep-mu2); }
+            .ep-mbadge.cur, .ep-mbadge.future { background: rgba(16, 185, 129, .12); color: var(--ep-pos); }
+            .ep-sumwrap { display: flex; flex-direction: column; gap: 14px; padding: 6px 20px 20px; }
+
+            /* Eveniment urmarit */
+            .ep-fe-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+            .ep-blocks { display: flex; flex-wrap: wrap; gap: 12px; }
+            .ep-block { flex: 1 1 260px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--ep-bd); }
+            .ep-block h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+
+            /* Ceas */
+            .ep-clock { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 26px; font-weight: 600; letter-spacing: .02em; padding: 6px 12px; border-radius: 10px; background: var(--ep-card); border: 1px solid var(--ep-bd); font-variant-numeric: tabular-nums; }
+
+            @media (max-width: 1279px) { .ep-k6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+            @media (max-width: 640px) {
+                .ep-k6, .ep-k3.six { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .ep-k3, .ep-k4 { grid-template-columns: minmax(0, 1fr); }
+                .ep-k4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .ep-li { flex-wrap: wrap; padding: 12px 14px; }
+            }
+        </style>
+
+        <div class="ep-dash"
+             x-data="{ panel: @js($initialPanel), lostOpen: false, jump(id) { this.$nextTick(() => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); } }">
+
+            {{-- Titlu + data + ceas (fusul orar al contului) --}}
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;">
+                <h1 style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; flex: 1 1 240px;">{{ __('Panou de control') }}</h1>
+                <div style="display: flex; align-items: center; gap: 16px;"
+                     x-data="{
+                        now: new Date(), tz: @js($tzName), loc: @js(app()->getLocale()),
+                        fmt(o) { try { return new Intl.DateTimeFormat(this.loc, Object.assign({ timeZone: this.tz }, o)).format(this.now); } catch (e) { return ''; } }
+                     }"
+                     x-init="const t = setInterval(() => { if (!$el.isConnected) { clearInterval(t); return; } now = new Date(); }, 1000)">
+                    <div style="text-align: right; line-height: 1.25;">
+                        <div style="font-size: 13px; color: var(--ep-mu2); text-transform: capitalize;" x-text="fmt({ weekday: 'long' })">{{ $nowTz->translatedFormat('l') }}</div>
+                        <div style="font-size: 14px; font-weight: 600;" x-text="fmt({ day: 'numeric', month: 'long', year: 'numeric' })">{{ $nowTz->translatedFormat('j F Y') }}</div>
+                    </div>
+                    <div class="ep-clock" role="timer" aria-label="{{ __('Ora curentă') }}" x-text="fmt({ hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })">{{ $nowTz->format('H:i:s') }}</div>
                 </div>
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('filament.marketplace.pages.invitation-abuse-report') }}" class="inline-flex items-center gap-1 text-xs font-medium text-white hover:underline">
-                        <x-heroicon-o-arrow-top-right-on-square class="w-3.5 h-3.5" />
-                        {{ __('Vezi raport complet') }}
-                    </a>
-                    <a href="{{ request()->fullUrlWithQuery(['refresh_invite_abuse' => 1]) }}" class="text-xs font-medium text-blue-100 hover:text-white hover:underline">
-                        Actualizează
-                    </a>
-                </div>
             </div>
 
-            <div class="overflow-y-auto" style="max-height:32rem" x-show="open" x-collapse x-cloak>
-            {{-- All-time aggregate KPIs --}}
-            <div class="p-4 border-b border-blue-100 dark:border-blue-900/40">
-                <p class="mb-2 text-[11px] font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">{{ __('Total istoric') }}</p>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision pierdut (estimat)') }}</p>
-                        <p class="text-xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($iaAllSum['total_lost'], 2) }} {{ $currency }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision efectiv câștigat') }}</p>
-                        <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($iaAllSum['total_earned'], 2) }} {{ $currency }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Invitații / total bilete') }}</p>
-                        <p class="text-xl font-bold text-gray-900 dark:text-white">
-                            {{ number_format($iaAllSum['total_invitations']) }} <span class="text-sm font-normal text-gray-500">/ {{ number_format($iaAllSum['total_invitations'] + $iaAllSum['total_paid_tickets']) }}</span>
-                            <span class="text-xs font-normal text-rose-600 dark:text-rose-400 block">{{ number_format($iaAllSum['invitation_ratio_pct'], 1) }}%</span>
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Organizatori afectați') }}</p>
-                        <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($iaAllSum['unique_organizers']) }}</p>
-                    </div>
-                </div>
-            </div>
+            {{-- Cer atenție: carduri clicabile. Alertele condiționale (tokenuri Facebook,
+                 tichete suport, evenimente de revizuit) apar doar când există; cardul
+                 de evenimente publicate recent deschide lista. --}}
+            @if($hasChat || !empty($expiredCapiTokens) || $hasSupport || $hasReview || $hasRecent)
+            <div class="ep-sec" id="ep-attention">
+                <div class="ep-cap">{{ __('Cer atenție') }}</div>
+                <div class="ep-attrow">
+                    @if($hasChat)
+                        @livewire(\App\Livewire\Marketplace\ChatAttentionCard::class)
+                    @endif
 
-            {{-- Explanatory note --}}
-            <div class="px-4 py-2 text-xs italic text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 border-b border-blue-100 dark:border-blue-900/40">
-                {{ __('Pentru fiecare eveniment se calculează media comisionului pe bilet vândut, apoi se proiectează pe numărul de invitații emise. Sunt afișate DOAR evenimentele unde proiecția de comision pierdut depășește comisionul efectiv câștigat. Include: invitații standalone (fără comandă) + bilete cu valoare 0 emise prin comandă (promo 100%, bulk admin, etc).') }}
-            </div>
-
-            {{-- Current month aggregate KPIs --}}
-            <div class="p-4 bg-blue-50/40 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-900/40">
-                <p class="mb-2 text-[11px] font-semibold tracking-wider uppercase text-blue-700 dark:text-blue-300">Luna curentă — {{ ucfirst($iaMonthLabel) }}</p>
-                @if($iaMonthSum['events_count'] > 0)
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision pierdut (estimat)') }}</p>
-                        <p class="text-lg font-bold text-rose-600 dark:text-rose-400">{{ number_format($iaMonthSum['total_lost'], 2) }} {{ $currency }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comision efectiv câștigat') }}</p>
-                        <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($iaMonthSum['total_earned'], 2) }} {{ $currency }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Invitații / total bilete') }}</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">
-                            {{ number_format($iaMonthSum['total_invitations']) }} <span class="text-sm font-normal text-gray-500">/ {{ number_format($iaMonthSum['total_invitations'] + $iaMonthSum['total_paid_tickets']) }}</span>
-                            <span class="text-xs font-normal text-rose-600 dark:text-rose-400 block">{{ number_format($iaMonthSum['invitation_ratio_pct'], 1) }}%</span>
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente / organizatori') }}</p>
-                        <p class="text-lg font-bold text-gray-900 dark:text-white">{{ number_format($iaMonthSum['events_count']) }} <span class="text-sm font-normal text-gray-500">/ {{ number_format($iaMonthSum['unique_organizers']) }}</span></p>
-                    </div>
-                </div>
-                @else
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Nicio alertă pe luna în curs.') }}</p>
-                @endif
-            </div>
-
-            {{-- Current month events table --}}
-            @if(count($iaMonthEvents) > 0)
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Eveniment') }}</th>
-                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">{{ __('Organizator') }}</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Vândute') }}</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Invitații') }}</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('% inv') }}</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Câștigat') }}</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">{{ __('Pierdut (estimat)') }}</th>
-                            <th class="px-3 py-2 text-xs font-medium text-center text-gray-500 dark:text-gray-400">{{ __('Impact') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($iaMonthEvents as $ev)
-                        @php
-                            $impactColors = [
-                                'high' => 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-                                'medium' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-                                'low' => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                            ];
-                            $impactLabels = ['high' => 'HIGH', 'medium' => 'MED', 'low' => 'LOW'];
-                        @endphp
-                        <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 {{ $ev['is_past'] ?? false ? 'opacity-70' : '' }}">
-                            <td class="px-3 py-2">
-                                <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $ev['event_id'], 'tab' => 'vanzari']) }}"
-                                   class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
-                                    {{ $ev['event_title'] ?? ('Event #' . $ev['event_id']) }}
-                                </a>
-                                <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                    @if($ev['event_date'] ?? null)<span>{{ $ev['event_date'] }}</span>@endif
-                                    @if($ev['venue_name'] ?? null)<span>·</span><span>{{ $ev['venue_name'] }}@if($ev['venue_city'] ?? null), {{ $ev['venue_city'] }}@endif</span>@endif
-                                </div>
-                            </td>
-                            <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
-                                @if($ev['organizer_id'] ?? null)
-                                    <a href="{{ route('filament.marketplace.resources.organizers.edit', ['record' => $ev['organizer_id']]) }}" class="hover:text-indigo-600 dark:hover:text-indigo-400">
-                                        {{ $ev['organizer_name'] ?? 'Organizer #' . $ev['organizer_id'] }}
-                                    </a>
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td class="px-3 py-2 text-right text-gray-700 dark:text-gray-300 tabular-nums">{{ number_format($ev['paid_tickets']) }}</td>
-                            <td class="px-3 py-2 text-right text-rose-600 dark:text-rose-400 font-medium tabular-nums">{{ number_format($ev['invitations']) }}</td>
-                            <td class="px-3 py-2 text-right text-rose-700 dark:text-rose-400 font-semibold tabular-nums">{{ number_format($ev['invitation_ratio_pct'], 1) }}%</td>
-                            <td class="px-3 py-2 text-right text-emerald-700 dark:text-emerald-400 tabular-nums">{{ number_format($ev['commission_earned'], 2) }}</td>
-                            <td class="px-3 py-2 text-right text-rose-700 dark:text-rose-400 font-bold tabular-nums">{{ number_format($ev['lost_commission_estimate'], 2) }}</td>
-                            <td class="px-3 py-2 text-center">
-                                <span class="inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded {{ $impactColors[$ev['impact']] ?? 'bg-gray-100 text-gray-700' }}">{{ $impactLabels[$ev['impact']] ?? '—' }}</span>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @endif
-            </div>{{-- /x-show collapse --}}
-        </div>
-        @endif
-
-
-        <!-- Pending Review Events — visible to all admins -->
-        @if(isset($pendingReviewEvents) && $pendingReviewEvents->count() > 0)
-        <div x-data="{ open: false }" :class="open ? 'lg:col-span-2' : ''" class="overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-amber-300 dark:border-amber-700">
-            <div class="flex items-center justify-between px-4 py-3 border-b bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 text-amber-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-amber-500" />
-                    <h3 class="font-semibold text-amber-800 dark:text-amber-200">{{ __('Evenimente de revizuit') }}</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full">{{ $pendingReviewEvents->count() }}</span>
-                </div>
-                <a href="{{ route('filament.marketplace.resources.events.index') }}?tableFilters[is_published][value]=0" class="text-xs text-amber-600 dark:text-amber-400 hover:underline">
-                    {{ __('Vezi toate') }}
-                </a>
-            </div>
-            <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96" x-show="open" x-collapse x-cloak>
-                @foreach($pendingReviewEvents->take(10) as $event)
-                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
-                                {{ $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') }}
-                            </a>
-                            @if($event->suggested_venue_name)
-                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded">
-                                    <x-heroicon-o-map-pin class="w-3 h-3" /> {{ $event->suggested_venue_name }}
-                                </span>
-                            @endif
+                    @if(!empty($expiredCapiTokens))
+                    <button type="button" class="ep-att tone-red" @click="panel = panel === 'tokens' ? null : 'tokens'" :aria-expanded="panel === 'tokens'">
+                        <span class="n">{{ count($expiredCapiTokens) }}</span>
+                        <div>
+                            <div class="t">{{ __('Tokenuri Facebook expirate') }}</div>
+                            <div class="ep-hint">{{ __('Conversiile nu ajung în Meta până la schimbarea tokenului') }}</div>
                         </div>
-                        <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            @if($event->marketplaceOrganizer)
-                                <span>{{ $event->marketplaceOrganizer->name }}</span>
-                            @endif
-                            @if($event->event_date)
-                                <span>{{ $event->event_date->format('d.m.Y') }}</span>
-                            @endif
-                            @if($event->venue)
-                                <span>{{ $event->venue->getTranslation('name', 'ro') }}</span>
-                            @endif
-                            <span class="text-gray-400">Trimis {{ $event->submitted_at->diffForHumans() }}</span>
-                        </div>
-                    </div>
-                    <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 dark:text-amber-300 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 rounded-lg transition-colors">
-                        <x-heroicon-o-eye class="w-3.5 h-3.5" />
-                        {{ __('Revizuieste') }}
-                    </a>
-                </div>
-                @endforeach
-            </div>
-        </div>
-        @endif
+                        <svg class="chev" :class="{ open: panel === 'tokens' }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg>
+                    </button>
+                    @endif
 
-        <!-- Recently published events (last 7 days) — visible to all admins -->
-        @if(isset($recentlyPublishedEvents))
-        <div x-data="{ open: false }" :class="open ? 'lg:col-span-2' : ''" class="overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-emerald-200 dark:border-emerald-800">
-            <div class="flex items-center justify-between px-4 py-3 border-b bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/40">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 transition-transform text-emerald-500" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-rocket-launch class="w-5 h-5 text-emerald-500" />
-                    <h3 class="font-semibold text-emerald-900 dark:text-emerald-200">{{ __('Evenimente publicate recent') }}</h3>
-                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-emerald-500 rounded-full">{{ $recentlyPublishedEvents->count() }}</span>
-                    <span class="text-xs text-emerald-600 dark:text-emerald-400">{{ __('ultimele 7 zile') }}</span>
+                    @if($hasSupport)
+                    <button type="button" class="ep-att tone-orange" @click="panel = panel === 'support' ? null : 'support'" :aria-expanded="panel === 'support'">
+                        <span class="n">{{ $pendingSupportTicketsCount }}</span>
+                        <div>
+                            <div class="t">{{ __('Tichete suport active') }}</div>
+                            <div class="ep-hint">{{ __('Deschide lista') }}</div>
+                        </div>
+                        <svg class="chev" :class="{ open: panel === 'support' }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg>
+                    </button>
+                    @endif
+
+                    @if($hasReview)
+                    <button type="button" class="ep-att tone-yellow" @click="panel = panel === 'review' ? null : 'review'" :aria-expanded="panel === 'review'">
+                        <span class="n">{{ $pendingReviewEvents->count() }}</span>
+                        <div>
+                            <div class="t">{{ __('Evenimente de revizuit') }}</div>
+                            <div class="ep-hint">{{ __('Deschide lista') }}</div>
+                        </div>
+                        <svg class="chev" :class="{ open: panel === 'review' }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg>
+                    </button>
+                    @endif
+
+                    @if($hasRecent)
+                    <button type="button" class="ep-att" @click="panel = panel === 'recent' ? null : 'recent'" :aria-expanded="panel === 'recent'">
+                        <span class="n">{{ $recentlyPublishedEvents->count() }}</span>
+                        <div>
+                            <div class="t">{{ __('Evenimente publicate') }}</div>
+                            <div class="ep-hint">{{ __('în ultimele 7 zile') }}</div>
+                        </div>
+                        <svg class="chev" :class="{ open: panel === 'recent' }" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg>
+                    </button>
+                    @endif
                 </div>
-                <a href="{{ route('filament.marketplace.resources.events.index') }}" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">
-                    {{ __('Vezi toate') }}
-                </a>
-            </div>
-            <div x-show="open" x-collapse x-cloak>
-                @if($recentlyPublishedEvents->isEmpty())
-                    <p class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ __('Niciun eveniment publicat în ultimele 7 zile.') }}</p>
-                @else
-                <div class="overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 max-h-96">
-                    @foreach($recentlyPublishedEvents as $event)
-                    @php $eventDate = $event->event_date ?? $event->range_start_date; @endphp
-                    <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <div class="flex-1 min-w-0">
-                            <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="block text-sm font-medium text-gray-900 truncate dark:text-white hover:text-emerald-600 dark:hover:text-emerald-400">
-                                {{ $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') }}
-                            </a>
-                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                @if($event->marketplaceOrganizer)
-                                    <span>{{ $event->marketplaceOrganizer->name }}</span>
-                                @endif
-                                @if($eventDate)
-                                    <span>{{ \Carbon\Carbon::parse($eventDate)->format('d.m.Y') }}</span>
-                                @endif
-                                @if($event->venue)
-                                    <span>{{ $event->venue->getTranslation('name', 'ro') }}</span>
-                                @endif
-                                <span class="text-gray-400">Publicat {{ \Carbon\Carbon::parse($event->published_moment)->diffForHumans() }}</span>
+
+                {{-- Tokenuri Facebook CAPI expirate / invalide, pe organizator --}}
+                @if(!empty($expiredCapiTokens))
+                <div class="ep-card" x-show="panel === 'tokens'" x-collapse x-cloak style="overflow: hidden;">
+                    <div class="ep-card-h">
+                        <h2>{{ __('Tokenuri Facebook expirate') }}</h2>
+                        <span class="ep-hint">{{ __('Conversiile nu ajung în Meta până la schimbarea tokenului') }}</span>
+                    </div>
+                    @foreach($expiredCapiTokens as $capi)
+                    @php
+                        $capiEditUrl = route('filament.marketplace.resources.organizers.edit', ['record' => $capi['organizer_id']]) . '?tab=bilete-termeni';
+                    @endphp
+                    <div class="ep-li">
+                        <div class="main">
+                            <div>
+                                <a href="{{ $capiEditUrl }}" class="ttl">{{ $capi['organizer_name'] }}</a>
+                                <span class="ep-badge t-red">{{ $capi['is_expired'] ? 'Expirat' : 'Invalid' }}</span>
+                                <span class="ep-hint">Pixel {{ $capi['pixel_id'] }}</span>
                             </div>
+                            <div class="meta">
+                                @if($capi['expired_at'])
+                                    <span>{{ __('Expirat pe') }} <strong>{{ \App\Support\MarketplaceTz::fmt($capi['expired_at'], 'd.m.Y H:i', fallback: '') }}</strong></span>
+                                @endif
+                                @if($capi['first_failed_at'])
+                                    <span>Respins din {{ \App\Support\MarketplaceTz::fmt($capi['first_failed_at'], 'd.m.Y H:i', fallback: '') }}</span>
+                                @endif
+                                <span>{{ $capi['failed_count'] }} {{ $capi['failed_count'] === 1 ? 'eveniment pierdut' : 'evenimente pierdute' }}</span>
+                                <span>Ultimul trimis cu succes: {{ $capi['last_sent_at'] ? \App\Support\MarketplaceTz::fmt($capi['last_sent_at'], 'd.m.Y H:i', fallback: '') : 'niciodată' }}</span>
+                            </div>
+                            @if($capi['message'])
+                                <p class="ep-hint" style="margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $capi['message'] }}">{{ $capi['message'] }}</p>
+                            @endif
                         </div>
-                        <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/40 rounded-lg transition-colors">
-                            <x-heroicon-o-pencil-square class="w-3.5 h-3.5" />
-                            {{ __('Deschide') }}
-                        </a>
+                        <a href="{{ $capiEditUrl }}" class="ep-btn">{{ __('Schimbă tokenul') }}</a>
                     </div>
                     @endforeach
+                    <p class="ep-hint" style="margin: 0; padding: 10px 20px; border-top: 1px solid var(--ep-bd2);">
+                        {{ __('Tokenul se schimbă în tab-ul „Bilete & Termeni”, secțiunea Facebook Conversions API. Rândul dispare după primul eveniment trimis cu succes (lista se actualizează la 10 minute).') }}
+                    </p>
+                </div>
+                @endif
+
+                {{-- Tichete suport active — vizibile tuturor adminilor --}}
+                @if($hasSupport)
+                <div class="ep-card" x-show="panel === 'support'" x-collapse x-cloak style="overflow: hidden;">
+                    <div class="ep-card-h">
+                        <h2>{{ __('Tichete suport active') }}</h2>
+                        <a href="{{ route('filament.marketplace.resources.support-tickets.index') }}" style="margin-left: auto; font-size: 12px;">{{ __('Vezi toate') }}</a>
+                    </div>
+                    <div class="ep-list-scroll">
+                        @foreach($pendingSupportTickets as $supportTicket)
+                        @php
+                            $statusLabel = match ($supportTicket->status) {
+                                'open' => 'Deschis',
+                                'in_progress' => 'Așteaptă răspuns',
+                                'awaiting_organizer' => 'Răspuns trimis',
+                                default => $supportTicket->status,
+                            };
+                            $statusTone = match ($supportTicket->status) {
+                                'open' => 't-blue',
+                                'in_progress' => 't-amber',
+                                'awaiting_organizer' => 't-green',
+                                default => 't-gray',
+                            };
+                            $openerName = $supportTicket->opener?->name ?? $supportTicket->opener?->public_name ?? '—';
+                        @endphp
+                        <div class="ep-li">
+                            <div class="main">
+                                <div>
+                                    <a href="{{ route('filament.marketplace.resources.support-tickets.view', $supportTicket->id) }}" class="ttl">{{ $supportTicket->subject }}</a>
+                                    <span class="ep-badge {{ $statusTone }}">{{ $statusLabel }}</span>
+                                    <span class="ep-hint">{{ $supportTicket->ticket_number }}</span>
+                                </div>
+                                <div class="meta">
+                                    <span>{{ $openerName }}</span>
+                                    <span>{{ $supportTicket->department?->getTranslation('name', 'ro') ?? '—' }}</span>
+                                    @if ($supportTicket->assignee)
+                                        <span>Asignat: {{ $supportTicket->assignee->name }}</span>
+                                    @endif
+                                    <span>{{ $supportTicket->last_activity_at?->diffForHumans() }}</span>
+                                </div>
+                            </div>
+                            <a href="{{ route('filament.marketplace.resources.support-tickets.view', $supportTicket->id) }}" class="ep-btn">{{ __('Deschide') }}</a>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- Evenimente de revizuit — vizibile tuturor adminilor --}}
+                @if($hasReview)
+                <div class="ep-card" x-show="panel === 'review'" x-collapse x-cloak style="overflow: hidden;">
+                    <div class="ep-card-h">
+                        <h2>{{ __('Evenimente de revizuit') }}</h2>
+                        <a href="{{ route('filament.marketplace.resources.events.index') }}?tableFilters[is_published][value]=0" style="margin-left: auto; font-size: 12px;">{{ __('Vezi toate') }}</a>
+                    </div>
+                    <div class="ep-list-scroll">
+                        @foreach($pendingReviewEvents->take(10) as $event)
+                        <div class="ep-li">
+                            <div class="main">
+                                <div>
+                                    <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="ttl">{{ $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') }}</a>
+                                    @if($event->suggested_venue_name)
+                                        <span class="ep-badge t-amber">{{ $event->suggested_venue_name }}</span>
+                                    @endif
+                                </div>
+                                <div class="meta">
+                                    @if($event->marketplaceOrganizer)
+                                        <span>{{ $event->marketplaceOrganizer->name }}</span>
+                                    @endif
+                                    @if($event->event_date)
+                                        <span>{{ $event->event_date->format('d.m.Y') }}</span>
+                                    @endif
+                                    @if($event->venue)
+                                        <span>{{ $event->venue->getTranslation('name', 'ro') }}</span>
+                                    @endif
+                                    <span>Trimis {{ $event->submitted_at->diffForHumans() }}</span>
+                                </div>
+                            </div>
+                            <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="ep-btn">{{ __('Revizuieste') }}</a>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- Evenimente publicate recent (ultimele 7 zile) — vizibile tuturor adminilor --}}
+                @if($hasRecent)
+                <div class="ep-card" id="ep-recent" x-show="panel === 'recent'" x-collapse x-cloak style="overflow: hidden;">
+                    <div class="ep-card-h">
+                        <h2>{{ __('Evenimente publicate recent') }}</h2>
+                        <span class="ep-hint">{{ __('ultimele 7 zile') }}</span>
+                        <a href="{{ route('filament.marketplace.resources.events.index') }}" style="margin-left: auto; font-size: 12px;">{{ __('Vezi toate') }}</a>
+                    </div>
+                    @if($recentlyPublishedEvents->isEmpty())
+                        <p class="ep-hint" style="margin: 0; padding: 14px 20px;">{{ __('Niciun eveniment publicat în ultimele 7 zile.') }}</p>
+                    @else
+                    <div class="ep-list-scroll">
+                        @foreach($recentlyPublishedEvents as $event)
+                        @php $eventDate = $event->event_date ?? $event->range_start_date; @endphp
+                        <div class="ep-li">
+                            <div class="main">
+                                <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="ttl">{{ $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') }}</a>
+                                <div class="meta">
+                                    @if($event->marketplaceOrganizer)
+                                        <span>{{ $event->marketplaceOrganizer->name }}</span>
+                                    @endif
+                                    @if($eventDate)
+                                        <span>{{ \Carbon\Carbon::parse($eventDate)->format('d.m.Y') }}</span>
+                                    @endif
+                                    @if($event->venue)
+                                        <span>{{ $event->venue->getTranslation('name', 'ro') }}</span>
+                                    @endif
+                                    <span>Publicat {{ \Carbon\Carbon::parse($event->published_moment)->diffForHumans() }}</span>
+                                </div>
+                            </div>
+                            <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="ep-btn">{{ __('Deschide') }}</a>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
                 </div>
                 @endif
             </div>
-        </div>
-        @endif
+            @endif
 
-        </div>{{-- /grid secțiuni pliabile --}}
-
-        @if($isSuperAdmin ?? false)
-        <!-- Today Stats -->
-        @if(isset($todayStats))
-        <div class="mb-5">
-            <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                <x-heroicon-o-sun class="w-4 h-4" />
-                Azi — {{ $todayStats['date_label'] }}
-            </h3>
-            <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Încasări azi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 2) }} <span class="text-sm font-normal text-gray-400">{{ __('RON') }}</span></p>
+            @if($isSA)
+            {{-- Azi --}}
+            @if(isset($todayStats))
+            <div class="ep-sec">
+                <div class="ep-sec-h">
+                    <div class="ep-cap">{{ __('Azi') }}</div>
+                    <span class="ep-hint">{{ $todayStats['date_label'] }}</span>
                 </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comisioane azi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['commission'] ?? 0, 2) }} <span class="text-sm font-normal text-gray-400">{{ __('RON') }}</span></p>
-                    @if(($todayVatRate ?? 0) > 0)
-                    <p class="mt-0.5 text-[10px] text-gray-400">net · +TVA {{ number_format(($todayStats['commission'] ?? 0) * $todayVatRate / 100, 2) }} RON</p>
-                    @endif
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Bilete vândute') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($todayStats['tickets_sold']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comenzi azi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayStats['total_orders']) }}</p>
-                    @if(($todayStats['total_orders'] ?? 0) > 0)
-                    <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['paid_orders'] ?? 0 }} plătite · {{ $todayStats['pending_orders'] ?? 0 }} pending · {{ $todayStats['failed_orders'] ?? 0 }} eșuate · {{ $todayStats['cancelled_orders'] ?? 0 }} anulate · {{ $todayStats['expired_orders'] ?? 0 }} expirate · {{ $todayStats['refunded_orders'] ?? 0 }} rambursate</p>
-                    @endif
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Clienți noi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($todayStats['new_customers']) }}</p>
-                    <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['registered_customers'] ?? 0 }} registered · {{ $todayStats['guest_customers'] ?? 0 }} guest</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente publicate azi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($todayStats['events_published'] ?? 0) }}</p>
+                <div class="ep-kpis ep-k6">
+                    <div class="ep-kpi">
+                        <span class="l">{{ __('Încasări') }}</span>
+                        <span class="v">{{ number_format($todayStats['revenue'], 2) }} <small>{{ __('RON') }}</small></span>
+                    </div>
+                    <div class="ep-kpi">
+                        <span class="l">{{ __('Comisioane') }}</span>
+                        <span class="v">{{ number_format($todayStats['commission'] ?? 0, 2) }} <small>{{ __('RON') }}</small></span>
+                        @if(($todayVatRate ?? 0) > 0)
+                        <span class="s">net | +TVA {{ number_format(($todayStats['commission'] ?? 0) * $todayVatRate / 100, 2) }} RON</span>
+                        @endif
+                    </div>
+                    <div class="ep-kpi">
+                        <span class="l">{{ __('Bilete vândute') }}</span>
+                        <span class="v">{{ number_format($todayStats['tickets_sold']) }}</span>
+                    </div>
+                    <div class="ep-kpi">
+                        <span class="l">{{ __('Comenzi') }}</span>
+                        <span class="v">{{ number_format($todayStats['total_orders']) }}</span>
+                        @if(($todayStats['total_orders'] ?? 0) > 0)
+                        <span class="s">{{ $todayStats['paid_orders'] ?? 0 }} {{ __('plătite') }} | {{ $todayStats['pending_orders'] ?? 0 }} pending | {{ $todayStats['failed_orders'] ?? 0 }} {{ __('eșuate') }} | {{ $todayStats['cancelled_orders'] ?? 0 }} {{ __('anulate') }} | {{ $todayStats['expired_orders'] ?? 0 }} {{ __('expirate') }} | {{ $todayStats['refunded_orders'] ?? 0 }} {{ __('rambursate') }}</span>
+                        @endif
+                    </div>
+                    <div class="ep-kpi">
+                        <span class="l">{{ __('Clienți noi') }}</span>
+                        <span class="v">{{ number_format($todayStats['new_customers']) }}</span>
+                        <span class="s">{{ $todayStats['registered_customers'] ?? 0 }} {{ __('cu cont') }} | {{ $todayStats['guest_customers'] ?? 0 }} {{ __('oaspeți') }}</span>
+                    </div>
+                    <div class="ep-kpi">
+                        <span class="l">{{ __('Evenimente publicate') }}</span>
+                        <span class="v">{{ number_format($todayStats['events_published'] ?? 0) }}</span>
+                    </div>
                 </div>
             </div>
-        </div>
-        @endif
+            @endif
 
-        <!-- Monthly Stats -->
-        @if(isset($monthStats))
-        <div class="mb-5">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="flex items-center gap-2 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                    <x-heroicon-o-calendar-days class="w-4 h-4" />
-                    {{ $monthStats['month_label'] }}
-                </h3>
-                <input type="month"
-                    wire:model.live="selectedMonth"
-                    class="py-1 text-xs border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-primary-500 focus:border-primary-500"
-                    max="{{ now()->format('Y-m') }}"
-                />
-            </div>
-            <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Organizatori noi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['new_organizers']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente live acum') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($monthStats['live_events']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Evenimente încheiate') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['ended_events']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Total vânzări') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['total_sales'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Venituri brute') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($monthStats['total_commission'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Bilete vândute') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($monthStats['tickets_sold']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Clienți noi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($monthStats['new_customers']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Comenzi') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['month_orders']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+            <div class="ep-cols">
+            <div class="ep-main">
+
+                {{-- Luna --}}
+                @if(isset($monthStats))
+                <div class="ep-sec">
+                    <div class="ep-sec-h">
+                        <div class="ep-cap">{{ __('Luna') }}</div>
+                        <span class="ep-hint">{{ $monthStats['month_label'] }}</span>
+                        <input type="month"
+                            wire:model.live="selectedMonth"
+                            class="ep-in"
+                            style="margin-left: auto;"
+                            max="{{ now()->format('Y-m') }}"
+                        />
+                    </div>
                     @php $mVat = $monthStats['vat'] ?? null; @endphp
-                    <p class="text-xs text-gray-500 dark:text-gray-400">TVA de plată @if(!empty($mVat['from_label']))<span class="text-gray-400">(din {{ $mVat['from_label'] }})</span>@endif</p>
-                    <p class="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($mVat['total'] ?? 0, 2) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
-                    @if(($mVat['total'] ?? 0) > 0)
-                    <p class="mt-0.5 text-[10px] text-gray-400">comision {{ number_format($mVat['commission'], 2) }} · servicii {{ number_format($mVat['services'], 2) }} · taxe retur/card cultural {{ number_format($mVat['other'], 2) }}</p>
-                    @endif
+                    <div class="ep-kpis ep-k3 six">
+                        <div class="ep-kpi">
+                            <span class="l">{{ __('Total vânzări') }}</span>
+                            <span class="v">{{ number_format($monthStats['total_sales'], 0) }} <small>{{ $monthStats['currency'] }}</small></span>
+                            <span class="s">{{ __('medie zilnică') }} {{ number_format($monthStats['avg_daily_sales'], 0) }} {{ $monthStats['currency'] }}</span>
+                        </div>
+                        <div class="ep-kpi">
+                            <span class="l">{{ __('Venituri brute') }}</span>
+                            <span class="v ep-amber">{{ number_format($monthStats['total_commission'], 0) }} <small>{{ $monthStats['currency'] }}</small></span>
+                        </div>
+                        <div class="ep-kpi">
+                            <span class="l">{{ __('TVA de plată') }} @if(!empty($mVat['from_label']))<span>(din {{ $mVat['from_label'] }})</span>@endif</span>
+                            <span class="v ep-rose">{{ number_format($mVat['total'] ?? 0, 2) }} <small>{{ $monthStats['currency'] }}</small></span>
+                            @if(($mVat['total'] ?? 0) > 0)
+                            <span class="s">comision {{ number_format($mVat['commission'], 2) }} | servicii {{ number_format($mVat['services'], 2) }} | taxe retur/card cultural {{ number_format($mVat['other'], 2) }}</span>
+                            @endif
+                        </div>
+                        <div class="ep-kpi">
+                            <span class="l">{{ __('Bilete vândute') }}</span>
+                            <span class="v">{{ number_format($monthStats['tickets_sold']) }}</span>
+                            <span class="s">{{ number_format($monthStats['month_orders']) }} {{ __('comenzi') }}</span>
+                        </div>
+                        <div class="ep-kpi">
+                            <span class="l">{{ __('Clienți noi') }}</span>
+                            <span class="v">{{ number_format($monthStats['new_customers']) }}</span>
+                        </div>
+                        <div class="ep-kpi">
+                            <span class="l">{{ __('Evenimente live acum') }}</span>
+                            <span class="v">{{ number_format($monthStats['live_events']) }}</span>
+                            <span class="s">{{ number_format($monthStats['ended_events']) }} {{ __('încheiate') }} | {{ number_format($monthStats['new_organizers']) }} {{ __('organizatori noi') }}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Media vânzări zilnice') }}</p>
-                    <p class="mt-1 text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($monthStats['avg_daily_sales'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
-                </div>
-            </div>
-        </div>
-        @endif
+                @endif
 
-        {{-- Featured event statistics — super-admin only (also inside the outer isSuperAdmin gate) --}}
-        @if(($isSuperAdmin ?? false) && !empty($featuredEventStats))
-        @php
-            $fes = $featuredEventStats;
-            $cur = $fes['currency'];
-            $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' ' . $cur;
-            $num = fn ($v) => number_format((float) $v, 0, ',', '.');
-            $avg = fn ($v) => number_format((float) $v, 1, ',', '.');
-            $stat = function (string $label, string $value, string $sub, string $c) {
-                return '<div class="px-2 py-1.5 rounded-md bg-' . $c . '-50 dark:bg-' . $c . '-900/20 border border-' . $c . '-100/60 dark:border-' . $c . '-800/30">'
-                    . '<span class="text-[10px] text-' . $c . '-700 dark:text-' . $c . '-300">' . $label . '</span>'
-                    . '<span class="block mb-1 text-sm font-bold text-' . $c . '-900 dark:text-' . $c . '-100 tabular-nums leading-tight">' . $value . '</span>'
-                    . ($sub !== '' ? '<span class="block text-[10px] text-' . $c . '-600/70 dark:text-' . $c . '-300/70 leading-tight">' . $sub . '</span>' : '')
-                    . '</div>';
-            };
-        @endphp
-        <div x-data="{ open: false }" class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-indigo-200 dark:border-indigo-800/50">
-            <div class="flex items-center justify-between px-4 py-3 border-b bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/40">
-                <div class="flex items-center gap-2 cursor-pointer select-none" @click="open = !open" role="button">
-                    <x-heroicon-o-chevron-right class="w-4 h-4 text-indigo-500 transition-transform" ::class="open ? 'rotate-90' : ''" />
-                    <x-heroicon-o-chart-bar class="w-5 h-5 text-indigo-500" />
-                    <h3 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Statistici · {{ $fes['event_name'] }}</h3>
-                </div>
-                <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $fes['event_id']]) }}" class="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">Deschide eveniment</a>
-            </div>
-            <div class="p-3 space-y-3" x-show="open" x-collapse x-cloak>
-                {{-- 30-day trend (mini bar chart). Bars are scaled by sales; when
-                     the daily sales series is flat (e.g. POS-heavy events whose
-                     revenue isn't reflected per-ticket) we fall back to ticket
-                     counts so the chart is still visible. --}}
+                {{-- Vânzări și bilete (Chart.js — scriptul de mai jos citește #combinedChart) --}}
+                <section class="ep-card" aria-labelledby="ep-h-ch" wire:key="charts-{{ $chartPeriod }}-{{ $chartMonth }}">
+                    <div class="ep-card-h">
+                        <h2 id="ep-h-ch">{{ __('Vânzări și bilete') }}</h2>
+                        <div class="ep-seg" role="group" aria-label="{{ __('Perioadă') }}" style="margin-left: auto;">
+                            @foreach(['month' => 'Avansat', '7' => '7 zile', '15' => '15 zile', '30' => '30 zile', '60' => '60 zile', '90' => '90 zile'] as $pVal => $pLabel)
+                                <button type="button"
+                                        wire:click="$set('chartPeriod', '{{ $pVal }}')"
+                                        class="{{ (string) $chartPeriod === (string) $pVal ? 'on' : '' }}"
+                                        aria-pressed="{{ (string) $chartPeriod === (string) $pVal ? 'true' : 'false' }}">{{ __($pLabel) }}</button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    @if($chartPeriod === 'month' && $chartMonthMeta)
+                    <div class="ep-monthnav">
+                        <button type="button"
+                                wire:click="shiftChartMonth(-1)"
+                                @disabled(!($chartMonthMeta['canGoPrev'] ?? false))
+                                class="ep-btn ep-btn-ghost"
+                                title="{{ __('Luna anterioară') }}">‹ {{ __('Luna anterioară') }}</button>
+                        <span style="font-size: 14px; font-weight: 600; padding: 0 6px;">{{ ucfirst($chartMonthMeta['monthLabel']) }}</span>
+                        @if($chartMonthMeta['mode'] === 'past')
+                            <span class="ep-mbadge">{{ __('Trecut') }}</span>
+                        @elseif($chartMonthMeta['mode'] === 'future')
+                            <span class="ep-mbadge future">{{ __('Predicție') }}</span>
+                        @else
+                            <span class="ep-mbadge cur">{{ __('în curs, cu predicție') }}</span>
+                        @endif
+                        <button type="button"
+                                wire:click="shiftChartMonth(1)"
+                                @disabled(!($chartMonthMeta['canGoNext'] ?? false))
+                                class="ep-btn ep-btn-ghost"
+                                title="{{ __('Luna următoare') }}">{{ __('Luna următoare') }} ›</button>
+                        @if($chartMonthMeta['mode'] !== 'current')
+                            <button type="button"
+                                    wire:click="$set('chartMonth', '{{ \Carbon\Carbon::now('Europe/Bucharest')->format('Y-m') }}')"
+                                    class="ep-btn"
+                                    style="margin-left: auto;"
+                                    title="{{ __('Revino la luna în curs') }}">{{ __('Revino la luna în curs') }}</button>
+                        @endif
+                    </div>
+                    @endif
+
+                    <div class="ep-legend ep-hint">
+                        @if($chartPeriod === 'month' && $chartMonthMeta && $chartMonthMeta['mode'] !== 'future')
+                            <span><span class="sw" style="width: 14px; height: 2px; background: #6366f1;"></span>{{ __('Vânzări (RON)') }}</span>
+                            <span><span class="sw" style="width: 10px; height: 10px; border-radius: 3px; background: rgba(147, 51, 234, .7);"></span>{{ __('Bilete') }}</span>
+                        @elseif($chartPeriod !== 'month')
+                            <span><span class="sw" style="width: 14px; height: 2px; background: #6366f1;"></span>{{ __('Vânzări (RON)') }}</span>
+                            <span><span class="sw" style="width: 10px; height: 10px; border-radius: 3px; background: rgba(147, 51, 234, .7);"></span>{{ __('Bilete') }}</span>
+                        @endif
+                        <span><span class="sw" style="width: 10px; height: 10px; border-radius: 3px; background: #eab308;"></span>{{ __('weekend') }}</span>
+                        <span><span class="sw" style="width: 14px; border-top: 1.5px dashed rgba(99, 102, 241, .7);"></span>{{ __('Medie') }}</span>
+                        @if($chartPeriod === 'month')
+                            <span><span class="sw" style="width: 14px; border-top: 2px dashed rgba(202, 138, 4, .8);"></span>{{ __('Anul trecut') }}</span>
+                            <span><span class="sw" style="width: 14px; border-top: 1.5px dotted rgba(202, 138, 4, .8);"></span>{{ __('Medie an trecut') }}</span>
+                            @if($chartMonthMeta && $chartMonthMeta['mode'] !== 'past')
+                                <span><span class="sw" style="width: 14px; border-top: 2px dashed rgba(16, 185, 129, .85);"></span>{{ __('Predicție') }}</span>
+                            @endif
+                        @endif
+                    </div>
+
+                    <div class="ep-chart">
+                        <div>
+                            <canvas id="combinedChart"
+                                    data-sales='@json($chartData)'
+                                    data-tickets='@json($ticketChartData)'
+                                    data-prev-sales='@json($prevYearChartData ?? null)'
+                                    data-prev-tickets='@json($prevYearTicketChartData ?? null)'
+                                    data-chart-meta='@json($chartMonthMeta ?? null)'
+                                    data-currency="RON"></canvas>
+                        </div>
+                    </div>
+
+                    @if($chartPeriod === 'month' && isset($chartSummary) && $chartMonthMeta)
+                        @php
+                            $monthLabel = ucfirst($chartMonthMeta['monthLabel']);
+                            $prevLabel = ucfirst($chartMonthMeta['prevMonthLabel']);
+                            $mode = $chartMonthMeta['mode'];
+                            $isPast = $mode === 'past';
+                            $isFuture = $mode === 'future';
+                            // % change vs last year (null when no last-year baseline).
+                            $pct = function ($cur, $prev) {
+                                $prev = (float) $prev;
+                                if ($prev <= 0) return null;
+                                return round(((float) $cur - $prev) / $prev * 100, 1);
+                            };
+                            $pctText = function ($p) {
+                                if ($p === null) return '';
+                                $pos = $p >= 0;
+                                $val = ($pos ? '+' : '') . number_format($p, 1, ',', '.');
+                                return ' | <span class="ep-pct ' . ($pos ? 'pos' : 'neg') . '">' . ($pos ? '▲' : '▼') . ' ' . $val . '%</span> ' . e(__('față de anul trecut'));
+                            };
+                        @endphp
+                        <div class="ep-sumwrap">
+                            {{-- Până acum (luna în curs) / totaluri (luna trecută); ascuns pentru luni viitoare --}}
+                            @if(!$isFuture)
+                            <div>
+                                <div class="ep-grp" style="color: var(--ep-g1);">{{ $isPast ? __('Total lună') : __('Până acum') }}</div>
+                                <div class="ep-kpis ep-k3">
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Vânzări') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['sales_so_far'], 0, ',', '.') }} <small>{{ __('RON') }}</small></span>
+                                        <span class="s">{{ $monthLabel }}{!! $pctText($pct($chartSummary['sales_so_far'], $chartSummary['prev_year_sales'] ?? 0)) !!}</span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Bilete') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['tickets_so_far'], 0, ',', '.') }}</span>
+                                        <span class="s">{{ $monthLabel }}{!! $pctText($pct($chartSummary['tickets_so_far'], $chartSummary['prev_year_tickets'] ?? 0)) !!}</span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Comisioane') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['commission_so_far'] ?? 0, 0, ',', '.') }} <small>{{ __('RON') }}</small></span>
+                                        <span class="s">{{ $monthLabel }}{!! $pctText($pct($chartSummary['commission_so_far'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+
+                            {{-- Anul trecut --}}
+                            <div>
+                                <div class="ep-grp" style="color: var(--ep-g2);">{{ __('Anul trecut, aceeași lună') }}</div>
+                                <div class="ep-kpis ep-k3">
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Vânzări') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['prev_year_sales'], 0, ',', '.') }} <small>{{ __('RON') }}</small></span>
+                                        <span class="s">{{ $prevLabel }}</span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Bilete') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['prev_year_tickets'], 0, ',', '.') }}</span>
+                                        <span class="s">{{ $prevLabel }}</span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Comisioane') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['prev_year_commission'] ?? 0, 0, ',', '.') }} <small>{{ __('RON') }}</small></span>
+                                        <span class="s">estimat | {{ $prevLabel }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Predicție (ascunsă pentru luni trecute — valorile reale sunt cunoscute) --}}
+                            @if(!$isPast)
+                            <div>
+                                <div class="ep-grp" style="color: var(--ep-g3);">{{ __('Predicție pentru toată luna') }}</div>
+                                <div class="ep-kpis ep-k3">
+                                    <div class="ep-mini pred">
+                                        <span class="l">{{ __('Vânzări') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['predicted_sales'], 0, ',', '.') }} <small>{{ __('RON') }}</small></span>
+                                        <span class="s">total {{ $monthLabel }}{!! $pctText($pct($chartSummary['predicted_sales'] ?? 0, $chartSummary['prev_year_sales'] ?? 0)) !!}</span>
+                                    </div>
+                                    <div class="ep-mini pred">
+                                        <span class="l">{{ __('Bilete') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['predicted_tickets'], 0, ',', '.') }}</span>
+                                        <span class="s">total {{ $monthLabel }}{!! $pctText($pct($chartSummary['predicted_tickets'] ?? 0, $chartSummary['prev_year_tickets'] ?? 0)) !!}</span>
+                                    </div>
+                                    <div class="ep-mini pred">
+                                        <span class="l">{{ __('Comisioane') }}</span>
+                                        <span class="v">{{ number_format($chartSummary['predicted_commission'] ?? 0, 0, ',', '.') }} <small>{{ __('RON') }}</small></span>
+                                        <span class="s">total {{ $monthLabel }}{!! $pctText($pct($chartSummary['predicted_commission'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                    @endif
+                </section>
+
+                {{-- Raport vânzări pe zi, pe evenimente — componentă Livewire lazy proprie:
+                     schimbarea zilei re-randează doar tabelul, nu tot dashboardul. --}}
+                @livewire(\App\Livewire\Marketplace\DailySalesReport::class)
+
+                {{-- Eveniment urmărit (deschis implicit) — doar admini --}}
+                @if(!empty($featuredEventStats))
                 @php
+                    $fes = $featuredEventStats;
+                    $cur = $fes['currency'];
+                    $money = fn ($v) => number_format((float) $v, 2, ',', '.') . ' ' . $cur;
+                    $num = fn ($v) => number_format((float) $v, 0, ',', '.');
+                    $avg = fn ($v) => number_format((float) $v, 1, ',', '.');
+                    // Seria de 30 de zile: preferă vânzările; dacă e plată (evenimente
+                    // cu POS), cade pe numărul de bilete ca graficul să rămână vizibil.
                     $dsSales   = $fes['daily_sales'] ?? [];
                     $dsTickets = $fes['daily_tickets'] ?? [];
                     $sum30     = array_sum($dsSales);
-                    // Metric used for bar heights: prefer sales, fall back to tickets.
                     $barSeries = array_sum($dsSales) > 0 ? $dsSales : $dsTickets;
                     $maxD      = !empty($barSeries) ? max($barSeries) : 0;
                     $maxD      = $maxD > 0 ? $maxD : 1;
                     $hasTrend  = array_sum($dsTickets) > 0 || array_sum($dsSales) > 0;
                 @endphp
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400">{{ __('Vânzări · ultimele 30 zile') }}</span>
-                        <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400">{{ $money($sum30) }}</span>
+                <section class="ep-card" aria-labelledby="ep-h-fe">
+                    <div class="ep-card-h">
+                        <h2 id="ep-h-fe">{{ $fes['event_name'] }}</h2>
+                        <span class="ep-hint">{{ __('eveniment urmărit') }}</span>
+                        <a class="ep-btn ep-btn-ghost" href="{{ route('filament.marketplace.resources.events.edit', ['record' => $fes['event_id']]) }}" style="margin-left: auto;">{{ __('Deschide evenimentul') }} ↗</a>
                     </div>
-                    @if($hasTrend)
-                        {{-- Bars use explicit PIXEL heights + an inline background
-                             colour so they never depend on percentage-height
-                             resolution inside a flex row (which some browsers
-                             collapse to 0) or on Tailwind arbitrary-value/opacity
-                             classes being compiled into the panel theme. --}}
-                        <div class="flex items-end gap-px" style="height: 64px;">
-                            @foreach($barSeries as $i => $v)
-                                @php
-                                    $barPx = $v > 0 ? max(4, (int) round($v / $maxD * 58)) : 2;
-                                    $isWknd = $fes['daily_weekend'][$i] ?? false;
-                                    $tip = ($fes['daily_labels'][$i] ?? '')
-                                        . "\nVânzări: " . $money($fes['daily_sales'][$i] ?? 0)
-                                        . "\n• Online: " . $money($fes['daily_sales_online'][$i] ?? 0)
-                                        . "\n• POS: " . $money($fes['daily_sales_pos'][$i] ?? 0)
-                                        . "\nBilete: " . ($fes['daily_tickets'][$i] ?? 0)
-                                        . "\n• Online: " . ($fes['daily_tickets_online'][$i] ?? 0)
-                                        . "\n• POS: " . ($fes['daily_tickets_pos'][$i] ?? 0);
-                                @endphp
-                                {{-- Weekend bars are wider (flex 2 vs 1) and yellow so they stand out. --}}
-                                <div class="rounded-sm"
-                                     style="flex: {{ $isWknd ? '2' : '1' }}; height: {{ $barPx }}px; background-color: {{ $isWknd ? '#eab308' : '#6366f1' }}; opacity: {{ $isWknd ? '1' : '.85' }};"
-                                     title="{{ $tip }}"></div>
-                            @endforeach
+                    <div class="ep-fe-body">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                                <span class="ep-hint" style="font-size: 13px;">{{ __('Vânzări · ultimele 30 zile') }}</span>
+                                <span style="font-weight: 600;">{{ $money($sum30) }}</span>
+                            </div>
+                            @if($hasTrend)
+                                {{-- Bare cu înălțime în pixeli și culoare inline: nu depind de clase Tailwind compilate. --}}
+                                <div style="display: flex; align-items: flex-end; gap: 2px; height: 64px;">
+                                    @foreach($barSeries as $i => $v)
+                                        @php
+                                            $barPx = $v > 0 ? max(4, (int) round($v / $maxD * 58)) : 2;
+                                            $isWknd = $fes['daily_weekend'][$i] ?? false;
+                                            $tip = ($fes['daily_labels'][$i] ?? '')
+                                                . "\nVânzări: " . $money($fes['daily_sales'][$i] ?? 0)
+                                                . "\n• Online: " . $money($fes['daily_sales_online'][$i] ?? 0)
+                                                . "\n• POS: " . $money($fes['daily_sales_pos'][$i] ?? 0)
+                                                . "\nBilete: " . ($fes['daily_tickets'][$i] ?? 0)
+                                                . "\n• Online: " . ($fes['daily_tickets_online'][$i] ?? 0)
+                                                . "\n• POS: " . ($fes['daily_tickets_pos'][$i] ?? 0);
+                                        @endphp
+                                        {{-- Weekendul: bară mai lată (flex 2) și galbenă. --}}
+                                        <div style="flex: {{ $isWknd ? '2' : '1' }}; height: {{ $barPx }}px; border-radius: 2px 2px 0 0; background-color: {{ $isWknd ? '#eab308' : '#6366f1' }}; opacity: {{ $isWknd ? '1' : '.85' }};"
+                                             title="{{ $tip }}"></div>
+                                    @endforeach
+                                </div>
+                                <div style="display: flex; gap: 2px; margin-top: 4px;">
+                                    @foreach($barSeries as $i => $v)
+                                        @php $isWknd = $fes['daily_weekend'][$i] ?? false; @endphp
+                                        <div style="flex: {{ $isWknd ? '2' : '1' }}; text-align: center; font-size: 8px; line-height: 1; color: {{ $isWknd ? '#ca8a04' : '#9ca3af' }}; font-weight: {{ $isWknd ? '700' : '400' }};">{{ $fes['daily_day_num'][$i] ?? '' }}</div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="ep-hint" style="display: flex; align-items: center; justify-content: center; height: 64px; border: 1px dashed var(--ep-bd); border-radius: 8px;">
+                                    {{ __('Nicio vânzare în ultimele 30 zile') }}
+                                </div>
+                            @endif
                         </div>
-                        {{-- Day-of-month labels under the bars (same flex weights so they
-                             line up); weekend days are yellow + bold. --}}
-                        <div class="flex gap-px mt-1">
-                            @foreach($barSeries as $i => $v)
-                                @php $isWknd = $fes['daily_weekend'][$i] ?? false; @endphp
-                                <div class="text-center" style="flex: {{ $isWknd ? '2' : '1' }}; font-size: 8px; line-height: 1; color: {{ $isWknd ? '#ca8a04' : '#9ca3af' }}; font-weight: {{ $isWknd ? '700' : '400' }};">{{ $fes['daily_day_num'][$i] ?? '' }}</div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="flex items-center justify-center text-[11px] text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-700 rounded-md" style="height: 64px;">
-                            {{ __('Nicio vânzare în ultimele 30 zile') }}
-                        </div>
-                    @endif
-                </div>
-                {{-- Compact stats — 3 columns on all sizes --}}
-                <div class="grid grid-cols-3 gap-2">
-                    {!! $stat('Total bilete', $num($fes['tickets_total']), $num($fes['tickets_online']) . ' online · ' . $num($fes['tickets_pos']) . ' POS', 'indigo') !!}
-                    {!! $stat('Total vânzări', $money($fes['sales_total']), $num($fes['sales_online']) . ' online · ' . $num($fes['sales_pos']) . ' POS', 'emerald') !!}
-                    {!! $stat('Total comision', $money($fes['comm_total']), $num($fes['comm_online']) . ' online · ' . $num($fes['comm_pos']) . ' POS', 'amber') !!}
-                    {!! $stat('Bilete / zi', $avg($fes['days'] > 0 ? $fes['tickets_total'] / $fes['days'] : 0), '', 'purple') !!}
-                    {!! $stat('Încasări / zi', $money($fes['days'] > 0 ? $fes['sales_total'] / $fes['days'] : 0), '', 'purple') !!}
-                    {!! $stat('Comision / zi', $money($fes['days'] > 0 ? $fes['comm_total'] / $fes['days'] : 0), '', 'purple') !!}
-                    {!! $stat('Bilete azi', $num($fes['tickets_today']), '', 'blue') !!}
-                    {!! $stat('Vânzări azi', $money($fes['sales_today']), '', 'blue') !!}
-                    {!! $stat('Comision azi', $money($fes['comm_today']), '', 'blue') !!}
-                </div>
 
-                {{-- Decontare (compensare) — perioada in derulare (jumatate-de-luna).
-                     Mirror 1:1 al /organizator/deconturi -> sectiunea "Decontare (compensare)"
-                     pentru admin AmBilet, ca sa vada balanta zilnic fara sa se logheze in cont. --}}
-                @if(!empty($fes['settlement']))
-                @php
-                    $stl = $fes['settlement'];
-                    $bal = $stl['balance'];
-                    $on = $stl['online'];
-                    $po = $stl['pos'];
-                    $pFrom = \Carbon\Carbon::parse($stl['period_from'])->locale('ro')->translatedFormat('j M');
-                    $pTo = \Carbon\Carbon::parse($stl['period_to'])->locale('ro')->translatedFormat('j M Y');
-                    // Clase statice per-directie (Tailwind JIT nu detecteaza `bg-{{ var }}`).
-                    $dirClasses = [
-                        'ambilet_to_venue' => [
-                            'wrap' => 'border-emerald-200 dark:border-emerald-800/40',
-                            'head' => 'bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800/40',
-                            'headLabel' => 'text-emerald-800 dark:text-emerald-200',
-                            'headSub' => 'text-emerald-700/80 dark:text-emerald-300/80',
-                            'balBox' => 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700/60',
-                            'balLbl' => 'text-emerald-800 dark:text-emerald-300',
-                            'balMain' => 'text-emerald-900 dark:text-emerald-100',
-                            'balSub' => 'text-emerald-700/80 dark:text-emerald-300/80',
-                        ],
-                        'venue_to_ambilet' => [
-                            'wrap' => 'border-amber-200 dark:border-amber-800/40',
-                            'head' => 'bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/40',
-                            'headLabel' => 'text-amber-800 dark:text-amber-200',
-                            'headSub' => 'text-amber-700/80 dark:text-amber-300/80',
-                            'balBox' => 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/60',
-                            'balLbl' => 'text-amber-800 dark:text-amber-300',
-                            'balMain' => 'text-amber-900 dark:text-amber-100',
-                            'balSub' => 'text-amber-700/80 dark:text-amber-300/80',
-                        ],
-                        'settled' => [
-                            'wrap' => 'border-gray-200 dark:border-gray-700/40',
-                            'head' => 'bg-gray-50 dark:bg-gray-900/20 border-b border-gray-100 dark:border-gray-700/40',
-                            'headLabel' => 'text-gray-800 dark:text-gray-200',
-                            'headSub' => 'text-gray-700/80 dark:text-gray-300/80',
-                            'balBox' => 'bg-gray-50 dark:bg-gray-900/20 border-gray-300 dark:border-gray-700/60',
-                            'balLbl' => 'text-gray-800 dark:text-gray-300',
-                            'balMain' => 'text-gray-900 dark:text-gray-100',
-                            'balSub' => 'text-gray-700/80 dark:text-gray-300/80',
-                        ],
-                    ];
-                    $cls = $dirClasses[$bal['direction']] ?? $dirClasses['settled'];
-                    $dirLabel = $bal['direction'] === 'ambilet_to_venue' ? 'AmBilet → Locație'
-                        : ($bal['direction'] === 'venue_to_ambilet' ? 'Locație → AmBilet' : 'Sold zero');
-                    $dirIcon = $bal['direction'] === 'ambilet_to_venue' ? '→'
-                        : ($bal['direction'] === 'venue_to_ambilet' ? '←' : '=');
-                @endphp
-                <div class="mt-3 border rounded-lg overflow-hidden {{ $cls['wrap'] }}">
-                    <div class="flex items-center justify-between px-3 py-2 {{ $cls['head'] }}">
-                        <div class="flex items-center gap-2">
-                            <span class="text-base">⚖️</span>
-                            <div>
-                                <p class="text-[11px] uppercase tracking-wide font-bold {{ $cls['headLabel'] }}">{{ __('Decontare (compensare) · perioada în derulare') }}</p>
-                                <p class="text-xs {{ $cls['headSub'] }}">{{ $pFrom }} – {{ $pTo }} · online încasat de AmBilet, POS încasat în locație · se compensează comisioanele</p>
+                        {{-- Decontare (compensare) — perioada în derulare (jumătate de lună).
+                             Oglinda secțiunii "Decontare (compensare)" din /organizator/deconturi,
+                             ca adminul să vadă balanța zilnic fără să se logheze în cont. --}}
+                        @php
+                            $hasStl = !empty($fes['settlement']);
+                            if ($hasStl) {
+                                $stl = $fes['settlement'];
+                                $bal = $stl['balance'];
+                                $on = $stl['online'];
+                                $po = $stl['pos'];
+                                $pFrom = \Carbon\Carbon::parse($stl['period_from'])->locale('ro')->translatedFormat('j M');
+                                $pTo = \Carbon\Carbon::parse($stl['period_to'])->locale('ro')->translatedFormat('j M Y');
+                                $dirTone = ['ambilet_to_venue' => 'ok', 'venue_to_ambilet' => 'warn'][$bal['direction']] ?? '';
+                                $dirLabel = $bal['direction'] === 'ambilet_to_venue' ? 'AmBilet → Locație'
+                                    : ($bal['direction'] === 'venue_to_ambilet' ? 'Locație → AmBilet' : 'Sold zero');
+                                $dirIcon = $bal['direction'] === 'ambilet_to_venue' ? '→'
+                                    : ($bal['direction'] === 'venue_to_ambilet' ? '←' : '=');
+                            }
+                        @endphp
+                        <div class="ep-kpis ep-k3 six">
+                            <div class="ep-mini">
+                                <span class="l">{{ __('Total bilete') }}</span>
+                                <span class="v">{{ $num($fes['tickets_total']) }}</span>
+                                <span class="s">{{ $num($fes['tickets_online']) }} online | {{ $num($fes['tickets_pos']) }} POS</span>
+                            </div>
+                            <div class="ep-mini">
+                                <span class="l">{{ __('Total vânzări') }}</span>
+                                <span class="v">{{ $money($fes['sales_total']) }}</span>
+                                <span class="s">{{ $num($fes['sales_online']) }} online | {{ $num($fes['sales_pos']) }} POS</span>
+                            </div>
+                            <div class="ep-mini">
+                                <span class="l">{{ __('Total comision') }}</span>
+                                <span class="v">{{ $money($fes['comm_total']) }}</span>
+                                <span class="s">{{ $num($fes['comm_online']) }} online | {{ $num($fes['comm_pos']) }} POS</span>
+                            </div>
+                            <div class="ep-mini">
+                                <span class="l">{{ __('Pe zi, în medie') }}</span>
+                                <span class="v">{{ $avg($fes['days'] > 0 ? $fes['tickets_total'] / $fes['days'] : 0) }} <small>{{ __('bilete') }}</small></span>
+                                <span class="s">{{ $money($fes['days'] > 0 ? $fes['sales_total'] / $fes['days'] : 0) }} {{ __('încasări') }} | {{ $money($fes['days'] > 0 ? $fes['comm_total'] / $fes['days'] : 0) }} {{ __('comision') }}</span>
+                            </div>
+                            <div class="ep-mini">
+                                <span class="l">{{ __('Azi') }}</span>
+                                <span class="v">{{ $num($fes['tickets_today']) }} <small>{{ __('bilete') }}</small></span>
+                                <span class="s">{{ $money($fes['sales_today']) }} {{ __('vânzări') }} | {{ $money($fes['comm_today']) }} {{ __('comision') }}</span>
+                            </div>
+                            @if($hasStl)
+                            <div class="ep-mini {{ $dirTone }}">
+                                <span class="l">{{ __('Decontare (compensare) · perioada în derulare') }}</span>
+                                <span class="v">{{ $money($bal['amount']) }}</span>
+                                <span class="s">{{ $dirIcon }} {{ $dirLabel }} | {{ __('de achitat, prin compensare') }}</span>
+                                <span class="s">{{ __('AmBilet → Locație:') }} {{ $money($bal['ambilet_owes_venue']) }} | {{ __('Locație → AmBilet:') }} {{ $money($bal['venue_owes_ambilet']) }}</span>
+                            </div>
+                            @else
+                            <div class="ep-mini"></div>
+                            @endif
+                        </div>
+
+                        @if($hasStl)
+                        <div class="ep-blocks">
+                            {{-- Online (AmBilet încasează) --}}
+                            <div class="ep-block">
+                                <h3>{{ __('Online · încasat de AmBilet') }}</h3>
+                                <div class="ep-row"><span>{{ __('Brut') }}</span><span class="num">{{ $money($on['gross']) }}</span></div>
+                                <div class="ep-row"><span>{{ __('Comision AmBilet') }}</span><span class="num ep-amber">−{{ $money($on['commission']) }}</span></div>
+                                <div class="ep-row"><span style="font-weight: 600;">{{ __('Net (către locație)') }}</span><span class="num" style="font-weight: 700;">{{ $money($on['net']) }}</span></div>
+                            </div>
+                            {{-- POS (locația încasează fizic) --}}
+                            <div class="ep-block">
+                                <h3>{{ __('POS · încasat în locație') }}</h3>
+                                <div class="ep-row"><span>{{ __('Brut') }}</span><span class="num">{{ $money($po['gross']) }}</span></div>
+                                <div class="ep-row"><span>{{ __('Cash') }}</span><span class="num">{{ $money($po['cash']) }}</span></div>
+                                <div class="ep-row"><span>{{ __('Card') }}</span><span class="num">{{ $money($po['card']) }}</span></div>
+                                <div class="ep-row"><span style="font-weight: 600;">{{ __('Comision datorat') }}</span><span class="num" style="font-weight: 700;">{{ $money($po['commission']) }}</span></div>
                             </div>
                         </div>
+                        <div class="ep-hint">{{ $pFrom }} – {{ $pTo }} | {{ __('online încasat de AmBilet, POS încasat în locație') }} | {{ __('se compensează comisioanele') }}</div>
+                        @endif
                     </div>
-                    <div class="grid grid-cols-1 gap-3 p-3 lg:grid-cols-3">
-                        {{-- Online (AmBilet incaseaza) --}}
-                        <div class="p-3 border rounded-md bg-sky-50/50 dark:bg-sky-900/10 border-sky-200 dark:border-sky-800/40">
-                            <p class="text-[10px] uppercase font-bold text-sky-800 dark:text-sky-300 mb-1">{{ __('🌐 Online · încasat de AmBilet') }}</p>
-                            <div class="space-y-1 text-xs">
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('Brut') }}</span><span class="font-semibold tabular-nums">{{ $money($on['gross']) }}</span></div>
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('Comision AmBilet') }}</span><span class="font-semibold tabular-nums text-amber-700 dark:text-amber-400">−{{ $money($on['commission']) }}</span></div>
-                                <div class="flex justify-between pt-1 border-t border-sky-200/60"><span class="font-bold text-sky-800 dark:text-sky-200">{{ __('Net (către locație)') }}</span><span class="font-bold tabular-nums text-sky-900 dark:text-sky-100">{{ $money($on['net']) }}</span></div>
-                            </div>
-                        </div>
-                        {{-- POS (locatia incaseaza fizic) --}}
-                        <div class="p-3 border rounded-md bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40">
-                            <p class="text-[10px] uppercase font-bold text-amber-800 dark:text-amber-300 mb-1">{{ __('🏪 POS · încasat în locație') }}</p>
-                            <div class="space-y-1 text-xs">
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('Brut') }}</span><span class="font-semibold tabular-nums">{{ $money($po['gross']) }}</span></div>
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('💵 Cash') }}</span><span class="font-semibold tabular-nums">{{ $money($po['cash']) }}</span></div>
-                                <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">{{ __('💳 Card') }}</span><span class="font-semibold tabular-nums">{{ $money($po['card']) }}</span></div>
-                                <div class="flex justify-between pt-1 border-t border-amber-200/60"><span class="font-bold text-amber-800 dark:text-amber-200">{{ __('Comision datorat') }}</span><span class="font-bold tabular-nums text-amber-900 dark:text-amber-100">{{ $money($po['commission']) }}</span></div>
-                            </div>
-                        </div>
-                        {{-- Balanta compensare --}}
-                        <div class="p-3 border-2 rounded-md {{ $cls['balBox'] }} flex flex-col justify-center">
-                            <p class="text-[10px] uppercase font-bold {{ $cls['balLbl'] }}">{{ __('De achitat, prin compensare') }}</p>
-                            <p class="mt-1 text-sm font-bold {{ $cls['balMain'] }}">{{ $dirIcon }} {{ $dirLabel }}</p>
-                            <p class="text-2xl font-extrabold {{ $cls['balMain'] }} tabular-nums">{{ $money($bal['amount']) }}</p>
-                            <p class="text-[10px] {{ $cls['balSub'] }} mt-1">
-                                {{ __('AmBilet → Locație:') }} <span class="tabular-nums font-semibold">{{ $money($bal['ambilet_owes_venue']) }}</span><br>
-                                {{ __('Locație → AmBilet:') }} <span class="tabular-nums font-semibold">{{ $money($bal['venue_owes_ambilet']) }}</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                </section>
                 @endif
-            </div>
-        </div>
-        @endif
 
-        {{-- Daily per-event sales report (super-admin only) — its own lazy
-             component: loads after the page, and changing the day re-renders
-             only the table, not the whole dashboard. --}}
-        @livewire(\App\Livewire\Marketplace\DailySalesReport::class)
+                {{-- Comisioane pierdute (invitații peste comisionul câștigat) — doar super-admin, închis implicit --}}
+                @if($showLost)
+                @php
+                    $iaAllSum = $invitationAbuse['all_time']['summary'];
+                    $iaMonthSum = $invitationAbuse['current_month']['summary'];
+                    $iaMonthEvents = $invitationAbuse['current_month']['events'];
+                    $iaMonthLabel = $invitationAbuse['current_month']['label'] ?? '';
+                    $currency = $marketplace->currency ?? 'RON';
+                @endphp
+                <section class="ep-card" id="ep-lost" style="overflow: hidden;">
+                    <div class="ep-card-h">
+                        <button type="button" class="ep-btn ep-btn-ghost" style="padding: 0; height: auto;" @click="lostOpen = !lostOpen" :aria-expanded="lostOpen">
+                            <svg style="width: 16px; height: 16px; transition: transform .15s;" :style="lostOpen ? 'transform: rotate(90deg)' : ''" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg>
+                            <span style="font-size: 15px; font-weight: 600; color: var(--ep-tx);">{{ __('Comisioane pierdute') }}</span>
+                        </button>
+                        <span class="ep-badge t-amber">{{ number_format($iaAllSum['events_count']) }} evenimente</span>
+                        <div style="margin-left: auto; display: flex; align-items: center; gap: 14px; font-size: 12px;">
+                            <a href="{{ route('filament.marketplace.pages.invitation-abuse-report') }}">{{ __('Vezi raport complet') }} ↗</a>
+                            <a href="{{ request()->fullUrlWithQuery(['refresh_invite_abuse' => 1]) }}">Actualizează</a>
+                        </div>
+                    </div>
 
-        <!-- Combined Chart: Sales + Tickets -->
-        <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="charts-{{ $chartPeriod }}-{{ $chartMonth }}">
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <div class="flex items-center gap-4">
-                    <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">{{ __('Vânzări & Bilete') }}</h3>
-                    @if($chartPeriod === 'month' && $chartMonthMeta)
-                        <div class="flex items-center gap-1">
-                            <button type="button"
-                                    wire:click="shiftChartMonth(-1)"
-                                    @disabled(!($chartMonthMeta['canGoPrev'] ?? false))
-                                    class="inline-flex items-center justify-center w-7 h-7 text-gray-500 transition-colors rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    title="{{ __('Luna anterioară') }}">
-                                <x-heroicon-o-chevron-left class="w-4 h-4" />
-                            </button>
-                            <span class="px-1 text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums whitespace-nowrap">
-                                {{ ucfirst($chartMonthMeta['monthLabel']) }}
-                                @if($chartMonthMeta['mode'] === 'past')
-                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-gray-500 bg-gray-100 dark:text-gray-400 dark:bg-gray-700 rounded">{{ __('Trecut') }}</span>
-                                @elseif($chartMonthMeta['mode'] === 'future')
-                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40 rounded">{{ __('Predicție') }}</span>
+                    <div x-show="lostOpen" x-collapse x-cloak>
+                        <div style="max-height: 32rem; overflow-y: auto;">
+                            {{-- Totaluri istorice --}}
+                            <div style="padding: 16px 20px; border-bottom: 1px solid var(--ep-bd);">
+                                <div class="ep-grp" style="color: var(--ep-mu);">{{ __('Total istoric') }}</div>
+                                <div class="ep-kpis ep-k4">
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Comision pierdut (estimat)') }}</span>
+                                        <span class="v ep-rose">{{ number_format($iaAllSum['total_lost'], 2) }} <small>{{ $currency }}</small></span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Comision efectiv câștigat') }}</span>
+                                        <span class="v ep-green">{{ number_format($iaAllSum['total_earned'], 2) }} <small>{{ $currency }}</small></span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Invitații / total bilete') }}</span>
+                                        <span class="v">{{ number_format($iaAllSum['total_invitations']) }} <small>/ {{ number_format($iaAllSum['total_invitations'] + $iaAllSum['total_paid_tickets']) }}</small></span>
+                                        <span class="s ep-rose">{{ number_format($iaAllSum['invitation_ratio_pct'], 1) }}%</span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Organizatori afectați') }}</span>
+                                        <span class="v">{{ number_format($iaAllSum['unique_organizers']) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="ep-hint" style="margin: 0; padding: 10px 20px; font-style: italic; border-bottom: 1px solid var(--ep-bd);">
+                                {{ __('Pentru fiecare eveniment se calculează media comisionului pe bilet vândut, apoi se proiectează pe numărul de invitații emise. Sunt afișate DOAR evenimentele unde proiecția de comision pierdut depășește comisionul efectiv câștigat. Include: invitații standalone (fără comandă) + bilete cu valoare 0 emise prin comandă (promo 100%, bulk admin, etc).') }}
+                            </p>
+
+                            {{-- Luna curentă --}}
+                            <div style="padding: 16px 20px; border-bottom: 1px solid var(--ep-bd);">
+                                <div class="ep-grp" style="color: var(--ep-g1);">Luna curentă — {{ ucfirst($iaMonthLabel) }}</div>
+                                @if($iaMonthSum['events_count'] > 0)
+                                <div class="ep-kpis ep-k4">
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Comision pierdut (estimat)') }}</span>
+                                        <span class="v ep-rose">{{ number_format($iaMonthSum['total_lost'], 2) }} <small>{{ $currency }}</small></span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Comision efectiv câștigat') }}</span>
+                                        <span class="v ep-green">{{ number_format($iaMonthSum['total_earned'], 2) }} <small>{{ $currency }}</small></span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Invitații / total bilete') }}</span>
+                                        <span class="v">{{ number_format($iaMonthSum['total_invitations']) }} <small>/ {{ number_format($iaMonthSum['total_invitations'] + $iaMonthSum['total_paid_tickets']) }}</small></span>
+                                        <span class="s ep-rose">{{ number_format($iaMonthSum['invitation_ratio_pct'], 1) }}%</span>
+                                    </div>
+                                    <div class="ep-mini">
+                                        <span class="l">{{ __('Evenimente / organizatori') }}</span>
+                                        <span class="v">{{ number_format($iaMonthSum['events_count']) }} <small>/ {{ number_format($iaMonthSum['unique_organizers']) }}</small></span>
+                                    </div>
+                                </div>
+                                @else
+                                <p class="ep-hint" style="margin: 0;">{{ __('Nicio alertă pe luna în curs.') }}</p>
                                 @endif
-                            </span>
-                            <button type="button"
-                                    wire:click="shiftChartMonth(1)"
-                                    @disabled(!($chartMonthMeta['canGoNext'] ?? false))
-                                    class="inline-flex items-center justify-center w-7 h-7 text-gray-500 transition-colors rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    title="{{ __('Luna următoare') }}">
-                                <x-heroicon-o-chevron-right class="w-4 h-4" />
-                            </button>
-                            @if($chartMonthMeta['mode'] !== 'current')
-                                <button type="button"
-                                        wire:click="$set('chartMonth', '{{ \Carbon\Carbon::now('Europe/Bucharest')->format('Y-m') }}')"
-                                        class="ml-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-900/30 rounded transition-colors"
-                                        title="{{ __('Revino la luna în curs') }}">
-                                    Azi
-                                </button>
+                            </div>
+
+                            {{-- Evenimentele lunii curente --}}
+                            @if(count($iaMonthEvents) > 0)
+                            <div class="ep-tblwrap">
+                                <table class="ep-tbl">
+                                    <thead>
+                                        <tr>
+                                            <th class="l">{{ __('Eveniment') }}</th>
+                                            <th class="l">{{ __('Organizator') }}</th>
+                                            <th>{{ __('Vândute') }}</th>
+                                            <th>{{ __('Invitații') }}</th>
+                                            <th>{{ __('% inv') }}</th>
+                                            <th>{{ __('Câștigat') }}</th>
+                                            <th>{{ __('Pierdut (estimat)') }}</th>
+                                            <th style="text-align: center;">{{ __('Impact') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($iaMonthEvents as $ev)
+                                        @php
+                                            $impactTones = ['high' => 't-red', 'medium' => 't-amber', 'low' => 't-gray'];
+                                            $impactLabels = ['high' => 'HIGH', 'medium' => 'MED', 'low' => 'LOW'];
+                                        @endphp
+                                        <tr style="{{ ($ev['is_past'] ?? false) ? 'opacity: .7;' : '' }}">
+                                            <td>
+                                                <a href="{{ route('filament.marketplace.resources.events.edit', ['record' => $ev['event_id'], 'tab' => 'vanzari']) }}" class="evn" style="color: var(--ep-tx);">
+                                                    {{ $ev['event_title'] ?? ('Event #' . $ev['event_id']) }}
+                                                </a>
+                                                <div class="ep-hint">
+                                                    @if($ev['event_date'] ?? null){{ $ev['event_date'] }}@endif
+                                                    @if($ev['venue_name'] ?? null) | {{ $ev['venue_name'] }}@if($ev['venue_city'] ?? null), {{ $ev['venue_city'] }}@endif @endif
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @if($ev['organizer_id'] ?? null)
+                                                    <a href="{{ route('filament.marketplace.resources.organizers.edit', ['record' => $ev['organizer_id']]) }}">{{ $ev['organizer_name'] ?? 'Organizer #' . $ev['organizer_id'] }}</a>
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                            <td class="num">{{ number_format($ev['paid_tickets']) }}</td>
+                                            <td class="num ep-rose">{{ number_format($ev['invitations']) }}</td>
+                                            <td class="num ep-rose strong">{{ number_format($ev['invitation_ratio_pct'], 1) }}%</td>
+                                            <td class="num ep-green">{{ number_format($ev['commission_earned'], 2) }}</td>
+                                            <td class="num ep-rose strong">{{ number_format($ev['lost_commission_estimate'], 2) }}</td>
+                                            <td style="text-align: center;"><span class="ep-badge {{ $impactTones[$ev['impact']] ?? 't-gray' }}" style="margin: 0;">{{ $impactLabels[$ev['impact']] ?? '—' }}</span></td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                             @endif
                         </div>
-                    @endif
-                    <div class="flex items-center gap-3 text-xs text-gray-500">
-                        @if($chartPeriod === 'month' && $chartMonthMeta && $chartMonthMeta['mode'] !== 'future')
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> {{ __('Vânzări (RON)') }}</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> {{ __('Bilete') }}</span>
-                        @elseif($chartPeriod !== 'month')
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> {{ __('Vânzări (RON)') }}</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> {{ __('Bilete') }}</span>
-                        @endif
-                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(99,102,241,0.6);"></span> {{ __('Medie') }}</span>
-                        @if($chartPeriod === 'month')
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> {{ __('Anul trecut') }}</span>
-                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(234,179,8,0.5);"></span> {{ __('Medie an trecut') }}</span>
-                            @if($chartMonthMeta && $chartMonthMeta['mode'] !== 'past')
-                                <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(16,185,129,0.7);"></span> {{ __('Predicție') }}</span>
-                            @endif
-                        @endif
                     </div>
-                </div>
-                <select
-                    wire:model.live="chartPeriod"
-                    class="py-1 text-xs border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-primary-500 focus:border-primary-500"
-                >
-                    <option value="month">{{ __('Avansat') }}</option>
-                    <option value="7">{{ __('7 zile') }}</option>
-                    <option value="15">{{ __('15 zile') }}</option>
-                    <option value="30">{{ __('30 zile') }}</option>
-                    <option value="60">{{ __('60 zile') }}</option>
-                    <option value="90">{{ __('90 zile') }}</option>
-                </select>
-            </div>
-            <div class="h-64">
-                <canvas id="combinedChart"
-                        data-sales='@json($chartData)'
-                        data-tickets='@json($ticketChartData)'
-                        data-prev-sales='@json($prevYearChartData ?? null)'
-                        data-prev-tickets='@json($prevYearTicketChartData ?? null)'
-                        data-chart-meta='@json($chartMonthMeta ?? null)'
-                        data-currency="RON"></canvas>
-            </div>
+                </section>
+                @endif
+            </div>{{-- /ep-main --}}
 
-            @if($chartPeriod === 'month' && isset($chartSummary) && $chartMonthMeta)
-                @php
-                    $monthLabel = ucfirst($chartMonthMeta['monthLabel']);
-                    $prevLabel = ucfirst($chartMonthMeta['prevMonthLabel']);
-                    $mode = $chartMonthMeta['mode'];
-                    $isCurrent = $mode === 'current';
-                    $isPast = $mode === 'past';
-                    $isFuture = $mode === 'future';
-                    // Labels adapt to mode: past = totals, current = so-far, future = no actuals yet
-                    $salesLabel = $isCurrent ? 'Vânzări până acum' : ($isPast ? 'Vânzări totale' : 'Vânzări reale');
-                    $ticketsLabel = $isCurrent ? 'Bilete până acum' : ($isPast ? 'Bilete totale' : 'Bilete reale');
-                    $commLabel = $isCurrent ? 'Comisioane până acum' : ($isPast ? 'Comisioane totale' : 'Comisioane reale');
-                    // % change vs last year (null when no last-year baseline).
-                    $pct = function ($cur, $prev) {
-                        $prev = (float) $prev;
-                        if ($prev <= 0) return null;
-                        return round(((float) $cur - $prev) / $prev * 100, 1);
-                    };
-                @endphp
-                @php
-                    $pctBadge = function ($p) {
-                        if ($p === null) return '';
-                        $pos = $p >= 0;
-                        $cls = $pos
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-600';
-                        $arrow = $pos ? '▲' : '▼';
-                        $val = ($pos ? '+' : '') . number_format($p, 1, ',', '.');
-                        return '<span class="inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold align-middle ' . $cls . '">' . $arrow . ' ' . $val . '%</span>';
-                    };
-                @endphp
-                <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {{-- Color by TIME GROUP: până acum=indigo, anul trecut=purple,
-                             predicție=emerald. % vs last year sits inline by the number. --}}
-                        @if(!$isFuture)
-                        <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">{{ $salesLabel }}</p>
-                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['sales_so_far'], 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['sales_so_far'], $chartSummary['prev_year_sales'] ?? 0)) !!}</p>
-                            <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
+            {{-- Coloana din dreapta --}}
+            <div class="ep-rail">
+                {{-- De plătit către Tixello --}}
+                @if(isset($billing))
+                <section class="ep-card" aria-labelledby="ep-h-tx">
+                    <div class="ep-card-h">
+                        <h2 id="ep-h-tx">{{ __('De plată către Tixello') }}</h2>
+                        <span class="ep-hint">{{ $billing['month_label'] }}</span>
+                        <a href="{{ route('filament.marketplace.pages.billing-breakdown') }}" style="margin-left: auto; font-size: 12px;">{{ __('Detalii') }} →</a>
+                    </div>
+                    <div style="padding: 6px 20px 14px;">
+                        <div class="ep-row">
+                            <span>Comision ticketing <span class="ep-hint">{{ $billing['commission_rate'] }}% din {{ number_format($billing['ticket_commission_base'] ?? $billing['order_revenue'], 2) }}</span></span>
+                            <span class="num">{{ number_format($billing['ticketing_commission'], 2) }}</span>
                         </div>
-                        <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">{{ $ticketsLabel }}</p>
-                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['tickets_so_far'], 0, ',', '.') }}{!! $pctBadge($pct($chartSummary['tickets_so_far'], $chartSummary['prev_year_tickets'] ?? 0)) !!}</p>
-                            <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
+                        @foreach($billing['services'] as $service)
+                        <div class="ep-row">
+                            <span>{{ $service['label'] }}</span>
+                            <span class="num" @if(!($service['amount'] > 0)) style="color: var(--ep-mu);" @endif>{{ number_format($service['amount'], 2) }}</span>
                         </div>
-                        <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">{{ $commLabel }}</p>
-                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['commission_so_far'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['commission_so_far'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</p>
-                            <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
+                        @endforeach
+                        <div class="ep-row" style="font-size: 12px;">
+                            <span>{{ __('Subtotal servicii') }}</span>
+                            <span class="num">{{ number_format($billing['services_total'], 2) }}</span>
+                        </div>
+                        <div class="ep-row" style="font-size: 15px;">
+                            <span style="color: var(--ep-tx); font-weight: 600;">{{ __('Total') }}</span>
+                            <span class="num ep-rose" style="font-weight: 700;">{{ number_format($billing['grand_total'], 2) }} {{ $billing['currency'] }}</span>
+                        </div>
+                    </div>
+                </section>
+                @endif
+
+                {{-- Rapoarte --}}
+                <section class="ep-card" aria-labelledby="ep-h-lk">
+                    <div class="ep-card-h"><h2 id="ep-h-lk">{{ __('Rapoarte') }}</h2></div>
+                    <div style="padding: 6px 20px 14px;">
+                        <div class="ep-row">
+                            <a href="{{ $salesBreakdownUrl }}" title="{{ __('Încasări online, refund-uri prin procesator, split POS cash / card, per eveniment') }}">{{ __('Breakdown vânzări & bilete') }}</a>
+                            <span class="ep-hint">{{ __('online, retururi, POS') }}</span>
+                        </div>
+                        <div class="ep-row">
+                            <a href="{{ route('filament.marketplace.pages.all-time-stats') }}" title="{{ __('Totaluri cumulate + breakdown importat (legacy) vs procesat prin Tixello') }}">{{ __('Statistici All Time') }}</a>
+                            <span class="ep-hint">{{ __('totaluri cumulate') }}</span>
+                        </div>
+                        @if($showLost)
+                        <div class="ep-row">
+                            <a href="#ep-lost" @click.prevent="lostOpen = true; jump('ep-lost')">{{ __('Comisioane pierdute') }}</a>
+                            <span class="ep-hint">{{ number_format($invitationAbuse['all_time']['summary']['events_count']) }} evenimente</span>
                         </div>
                         @endif
-
-                        {{-- ── Anul trecut (purple) ── --}}
-                        <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ __('Vânzări - anul trecut') }}</p>
-                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-purple-600 dark:text-purple-300 ml-1">{{ __('RON') }}</span></p>
-                            <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">{{ $prevLabel }}</p>
-                        </div>
-                        <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ __('Bilete - anul trecut') }}</p>
-                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_tickets'], 0, ',', '.') }}</p>
-                            <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">{{ $prevLabel }}</p>
-                        </div>
-                        <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ __('Comisioane - anul trecut') }}</p>
-                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['prev_year_commission'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-purple-600 dark:text-purple-300 ml-1">{{ __('RON') }}</span></p>
-                            <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">estimat · {{ $prevLabel }}</p>
-                        </div>
-
-                        {{-- ── Predicție (emerald; hide for past — actuals already known) ── --}}
-                        @if(!$isPast)
-                        <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">{{ __('Vânzări - Predicție') }}</p>
-                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['predicted_sales'] ?? 0, $chartSummary['prev_year_sales'] ?? 0)) !!}</p>
-                            <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
-                        </div>
-                        <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">{{ __('Bilete - Predicție') }}</p>
-                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_tickets'], 0, ',', '.') }}{!! $pctBadge($pct($chartSummary['predicted_tickets'] ?? 0, $chartSummary['prev_year_tickets'] ?? 0)) !!}</p>
-                            <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
-                        </div>
-                        <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">{{ __('Comisioane - Predicție') }}</p>
-                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_commission'] ?? 0, 0, ',', '.') }}<span class="text-xs font-medium text-emerald-600 dark:text-emerald-300 ml-1">{{ __('RON') }}</span>{!! $pctBadge($pct($chartSummary['predicted_commission'] ?? 0, $chartSummary['prev_year_commission'] ?? 0)) !!}</p>
-                            <p class="text-[10px] text-emerald-600/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
+                        @if($hasRecent)
+                        <div class="ep-row">
+                            <a href="#ep-recent" @click.prevent="panel = 'recent'; jump('ep-attention')">{{ __('Evenimente publicate recent') }}</a>
+                            <span class="ep-hint">{{ $recentlyPublishedEvents->count() }}</span>
                         </div>
                         @endif
                     </div>
-                </div>
-            @endif
-        </div>
-
-        <!-- Breakdown vânzări & bilete + Statistici All Time -->
-        <div class="grid grid-cols-1 gap-5 mb-5 md:grid-cols-2">
-            <a href="{{ route('filament.marketplace.pages.sales-breakdown', ['month' => ($chartMonthMeta['monthRef'] ?? \Carbon\Carbon::now('Europe/Bucharest')->format('Y-m'))]) }}"
-               class="flex items-center justify-between gap-4 p-5 transition-colors bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 group">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 shrink-0">
-                        <x-heroicon-o-chart-pie class="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Breakdown vânzări & bilete') }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Încasări online, refund-uri prin procesator, split POS cash / card, per eveniment') }}</p>
-                    </div>
-                </div>
-                <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400 transition-colors shrink-0 group-hover:text-indigo-500" />
-            </a>
-
-            <a href="{{ route('filament.marketplace.pages.all-time-stats') }}"
-               class="flex items-center justify-between gap-4 p-5 transition bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 rounded-lg bg-primary-100 dark:bg-primary-900/30 shrink-0">
-                        <x-heroicon-o-chart-bar-square class="w-6 h-6 text-primary-600 dark:text-primary-400" />
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ __('Statistici All Time') }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ __('Totaluri cumulate + breakdown importat (legacy) vs procesat prin Tixello') }}</p>
-                    </div>
-                </div>
-                <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400 shrink-0" />
-            </a>
-        </div>
-
-        <!-- Tixello Monthly Billing -->
-        @if(isset($billing))
-        <a href="{{ route('filament.marketplace.pages.billing-breakdown') }}" class="block p-5 mb-5 transition-colors bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700 hover:border-rose-300 dark:hover:border-rose-700 group">
-            <div class="flex items-center justify-between mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-lg bg-rose-100 dark:bg-rose-900/30">
-                        <x-heroicon-o-document-currency-dollar class="w-5 h-5 text-rose-600 dark:text-rose-400" />
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">{{ __('De plată către Tixello') }}</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $billing['month_label'] }}</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="text-right">
-                        <p class="text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($billing['grand_total'], 2) }} <span class="text-sm font-medium">{{ $billing['currency'] }}</span></p>
-                    </div>
-                    <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400 transition-colors group-hover:text-rose-500" />
-                </div>
-            </div>
-
-            <div class="space-y-2">
-                {{-- Ticketing commission --}}
-                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                    <div class="flex items-center gap-2">
-                        <x-heroicon-o-ticket class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                        <span class="text-sm text-gray-700 dark:text-gray-300">Comision ticketing ({{ $billing['commission_rate'] }}% din {{ number_format($billing['ticket_commission_base'] ?? $billing['order_revenue'], 2) }})</span>
-                    </div>
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($billing['ticketing_commission'], 2) }} {{ $billing['currency'] }}</span>
-                </div>
-
-                {{-- Service breakdown - always show all --}}
-                @foreach($billing['services'] as $service)
-                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                    <div class="flex items-center gap-2">
-                        @switch($service['type'])
-                            @case('featuring')
-                                <x-heroicon-o-star class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                @break
-                            @case('email')
-                                <x-heroicon-o-envelope class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                @break
-                            @case('tracking')
-                                <x-heroicon-o-chart-bar class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                @break
-                            @case('campaign')
-                                <x-heroicon-o-megaphone class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                                @break
-                            @default
-                                <x-heroicon-o-cog-6-tooth class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                        @endswitch
-                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $service['label'] }}</span>
-                    </div>
-                    <span class="text-sm font-semibold {{ $service['amount'] > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500' }}">{{ number_format($service['amount'], 2) }} {{ $billing['currency'] }}</span>
-                </div>
-                @endforeach
-
-                <div class="flex items-center justify-between px-3 py-2 mt-1 border-t border-gray-200 dark:border-gray-600">
-                    <span class="text-xs text-gray-500 uppercase dark:text-gray-400">{{ __('Subtotal servicii') }}</span>
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ number_format($billing['services_total'], 2) }} {{ $billing['currency'] }}</span>
-                </div>
-            </div>
-        </a>
-        @endif
-        @endif {{-- end isSuperAdmin (top half) --}}
-
+                </section>
+            </div>{{-- /ep-rail --}}
+            </div>{{-- /ep-cols --}}
+            @endif {{-- end isSA --}}
+        </div>{{-- /ep-dash --}}
     @endif
 
     @push('scripts')

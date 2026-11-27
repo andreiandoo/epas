@@ -24,10 +24,10 @@ class DailySalesReport extends Component
     public function placeholder(): string
     {
         return <<<'HTML'
-        <div class="mb-5">
-            <h3 class="mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">Raport vânzări pe zi</h3>
-            <div class="p-6 text-sm text-center text-gray-400 bg-white border border-gray-200 shadow-sm animate-pulse dark:bg-gray-800 rounded-xl dark:border-gray-700">Se încarcă raportul…</div>
-        </div>
+        <section class="ep-card">
+            <div class="ep-card-h"><h2>Vânzări pe zi, pe evenimente</h2></div>
+            <div class="ep-hint animate-pulse" style="text-align: center; padding: 28px;">Se încarcă raportul…</div>
+        </section>
         HTML;
     }
 
