@@ -5,7 +5,12 @@
         .opsb { --opsb-line: #e5e7eb; --opsb-muted: #6b7280; --opsb-card: #fff; --opsb-text: #111827; --opsb-head: #f9fafb; }
         .dark .opsb { --opsb-line: #374151; --opsb-muted: #9ca3af; --opsb-card: #1f2937; --opsb-text: #f3f4f6; --opsb-head: #111827; }
         .opsb { color: var(--opsb-text); display: flex; flex-direction: column; gap: 1.25rem; padding-bottom: 5rem; }
-        .opsb-intro { font-size: .75rem; color: var(--opsb-muted); margin-top: -.75rem; }
+        /* Page explanation lives behind a small "i" instead of a paragraph. */
+        .opsb-info { position: relative; }
+        .opsb-info > button { width: 1.75rem; height: 1.75rem; border-radius: 999px; border: 1px solid var(--opsb-line); background: var(--opsb-card); color: var(--opsb-muted); font: italic 600 .875rem/1 Georgia, serif; }
+        .opsb-info > button:hover, .opsb-info > button[aria-expanded="true"] { color: #2563eb; border-color: #2563eb; }
+        .opsb-info-pop { position: absolute; top: calc(100% + .5rem); left: 0; z-index: 30; width: 26rem; max-width: 80vw; padding: .8rem .95rem; border: 1px solid var(--opsb-line); border-radius: .6rem; background: var(--opsb-card); box-shadow: 0 12px 28px rgba(0, 0, 0, .25); font-size: .8125rem; line-height: 1.5; color: var(--opsb-text); }
+        .opsb-info-pop p + p { margin-top: .4rem; }
         .opsb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
         .opsb-seg { display: inline-flex; border: 1px solid var(--opsb-line); border-radius: .5rem; overflow: hidden; background: var(--opsb-card); }
         .opsb-seg button { padding: .4rem .9rem; font-size: .875rem; color: var(--opsb-muted); }
@@ -80,6 +85,17 @@
         .opsb-history ul { display: grid; gap: .25rem; }
         .opsb-history time { display: inline-block; min-width: 8.5rem; color: var(--opsb-muted); }
         .opsb-empty { padding: 1.25rem 1rem; color: var(--opsb-muted); font-size: .875rem; }
+        /* Search, filters and status pills: one bar that stays under the panel topbar (56px). */
+        .opsb-filters { position: sticky; top: 3.5rem; z-index: 15; padding: .6rem .75rem; border: 1px solid var(--opsb-line); border-radius: .75rem; background: var(--opsb-card); box-shadow: 0 6px 16px rgba(0, 0, 0, .12); }
+        .opsb-filters .opsb-search { min-width: 14rem; }
+        .opsb-filters select { max-width: 13rem; }
+        .opsb-filters .opsb-stats { margin-left: auto; }
+        /* Events with nothing left to do: dimmed, folded under one row. */
+        .opsb-row-done > td { opacity: .55; }
+        .opsb-row-done:hover > td { opacity: 1; }
+        .opsb-done-toggle td { padding: .45rem .75rem; background: var(--opsb-head); }
+        .opsb-done-toggle button { font-size: .8125rem; font-weight: 600; color: var(--opsb-muted); }
+        .opsb-done-toggle button:hover { color: var(--opsb-text); }
     </style>
 
     @php
@@ -101,8 +117,6 @@
          event and organizer names do not contain what was typed. --}}
     {{-- Reîmprospătare la 30s cât tab-ul e vizibil: stările și cine le-a rezolvat apar fără reload. --}}
     <div class="opsb" wire:poll.30s.visible x-data="{ q: '', hit(el) { return this.q.trim() === '' || el.dataset.s.includes(this.q.trim().toLowerCase()); } }">
-        <p class="opsb-intro">Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual. Pe fiecare sarcină rezolvată apare cine a rezolvat-o și când; pagina se actualizează singură la 30 de secunde. Un document depus deja se închide cu „Am depus”, cu data reală a depunerii.</p>
-
         <div class="opsb-bar">
             <div class="opsb-seg">
                 <button type="button" wire:click="setPeriod('week')" @class(['is-on' => $this->period === 'week'])>Săptămână</button>
@@ -113,15 +127,13 @@
             <button type="button" class="opsb-btn" wire:click="next" aria-label="{{ __('Perioada următoare') }}">→</button>
             <button type="button" class="opsb-btn" wire:click="goToday">{{ __('Azi') }}</button>
 
-            <div class="opsb-stats">
-                @foreach($pills as $pillKey => [$pillLabel, $pillClass])
-                    <button type="button" wire:click="toggleStatus('{{ $pillKey }}')"
-                        @class(['opsb-stat', $pillClass, 'is-on' => in_array($pillKey, $this->status, true)])
-                        aria-pressed="{{ in_array($pillKey, $this->status, true) ? 'true' : 'false' }}"
-                        title="{{ __('Arată doar evenimentele care au ceva în această stare') }}">
-                        {{ $board['counts'][$pillKey] }} {{ $pillLabel }}
-                    </button>
-                @endforeach
+            <div class="opsb-info" x-data="{ tip: false }" x-on:keydown.escape.window="tip = false">
+                <button type="button" x-on:click="tip = !tip" x-bind:aria-expanded="tip" aria-label="{{ __('Cum funcționează tabla') }}" title="{{ __('Cum funcționează tabla') }}">i</button>
+                <div class="opsb-info-pop" x-show="tip" x-on:click.outside="tip = false" x-transition.opacity style="display: none;">
+                    <p>{{ __('Ce mai e de făcut pentru fiecare eveniment. Stările se calculează din date, nu se mută manual.') }}</p>
+                    <p>{{ __('Pe fiecare sarcină rezolvată apare cine a rezolvat-o și când; pagina se actualizează singură la 30 de secunde.') }}</p>
+                    <p>{{ __('Un document depus deja se închide cu „Am depus”, cu data reală a depunerii.') }}</p>
+                </div>
             </div>
         </div>
 
@@ -154,16 +166,31 @@
             </select>
             <label><input type="checkbox" wire:model.live="onlyOpen"> {{ __('Doar cu ceva de făcut') }}</label>
             <label><input type="checkbox" wire:model.live="byRegistry"> {{ __('Grupează pe primărie') }}</label>
+
+            <div class="opsb-stats">
+                @foreach($pills as $pillKey => [$pillLabel, $pillClass])
+                    <button type="button" wire:click="toggleStatus('{{ $pillKey }}')"
+                        @class(['opsb-stat', $pillClass, 'is-on' => in_array($pillKey, $this->status, true)])
+                        aria-pressed="{{ in_array($pillKey, $this->status, true) ? 'true' : 'false' }}"
+                        title="{{ __('Arată doar evenimentele care au ceva în această stare') }}">
+                        {{ $board['counts'][$pillKey] }} {{ $pillLabel }}
+                    </button>
+                @endforeach
+            </div>
         </div>
 
         @foreach($zones as $key => $zone)
             @php
                 [$heading, $hint, $emptyText] = $zone;
                 $rows = $board[$key];
+                // Rows are sorted with finished events last, so they fold under one toggle.
+                // Grouped by registry the order changes, so there they are only dimmed.
+                $doneCount = count(array_filter($rows, fn ($r) => $r['open_count'] === 0));
+                $foldDone = ! $this->byRegistry && $doneCount > 0;
             @endphp
             @continue(empty($rows) && $emptyText === null)
 
-            <div class="opsb-zone" wire:key="opsb-zone-{{ $key }}" x-data="{ open: {{ $key === 'backlog' ? 'false' : 'true' }} }">
+            <div class="opsb-zone" wire:key="opsb-zone-{{ $key }}" x-data="{ open: {{ $key === 'backlog' ? 'false' : 'true' }}, done: false }">
                 <button type="button" class="opsb-zone-head" x-on:click="open = !open" x-bind:aria-expanded="open">
                     <h3>{{ $heading }} ({{ count($rows) }})</h3>
                     <span>{{ $hint }}</span>
@@ -185,15 +212,32 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @php $lastRegistry = false; @endphp
+                                @php $lastRegistry = false; $toggleShown = false; @endphp
                                 @foreach($rows as $row)
+                                    @php
+                                        $isDone = $row['open_count'] === 0;
+                                        // Folded rows still show up while searching.
+                                        $rowShow = ($foldDone && $isDone) ? "(done || q.trim() !== '') && hit(\$el)" : 'hit($el)';
+                                    @endphp
+                                    @if($foldDone && $isDone && ! $toggleShown)
+                                        @php $toggleShown = true; @endphp
+                                        <tr class="opsb-done-toggle" wire:key="opsb-{{ $key }}-done-toggle">
+                                            <td colspan="{{ count($tasks) + 1 }}">
+                                                <button type="button" x-on:click="done = !done" x-bind:aria-expanded="done">
+                                                    <span x-text="done ? '▾' : '▸'">▸</span>
+                                                    {{ __('Rezolvate') }} ({{ $doneCount }})
+                                                    <span x-show="!done">— {{ __('nimic de făcut, ascunse') }}</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endif
                                     @if($this->byRegistry && $row['registry'] !== $lastRegistry)
                                         @php $lastRegistry = $row['registry']; @endphp
                                         <tr class="opsb-group" wire:key="opsb-{{ $key }}-group-{{ $row['registry_id'] ?? 0 }}">
                                             <td colspan="{{ count($tasks) + 1 }}">{{ $row['registry'] ?? 'Fără registru fiscal' }}</td>
                                         </tr>
                                     @endif
-                                    <tr wire:key="opsb-{{ $key }}-{{ $row['id'] }}" data-s="{{ mb_strtolower($row['title'] . ' ' . $row['organizer']) }}" x-show="hit($el)">
+                                    <tr wire:key="opsb-{{ $key }}-{{ $row['id'] }}" @class(['opsb-row-done' => $isDone]) data-s="{{ mb_strtolower($row['title'] . ' ' . $row['organizer']) }}" x-show="{{ $rowShow }}">
                                         <td class="opsb-event">
                                             <a href="{{ $row['url'] }}" target="_blank" rel="noopener">{{ $row['title'] }}</a>
                                             @if($row['cancelled'])<span class="opsb-tag">{{ __('Anulat') }}</span>@endif
@@ -242,7 +286,7 @@
                                         @endforeach
                                     </tr>
                                     @if($this->historyFor === $row['id'] && $history !== null)
-                                        <tr class="opsb-history" wire:key="opsb-{{ $key }}-history-{{ $row['id'] }}" data-s="{{ mb_strtolower($row['title'] . ' ' . $row['organizer']) }}" x-show="hit($el)">
+                                        <tr class="opsb-history" wire:key="opsb-{{ $key }}-history-{{ $row['id'] }}" data-s="{{ mb_strtolower($row['title'] . ' ' . $row['organizer']) }}" x-show="{{ $rowShow }}">
                                             <td colspan="{{ count($tasks) + 1 }}">
                                                 @if(empty($history))
                                                     Nimic înregistrat încă pe acest eveniment.
