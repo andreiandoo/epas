@@ -142,10 +142,24 @@
         html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-badge,
         html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-footer,
         html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group.ep-has-gicon .fi-sidebar-group-items { display: none !important; }
-        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-btn { justify-content: center; padding: 8px 0 !important; border-radius: 8px; }
-        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group.fi-active .fi-sidebar-group-btn { background: var(--ep-frame-hover); }
-        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-btn { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group { padding-left: 0 !important; padding-right: 0 !important; }
+        /* Închis: fiecare iconiță într-un pătrat de 40px, centrat, cu aer în jur (ca bara din dreapta). */
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-nav { padding: 12px 0 !important; }
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-nav-groups { gap: 6px !important; padding: 0 !important; margin: 0 !important; }
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group,
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-items { padding: 0 !important; margin: 0 !important; gap: 6px !important; display: flex; flex-direction: column; align-items: center; }
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item { width: 40px; margin: 0 auto !important; }
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-btn,
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-btn {
+            width: 40px !important; height: 40px !important; min-height: 40px; margin: 0 auto !important; padding: 0 !important;
+            display: flex !important; align-items: center; justify-content: center !important; gap: 0 !important;
+            border-radius: 10px !important; transition: background .15s ease;
+        }
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group-btn:hover,
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-btn:hover { background: var(--ep-frame-hover) !important; }
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-group.fi-active .fi-sidebar-group-btn,
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item.fi-active .fi-sidebar-item-btn { background: color-mix(in srgb, #10b981 16%, transparent) !important; }
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .fi-sidebar-item-icon,
+        html.ep-frame:not(.ep-nav-open):not(.ep-nav-pinned) .fi-main-sidebar .ep-gicon { margin: 0 !important; }
 
         html.ep-frame.ep-nav-open.ep-nav-reveal .ep-secondary-sidebar { left: var(--ep-left-open) !important; }
         html.ep-frame .ep-secondary-sidebar { transition: left .24s cubic-bezier(.2,.8,.2,1); }

@@ -4136,10 +4136,11 @@ html.dark {
     background: #13111c;
     border: 0;
 }
-.dark .fi-ta-content-ctn .fi-ta-table {
+/* Un singur scroll: containerul tabelului (antetul rămâne lipit sus). Înainte și tabelul avea
+   scroll propriu → două bare verticale una lângă alta. */
+.dark .fi-ta-content-ctn {
 	max-height: 65vh;
-    overflow-y: scroll;
-    display: block;
+    overflow-y: auto;
 }
 .dark .fi-ta-content-ctn .fi-ta-table .fi-ta-cell.fi-ta-selection-cell:first-of-type {
 	padding-inline-start: calc(var(--spacing) * 4);
