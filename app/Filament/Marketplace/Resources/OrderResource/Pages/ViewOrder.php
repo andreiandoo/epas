@@ -119,6 +119,18 @@ class ViewOrder extends ViewRecord
                     }
                 }),
 
+            Actions\Action::make('dismiss_external_refund_notice')
+                ->label('Ignoră notificarea de rambursare')
+                ->icon('heroicon-o-x-mark')
+                ->color('gray')
+                ->visible(fn () => $this->externalRefundNotice() !== null)
+                ->requiresConfirmation()
+                ->modalDescription('Folosește doar dacă banii NU au fost returnați clientului (notificare greșită sau deja înregistrată).')
+                ->action(function (): void {
+                    app(PaymentRefundService::class)->clearExternalRefundNotice($this->record);
+                    Notification::make()->success()->title('Notificarea a fost ignorată')->send();
+                }),
+
             Actions\Action::make('refund_order')
                 ->label('Rambursare')
                 ->icon('heroicon-o-arrow-uturn-left')
@@ -667,6 +679,44 @@ class ViewOrder extends ViewRecord
             ->nullable()
             ->hidden(fn (Get $get) => $get('reason_category') !== 'other');
 
+        // Money already returned outside the platform (e.g. straight from the
+        // Netopia panel): record it without calling the processor again.
+        $schema[] = Forms\Components\Toggle::make('already_refunded')
+            ->label('Banii au fost deja returnați în afara platformei (ex. din panoul Netopia) — doar înregistrează')
+            ->helperText('Procesatorul NU mai este apelat. Biletele se anulează, stocul se eliberează și decontul ține cont de rambursare. Suma aleasă mai sus trebuie să fie cea returnată efectiv.')
+            ->default(false)
+            ->live();
+
+        $schema[] = Forms\Components\Select::make('external_method')
+            ->label('Cum s-au returnat banii')
+            ->options([
+                'original_payment' => 'Din panoul procesatorului (Netopia / Stripe)',
+                'bank_transfer' => 'Transfer bancar',
+                'manual' => 'Altă metodă (numerar etc.)',
+            ])
+            ->default('original_payment')
+            ->visible(fn (Get $get) => (bool) $get('already_refunded'))
+            ->required(fn (Get $get) => (bool) $get('already_refunded'))
+            ->live();
+
+        $schema[] = Forms\Components\TextInput::make('external_reference')
+            ->label('Referința tranzacției')
+            ->helperText('ID-ul rambursării din panoul procesatorului sau referința transferului.')
+            ->maxLength(190)
+            ->visible(fn (Get $get) => (bool) $get('already_refunded'))
+            ->required(fn (Get $get) => (bool) $get('already_refunded') && $get('external_method') !== 'manual');
+
+        $schema[] = Forms\Components\Toggle::make('external_notify')
+            ->label('Trimite clientului emailul de rambursare')
+            ->default(false)
+            ->visible(fn (Get $get) => (bool) $get('already_refunded'));
+
+        $schema[] = Forms\Components\Checkbox::make('external_confirm')
+            ->label('Confirm că suma a fost deja trimisă clientului.')
+            ->visible(fn (Get $get) => (bool) $get('already_refunded'))
+            ->accepted(fn (Get $get) => (bool) $get('already_refunded'))
+            ->required(fn (Get $get) => (bool) $get('already_refunded'));
+
         return $schema;
     }
 
@@ -893,9 +943,33 @@ class ViewOrder extends ViewRecord
         return app(PaymentRefundService::class)->pendingManualRefundFor($this->record);
     }
 
+    protected function externalRefundNotice(): ?array
+    {
+        $notice = (is_array($this->record->meta) ? $this->record->meta : [])[PaymentRefundService::EXTERNAL_REFUND_NOTICE] ?? null;
+        return is_array($notice) ? $notice : null;
+    }
+
     public function getSubheading(): string|\Illuminate\Contracts\Support\Htmlable|null
     {
         $refund = $this->pendingRefund();
+        $notice = $this->externalRefundNotice();
+
+        if (!$refund && $notice) {
+            $amount = $notice['amount'] !== null
+                ? number_format((float) $notice['amount'], 2) . ' ' . ($this->record->currency ?? 'RON')
+                : 'sumă necunoscută';
+            $when = !empty($notice['received_at']) ? \Carbon\Carbon::parse($notice['received_at'])->timezone('Europe/Bucharest')->format('d.m.Y H:i') : '';
+
+            return new HtmlString(
+                '<div style="margin-top:8px;padding:14px 16px;border:1px solid #f59e0b;background:#fffbeb;border-radius:10px;color:#78350f;">'
+                . '<div style="font-weight:700;margin-bottom:4px;">' . e(ucfirst($notice['processor'] ?? 'Procesatorul')) . ' a raportat o rambursare făcută în afara platformei: ' . e($amount) . '</div>'
+                . '<div style="font-size:12px;">' . e($when) . ($notice['reference'] ? ' · referință <code>' . e($notice['reference']) . '</code>' : '')
+                . ($notice['reason'] ? ' · ' . e($notice['reason']) : '') . '</div>'
+                . '<div style="font-size:12px;margin-top:6px;">Banii au plecat deja. Apasă <strong>„Rambursare”</strong>, alege biletele și suma care corespund și bifează <strong>„Banii au fost deja returnați în afara platformei”</strong>. Dacă notificarea e greșită, folosește „Ignoră notificarea de rambursare”.</div>'
+                . '</div>'
+            );
+        }
+
         if (!$refund) {
             return parent::getSubheading();
         }
@@ -928,21 +1002,31 @@ class ViewOrder extends ViewRecord
         ];
         $reason = $reasonLabels[$reasonCategory] ?? $data['reason'] ?? 'Rambursare';
 
+        $external = !empty($data['already_refunded'])
+            ? [
+                'method' => $data['external_method'] ?? 'original_payment',
+                'reference' => trim((string) ($data['external_reference'] ?? '')) ?: null,
+                'processed_by' => auth()->id(),
+                'notify' => (bool) ($data['external_notify'] ?? false),
+                'source' => 'admin',
+            ]
+            : null;
+
         if ($data['refund_type'] === 'full') {
-            $result = $refundService->processOrderLevelRefund($order, $refundCommission, $reason, $reasonCategory);
+            $result = $refundService->processOrderLevelRefund($order, $refundCommission, $reason, $reasonCategory, $external);
         } else {
             $ticketIds = $data['ticket_ids'] ?? [];
             if (empty($ticketIds)) {
                 Notification::make()->warning()->title('Selectează cel puțin un bilet.')->send();
                 return;
             }
-            $result = $refundService->processTicketLevelRefund($order, $ticketIds, $refundCommission, $reason, $reasonCategory);
+            $result = $refundService->processTicketLevelRefund($order, $ticketIds, $refundCommission, $reason, $reasonCategory, $external);
         }
 
         if ($result->success) {
             Notification::make()
                 ->success()
-                ->title('Rambursare procesată cu succes')
+                ->title($external ? 'Rambursare externă înregistrată' : 'Rambursare procesată cu succes')
                 ->body($result->refundId ? "Referință: {$result->refundId}" : 'Rambursarea a fost înregistrată.')
                 ->send();
 

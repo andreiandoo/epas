@@ -230,8 +230,14 @@ class PaymentRefundService
         array $ticketIds,
         bool $refundCommission,
         string $reason,
-        ?string $reasonCategory = null
+        ?string $reasonCategory = null,
+        ?array $external = null
     ): RefundResult {
+        // $external: the money already went back outside the platform (processor
+        // panel, bank transfer...). Keys: method, reference, processed_by,
+        // notify, source. The processor is not called; the refund is recorded
+        // exactly like a manually completed one.
+
         // Validate order is paid
         if (!in_array($order->status, ['completed', 'paid', 'confirmed'])) {
             return new RefundResult(success: false, error: 'Comanda nu este plătită. Refund imposibil.');
@@ -402,6 +408,37 @@ class PaymentRefundService
                 ]);
             }
 
+            if ($external !== null) {
+                $method = $external['method'] ?? 'original_payment';
+                $reference = $external['reference'] ?? null;
+                $source = ($external['source'] ?? 'admin') === 'ipn' ? 'notificare Netopia' : 'operator';
+                $this->applyRefund($refundRequest, $tickets, $isFullRefund, [
+                    'payment_refund_id' => $reference,
+                    'is_automatic' => false,
+                    'refund_method' => $method,
+                    'processed_by' => $external['processed_by'] ?? null,
+                    'admin_notes' => 'Rambursare făcută în afara platformei, înregistrată de ' . $source . ' (' . $method . ')'
+                        . ($reference ? ", referință {$reference}" : '') . ' la ' . now()->format('Y-m-d H:i'),
+                ]);
+
+                DB::commit();
+
+                Log::channel('marketplace')->info('External refund recorded', [
+                    'order_id' => $order->id,
+                    'refund_request_id' => $refundRequest->id,
+                    'amount' => $totalRefund,
+                    'source' => $external['source'] ?? 'admin',
+                ]);
+
+                $this->clearExternalRefundNotice($order);
+
+                if (!empty($external['notify'])) {
+                    $this->sendRefundEmail($refundRequest);
+                }
+
+                return new RefundResult(success: true, refundId: $reference, refundRequestId: $refundRequest->id);
+            }
+
             // Call payment processor
             $processorResult = $this->processRefund($refundRequest);
 
@@ -494,7 +531,7 @@ class PaymentRefundService
     /**
      * Process a full order refund (all non-refunded tickets).
      */
-    public function processOrderLevelRefund(Order $order, bool $refundCommission, string $reason, ?string $reasonCategory = null): RefundResult
+    public function processOrderLevelRefund(Order $order, bool $refundCommission, string $reason, ?string $reasonCategory = null, ?array $external = null): RefundResult
     {
         $ticketIds = $order->tickets()
             ->where('refund_status', '!=', 'refunded')
@@ -505,13 +542,117 @@ class PaymentRefundService
             return new RefundResult(success: false, error: 'Toate biletele sunt deja rambursate.');
         }
 
-        return $this->processTicketLevelRefund($order, $ticketIds, $refundCommission, $reason, $reasonCategory);
+        return $this->processTicketLevelRefund($order, $ticketIds, $refundCommission, $reason, $reasonCategory, $external);
     }
 
     /**
      * Operator-started refund the processor refused, still waiting for the
      * money to actually go out.
      */
+    /** Order meta key set when the processor reports a refund we couldn't record alone. */
+    public const EXTERNAL_REFUND_NOTICE = 'external_refund_notice';
+
+    /**
+     * The processor reported a credit (refund) on this order. A refund started
+     * in the platform is ignored; a full one made outside (processor panel) is
+     * recorded; anything else is flagged on the order for the operator.
+     */
+    public function handleProcessorCredit(Order $order, ?float $amount, ?string $reference, string $processor = 'netopia'): string
+    {
+        $order->refresh();
+        $amount = ($amount !== null && $amount > 0) ? round($amount, 2) : null;
+        $context = ['order_id' => $order->id, 'amount' => $amount, 'reference' => $reference, 'processor' => $processor];
+
+        if (!in_array($order->status, ['completed', 'paid', 'confirmed', 'partially_refunded'], true)) {
+            return 'skipped';
+        }
+
+        // Refused by the processor earlier, then refunded by hand in the panel:
+        // finish that request.
+        if ($pending = $this->pendingManualRefundFor($order)) {
+            if ($amount !== null && abs((float) $pending->approved_amount - $amount) < 0.05) {
+                $result = $this->completeManualRefund($pending, 'original_payment', $reference ?: ($processor . '-ipn'), null, true);
+                if ($result->success) {
+                    Log::channel('marketplace')->info('Pending manual refund completed from processor credit notice', $context + ['refund_request_id' => $pending->id]);
+                    return 'completed_pending';
+                }
+            }
+            $this->flagExternalRefund($order, $amount, $reference, $processor, 'Există o rambursare neterminată cu altă sumă.');
+            return 'flagged';
+        }
+
+        // Echo of a refund started from the platform.
+        if (MarketplaceRefundRequest::where('order_id', $order->id)->where('created_at', '>=', now()->subMinutes(30))->exists()) {
+            return 'own_refund';
+        }
+        if ($amount !== null && MarketplaceRefundRequest::where('order_id', $order->id)
+            ->whereIn('status', ['refunded', 'partially_refunded'])
+            ->where('created_at', '>=', now()->subDay())
+            ->get()
+            ->contains(fn ($r) => abs((float) $r->approved_amount - $amount) < 0.05)) {
+            return 'own_refund';
+        }
+
+        $remaining = round((float) $order->total - (float) ($order->refunded_amount ?? 0), 2);
+        $meta = is_array($order->meta) ? $order->meta : [];
+        $notRefundable = (float) ($meta['insurance_amount'] ?? 0) + round(((int) ($order->processing_fee_cents ?? 0)) / 100, 2);
+
+        if ($amount !== null && $amount >= $remaining - $notRefundable - 0.05) {
+            $result = $this->processOrderLevelRefund(
+                $order,
+                true,
+                'Rambursare făcută direct din panoul ' . ucfirst($processor),
+                null,
+                ['method' => 'original_payment', 'reference' => $reference ?: ($processor . '-ipn'), 'processed_by' => null, 'notify' => false, 'source' => 'ipn']
+            );
+            if ($result->success) {
+                Log::channel('marketplace')->warning('External refund recorded from processor credit notice', $context + ['refund_request_id' => $result->refundRequestId]);
+                return 'recorded';
+            }
+            $this->flagExternalRefund($order, $amount, $reference, $processor, $result->error);
+            return 'flagged';
+        }
+
+        $this->flagExternalRefund($order, $amount, $reference, $processor, $amount === null
+            ? 'Notificarea nu conține suma returnată.'
+            : 'Suma returnată e mai mică decât restul comenzii; alege biletele rambursate.');
+        return 'flagged';
+    }
+
+    protected function flagExternalRefund(Order $order, ?float $amount, ?string $reference, string $processor, ?string $why): void
+    {
+        $meta = is_array($order->meta) ? $order->meta : [];
+        $meta[self::EXTERNAL_REFUND_NOTICE] = [
+            'amount' => $amount,
+            'reference' => $reference,
+            'processor' => $processor,
+            'reason' => $why,
+            'received_at' => now()->toIso8601String(),
+        ];
+        $order->meta = $meta;
+        $order->saveQuietly();
+
+        Log::channel('marketplace')->warning('Processor reported a refund that needs to be recorded by hand', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'amount' => $amount,
+            'reference' => $reference,
+            'reason' => $why,
+        ]);
+    }
+
+    public function clearExternalRefundNotice(Order $order): void
+    {
+        $order->refresh();
+        $meta = is_array($order->meta) ? $order->meta : [];
+        if (!array_key_exists(self::EXTERNAL_REFUND_NOTICE, $meta)) {
+            return;
+        }
+        unset($meta[self::EXTERNAL_REFUND_NOTICE]);
+        $order->meta = $meta;
+        $order->saveQuietly();
+    }
+
     public function pendingManualRefundFor(Order $order): ?MarketplaceRefundRequest
     {
         return MarketplaceRefundRequest::where('order_id', $order->id)
@@ -582,6 +723,10 @@ class PaymentRefundService
             'processed_by' => $processedBy,
             'admin_notes' => trim(($refund->admin_notes ?? '') . "\n\n" . $note),
         ]));
+
+        if ($refund->order) {
+            $this->clearExternalRefundNotice($refund->order);
+        }
 
         if ($notifyCustomer) {
             $this->sendRefundEmail($refund);

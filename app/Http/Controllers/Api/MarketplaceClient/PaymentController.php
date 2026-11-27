@@ -592,6 +592,26 @@ class PaymentController extends BaseController
                         'callback_status' => $result['status'],
                         'callback_error' => $result['metadata']['error_message'] ?? $result['message'] ?? null,
                     ]);
+
+                    // A credit notice may also come from a refund made directly in
+                    // the Netopia panel. Checked a few minutes later, so a refund we
+                    // started ourselves has time to commit and is recognised.
+                    if ($result['status'] === 'refunded' && $processorType === 'netopia' && $order->status !== 'refunded') {
+                        Log::channel('marketplace')->info('Netopia credit notice', [
+                            'order_id' => $order->id,
+                            'processed_amount' => $result['metadata']['processed_amount'] ?? null,
+                            'original_amount' => $result['metadata']['original_amount'] ?? null,
+                            'purchase_id' => $result['metadata']['purchase_id'] ?? null,
+                            'fields' => $result['metadata']['mobilpay_fields'] ?? [],
+                        ]);
+                        \App\Jobs\RecordProcessorCreditJob::dispatch(
+                            $order->id,
+                            isset($result['metadata']['processed_amount']) ? (float) $result['metadata']['processed_amount'] : null,
+                            $result['metadata']['purchase_id'] ?? null,
+                            'netopia'
+                        )->delay(now()->addMinutes(3));
+                    }
+
                     return $this->netopiaResponse(0);
                 }
 

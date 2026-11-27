@@ -193,7 +193,7 @@ class NetopiaProcessor implements PaymentProcessorInterface
             $status = 'pending';
         } elseif ($action === 'canceled') {
             $status = 'cancelled';
-        } elseif ($action === 'credit') {
+        } elseif ($action === 'credit' && in_array($errorCode, ['0', ''], true)) {
             $status = 'refunded';
         } else {
             $status = 'failed';
@@ -211,6 +211,12 @@ class NetopiaProcessor implements PaymentProcessorInterface
                 'error_code' => $errorCode,
                 'error_message' => $errorMessage,
                 'action' => $action,
+                // On a credit (refund) notice: how much went back and the
+                // Netopia purchase id, used to record refunds made in their panel.
+                'processed_amount' => isset($xmlData->mobilpay->processed_amount) ? (float) $xmlData->mobilpay->processed_amount : null,
+                'original_amount' => isset($xmlData->mobilpay->original_amount) ? (float) $xmlData->mobilpay->original_amount : null,
+                'purchase_id' => isset($xmlData->mobilpay->purchase) ? (string) $xmlData->mobilpay->purchase : null,
+                'mobilpay_fields' => isset($xmlData->mobilpay) ? array_keys((array) $xmlData->mobilpay) : [],
             ],
         ];
     }

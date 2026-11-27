@@ -153,8 +153,11 @@ class ListOrders extends ListRecords
     // Refunds the payment processor refused, waiting to be finished by hand
     protected function pendingManualRefundScope(Builder $query): Builder
     {
-        return $query->whereHas('refundRequests', fn ($q) => $q
-            ->where('status', 'approved')
-            ->whereHas('refundItems', fn ($i) => $i->where('status', 'pending')));
+        // ...or refunds the processor reported that still have to be recorded
+        return $query->where(fn (Builder $w) => $w
+            ->whereHas('refundRequests', fn ($q) => $q
+                ->where('status', 'approved')
+                ->whereHas('refundItems', fn ($i) => $i->where('status', 'pending')))
+            ->orWhereNotNull('meta->' . \App\Services\PaymentRefundService::EXTERNAL_REFUND_NOTICE));
     }
 }
