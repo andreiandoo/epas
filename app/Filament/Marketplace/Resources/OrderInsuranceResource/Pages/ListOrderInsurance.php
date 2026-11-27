@@ -13,8 +13,7 @@ class ListOrderInsurance extends ListOrders
 
     public function getHeading(): string|Htmlable
     {
-        $count = number_format(static::getResource()::getEloquentQuery()->count());
-        return new HtmlString("Comenzi cu asigurare bilete <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+        return $this->listHeading(__('Comenzi cu asigurare bilete'));
     }
 
     public function getSubheading(): string|Htmlable|null
