@@ -6683,7 +6683,7 @@ class EventResource extends Resource
                             $html .= ' <span class="ep-pill ep-pill--warn">' . e(__('Sold out')) . '</span>';
                         }
                         // Organizer changes waiting for review; Aprobă / Respinge sit at the end of the row.
-                        if ($record->pending_changes_status === 'pending') {
+                        if ($record->pending_changes_status === 'pending' && ! $record->isPast()) {
                             $html .= ' <span class="ep-pill ep-pill--warn" title="' . e(__('Organizatorul a trimis modificări care așteaptă aprobarea.')) . '"><span class="ep-dot"></span>' . e(__('Modificări de aprobat')) . '</span>';
                         }
 
@@ -6760,7 +6760,10 @@ class EventResource extends Resource
                     ->relationship('marketplaceOrganizer', 'name'),
                 Tables\Filters\Filter::make('has_pending_changes')
                     ->label(__('Modificări în așteptare'))
-                    ->query(fn ($query) => $query->where('pending_changes_status', 'pending'))
+                    // Ended events no longer need a decision (same rule as the attention bar).
+                    ->query(fn ($query) => $query->where('pending_changes_status', 'pending')
+                        ->where(fn ($q) => $q->whereRaw('COALESCE(range_end_date, event_date) IS NULL')
+                            ->orWhereRaw('COALESCE(range_end_date, event_date) >= CURRENT_DATE')))
                     ->toggle(),
                 Tables\Filters\Filter::make('tics_other_platforms')
                     ->label(__('Se vinde și pe alte platforme (tics.ro)'))
@@ -6790,7 +6793,7 @@ class EventResource extends Resource
                     // Compact: icon + tooltip, so the actions column stays narrow when a row has pending changes.
                     ->iconButton()
                     ->tooltip(__('Aprobă modificări'))
-                    ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
+                    ->visible(fn (Event $record) => $record->pending_changes_status === 'pending' && ! $record->isPast())
                     ->modalHeading(__('Modificări trimise de organizator'))
                     ->modalDescription(__('Doar câmpurile schimbate de organizator. La aprobare se aplică pe evenimentul live numai acestea.'))
                     ->modalWidth(\Filament\Support\Enums\Width::SixExtraLarge)
@@ -6823,7 +6826,7 @@ class EventResource extends Resource
                     ->color('danger')
                     ->iconButton()
                     ->tooltip(__('Respinge modificări'))
-                    ->visible(fn (Event $record) => $record->pending_changes_status === 'pending')
+                    ->visible(fn (Event $record) => $record->pending_changes_status === 'pending' && ! $record->isPast())
                     ->modalHeading(__('Respinge modificările organizatorului'))
                     ->modalDescription(__('Evenimentul live rămâne neschimbat. Acestea sunt modificările care se renunță.'))
                     ->modalWidth(\Filament\Support\Enums\Width::SixExtraLarge)

@@ -40,6 +40,16 @@ class EventSeatingLayoutResource extends Resource
     protected static ?string $modelLabel = 'Hartă eveniment';
     protected static ?string $pluralModelLabel = 'Hărți evenimente';
 
+    /** Event name for a layout: the panel event (event_id), else the old marketplace event. */
+    public static function eventLabel(EventSeatingLayout $record): string
+    {
+        $title = $record->event?->getTranslation('title', app()->getLocale())
+            ?: $record->event?->getTranslation('title', 'ro')
+            ?: $record->event?->getTranslation('title', 'en');
+
+        return $title ?: ($record->marketplaceEvent?->name ?? ($record->event_id ? '#' . $record->event_id : '—'));
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();
@@ -49,7 +59,7 @@ class EventSeatingLayoutResource extends Resource
             return parent::getEloquentQuery()
                 ->withoutGlobalScopes()
                 ->where('marketplace_client_id', $marketplace?->id)
-                ->with(['marketplaceEvent', 'baseLayout']);
+                ->with(['event', 'marketplaceEvent', 'baseLayout']);
         } catch (\Exception $e) {
             // If column doesn't exist yet, return empty query
             return parent::getEloquentQuery()
@@ -289,7 +299,27 @@ class EventSeatingLayoutResource extends Resource
                     SC\Section::make(__('Eveniment & Layout'))
                         ->icon('heroicon-o-calendar')
                         ->schema([
+                            // Layouts created from the event page carry event_id: show that event.
+                            Forms\Components\Placeholder::make('linked_event')
+                                ->label(__('Eveniment'))
+                                ->visible(fn (?EventSeatingLayout $record) => filled($record?->event_id))
+                                ->content(function (?EventSeatingLayout $record) {
+                                    if (! $record?->event) {
+                                        return '#' . $record?->event_id;
+                                    }
+                                    $url = \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $record->event]);
+                                    $date = $record->event->displayDateLabel();
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<a href="' . e($url) . '" class="font-semibold text-primary-600 hover:underline">' . e(static::eventLabel($record)) . '</a>'
+                                        . ($date ? ' <span class="text-gray-500">| ' . e($date) . '</span>' : '')
+                                    );
+                                })
+                                ->columnSpan(1),
+
                             Forms\Components\Select::make('marketplace_event_id')
+                                ->hidden(fn (?EventSeatingLayout $record) => filled($record?->event_id))
+                                ->required(fn (?EventSeatingLayout $record) => blank($record?->event_id))
                                 ->label(__('Eveniment'))
                                 ->options(fn () => MarketplaceEvent::query()
                                     ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
@@ -301,7 +331,6 @@ class EventSeatingLayoutResource extends Resource
                                     ])
                                     ->all()
                                 )
-                                ->required()
                                 ->searchable()
                                 ->helperText(__('Selectează evenimentul pentru care configurezi locurile'))
                                 ->columnSpan(1),
@@ -447,10 +476,21 @@ class EventSeatingLayoutResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('marketplaceEvent.name')
+                // Layouts are linked to the panel's events through event_id; the old
+                // marketplace_event_id link is empty on them, so the column showed nothing.
+                Tables\Columns\TextColumn::make('event_title')
                     ->label(__('Eveniment'))
-                    ->searchable()
-                    ->sortable()
+                    ->getStateUsing(fn (EventSeatingLayout $record) => static::eventLabel($record))
+                    ->description(fn (EventSeatingLayout $record) => $record->event?->displayDateLabel())
+                    ->searchable(query: function (Builder $query, string $search): void {
+                        $term = '%' . mb_strtolower($search) . '%';
+                        $query->where(function (Builder $q) use ($term) {
+                            $q->whereHas('event', fn (Builder $e) => \DB::getDriverName() === 'pgsql'
+                                    ? $e->whereRaw('LOWER(CAST(title AS TEXT)) LIKE ?', [$term])
+                                    : $e->whereRaw('LOWER(CAST(title AS CHAR)) LIKE ?', [$term]))
+                                ->orWhereHas('marketplaceEvent', fn (Builder $e) => $e->whereRaw('LOWER(name) LIKE ?', [$term]));
+                        });
+                    })
                     ->weight(FontWeight::Bold)
                     ->url(fn (EventSeatingLayout $record) => static::getUrl('edit', ['record' => $record])),
 
