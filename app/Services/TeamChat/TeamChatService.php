@@ -484,8 +484,8 @@ class TeamChatService
             'editable' => ! $deleted && (int) $m->marketplace_admin_id === (int) $admin->id
                 && $m->created_at && $m->created_at->gte(now()->subMinutes(TeamMessage::EDIT_WINDOW_MINUTES)),
             'mentions_me' => in_array((int) $admin->id, array_map('intval', (array) $m->mentions), true),
-            'time' => optional($m->created_at)->format('H:i'),
-            'date' => optional($m->created_at)->format('d.m.Y'),
+            'time' => $m->created_at?->copy()->timezone('Europe/Bucharest')->format('H:i'),
+            'date' => $m->created_at?->copy()->timezone('Europe/Bucharest')->format('d.m.Y'),
             'attachments' => $deleted ? [] : $m->attachments->map(fn (TeamMessageAttachment $a) => [
                 'id' => (int) $a->id,
                 'name' => $a->name,

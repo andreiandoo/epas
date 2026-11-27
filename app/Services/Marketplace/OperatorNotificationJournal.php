@@ -37,6 +37,9 @@ class OperatorNotificationJournal
         MarketplaceNotification::TYPE_SERVICE_ORDER_COMPLETED,
         MarketplaceNotification::TYPE_SERVICE_ORDER_RESULTS,
         MarketplaceNotification::TYPE_SERVICE_ORDER_STARTED,
+        MarketplaceNotification::TYPE_CHAT_STARTED,
+        MarketplaceNotification::TYPE_CHAT_CLAIMED,
+        MarketplaceNotification::TYPE_CHAT_CLOSED,
     ];
 
     private const ADMIN_TYPES = [
@@ -62,6 +65,9 @@ class OperatorNotificationJournal
         MarketplaceNotification::TYPE_SERVICE_ORDER_RESULTS,
         MarketplaceNotification::TYPE_SERVICE_ORDER_STARTED,
         MarketplaceNotification::TYPE_COMPANY_INVOICE_REQUEST,
+        MarketplaceNotification::TYPE_CHAT_STARTED,
+        MarketplaceNotification::TYPE_CHAT_CLAIMED,
+        MarketplaceNotification::TYPE_CHAT_CLOSED,
     ];
 
     public function admin(): ?MarketplaceAdmin
@@ -133,6 +139,9 @@ class OperatorNotificationJournal
             ->get()
             ->map(function (MarketplaceNotification $n) use ($labels) {
                 $url = (string) ($n->action_url ?? '');
+                // Serverul e pe UTC; operatorii citesc ora României.
+                $at = $n->created_at?->copy()->timezone('Europe/Bucharest');
+                $today = now('Europe/Bucharest');
 
                 return [
                     'id' => (int) $n->id,
@@ -141,8 +150,8 @@ class OperatorNotificationJournal
                     'color' => $n->color ?: (MarketplaceNotification::getTypeColors()[$n->type] ?? 'primary'),
                     'title' => (string) $n->title,
                     'message' => $n->message ? mb_strimwidth((string) $n->message, 0, 160, '…') : null,
-                    'time' => $n->created_at?->isToday() ? $n->created_at->format('H:i') : $n->created_at?->format('d.m H:i'),
-                    'day' => $n->created_at?->isToday() ? 'Azi' : ($n->created_at?->isYesterday() ? 'Ieri' : $n->created_at?->format('d.m')),
+                    'time' => $at && $at->isSameDay($today) ? $at->format('H:i') : $at?->format('d.m H:i'),
+                    'day' => ! $at ? '' : ($at->isSameDay($today) ? 'Azi' : ($at->isSameDay($today->copy()->subDay()) ? 'Ieri' : $at->format('d.m'))),
                     // Linkurile notificărilor de organizator duc în contul lui, nu în panou.
                     'url' => str_starts_with($url, '/marketplace') ? $url : null,
                     'attention' => $n->needsOperatorAttention(),

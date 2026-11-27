@@ -67,7 +67,7 @@
     }
     @media (min-width: 1024px) { .epc-drawer { right: var(--epc-rail-w); transform: translateX(calc(100% + var(--epc-rail-w))); } }
     #epc-root.is-open .epc-drawer { transform: translateX(0); visibility: visible; }
-    .epc-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--epc-line); display: grid; gap: 10px; }
+    .epc-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--epc-line); display: grid; gap: 10px; background: var(--epc-rail); }
     .epc-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .epc-title { font-weight: 600; font-size: 15px; }
     .epc-head-actions { display: flex; gap: 6px; }
@@ -396,6 +396,8 @@
         jbody.innerHTML = html || '<p class="epc-empty">Nimic în ultimele 3 zile.</p>';
     }
     jbody.addEventListener('click', function (e) {
+        var link = e.target.closest('a[href*="chat-console?c="]');
+        if (link && openInDock(link.getAttribute('href'))) { e.preventDefault(); return; }
         var b = e.target.closest('[data-jread]');
         if (!b) return;
         b.disabled = true;

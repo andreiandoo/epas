@@ -44,6 +44,20 @@ class AttentionService
         return (bool) $client?->hasMicroservice(config('operator_cockpit.microservice_slug', 'operator-cockpit'));
     }
 
+    /**
+     * Varianta cu cache, pentru observatori (rulează la fiecare salvare).
+     */
+    public static function isEnabledForClientId(?int $marketplaceClientId): bool
+    {
+        if (! $marketplaceClientId) {
+            return false;
+        }
+
+        return (bool) \Illuminate\Support\Facades\Cache::remember('cockpit-enabled:' . $marketplaceClientId, 300, function () use ($marketplaceClientId) {
+            return self::isEnabledFor(MarketplaceClient::find($marketplaceClientId));
+        });
+    }
+
     public function forAdmin(MarketplaceAdmin $admin): static
     {
         $this->admin = $admin;

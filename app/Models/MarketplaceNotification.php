@@ -63,6 +63,11 @@ class MarketplaceNotification extends Model
     public const TYPE_SERVICE_ORDER_STARTED = 'service_order_started';
     public const TYPE_COMPANY_INVOICE_REQUEST = 'company_invoice_request';
 
+    // Chat cu clienții (jurnalul operatorilor)
+    public const TYPE_CHAT_STARTED = 'chat_started';
+    public const TYPE_CHAT_CLAIMED = 'chat_claimed';
+    public const TYPE_CHAT_CLOSED = 'chat_closed';
+
     /**
      * Type labels for display
      */
@@ -92,6 +97,9 @@ class MarketplaceNotification extends Model
             self::TYPE_SERVICE_ORDER_RESULTS => 'Rezultate Serviciu',
             self::TYPE_SERVICE_ORDER_STARTED => 'Serviciu Pornit',
             self::TYPE_COMPANY_INVOICE_REQUEST => 'Factură cerută pe firmă',
+            self::TYPE_CHAT_STARTED => 'Chat început',
+            self::TYPE_CHAT_CLAIMED => 'Chat preluat',
+            self::TYPE_CHAT_CLOSED => 'Chat închis',
         ];
     }
 
@@ -124,6 +132,9 @@ class MarketplaceNotification extends Model
             self::TYPE_SERVICE_ORDER_RESULTS => 'heroicon-o-chart-bar',
             self::TYPE_SERVICE_ORDER_STARTED => 'heroicon-o-play',
             self::TYPE_COMPANY_INVOICE_REQUEST => 'heroicon-o-document-arrow-up',
+            self::TYPE_CHAT_STARTED => 'heroicon-o-chat-bubble-left-right',
+            self::TYPE_CHAT_CLAIMED => 'heroicon-o-chat-bubble-left-right',
+            self::TYPE_CHAT_CLOSED => 'heroicon-o-chat-bubble-left-right',
         ];
     }
 
@@ -156,6 +167,9 @@ class MarketplaceNotification extends Model
             self::TYPE_SERVICE_ORDER_RESULTS => 'success',
             self::TYPE_SERVICE_ORDER_STARTED => 'info',
             self::TYPE_COMPANY_INVOICE_REQUEST => 'warning',
+            self::TYPE_CHAT_STARTED => 'info',
+            self::TYPE_CHAT_CLAIMED => 'primary',
+            self::TYPE_CHAT_CLOSED => 'success',
         ];
     }
 

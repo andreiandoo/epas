@@ -285,7 +285,7 @@ class ChatDockController extends Controller
             'kind' => $kind,
             'author' => $kind === 'in' ? null : $this->cleanName((string) $m->author_label),
             'body' => (string) $m->body,
-            'time' => optional($m->created_at)->format('H:i'),
+            'time' => $m->created_at?->copy()->timezone('Europe/Bucharest')->format('H:i'),
             'attachments' => collect((array) ($m->attachments ?? []))
                 ->filter(fn ($a) => ! empty($a['token']))
                 ->map(fn ($a) => [

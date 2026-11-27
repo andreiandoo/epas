@@ -34,6 +34,6 @@ class TeamMessageAttachment extends Model
 
     public function expiresAt(): ?\Carbon\CarbonInterface
     {
-        return $this->created_at?->copy()->addDays($this->keep ? self::KEEP_DAYS : self::RETENTION_DAYS);
+        return $this->created_at?->copy()->timezone('Europe/Bucharest')->addDays($this->keep ? self::KEEP_DAYS : self::RETENTION_DAYS);
     }
 }

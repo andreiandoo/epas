@@ -62,7 +62,7 @@ class Notifications extends Page
             'notifications' => $notifications,
             'totalCount' => $journal->query()->count(),
             'unreadCount' => $journal->unreadCount(),
-            'todayCount' => $journal->query()->whereDate('created_at', today())->count(),
+            'todayCount' => $journal->query()->where('created_at', '>=', now('Europe/Bucharest')->startOfDay()->utc())->count(),
             'typeLabels' => array_intersect_key(MarketplaceNotification::getTypeLabels(), array_flip($visibleTypes)),
             'typeIcons' => MarketplaceNotification::getTypeIcons(),
             'typeColors' => MarketplaceNotification::getTypeColors(),

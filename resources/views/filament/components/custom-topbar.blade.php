@@ -213,8 +213,9 @@
                 </div>
             @endif
 
-            {{-- Notifications Dropdown (Marketplace only) --}}
-            @if($isMarketplacePanel)
+            {{-- Notifications Dropdown (Marketplace only). Ascuns unde e activă bara de atenție:
+                 jurnalul zilei și sunetele trăiesc acolo. --}}
+            @if($isMarketplacePanel && ! \App\Services\OperatorCockpit\AttentionService::isEnabledFor($currentMarketplaceClient))
                 @livewire('marketplace.notification-dropdown')
             @endif
 
