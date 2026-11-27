@@ -88,6 +88,23 @@
     .epc-snooze { border: 0; background: transparent; color: var(--epc-muted); cursor: pointer; padding: 2px; display: grid; place-items: center; border-radius: 5px; }
     .epc-snooze:hover, .epc-snooze:focus-visible { color: var(--epc-fg); outline: none; background: var(--epc-hover); }
     .epc-snooze svg { width: 15px; height: 15px; }
+    .epc-tabs { display: flex; gap: 16px; }
+    .epc-tab { border: 0; background: transparent; padding: 0 0 4px; font-size: 15px; font-weight: 600; color: var(--epc-muted); cursor: pointer; border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 6px; }
+    .epc-tab.is-on { color: var(--epc-fg); border-bottom-color: var(--epc-fg); }
+    .epc-tab:focus-visible { outline: 2px solid var(--epc-event); outline-offset: 2px; }
+    .epc-tab .epc-tab-n { font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--epc-seg); color: var(--epc-fg); display: inline-grid; place-items: center; }
+    .epc-jbtn { position: relative; }
+    .epc-jbtn .epc-jn { position: absolute; top: -6px; right: -7px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--epc-fg); color: var(--epc-rail); font-size: 10px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--epc-rail); }
+    .epc-jday { position: sticky; top: 0; background: var(--epc-drawer); padding: 10px 16px 6px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--epc-muted); z-index: 1; }
+    .epc-jrow { margin: 0 8px; padding: 8px 10px; border-radius: 7px; display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 2px 10px; align-items: start; }
+    .epc-jrow:hover { background: var(--epc-hover); }
+    .epc-jrow .epc-jdot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; }
+    .epc-jrow .epc-jt { font-size: 13px; font-weight: 500; color: var(--epc-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+    .epc-jrow a.epc-jt:hover { text-decoration: underline; }
+    .epc-jrow .epc-jm { grid-column: 2; font-size: 12px; color: var(--epc-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .epc-jrow .epc-jtime { grid-row: 1; grid-column: 3; font-size: 11.5px; color: var(--epc-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .epc-jrow.is-att .epc-jt { font-weight: 700; }
+    .epc-jrow .epc-jread { grid-column: 3; grid-row: 2; justify-self: end; }
     .epc-empty { padding: 28px 16px; color: var(--epc-muted); font-size: 13px; }
     .epc-msg { margin: 8px 12px 0; padding: 8px 10px; border-radius: 7px; font-size: 12.5px; background: color-mix(in srgb, var(--epc-late) 14%, transparent); color: var(--epc-fg); }
     .epc-foot { border-top: 1px solid var(--epc-line); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--epc-muted); }
@@ -104,9 +121,10 @@
         <span class="epc-rail-lbl">Acțiuni</span>
         <div class="epc-tiles" style="display:grid;gap:10px"></div>
         <div class="epc-spacer"></div>
-        <a class="epc-icon-btn" href="/marketplace/notifications" title="Jurnalul zilei" aria-label="Jurnalul zilei">
+        <button type="button" class="epc-icon-btn epc-jbtn" title="Jurnalul zilei" aria-label="Jurnalul zilei">
             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10"/></svg>
-        </a>
+            <span class="epc-jn" hidden></span>
+        </button>
     </nav>
 
     <button type="button" class="epc-fab" aria-label="Deschide bara de atenție" hidden>
@@ -116,13 +134,16 @@
     <aside class="epc-drawer" aria-label="De rezolvat" aria-hidden="true">
         <div class="epc-head">
             <div class="epc-head-row">
-                <span class="epc-title">De rezolvat</span>
+                <div class="epc-tabs" role="tablist">
+                    <button type="button" class="epc-tab is-on" role="tab" data-tab="todo" aria-selected="true">De rezolvat</button>
+                    <button type="button" class="epc-tab" role="tab" data-tab="journal" aria-selected="false">Jurnalul zilei <span class="epc-tab-n" hidden></span></button>
+                </div>
                 <div class="epc-head-actions">
                     <button type="button" class="epc-pill epc-pin" aria-pressed="false">Fixează</button>
                     <button type="button" class="epc-pill epc-close" aria-label="Închide">Închide</button>
                 </div>
             </div>
-            <div class="epc-seg" role="group" aria-label="Filtru">
+            <div class="epc-seg" role="group" aria-label="Filtru" data-for="todo">
                 <button type="button" class="is-on" data-f="all">Toate</button>
                 <button type="button" data-f="mine">Ale mele</button>
                 <button type="button" data-f="pool">Nealocate</button>
@@ -131,8 +152,9 @@
         </div>
         <div class="epc-msg" role="status" hidden></div>
         <div class="epc-body"></div>
+        <div class="epc-body epc-jbody" hidden></div>
         <div class="epc-foot">
-            <a href="/marketplace/notifications">Jurnalul zilei</a>
+            <a href="/marketplace/notifications">Toate notificările (3 zile)</a>
             <button type="button" class="epc-pill epc-sound" aria-pressed="true">Sunet pornit</button>
         </div>
     </aside>
@@ -162,7 +184,10 @@
     var fab = root.querySelector('.epc-fab');
     var pollMs = parseInt(root.getAttribute('data-poll-ms'), 10) || 15000;
 
-    var state = { items: {}, filter: 'all', super: false };
+    var state = { items: {}, filter: 'all', super: false, journal: [], journalUnread: 0, tab: 'todo' };
+    var jbody = root.querySelector('.epc-jbody');
+    var LS_JSEEN = 'epc_journal_seen';
+    var JCOLOR = { success: '#2fb67c', warning: '#f2b53d', danger: '#f2645f', info: '#4ea8f5', primary: '#a98bfa' };
     var closeTimer = null, pollTimer = null, msgTimer = null, signalTimer = null, lastPoll = 0;
     var clientId = parseInt(root.getAttribute('data-client-id'), 10) || 0;
     // Cu Reverb conectat, polling-ul devine doar plasă de siguranță.
@@ -239,6 +264,69 @@
         if (e.key === 'Escape' && root.classList.contains('is-open')) { lsSet(LS_PIN, '0'); renderPin(); close(); }
     });
 
+    function setTab(tab) {
+        state.tab = tab;
+        root.querySelectorAll('.epc-tab').forEach(function (t) {
+            var on = t.getAttribute('data-tab') === tab;
+            t.classList.toggle('is-on', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        root.querySelector('.epc-seg').hidden = tab !== 'todo';
+        body.hidden = tab !== 'todo';
+        jbody.hidden = tab !== 'journal';
+        if (tab === 'journal') markJournalSeen();
+    }
+    root.querySelectorAll('.epc-tab').forEach(function (t) {
+        t.addEventListener('click', function () { setTab(t.getAttribute('data-tab')); });
+    });
+    root.querySelector('.epc-jbtn').addEventListener('click', function () { open(); setTab('journal'); });
+
+    function maxJournalId() { return state.journal.reduce(function (m, j) { return Math.max(m, j.id); }, 0); }
+    function markJournalSeen() {
+        lsSet(LS_JSEEN, String(maxJournalId()));
+        renderJournalBadge();
+    }
+    function renderJournalBadge() {
+        var seen = parseInt(lsGet(LS_JSEEN, '0'), 10) || 0;
+        var fresh = state.journal.filter(function (j) { return j.id > seen; }).length;
+        var n = Math.max(fresh, state.journalUnread);
+        var badge = root.querySelector('.epc-jn');
+        badge.hidden = !n;
+        badge.textContent = n > 99 ? '99+' : String(n);
+        var tabN = root.querySelector('.epc-tab-n');
+        tabN.hidden = !state.journalUnread;
+        tabN.textContent = String(state.journalUnread);
+        tabN.title = 'Cer acțiune';
+    }
+    function renderJournal() {
+        var html = '', day = null;
+        state.journal.forEach(function (j) {
+            if (j.day !== day) { day = j.day; html += '<div class="epc-jday">' + esc(day) + '</div>'; }
+            var title = j.url
+                ? '<a class="epc-jt" href="' + esc(j.url) + '" title="' + esc(j.title) + '">' + esc(j.title) + '</a>'
+                : '<span class="epc-jt" title="' + esc(j.title) + '">' + esc(j.title) + '</span>';
+            var meta = j.label + (j.message ? ' · ' + j.message : '');
+            html += '<div class="epc-jrow' + (j.attention ? ' is-att' : '') + '">'
+                + '<span class="epc-jdot" style="background:' + (JCOLOR[j.color] || JCOLOR.primary) + '"></span>'
+                + title
+                + '<span class="epc-jtime">' + esc(j.time) + '</span>'
+                + '<span class="epc-jm" title="' + esc(meta) + '">' + esc(meta) + '</span>'
+                + (j.attention ? '<button type="button" class="epc-btn epc-jread" data-jread="' + j.id + '">Văzut</button>' : '')
+                + '</div>';
+        });
+        jbody.innerHTML = html || '<p class="epc-empty">Nimic în ultimele 3 zile.</p>';
+    }
+    jbody.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-jread]');
+        if (!b) return;
+        b.disabled = true;
+        fetch('/marketplace/cockpit/journal-read', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+            body: JSON.stringify({ id: parseInt(b.getAttribute('data-jread'), 10) })
+        }).then(function () { poll(); }).catch(function () { b.disabled = false; });
+    });
+
     root.querySelectorAll('.epc-seg button').forEach(function (b) {
         b.addEventListener('click', function () {
             state.filter = b.getAttribute('data-f');
@@ -280,6 +368,7 @@
             }
             b.addEventListener('click', function () {
                 open();
+                setTab('todo');
                 var h = body.querySelector('[data-g="' + cat + '"]');
                 if (h) body.scrollTop = h.offsetTop - 4;
             });
@@ -388,6 +477,10 @@
                 if (!data || data.ok !== true) return;
                 if (!data.enabled) { root.remove(); document.documentElement.classList.remove('epc-on'); stop(); return; }
                 state.items = data.items || {};
+                state.journal = (data.journal && data.journal.items) || [];
+                state.journalUnread = (data.journal && data.journal.unread) || 0;
+                renderJournal();
+                if (root.classList.contains('is-open') && state.tab === 'journal') markJournalSeen(); else renderJournalBadge();
                 state.super = !!data.super;
                 root.querySelector('[data-f="others"]').hidden = !state.super;
 

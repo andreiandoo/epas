@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceAdmin;
+use App\Services\Marketplace\OperatorNotificationJournal;
 use App\Services\OperatorCockpit\AttentionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class OperatorCockpitController extends Controller
             'super' => $service->isSuper(),
             'items' => $items,
             'counts' => array_map('count', $items),
+            'journal' => $this->journal(),
             'generated_at' => now()->toIso8601String(),
         ]);
     }
@@ -60,6 +62,29 @@ class OperatorCockpitController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    public function journalRead(Request $request): JsonResponse
+    {
+        if (! $this->service()) {
+            return response()->json(['ok' => false], 403);
+        }
+
+        app(OperatorNotificationJournal::class)->markRead((int) $request->input('id'));
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function journal(): array
+    {
+        try {
+            $journal = app(OperatorNotificationJournal::class);
+
+            return ['items' => $journal->forBar(), 'unread' => $journal->unreadCount()];
+        } catch (\Throwable $e) {
+            report($e);
+            return ['items' => [], 'unread' => 0];
+        }
     }
 
     private function service(): ?AttentionService

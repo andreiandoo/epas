@@ -660,6 +660,8 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         ->name('marketplace.cockpit.claim');
     Route::post('/cockpit/snooze', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'snooze'])
         ->name('marketplace.cockpit.snooze');
+    Route::post('/cockpit/journal-read', [\App\Http\Controllers\Marketplace\OperatorCockpitController::class, 'journalRead'])
+        ->name('marketplace.cockpit.journal-read');
 
     // Dock-ul de chat (ferestre lipite jos, în orice ecran)
     Route::get('/chat-dock/state', [\App\Http\Controllers\Marketplace\ChatDockController::class, 'state'])

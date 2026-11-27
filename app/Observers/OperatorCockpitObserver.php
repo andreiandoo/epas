@@ -27,6 +27,13 @@ class OperatorCockpitObserver
 
     public function saved(Model $model): void
     {
+        if ($model instanceof \App\Models\MarketplaceNotification) {
+            if ($model->wasRecentlyCreated) {
+                CockpitSignal::changed((int) $model->marketplace_client_id, 'journal');
+            }
+            return;
+        }
+
         if ($model instanceof ChatMessage) {
             if ($model->wasRecentlyCreated && $model->author_type !== 'staff') {
                 CockpitSignal::changed((int) $model->marketplace_client_id, 'chat');

@@ -66,7 +66,8 @@ class OperatorNotificationJournal
 
     public function admin(): ?MarketplaceAdmin
     {
-        $user = filament()->auth()->user() ?? auth('marketplace_admin')->user();
+        // Garda direct întâi: jurnalul e cerut și din endpoint-ul barei, în afara unei pagini Filament.
+        $user = auth('marketplace_admin')->user() ?? filament()->auth()->user();
 
         return $user instanceof MarketplaceAdmin ? $user : null;
     }
@@ -117,6 +118,37 @@ class OperatorNotificationJournal
             ->whereIn('type', $this->visibleTypes($admin) ?: ['__none__'])
             ->where('created_at', '>=', now()->subDays(self::RETENTION_DAYS))
             ->withExists(['operatorReads as read_by_me' => fn ($q) => $q->where('marketplace_admin_id', $adminId)]);
+    }
+
+    /**
+     * Ultimele intrări pentru sertarul barei de atenție.
+     */
+    public function forBar(int $limit = 40): array
+    {
+        $labels = MarketplaceNotification::getTypeLabels();
+
+        return $this->query()
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->map(function (MarketplaceNotification $n) use ($labels) {
+                $url = (string) ($n->action_url ?? '');
+
+                return [
+                    'id' => (int) $n->id,
+                    'type' => $n->type,
+                    'label' => $labels[$n->type] ?? $n->type,
+                    'color' => $n->color ?: (MarketplaceNotification::getTypeColors()[$n->type] ?? 'primary'),
+                    'title' => (string) $n->title,
+                    'message' => $n->message ? mb_strimwidth((string) $n->message, 0, 160, '…') : null,
+                    'time' => $n->created_at?->isToday() ? $n->created_at->format('H:i') : $n->created_at?->format('d.m H:i'),
+                    'day' => $n->created_at?->isToday() ? 'Azi' : ($n->created_at?->isYesterday() ? 'Ieri' : $n->created_at?->format('d.m')),
+                    // Linkurile notificărilor de organizator duc în contul lui, nu în panou.
+                    'url' => str_starts_with($url, '/marketplace') ? $url : null,
+                    'attention' => $n->needsOperatorAttention(),
+                ];
+            })
+            ->all();
     }
 
     public function unreadQuery(): Builder

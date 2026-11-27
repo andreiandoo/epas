@@ -205,6 +205,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Models\Event::class,
             \App\Models\Chat\ChatConversation::class,
             \App\Models\Chat\ChatMessage::class,
+            \App\Models\MarketplaceNotification::class,
         ] as $cockpitModel) {
             $cockpitModel::observe(\App\Observers\OperatorCockpitObserver::class);
         }
