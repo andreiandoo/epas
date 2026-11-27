@@ -253,6 +253,16 @@ class PaymentRefundService
             );
         }
 
+        if ($external === null) {
+            $meta = is_array($order->meta) ? $order->meta : [];
+            if (!empty($meta[self::EXTERNAL_REFUND_NOTICE])) {
+                return new RefundResult(
+                    success: false,
+                    error: 'Procesatorul a raportat deja o rambursare făcută în afara platformei pe această comandă. Înregistreaz-o cu opțiunea „Banii au fost deja returnați” sau ignoră întâi notificarea.'
+                );
+            }
+        }
+
         // Load tickets
         $tickets = $order->tickets()->whereIn('id', $ticketIds)->get();
         if ($tickets->isEmpty()) {

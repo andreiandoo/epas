@@ -681,10 +681,18 @@ class ViewOrder extends ViewRecord
 
         // Money already returned outside the platform (e.g. straight from the
         // Netopia panel): record it without calling the processor again.
+        // The processor already reported money going back on this order: a new
+        // processor refund could pay the customer twice, so only recording is allowed.
+        $hasExternalNotice = $this->externalRefundNotice() !== null;
+
         $schema[] = Forms\Components\Toggle::make('already_refunded')
             ->label('Banii au fost deja returnați în afara platformei (ex. din panoul Netopia) — doar înregistrează')
-            ->helperText('Procesatorul NU mai este apelat. Biletele se anulează, stocul se eliberează și decontul ține cont de rambursare. Suma aleasă mai sus trebuie să fie cea returnată efectiv.')
-            ->default(false)
+            ->helperText($hasExternalNotice
+                ? 'Procesatorul a raportat deja o rambursare pe această comandă, așa că aici se poate doar înregistra. Dacă trebuie trimiși bani în plus prin procesator, apasă întâi „Ignoră notificarea de rambursare”.'
+                : 'Procesatorul NU mai este apelat. Biletele se anulează, stocul se eliberează și decontul ține cont de rambursare. Suma aleasă mai sus trebuie să fie cea returnată efectiv.')
+            ->default($hasExternalNotice)
+            ->disabled($hasExternalNotice)
+            ->dehydrated()
             ->live();
 
         $schema[] = Forms\Components\Select::make('external_method')
